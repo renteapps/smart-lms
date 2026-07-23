@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { LayoutDashboard, BookOpen, Users, Home, Palette, Menu, Lightbulb, MessageSquare, Bell } from "lucide-react";
+import { LayoutDashboard, BookOpen, Users, Home, Palette, Menu, Lightbulb, MessageSquare, Bell, ClipboardCheck, Route } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 
 const navLinks = [
   { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/admin/onboarding", icon: Route, label: "Onboarding & Trilhas" },
   { href: "/admin/cursos", icon: BookOpen, label: "Cursos" },
+  { href: "/admin/testes-perfil", icon: ClipboardCheck, label: "Testes de Perfil" },
   { href: "/admin/users", icon: Users, label: "Usuários" },
   { href: "/admin/pilulas", icon: Lightbulb, label: "Pílulas" },
   { href: "/admin/comentarios", icon: MessageSquare, label: "Comentários" },

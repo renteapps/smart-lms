@@ -7,7 +7,7 @@ import { mockQuestionnaire, mockEligibleLessons } from '@/lib/mocks/trilhaMocks'
 import { generateLearningTrail } from '@/lib/matching';
 import dynamic from 'next/dynamic';
 
-const PhysicsKeywordSelector = dynamic(() => import('@/components/PhysicsKeywordSelector'), { ssr: false });
+const PhysicsKeywordSelector = dynamic(() => import('@/components/PhysicsKeywordSelector').then((mod) => mod.default), { ssr: false });
 
 export default function OnboardingPage() {
   const router = useRouter();

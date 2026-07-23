@@ -13,12 +13,24 @@ export type EligibleLesson = {
   prerequisitos?: string[]; // array de lessonIds
 };
 
+export type ContentType = 'lesson' | 'module' | 'course' | 'article' | 'external_link';
+
+export type ContentMapping = {
+  id: string;                   // UUID do conteúdo
+  type: ContentType;            // tipo do conteúdo
+  title: string;                // título p/ display no admin
+  slug?: string;                // slug (para artigos e cursos)
+  url?: string;                 // URL (para links externos)
+  unlockAfterDays: number;      // dias após conclusão do onboarding para liberar (0 = imediato)
+};
+
 export type QuestionOption = {
   label: string;
   tags?: string[]; // Mapeamento para topics, problemas ou nivel
   timeBudgetMin?: number; // Específico para perguntas de tempo
   weight?: number;
   subOptions?: QuestionOption[];
+  contentMappings?: ContentMapping[]; // Associações diretas a conteúdos
 };
 
 export type Question = {

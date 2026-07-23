@@ -3,7 +3,6 @@
 import { ArrowLeft, ArrowRight, CheckCircle, Star, Maximize, Minimize } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import confetti from "canvas-confetti";
 import VideoPlayer from "./VideoPlayer";
 import LessonTabs from "./LessonTabs";
 import { Lesson, MOCK_COURSE } from "@/lib/mockData";
@@ -47,28 +46,31 @@ export default function LessonClientWrapper({ lesson, courseId }: LessonClientWr
       const x = (rect.left + rect.width / 2) / window.innerWidth;
       const y = (rect.top + rect.height / 2) / window.innerHeight;
 
-      // Efeito de "explosão" dupla mais interessante partindo do botão
-      confetti({
-        particleCount: 80,
-        spread: 60,
-        origin: { x, y },
-        colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
-        startVelocity: 35,
-        gravity: 0.8,
-        ticks: 200
-      });
-      
-      setTimeout(() => {
+      import('canvas-confetti').then((module) => {
+        const confetti = module.default;
+        // Efeito de "explosão" dupla mais interessante partindo do botão
         confetti({
-          particleCount: 40,
-          spread: 80,
+          particleCount: 80,
+          spread: 60,
           origin: { x, y },
-          colors: ['#fff', '#10b981', '#f59e0b'],
-          startVelocity: 25,
-          gravity: 1,
-          ticks: 150
+          colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+          startVelocity: 35,
+          gravity: 0.8,
+          ticks: 200
         });
-      }, 150);
+        
+        setTimeout(() => {
+          confetti({
+            particleCount: 40,
+            spread: 80,
+            origin: { x, y },
+            colors: ['#fff', '#10b981', '#f59e0b'],
+            startVelocity: 25,
+            gravity: 1,
+            ticks: 150
+          });
+        }, 150);
+      });
     }
 
     // In a real app, make a fetch/POST request to /api/progress
