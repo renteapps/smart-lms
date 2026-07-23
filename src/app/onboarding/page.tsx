@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { mockQuestionnaire, mockEligibleLessons } from '@/lib/mocks/trilhaMocks';
 import { generateLearningTrail } from '@/lib/matching';
-import PhysicsKeywordSelector from '@/components/PhysicsKeywordSelector';
+import dynamic from 'next/dynamic';
+
+const PhysicsKeywordSelector = dynamic(() => import('@/components/PhysicsKeywordSelector'), { ssr: false });
 
 export default function OnboardingPage() {
   const router = useRouter();

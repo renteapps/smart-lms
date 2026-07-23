@@ -258,10 +258,8 @@ export default function AdminComentarios() {
               <div className="p-4 border-t border-border/40 bg-surface-hover/30 flex justify-between items-center">
                 <div className="flex gap-2">
                   <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <button className="p-2 text-text-soft hover:text-negative hover:bg-negative/10 rounded-lg transition-colors group" title="Excluir Comentário">
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                    <AlertDialogTrigger render={<button className="p-2 text-text-soft hover:text-negative hover:bg-negative/10 rounded-lg transition-colors group" title="Excluir Comentário" />}>
+                      <Trash2 className="w-5 h-5" />
                     </AlertDialogTrigger>
                     <AlertDialogContent className="bg-surface-card border-border/40">
                       <AlertDialogHeader>
@@ -280,10 +278,8 @@ export default function AdminComentarios() {
                   </AlertDialog>
 
                   <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <button className="p-2 text-text-soft hover:text-negative hover:bg-negative/10 rounded-lg transition-colors" title="Bloquear Aluno">
-                        <UserX className="w-5 h-5" />
-                      </button>
+                    <AlertDialogTrigger render={<button className="p-2 text-text-soft hover:text-negative hover:bg-negative/10 rounded-lg transition-colors" title="Bloquear Aluno" />}>
+                      <UserX className="w-5 h-5" />
                     </AlertDialogTrigger>
                     <AlertDialogContent className="bg-surface-card border-border/40">
                       <AlertDialogHeader>

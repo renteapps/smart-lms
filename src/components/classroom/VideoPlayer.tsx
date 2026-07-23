@@ -3,7 +3,9 @@
 import { Play } from "lucide-react";
 import { Lesson } from "@/lib/mockData";
 import { useState, useEffect } from "react";
-import ReactPlayer from "react-player";
+import dynamic from "next/dynamic";
+
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 
 interface VideoPlayerProps {
   lesson: Lesson;
@@ -34,18 +36,15 @@ export default function VideoPlayer({ lesson, onEnded }: VideoPlayerProps) {
         <div className="absolute inset-0 flex items-center justify-center">
           <Play className="w-16 h-16 text-white/50" />
         </div>
-      ) : (() => {
-        const Player = ReactPlayer as any;
-        return (
-          <Player
-            url={lesson.videoUrl}
-            width="100%"
-            height="100%"
-            controls={true}
-            onEnded={onEnded}
-          />
-        );
-      })()}
+      ) : (
+        <ReactPlayer
+          url={lesson.videoUrl}
+          width="100%"
+          height="100%"
+          controls={true}
+          onEnded={onEnded}
+        />
+      )}
     </div>
   );
 }

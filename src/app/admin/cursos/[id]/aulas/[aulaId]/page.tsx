@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { MOCK_COURSE, Lesson, ContentBlock } from "@/lib/mockData";
-import BlockEditor from "@/components/admin/editor/BlockEditor";
+import dynamic from 'next/dynamic';
+
+const BlockEditor = dynamic(() => import("@/components/admin/editor/BlockEditor"), { ssr: false });
 
 export default function AulaAdminFormPage() {
   const params = useParams();

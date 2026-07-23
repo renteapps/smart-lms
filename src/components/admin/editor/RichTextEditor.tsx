@@ -1,9 +1,12 @@
+"use client";
+
 import React, { useEffect, useRef } from 'react';
-import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Highlight from '@tiptap/extension-highlight';
-import TextStyle from '@tiptap/extension-text-style';
+import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import { Bold, Italic, Link as LinkIcon, Highlighter, Palette } from 'lucide-react';
 
@@ -20,6 +23,7 @@ export default function RichTextEditor({ content, onChange, onFocus, onKeyDown, 
   const containerRef = useRef<HTMLDivElement>(null);
   
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: false, // We use custom blocks for headings
@@ -51,7 +55,7 @@ export default function RichTextEditor({ content, onChange, onFocus, onKeyDown, 
   // Keep content in sync if it changes externally
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content, false);
+      editor.commands.setContent(content, { emitUpdate: false });
     }
   }, [content, editor]);
 
@@ -100,7 +104,6 @@ export default function RichTextEditor({ content, onChange, onFocus, onKeyDown, 
       {editor && (
         <BubbleMenu 
           editor={editor} 
-          tippyOptions={{ duration: 100 }}
           className="flex items-center gap-1 bg-surface-card border border-border rounded-lg shadow-lg p-1"
         >
           <button
