@@ -1,65 +1,126 @@
-import Image from "next/image";
+import HeroCarousel from "@/components/HeroCarousel";
+import CarouselRow from "@/components/CarouselRow";
+import CourseCard from "@/components/CourseCard";
+import LessonCard from "@/components/LessonCard";
+import DailyPill from "@/components/DailyPill";
+import CtaBand from "@/components/CtaBand";
+import MinhaTrilhaRow from "@/components/MinhaTrilhaRow";
+import { HomeBlogSection } from "@/components/blog/HomeBlogSection";
+import { getAllArticles } from "@/lib/blog";
+
+const mockCourses = [
+  {
+    id: "c1",
+    title: "React de Zero a Mestre",
+    category: "Programação",
+    cover: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=600&auto=format&fit=crop",
+    progress: 45
+  },
+  {
+    id: "c2",
+    title: "Gestão de Tempo e Foco",
+    category: "Produtividade",
+    cover: "https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=80&w=600&auto=format&fit=crop",
+  },
+  {
+    id: "c3",
+    title: "Liderança por Influência",
+    category: "Liderança",
+    cover: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=600&auto=format&fit=crop",
+  },
+  {
+    id: "c4",
+    title: "Feedback que Transforma",
+    category: "Comunicação",
+    cover: "https://images.unsplash.com/photo-1531545514256-b1400bc00f31?q=80&w=600&auto=format&fit=crop",
+  },
+  {
+    id: "c5",
+    title: "Negociação Ganha-Ganha",
+    category: "Habilidades",
+    cover: "https://images.unsplash.com/photo-1556761175-5973dc0f32b7?q=80&w=600&auto=format&fit=crop",
+  }
+];
+
+const mockLessons = [
+  {
+    id: "l1",
+    title: "Bem-vindo ao Curso!",
+    moduleName: "Módulo 1",
+    duration: "5m",
+    cover: "https://images.unsplash.com/photo-1573497491765-0a15320e8b2b?q=80&w=600&auto=format&fit=crop",
+    progress: 100
+  },
+  {
+    id: "l2",
+    title: "O que é React?",
+    moduleName: "Módulo 1",
+    duration: "12m",
+    cover: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=600&auto=format&fit=crop",
+    progress: 40
+  },
+  {
+    id: "l3",
+    title: "Criando seu primeiro componente",
+    moduleName: "Módulo 2",
+    duration: "15m",
+    cover: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?q=80&w=600&auto=format&fit=crop",
+  },
+  {
+    id: "l4",
+    title: "Entendendo useState",
+    moduleName: "Módulo 2",
+    duration: "20m",
+    cover: "https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=600&auto=format&fit=crop",
+  }
+];
 
 export default function Home() {
+  const articles = getAllArticles();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="pb-8">
+      <HeroCarousel />
+      
+
+      <div className="mt-[-10vh] md:mt-[-15vh] relative z-20">
+        <DailyPill />
+        <CarouselRow title="Continuar Assistindo (Aulas)">
+          {mockLessons.filter(l => l.progress).map((lesson) => (
+            <LessonCard key={lesson.id} {...lesson} />
+          ))}
+        </CarouselRow>
+      </div>
+
+      <MinhaTrilhaRow />
+
+      <CarouselRow title="Cursos em Destaque">
+        {mockCourses.slice().reverse().map((course) => (
+          <CourseCard key={course.id} {...course} />
+        ))}
+      </CarouselRow>
+      
+      <CarouselRow title="Aulas Recentes (Comunicação)">
+        {mockLessons.map((lesson) => (
+          <LessonCard key={lesson.id} {...lesson} />
+        ))}
+      </CarouselRow>
+
+      <CarouselRow title="Trilha Liderança">
+        {mockCourses.map((course) => (
+          <CourseCard key={course.id} {...course} />
+        ))}
+      </CarouselRow>
+
+      <CtaBand />
+
+      <HomeBlogSection articles={articles} />
+
+      <CarouselRow title="Novidades">
+        {mockCourses.slice(0, 3).map((course) => (
+          <CourseCard key={course.id} {...course} />
+        ))}
+      </CarouselRow>
     </div>
   );
 }
