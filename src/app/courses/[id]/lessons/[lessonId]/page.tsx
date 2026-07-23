@@ -1,7 +1,5 @@
 import { MOCK_COURSE } from "@/lib/mockData";
-import dynamic from "next/dynamic";
-
-const LessonClientWrapper = dynamic(() => import("@/components/classroom/LessonClientWrapper"), { ssr: false });
+import LessonClientWrapper from "@/components/classroom/LessonClientWrapper";
 
 export default async function AulaPage({ params }: { params: Promise<{ id: string; lessonId: string }> }) {
   const resolvedParams = await params;
