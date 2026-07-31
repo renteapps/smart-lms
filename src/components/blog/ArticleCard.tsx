@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Article } from '@/types/blog';
 import { Clock, Headphones, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 interface ArticleCardProps {
   article: Article;
@@ -13,16 +14,17 @@ export function ArticleCard({ article, className }: ArticleCardProps) {
     <Link 
       href={`/blog/${article.slug}`}
       className={cn(
-        "group flex flex-col rounded-[var(--radius-lg)] overflow-hidden bg-card border border-border/30 shadow-sm transition-all duration-[var(--duration-md)] ease-[var(--ease-zen)] hover:-translate-y-1 hover:shadow-md",
+        "editorial-card editorial-card-interactive group flex flex-col overflow-hidden",
         className
       )}
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img 
+        <Image 
           src={article.cover} 
           alt={article.title}
-          className="object-cover w-full h-full transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-105"
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+          className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.035]"
         />
         
         {/* Format Badges */}
@@ -48,7 +50,7 @@ export function ArticleCard({ article, className }: ArticleCardProps) {
         </div>
       </div>
 
-      <div className="flex flex-col flex-grow p-6">
+      <div className="flex flex-grow flex-col p-5 sm:p-6">
         <div className="flex items-center gap-3 mb-3">
           <span className="text-xs font-medium text-primary tracking-wider uppercase">
             {article.category}
@@ -58,7 +60,7 @@ export function ArticleCard({ article, className }: ArticleCardProps) {
           </span>
         </div>
         
-        <h3 className="text-xl font-bold text-foreground mb-2 line-clamp-2 group-hover:text-primary transition-colors duration-[var(--duration-sm)]">
+        <h3 className="mb-2 line-clamp-2 text-xl font-extrabold tracking-[-0.025em] text-ink group-hover:text-primary-active">
           {article.title}
         </h3>
         

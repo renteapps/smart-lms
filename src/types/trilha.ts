@@ -29,7 +29,6 @@ export type QuestionOption = {
   tags?: string[]; // Mapeamento para topics, problemas ou nivel
   timeBudgetMin?: number; // Específico para perguntas de tempo
   weight?: number;
-  subOptions?: QuestionOption[];
   contentMappings?: ContentMapping[]; // Associações diretas a conteúdos
 };
 

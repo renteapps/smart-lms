@@ -4,6 +4,7 @@ import React from 'react';
 import { ProfileTest } from '@/types/profileTest';
 import { Edit3, Eye, Trash2, HelpCircle, Layers, Users, Copy } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface TestCardProps {
   test: ProfileTest;
@@ -21,10 +22,12 @@ export const TestCard: React.FC<TestCardProps> = ({ test, onPreview, onDelete, o
       {/* Thumbnail Header */}
       <div className="h-40 bg-gradient-to-r from-primary/10 via-accent-cyan/20 to-primary-pale relative overflow-hidden flex items-center justify-center">
         {test.coverUrl ? (
-          <img
+          <Image
             src={test.coverUrl}
             alt={test.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            fill
+            sizes="(max-width: 768px) 100vw, 33vw"
+            className="object-cover transition-transform duration-[var(--duration-lg)] group-hover:scale-[1.035]"
           />
         ) : (
           <div className="text-center p-4">

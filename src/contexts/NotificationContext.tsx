@@ -40,6 +40,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       read: false,
+      stats: {
+        views: 0,
+        opens: 0,
+        clicks: 0,
+      }
     };
     setNotifications((prev) => [newNotification, ...prev]);
   };

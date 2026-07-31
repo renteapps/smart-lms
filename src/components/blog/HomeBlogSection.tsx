@@ -17,14 +17,15 @@ export function HomeBlogSection({ articles }: HomeBlogSectionProps) {
   const recents = articles.slice(1, 4);
 
   return (
-    <section className="py-24 relative">
-      <div className="container mx-auto px-4 md:px-6">
-        <div className="flex items-end justify-between mb-12">
+    <section className="relative py-16 sm:py-24">
+      <div className="editorial-container">
+        <div className="mb-10 flex items-end justify-between">
           <div>
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Insights & Carreira
+            <p className="eyebrow">Para continuar pensando</p>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.04em] text-ink md:text-4xl">
+              Ideias para levar com você
             </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl">
+            <p className="mt-3 max-w-2xl text-lg text-text-soft">
               Artigos, áudios e reflexões para você acelerar seu crescimento profissional.
             </p>
           </div>
@@ -38,12 +39,12 @@ export function HomeBlogSection({ articles }: HomeBlogSectionProps) {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 gap-7 lg:grid-cols-12">
           <div className="lg:col-span-8">
             <FeaturedArticle article={featured} className="h-full" />
           </div>
           
-          <div className="lg:col-span-4 flex flex-col gap-8">
+          <div className="flex flex-col gap-7 lg:col-span-4">
             {recents.map((article) => (
               <ArticleCard key={article.slug} article={article} />
             ))}

@@ -33,9 +33,9 @@ export default async function CategoryPage({ params }: { params: Promise<{ cat: 
   }
 
   return (
-    <div className="pt-32 pb-24">
-      <div className="container mx-auto px-4 md:px-6">
-        <header className="mb-16">
+    <div className="pb-24 pt-[120px] sm:pt-36">
+      <div className="editorial-container">
+        <header className="mb-14 max-w-4xl">
           <Link 
             href="/blog"
             className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors mb-8 font-medium"
@@ -43,8 +43,9 @@ export default async function CategoryPage({ params }: { params: Promise<{ cat: 
             <ArrowLeft className="w-4 h-4" />
             Voltar para o blog
           </Link>
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-            <span className="text-primary">Categoria:</span> {formattedCat}
+          <p className="eyebrow">Categoria</p>
+          <h1 className="mt-3 text-4xl font-extrabold tracking-[-0.05em] text-ink md:text-5xl">
+            {formattedCat}
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl">
             Explorando insights e estratégias sobre {formattedCat.toLowerCase()}.

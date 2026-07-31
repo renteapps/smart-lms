@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { StickyNote, Trash2, ExternalLink, Search, FileText } from "lucide-react";
-import NavBar from "@/components/NavBar";
-import Footer from "@/components/Footer";
+import { ArrowUpRight, FileText, Search, StickyNote, Trash2 } from "lucide-react";
 
 interface Note {
   lessonId: string;
@@ -19,137 +17,62 @@ export default function NotasPage() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const savedNotes = localStorage.getItem("smartlms_all_notes");
-    if (savedNotes) {
-      try {
-        setNotes(JSON.parse(savedNotes));
-      } catch (e) {
-        console.error("Failed to parse notes", e);
+    const frame = requestAnimationFrame(() => {
+      const savedNotes = localStorage.getItem("smartlms_all_notes");
+      if (savedNotes) {
+        try {
+          const parsed: unknown = JSON.parse(savedNotes);
+          if (Array.isArray(parsed)) setNotes(parsed as Note[]);
+        } catch {
+          // Ignora dados locais corrompidos sem bloquear a página.
+        }
       }
-    }
-    setIsLoaded(true);
+      setIsLoaded(true);
+    });
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   const handleDelete = (lessonId: string) => {
-    const newNotes = notes.filter((n) => n.lessonId !== lessonId);
+    const newNotes = notes.filter((note) => note.lessonId !== lessonId);
     setNotes(newNotes);
     localStorage.setItem("smartlms_all_notes", JSON.stringify(newNotes));
     localStorage.removeItem(`smartlms_note_${lessonId}`);
   };
 
-  const filteredNotes = notes.filter((note) => 
-    note.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    note.lessonTitle.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredNotes = useMemo(() => {
+    const normalized = searchQuery.toLocaleLowerCase("pt-BR");
+    return notes.filter((note) => note.content.toLocaleLowerCase("pt-BR").includes(normalized) || note.lessonTitle.toLocaleLowerCase("pt-BR").includes(normalized));
+  }, [notes, searchQuery]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <NavBar />
-      
-      <main className="flex-grow pt-24 pb-16 px-4 md:px-12 max-w-7xl mx-auto w-full mt-[60px]">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-500 font-medium text-sm mb-4">
-              <StickyNote className="w-4 h-4" />
-              <span>Seu Bloco de Notas</span>
-            </div>
-            <h1 className="text-4xl md:text-5xl font-display font-bold text-text">
-              Suas Anotações
-            </h1>
-            <p className="text-text-soft text-lg mt-4 max-w-2xl">
-              Reveja os insights, resumos e pensamentos que você registrou durante as aulas.
-            </p>
-          </div>
-
-          <div className="relative w-full md:w-auto">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-soft" />
-            <input
-              type="text"
-              placeholder="Buscar nas anotações..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full md:w-[300px] pl-12 pr-4 py-3 bg-surface-card border border-border rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-            />
-          </div>
+    <div className="pt-[76px]">
+      <section className="border-b border-border bg-accent-sage/8">
+        <div className="editorial-container grid gap-8 py-14 sm:py-18 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div><div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent-sage/15 px-3 py-1.5 text-xs font-bold text-positive"><StickyNote className="h-3.5 w-3.5" /> Caderno pessoal</div><h1 className="max-w-3xl text-4xl font-extrabold tracking-[-0.05em] text-ink sm:text-6xl">Ideias que merecem continuar com você.</h1><p className="mt-5 max-w-2xl text-lg leading-8 text-text-soft">Releia seus insights e transforme anotações em pequenas ações para a rotina.</p></div>
+          <label className="relative block w-full lg:w-80"><span className="sr-only">Buscar nas anotações</span><Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-text-mute" /><input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Buscar nas anotações" className="h-12 w-full rounded-[13px] border border-border bg-surface pl-12 pr-4 text-sm shadow-sm focus:border-primary focus:outline-none" /></label>
         </div>
+      </section>
 
+      <section className="editorial-container py-10 sm:py-14">
         {!isLoaded ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-64 bg-surface-card animate-pulse rounded-2xl border border-border"></div>
-            ))}
-          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">{[1, 2, 3].map((item) => <div key={item} className="h-64 animate-pulse rounded-[10px] border border-border bg-surface" />)}</div>
         ) : notes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center bg-surface-card border border-border rounded-3xl">
-            <div className="w-20 h-20 bg-surface rounded-full flex items-center justify-center mb-6">
-              <FileText className="w-10 h-10 text-text-soft" />
-            </div>
-            <h2 className="text-2xl font-bold mb-2">Nenhuma anotação ainda</h2>
-            <p className="text-text-soft max-w-md mx-auto mb-8">
-              Você ainda não criou nenhuma anotação. Durante as aulas, use a aba "Anotações" para registrar seus pensamentos.
-            </p>
-            <Link 
-              href="/cursos"
-              className="px-6 py-3 bg-primary text-white font-medium rounded-xl hover:bg-primary-hover transition-colors"
-            >
-              Começar a Estudar
-            </Link>
-          </div>
+          <div className="editorial-card flex flex-col items-center justify-center px-6 py-20 text-center"><span className="grid h-16 w-16 place-items-center rounded-[20px] bg-primary-pale text-primary"><FileText className="h-7 w-7" /></span><h2 className="mt-6 text-2xl font-extrabold text-ink">Seu caderno ainda está em branco</h2><p className="mt-3 max-w-md leading-7 text-text-soft">Durante uma aula, abra a aba “Anotações” para registrar ideias, perguntas e decisões.</p><Link href="/cursos" className="mt-7 inline-flex min-h-12 items-center gap-2 rounded-[13px] bg-primary px-5 font-bold text-on-primary hover:bg-primary-active">Escolher uma aula <ArrowUpRight className="h-4 w-4" /></Link></div>
         ) : filteredNotes.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-xl text-text-soft">Nenhuma anotação encontrada para "{searchQuery}".</p>
-          </div>
+          <div className="editorial-card py-16 text-center"><h2 className="text-xl font-extrabold text-ink">Nada encontrado</h2><p className="mt-2 text-text-soft">Tente buscar por outro termo.</p></div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredNotes.map((note) => (
-              <div 
-                key={note.lessonId}
-                className="group flex flex-col bg-surface-card border border-border hover:border-emerald-500/50 rounded-2xl overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1"
-              >
-                <div className="p-6 flex-grow flex flex-col">
-                  <div className="flex items-start justify-between mb-4">
-                    <span className="text-xs font-medium text-text-soft">
-                      {new Date(note.updatedAt).toLocaleDateString('pt-BR', {
-                        day: '2-digit', month: 'short', year: 'numeric'
-                      })}
-                    </span>
-                    <button 
-                      onClick={() => handleDelete(note.lessonId)}
-                      className="text-text-soft hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
-                      title="Excluir anotação"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                  
-                  <h3 className="font-bold text-lg mb-3 text-text line-clamp-2">
-                    {note.lessonTitle}
-                  </h3>
-                  
-                  <div className="relative flex-grow">
-                    <p className="text-text-soft text-sm leading-relaxed line-clamp-6 whitespace-pre-wrap">
-                      {note.content}
-                    </p>
-                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-surface-card to-transparent pointer-events-none" />
-                  </div>
-                </div>
-                
-                <div className="p-4 border-t border-border bg-surface/50">
-                  <Link 
-                    href={`/courses/c1/lessons/${note.lessonId}`} 
-                    className="flex items-center justify-center gap-2 w-full py-2 px-4 rounded-lg bg-surface-hover hover:bg-emerald-500 hover:text-white transition-colors text-sm font-medium"
-                  >
-                    <span>Ir para Aula</span>
-                    <ExternalLink className="w-4 h-4" />
-                  </Link>
-                </div>
-              </div>
+              <article key={note.lessonId} className="editorial-card editorial-card-interactive group flex min-h-72 flex-col p-5 sm:p-6">
+                <div className="flex items-start justify-between gap-4"><span className="text-xs font-bold uppercase tracking-[0.08em] text-text-mute">{new Date(note.updatedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}</span><button onClick={() => handleDelete(note.lessonId)} aria-label={`Excluir anotação de ${note.lessonTitle}`} className="grid h-10 w-10 place-items-center rounded-[10px] text-text-mute opacity-100 hover:bg-negative/10 hover:text-negative md:opacity-0 md:group-hover:opacity-100"><Trash2 className="h-4 w-4" /></button></div>
+                <h2 className="mt-3 text-lg font-extrabold leading-snug text-ink">{note.lessonTitle}</h2>
+                <p className="mt-4 line-clamp-6 flex-1 whitespace-pre-wrap text-sm leading-6 text-text-soft">{note.content}</p>
+                <Link href={`/courses/c1/lessons/${note.lessonId}`} className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-[11px] bg-canvas-soft px-4 text-sm font-bold text-ink hover:bg-primary-pale hover:text-primary-active">Reabrir aula <ArrowUpRight className="h-4 w-4" /></Link>
+              </article>
             ))}
           </div>
         )}
-      </main>
-      
-      <Footer />
+      </section>
     </div>
   );
 }

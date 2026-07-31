@@ -6,8 +6,8 @@ export default async function AulaPage({ params }: { params: Promise<{ id: strin
   
   // Encontrar aula atual
   let currentLesson = null;
-  for (const module of MOCK_COURSE.modules) {
-    const lesson = module.lessons.find((l) => l.id === resolvedParams.lessonId);
+  for (const courseModule of MOCK_COURSE.modules) {
+    const lesson = courseModule.lessons.find((l) => l.id === resolvedParams.lessonId);
     if (lesson) {
       currentLesson = lesson;
       break;

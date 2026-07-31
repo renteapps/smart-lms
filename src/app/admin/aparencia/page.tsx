@@ -1,17 +1,10 @@
-"use client";
-
-import { useState } from "react";
-import { Palette, Upload, Monitor, Moon, Sun, Type, Image as ImageIcon } from "lucide-react";
+import { Palette, Upload, Monitor, Sun, Type, Image as ImageIcon } from "lucide-react";
+import { PageHeader } from "@/components/ui/editorial";
 
 export default function AparenciaPage() {
-  const [theme, setTheme] = useState("system");
-  
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-300 pb-16">
-      <header>
-        <h1 className="text-3xl font-display font-black text-primary mb-2">Aparência</h1>
-        <p className="text-text-soft">Personalize a identidade visual e as configurações de marca da sua plataforma.</p>
-      </header>
+    <div className="mx-auto max-w-6xl space-y-8 pb-16">
+      <PageHeader eyebrow="Plataforma" title="Aparência" description="Personalize a identidade visual e as configurações de marca da plataforma." />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Formulário Principal */}
@@ -56,11 +49,11 @@ export default function AparenciaPage() {
                 <label className="block text-sm font-semibold text-text mb-2">Cor Principal</label>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-primary border border-border shadow-inner flex-shrink-0 relative overflow-hidden group">
-                     <input type="color" defaultValue="#1D4ED8" className="absolute -top-2 -left-2 w-16 h-16 opacity-0 cursor-pointer" />
+                     <input type="color" defaultValue="#3157B7" className="absolute -top-2 -left-2 w-16 h-16 opacity-0 cursor-pointer" />
                   </div>
                   <input 
                     type="text" 
-                    defaultValue="#1D4ED8"
+                    defaultValue="#3157B7"
                     className="w-full bg-canvas-soft border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 text-ink font-mono text-sm uppercase transition-all"
                   />
                 </div>
@@ -68,26 +61,9 @@ export default function AparenciaPage() {
               </div>
               
               <div>
-                <label className="block text-sm font-semibold text-text mb-3">Modo Escuro Padrão</label>
-                <div className="flex bg-canvas-soft p-1 rounded-lg border border-border">
-                  <button 
-                    onClick={() => setTheme("light")}
-                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-sm font-medium transition-colors ${theme === 'light' ? 'bg-surface shadow-sm text-ink' : 'text-text-mute hover:text-text'}`}
-                  >
-                    <Sun className="w-4 h-4" /> Claro
-                  </button>
-                  <button 
-                    onClick={() => setTheme("dark")}
-                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-sm font-medium transition-colors ${theme === 'dark' ? 'bg-surface shadow-sm text-ink' : 'text-text-mute hover:text-text'}`}
-                  >
-                    <Moon className="w-4 h-4" /> Escuro
-                  </button>
-                  <button 
-                    onClick={() => setTheme("system")}
-                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-sm font-medium transition-colors ${theme === 'system' ? 'bg-surface shadow-sm text-ink' : 'text-text-mute hover:text-text'}`}
-                  >
-                    <Monitor className="w-4 h-4" /> Sistema
-                  </button>
+                <label className="block text-sm font-semibold text-text mb-3">Tema da experiência</label>
+                <div className="rounded-[12px] border border-border bg-canvas-soft p-3">
+                  <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-[11px] bg-surface text-primary shadow-sm"><Sun className="h-4 w-4" /></span><div><p className="text-sm font-bold text-ink">Claro editorial</p><p className="text-xs text-text-mute">Tema principal desta versão</p></div></div>
                 </div>
               </div>
             </div>
@@ -147,7 +123,7 @@ export default function AparenciaPage() {
 
           {/* Botão de Salvar */}
           <div className="flex justify-end pt-2">
-            <button className="bg-primary hover:bg-primary-active text-white px-8 py-3 rounded-lg font-semibold flex items-center gap-2 shadow-sm transition-transform hover:scale-[1.02] active:scale-95">
+            <button className="min-h-12 rounded-[12px] bg-primary px-8 font-bold text-on-primary shadow-sm hover:bg-primary-active">
               Salvar Alterações
             </button>
           </div>

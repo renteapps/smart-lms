@@ -69,128 +69,32 @@ export const mockQuestionnaire: Questionnaire = {
     {
       id: 'q_problema',
       type: 'multiple',
-      text: 'O que mais te trava hoje? Toque para explorar',
+      text: 'O que mais te trava hoje?',
       role: 'problema',
       visualType: 'physics',
       options: [
-        {
-          label: 'Procrastinação',
-          tags: ['procrastinacao'],
-          subOptions: [
-            { label: 'Falta de energia', tags: ['energia'] },
-            { label: 'Muito planejamento', tags: ['planejamento'] },
-            { label: 'Distração fácil', tags: ['foco'] }
-          ]
-        },
-        {
-          label: 'Insegurança',
-          tags: ['inseguranca'],
-          subOptions: [
-            { label: 'Medo de errar', tags: ['medo'] },
-            { label: 'Síndrome do Impostor', tags: ['impostor'] },
-            { label: 'Perfeccionismo', tags: ['perfeccionismo'] }
-          ]
-        },
-        {
-          label: 'Comunicação',
-          tags: ['comunicacao'],
-          subOptions: [
-            { label: 'Falar em público', tags: ['apresentacao'] },
-            { label: 'Dar feedback', tags: ['feedback'] },
-            { label: 'Conflitos no time', tags: ['conflito'] }
-          ]
-        },
-        {
-          label: 'Liderança',
-          tags: ['lideranca'],
-          subOptions: [
-            { label: 'Delegar tarefas', tags: ['delegacao'] },
-            { label: 'Engajar o time', tags: ['engajamento'] }
-          ]
-        },
-        {
-          label: 'Falta de Tempo',
-          tags: ['tempo'],
-          subOptions: [
-            { label: 'Múltiplas prioridades', tags: ['priorizacao'] },
-            { label: 'Reuniões demais', tags: ['reunioes'] }
-          ]
-        },
-        {
-          label: 'Estagnação',
-          tags: ['estagnacao'],
-          subOptions: [
-            { label: 'Sem clareza de carreira', tags: ['carreira'] },
-            { label: 'Falta de desafios', tags: ['desafio'] }
-          ]
-        },
-        {
-          label: 'Inteligência Emocional',
-          tags: ['emocional'],
-          subOptions: [
-            { label: 'Lidar com pressão', tags: ['pressao'] },
-            { label: 'Autoconhecimento', tags: ['autoconhecimento'] }
-          ]
-        }
+        { label: 'Procrastinação', tags: ['procrastinacao'] },
+        { label: 'Insegurança', tags: ['inseguranca'] },
+        { label: 'Comunicação', tags: ['comunicacao'] },
+        { label: 'Liderança', tags: ['lideranca'] },
+        { label: 'Falta de Tempo', tags: ['tempo'] },
+        { label: 'Estagnação', tags: ['estagnacao'] },
+        { label: 'Inteligência Emocional', tags: ['emocional'] }
       ]
     },
     {
       id: 'q_habilidades',
       type: 'multiple',
-      text: 'Que habilidades você quer desenvolver? Toque para ver mais',
+      text: 'Que habilidades você quer desenvolver?',
       role: 'interesse',
       visualType: 'physics',
       options: [
-        {
-          label: 'Liderança',
-          tags: ['lideranca'],
-          subOptions: [
-            { label: 'Influência', tags: ['influencia'] },
-            { label: 'Tomada de decisão', tags: ['decisao'] },
-            { label: 'Visão estratégica', tags: ['estrategia'] }
-          ]
-        },
-        {
-          label: 'Produtividade',
-          tags: ['produtividade'],
-          subOptions: [
-            { label: 'Foco profundo', tags: ['foco'] },
-            { label: 'Gestão de energia', tags: ['energia'] }
-          ]
-        },
-        {
-          label: 'Comunicação',
-          tags: ['comunicacao'],
-          subOptions: [
-            { label: 'Storytelling', tags: ['storytelling'] },
-            { label: 'Escuta ativa', tags: ['escuta'] },
-            { label: 'Negociação', tags: ['negociacao'] }
-          ]
-        },
-        {
-          label: 'Criatividade',
-          tags: ['criatividade'],
-          subOptions: [
-            { label: 'Pensamento lateral', tags: ['lateral'] },
-            { label: 'Inovação', tags: ['inovacao'] }
-          ]
-        },
-        {
-          label: 'Autogestão',
-          tags: ['autogestao'],
-          subOptions: [
-            { label: 'Disciplina', tags: ['disciplina'] },
-            { label: 'Resiliência', tags: ['resiliencia'] }
-          ]
-        },
-        {
-          label: 'Colaboração',
-          tags: ['colaboracao'],
-          subOptions: [
-            { label: 'Trabalho em equipe', tags: ['equipe'] },
-            { label: 'Empatia', tags: ['empatia'] }
-          ]
-        }
+        { label: 'Liderança', tags: ['lideranca'] },
+        { label: 'Produtividade', tags: ['produtividade'] },
+        { label: 'Comunicação', tags: ['comunicacao'] },
+        { label: 'Criatividade', tags: ['criatividade'] },
+        { label: 'Autogestão', tags: ['autogestao'] },
+        { label: 'Colaboração', tags: ['colaboracao'] }
       ]
     },
     {

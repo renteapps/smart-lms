@@ -1,21 +1,21 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { ArrowRight, Route } from "lucide-react";
 
 export default function CtaBand() {
   return (
-    <section className="py-16 px-4 md:px-12 my-12">
-      <div className="max-w-6xl mx-auto bg-primary/5 rounded-[var(--radius-xl)] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 border border-primary/10 shadow-sm transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] hover:shadow-md">
+    <section className="editorial-container py-12 sm:py-18">
+      <div className="relative overflow-hidden rounded-[14px] bg-ink p-7 text-white shadow-[var(--shadow-card)] sm:p-10 lg:flex lg:items-center lg:justify-between lg:gap-10 lg:p-12">
+        <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full border-[48px] border-white/5" aria-hidden="true" />
         <div className="max-w-2xl">
-          <h2 className="text-3xl md:text-4xl font-display font-extrabold mb-4 text-primary">
-            Pronto para evoluir suas habilidades?
+          <span className="grid h-12 w-12 place-items-center rounded-[15px] bg-white/10 text-white"><Route className="h-5 w-5" /></span>
+          <h2 className="mt-6 text-3xl font-extrabold tracking-[-0.04em] md:text-4xl">
+            Um próximo passo feito para você.
           </h2>
-          <p className="text-muted-foreground text-lg">
-            Junte-se à comunidade e tenha acesso imediato a todos os cursos, materiais de apoio e comunidade exclusiva.
+          <p className="mt-4 text-lg leading-8 text-white/70">
+            Responda algumas perguntas e receba uma trilha que combina seus objetivos, desafios e ritmo.
           </p>
         </div>
-        <Button render={<Link href="#" />} nativeButton={false} size="lg" className="rounded-full font-bold text-lg px-10 py-6 hover:scale-105 transition-transform duration-[var(--duration-md)] shadow-sm">
-          Comece Agora
-        </Button>
+        <Link href="/onboarding" className="relative mt-7 inline-flex min-h-12 shrink-0 items-center gap-2 rounded-[13px] bg-white px-6 font-bold text-ink hover:bg-primary-pale lg:mt-0">Montar minha trilha <ArrowRight className="h-4 w-4" /></Link>
       </div>
     </section>
   );

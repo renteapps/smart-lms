@@ -2,16 +2,27 @@
 
 import { useState } from "react";
 import { useNotifications } from "@/contexts/NotificationContext";
-import { Send, Bell } from "lucide-react";
+import { Send, Trash2, Eye, MousePointerClick, MailOpen } from "lucide-react";
 import { toast } from "sonner";
+import { PageHeader, StatusBadge } from "@/components/ui/editorial";
+import { AutomationsTab } from "./AutomationsTab";
 
 export default function AdminNotificacoes() {
+  const [activeTab, setActiveTab] = useState<"manual" | "automations">("manual");
+
   const { addNotification, notifications, deleteNotification } = useNotifications();
 
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
-  const [targetAudience, setTargetAudience] = useState<"all" | "course" | "user">("all");
+  const [targetAudience, setTargetAudience] = useState<"all" | "course" | "user" | "inactive_7d" | "inactive_30d" | "new_users" | "course_completed" | "course_abandoned">("all");
   const [targetId, setTargetId] = useState("");
+  const [channels, setChannels] = useState<("platform" | "push" | "email")[]>(["platform"]);
+
+  const toggleChannel = (channel: "platform" | "push" | "email") => {
+    setChannels((prev) =>
+      prev.includes(channel) ? prev.filter((c) => c !== channel) : [...prev, channel]
+    );
+  };
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,8 +32,14 @@ export default function AdminNotificacoes() {
       return;
     }
 
-    if (targetAudience !== "all" && !targetId) {
-      toast.error("Informe o ID do curso ou usuário alvo.");
+    const requiresId = ["course", "user", "course_completed", "course_abandoned"].includes(targetAudience);
+    if (requiresId && !targetId) {
+      toast.error("Informe o ID necessário para este público.");
+      return;
+    }
+
+    if (channels.length === 0) {
+      toast.error("Selecione pelo menos um canal de envio.");
       return;
     }
 
@@ -30,31 +47,47 @@ export default function AdminNotificacoes() {
       title,
       message,
       targetAudience,
-      targetId: targetAudience !== "all" ? targetId : undefined,
+      targetId: ["course", "user", "course_completed", "course_abandoned"].includes(targetAudience) ? targetId : undefined,
+      channels,
     });
 
     toast.success("Notificação enviada com sucesso!");
     setTitle("");
     setMessage("");
     setTargetId("");
+    setChannels(["platform"]);
   };
 
   return (
-    <div className="space-y-8 max-w-4xl">
-      <div>
-        <h1 className="text-3xl font-display font-black text-primary flex items-center gap-3">
-          <Bell className="w-8 h-8" />
-          Notificações
-        </h1>
-        <p className="text-text-mute mt-2 text-lg">
-          Envie avisos, alertas ou mensagens para seus alunos.
-        </p>
+    <div className="space-y-7">
+      <PageHeader eyebrow="Comunicação" title="Notificações" description="Envie avisos manuais ou crie automações poderosas baseadas no comportamento dos alunos." />
+
+      <div className="flex border-b border-border mb-6">
+        <button
+          onClick={() => setActiveTab("manual")}
+          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${
+            activeTab === "manual" ? "border-primary text-primary" : "border-transparent text-text-mute hover:text-text"
+          }`}
+        >
+          Envio Avulso
+        </button>
+        <button
+          onClick={() => setActiveTab("automations")}
+          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${
+            activeTab === "automations" ? "border-primary text-primary" : "border-transparent text-text-mute hover:text-text"
+          }`}
+        >
+          Automações
+        </button>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
+      {activeTab === "automations" ? (
+        <AutomationsTab />
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-2">
         {/* Form */}
-        <div className="bg-surface-card border border-border rounded-xl p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-text mb-6">Nova Notificação</h2>
+        <div className="editorial-card p-5 sm:p-6">
+          <h2 className="mb-6 text-xl font-extrabold text-ink">Nova notificação</h2>
           <form onSubmit={handleSend} className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-text mb-1">Título</label>
@@ -63,7 +96,7 @@ export default function AdminNotificacoes() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Ex: Novo módulo liberado!"
-                className="w-full bg-surface-hover border border-border rounded-lg px-4 py-2 text-text placeholder:text-text-mute focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
+                className="min-h-11 w-full rounded-[11px] border border-border bg-canvas-soft px-4 text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
                 required
               />
             </div>
@@ -75,7 +108,7 @@ export default function AdminNotificacoes() {
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Detalhes da notificação..."
                 rows={4}
-                className="w-full bg-surface-hover border border-border rounded-lg px-4 py-2 text-text placeholder:text-text-mute focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow resize-none"
+                className="w-full resize-none rounded-[11px] border border-border bg-canvas-soft px-4 py-3 text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
                 required
               />
             </div>
@@ -84,34 +117,78 @@ export default function AdminNotificacoes() {
               <label className="block text-sm font-semibold text-text mb-1">Público Alvo</label>
               <select
                 value={targetAudience}
-                onChange={(e) => setTargetAudience(e.target.value as "all" | "course" | "user")}
-                className="w-full bg-surface-hover border border-border rounded-lg px-4 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
+                onChange={(e) => setTargetAudience(e.target.value as any)}
+                className="min-h-11 w-full rounded-[11px] border border-border bg-canvas-soft px-4 text-text focus:border-primary focus:bg-surface focus:outline-none"
               >
-                <option value="all">Todos os alunos</option>
-                <option value="course">Alunos de um curso específico</option>
-                <option value="user">Usuário específico</option>
+                <optgroup label="Geral">
+                  <option value="all">Todos os alunos</option>
+                  <option value="user">Usuário específico</option>
+                </optgroup>
+                <optgroup label="Cursos">
+                  <option value="course">Alunos de um curso específico</option>
+                  <option value="course_completed">Concluíram o curso (Upsell)</option>
+                  <option value="course_abandoned">Abandonaram o curso (Reengajamento)</option>
+                </optgroup>
+                <optgroup label="Comportamento (Growth)">
+                  <option value="new_users">Novos alunos (Onboarding)</option>
+                  <option value="inactive_7d">Ausentes há 7 dias (Reativação)</option>
+                  <option value="inactive_30d">Ausentes há 30+ dias (Risco de Churn)</option>
+                </optgroup>
               </select>
             </div>
 
-            {targetAudience !== "all" && (
+            {["course", "user", "course_completed", "course_abandoned"].includes(targetAudience) && (
               <div>
                 <label className="block text-sm font-semibold text-text mb-1">
-                  {targetAudience === "course" ? "ID do Curso" : "Email do Usuário / ID"}
+                  {targetAudience === "user" ? "Email do Usuário / ID" : "ID do Curso"}
                 </label>
                 <input
                   type="text"
                   value={targetId}
                   onChange={(e) => setTargetId(e.target.value)}
-                  placeholder={targetAudience === "course" ? "Ex: course_123" : "Ex: aluno@email.com"}
-                  className="w-full bg-surface-hover border border-border rounded-lg px-4 py-2 text-text placeholder:text-text-mute focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
+                  placeholder={targetAudience === "user" ? "Ex: aluno@email.com" : "Ex: course_123"}
+                  className="min-h-11 w-full rounded-[11px] border border-border bg-canvas-soft px-4 text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
                   required
                 />
               </div>
             )}
 
+            <div>
+              <label className="block text-sm font-semibold text-text mb-2">Canais de Envio</label>
+              <div className="flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={channels.includes("platform")}
+                    onChange={() => toggleChannel("platform")}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm text-text">Plataforma</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={channels.includes("push")}
+                    onChange={() => toggleChannel("push")}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm text-text">Push Notification</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={channels.includes("email")}
+                    onChange={() => toggleChannel("email")}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm text-text">Email</span>
+                </label>
+              </div>
+            </div>
+
             <button
               type="submit"
-              className="w-full bg-primary hover:bg-primary-hover text-primary-foreground font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors mt-6"
+              className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-[12px] bg-primary px-4 font-bold text-primary-foreground hover:bg-primary-active"
             >
               <Send className="w-5 h-5" /> Enviar Notificação
             </button>
@@ -119,32 +196,66 @@ export default function AdminNotificacoes() {
         </div>
 
         {/* History */}
-        <div className="bg-surface-card border border-border rounded-xl p-6 shadow-sm flex flex-col">
-          <h2 className="text-xl font-bold text-text mb-6">Histórico de Envios</h2>
+        <div className="editorial-card flex flex-col p-5 sm:p-6">
+          <h2 className="mb-6 text-xl font-extrabold text-ink">Histórico de envios</h2>
           
           <div className="flex-1 overflow-y-auto max-h-[500px] pr-2 space-y-4">
             {notifications.length === 0 ? (
               <p className="text-text-mute text-center mt-10">Nenhuma notificação enviada ainda.</p>
             ) : (
               notifications.map((notification) => (
-                <div key={notification.id} className="bg-surface-hover border border-border/50 rounded-lg p-4 relative group">
+                <div key={notification.id} className="group relative rounded-[12px] border border-border bg-canvas-soft p-4">
                   <h4 className="font-bold text-text">{notification.title}</h4>
                   <p className="text-sm text-text-mute mt-1 line-clamp-2">{notification.message}</p>
+                  
+                  {notification.channels && notification.channels.length > 0 && (
+                    <div className="flex gap-2 mt-3 flex-wrap">
+                      {notification.channels.map(channel => (
+                        <span key={channel} className="text-[10px] font-bold uppercase tracking-wider bg-canvas-alt text-text-mute px-2 py-0.5 rounded-full">
+                          {channel === 'platform' ? 'Plataforma' : channel}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex gap-2 mt-3 text-xs">
-                    <span className="bg-secondary text-text px-2 py-1 rounded-md font-medium">
-                      Alvo: {notification.targetAudience === 'all' ? 'Todos' : notification.targetAudience === 'course' ? 'Curso' : 'Usuário'}
+                    <StatusBadge tone="primary">
+                      {notification.targetAudience === 'all' && 'Todos'}
+                      {notification.targetAudience === 'course' && 'Curso'}
+                      {notification.targetAudience === 'user' && 'Usuário'}
+                      {notification.targetAudience === 'inactive_7d' && 'Ausentes 7d'}
+                      {notification.targetAudience === 'inactive_30d' && 'Ausentes 30d'}
+                      {notification.targetAudience === 'new_users' && 'Novos Alunos'}
+                      {notification.targetAudience === 'course_completed' && 'Concluiu Curso'}
+                      {notification.targetAudience === 'course_abandoned' && 'Abandonou Curso'}
                       {notification.targetId ? ` (${notification.targetId})` : ''}
-                    </span>
-                    <span className="bg-surface-card text-text-mute px-2 py-1 rounded-md border border-border/50">
-                      Lida por: {notification.read ? "1" : "0"} alunos (mock)
-                    </span>
+                    </StatusBadge>
+                    <StatusBadge>Lida por {notification.read ? "1" : "0"} alunos</StatusBadge>
                   </div>
+                  
+                  {notification.stats && (
+                    <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border/50 text-xs text-text-mute">
+                      <div className="flex items-center gap-1.5" title="Visualizações">
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>{notification.stats.views}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5" title="Aberturas">
+                        <MailOpen className="w-3.5 h-3.5" />
+                        <span>{notification.stats.opens}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5" title="Cliques">
+                        <MousePointerClick className="w-3.5 h-3.5" />
+                        <span>{notification.stats.clicks}</span>
+                      </div>
+                    </div>
+                  )}
 
                   <button
                     onClick={() => deleteNotification(notification.id)}
-                    className="absolute top-4 right-4 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity text-sm hover:underline"
+                    aria-label={`Excluir ${notification.title}`}
+                    className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-[9px] text-text-mute opacity-100 hover:bg-negative/10 hover:text-negative md:opacity-0 md:group-hover:opacity-100"
                   >
-                    Excluir
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               ))
@@ -152,6 +263,7 @@ export default function AdminNotificacoes() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

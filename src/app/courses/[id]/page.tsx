@@ -1,12 +1,11 @@
 import { MOCK_COURSE } from "@/lib/mockData";
-import Link from "next/link";
 import CourseOverviewClient from "@/components/classroom/CourseOverviewClient";
 
 export default async function CourseOverviewPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = await params;
+  const { id } = await params;
   
   // No mundo real, buscaríamos o curso pelo resolvedParams.id
-  const course = MOCK_COURSE;
+  const course = { ...MOCK_COURSE, id };
 
   // Cálculos de progresso
   const totalLessons = course.modules.reduce((acc, mod) => acc + mod.lessons.length, 0);
@@ -17,8 +16,8 @@ export default async function CourseOverviewPage({ params }: { params: Promise<{
   
   // Pegar a primeira aula não concluída, ou a primeira do curso se for novo
   let nextLesson = null;
-  for (const module of course.modules) {
-    const uncompletedLesson = module.lessons.find((l) => !l.isCompleted);
+  for (const courseModule of course.modules) {
+    const uncompletedLesson = courseModule.lessons.find((l) => !l.isCompleted);
     if (uncompletedLesson) {
       nextLesson = uncompletedLesson;
       break;

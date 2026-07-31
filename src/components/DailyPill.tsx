@@ -1,43 +1,75 @@
-import React from "react";
-import { Lightbulb, Target, Sparkles, ChevronRight } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { ArrowRight, CheckCircle2, Heart, Lightbulb, Target } from "lucide-react";
+import { toast } from "sonner";
 
 interface DailyPillProps {
   challenge?: string;
   title?: string;
+  initialLikes?: number;
 }
 
-export default function DailyPill({ 
-  title = "Pílula Diária de Micro-learning",
-  challenge = "Hoje, tente praticar a escuta ativa em sua próxima reunião, esperando 2 segundos antes de responder." 
+export default function DailyPill({
+  title = "Prática de hoje",
+  challenge = "Na sua próxima conversa, espere dois segundos antes de responder e confirme o que você entendeu.",
+  initialLikes = 128,
 }: DailyPillProps) {
-  return (
-    <div className="w-full px-4 md:px-8 mb-12 relative z-30">
-      <div className="max-w-4xl mx-auto">
-        <div className="group flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-surface-card/60 backdrop-blur-md border border-border/50 rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300">
-          
-          <div className="flex items-center gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
-              <Lightbulb className="w-5 h-5" />
-            </div>
-            
-            <div>
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <Target className="w-3.5 h-3.5 text-primary" />
-                <h3 className="text-[10px] md:text-xs font-bold text-primary tracking-widest uppercase">{title}</h3>
-              </div>
-              <p className="text-sm font-medium text-text-soft group-hover:text-text transition-colors">
-                "{challenge}"
-              </p>
-            </div>
-          </div>
+  const [accepted, setAccepted] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(initialLikes);
 
-          <button className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-primary bg-primary/5 hover:bg-primary/10 rounded-xl transition-colors ml-14 md:ml-0 whitespace-nowrap">
-            <span>Aceitar</span>
-            <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </button>
-          
+  const handleLike = () => {
+    if (!liked) {
+      setLiked(true);
+      setLikesCount((prev) => prev + 1);
+      toast.success("Você curtiu a pílula de hoje!");
+    } else {
+      setLiked(false);
+      setLikesCount((prev) => prev - 1);
+    }
+  };
+
+  return (
+    <article className={`editorial-card flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6 transition-all ${accepted ? "border-positive/25 bg-positive/[0.035]" : ""}`}>
+      <div className="flex min-w-0 items-start gap-4">
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[15px] bg-accent-orange/12 text-accent-orange">
+          <Lightbulb className="h-5 w-5" />
+        </span>
+        <div>
+          <div className="flex items-center gap-2">
+            <Target className="h-3.5 w-3.5 text-primary" />
+            <h3 className="eyebrow">{title}</h3>
+          </div>
+          <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-body-text sm:text-base">{challenge}</p>
         </div>
       </div>
-    </div>
+      <div className="flex items-center gap-3 shrink-0">
+        <button
+          type="button"
+          aria-pressed={liked}
+          onClick={handleLike}
+          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-[12px] px-3.5 text-sm font-bold border transition-all ${
+            liked
+              ? "border-negative/30 bg-negative/10 text-negative"
+              : "border-border bg-surface text-text-mute hover:border-negative/30 hover:text-negative"
+          }`}
+          title={liked ? "Descurtir pílula" : "Curtir pílula"}
+        >
+          <Heart className={`h-4 w-4 transition-transform active:scale-125 ${liked ? "fill-negative text-negative" : ""}`} />
+          <span>{likesCount}</span>
+        </button>
+
+        <button
+          type="button"
+          aria-pressed={accepted}
+          onClick={() => setAccepted((current) => !current)}
+          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-[12px] px-4 text-sm font-bold transition-all ${accepted ? "bg-positive text-white hover:bg-positive/90" : "bg-primary-pale text-primary-active hover:bg-primary hover:text-on-primary"}`}
+        >
+          {accepted ? <><CheckCircle2 className="h-4 w-4" /> Prática adicionada</> : <>Aceitar prática <ArrowRight className="h-4 w-4" /></>}
+        </button>
+      </div>
+    </article>
   );
 }
+

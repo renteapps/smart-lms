@@ -1,85 +1,37 @@
 import Link from "next/link";
-import { PlusCircle, Search, MoreVertical } from "lucide-react";
+import { BookOpen, MoreHorizontal, Plus, Search } from "lucide-react";
+import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 
-// Simulando dados que viriam do banco
 const mockCourses = [
-  { id: "1", title: "Inteligência Emocional no Trabalho", category: "Comportamental", lessons: 15, status: "Publicado" },
-  { id: "2", title: "Gestão de Tempo e Foco", category: "Produtividade", lessons: 12, status: "Publicado" },
-  { id: "3", title: "Liderança por Influência", category: "Liderança", lessons: 20, status: "Rascunho" },
-  { id: "4", title: "Feedback que Transforma", category: "Comunicação", lessons: 8, status: "Publicado" },
-  { id: "5", title: "Negociação Ganha-Ganha", category: "Habilidades", lessons: 10, status: "Rascunho" }
+  { id: "1", title: "Inteligência Emocional no Trabalho", category: "Comportamental", lessons: 15, status: "Publicado", updated: "Hoje, 09:42" },
+  { id: "2", title: "Gestão de Tempo e Foco", category: "Produtividade", lessons: 12, status: "Publicado", updated: "Ontem, 17:20" },
+  { id: "3", title: "Liderança por Influência", category: "Liderança", lessons: 20, status: "Rascunho", updated: "28 jul, 14:08" },
+  { id: "4", title: "Feedback que Transforma", category: "Comunicação", lessons: 8, status: "Publicado", updated: "26 jul, 11:35" },
+  { id: "5", title: "Negociação Ganha-Ganha", category: "Habilidades", lessons: 10, status: "Rascunho", updated: "24 jul, 16:02" },
 ];
 
 export default function AdminCursosList() {
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <h1 className="text-3xl font-display font-black text-primary">Cursos</h1>
-        <button className="bg-primary text-on-primary px-6 py-3 rounded-full font-semibold hover:bg-primary-active transition-all flex items-center gap-2 shadow-sm hover:shadow-md hover:-translate-y-0.5">
-          <PlusCircle className="w-5 h-5" />
-          <span>Novo Curso</span>
-        </button>
-      </div>
-      
-      <div className="bg-surface-card rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden border border-border/40">
-        <div className="p-6 border-b border-border/40 flex gap-4">
-          <div className="relative flex-1">
-            <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-text-mute" />
-            <input 
-              type="text" 
-              placeholder="Buscar curso..." 
-              className="w-full bg-canvas-soft border-transparent rounded-xl pl-12 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-surface transition-all"
-            />
-          </div>
+    <div className="space-y-7">
+      <PageHeader eyebrow="Conteúdo" title="Cursos" description="Crie, organize e acompanhe todo o catálogo de aprendizagem." actions={<Link href="/admin/cursos/novo" className="inline-flex min-h-11 items-center gap-2 rounded-[11px] bg-primary px-4 text-sm font-bold text-on-primary shadow-sm hover:bg-primary-active"><Plus className="h-4 w-4" /> Novo curso</Link>} />
+
+      <section className="editorial-card overflow-hidden">
+        <div className="flex flex-col gap-4 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <label className="relative block w-full sm:max-w-md"><span className="sr-only">Buscar curso</span><Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-mute" /><input placeholder="Buscar curso..." className="h-11 w-full rounded-[11px] border border-border bg-canvas-soft pl-10 pr-4 text-sm focus:border-primary focus:bg-surface focus:outline-none" /></label>
+          <div className="flex items-center gap-2 text-xs font-semibold text-text-mute"><StatusBadge tone="positive">24 publicados</StatusBadge><StatusBadge tone="warning">3 rascunhos</StatusBadge></div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[700px]">
-            <thead>
-              <tr className="border-b border-border/40 bg-surface-hover/50">
-                <th className="py-4 px-6 font-semibold text-text-soft text-sm uppercase tracking-wider">Título</th>
-                <th className="py-4 px-6 font-semibold text-text-soft text-sm uppercase tracking-wider">Categoria</th>
-                <th className="py-4 px-6 font-semibold text-text-soft text-sm uppercase tracking-wider">Aulas</th>
-                <th className="py-4 px-6 font-semibold text-text-soft text-sm uppercase tracking-wider">Status</th>
-                <th className="py-4 px-6 font-semibold text-text-soft text-sm uppercase tracking-wider text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockCourses.map((course, index) => (
-                <tr 
-                  key={course.id} 
-                  className="border-b border-border/40 hover:bg-surface-hover transition-colors group"
-                >
-                  <td className="py-4 px-6 font-medium">
-                    <Link href={`/admin/cursos/${course.id}`} className="hover:text-primary transition-colors text-ink-deep font-semibold">
-                      {course.title}
-                    </Link>
-                  </td>
-                  <td className="py-4 px-6 text-text-soft">{course.category}</td>
-                  <td className="py-4 px-6 text-text-soft">{course.lessons} aulas</td>
-                  <td className="py-4 px-6">
-                    <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-                      course.status === 'Publicado' 
-                        ? 'bg-positive/10 text-positive' 
-                        : 'bg-warning/10 text-yellow-600'
-                    }`}>
-                      {course.status}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 text-right">
-                    <Link 
-                      href={`/admin/cursos/${course.id}`} 
-                      className="text-sm font-medium text-primary hover:bg-primary/10 px-4 py-2 bg-primary/5 rounded-lg opacity-100 md:opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
-                    >
-                      Gerenciar
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full text-left">
+            <thead><tr className="bg-canvas-soft/75 text-[11px] font-bold uppercase tracking-[0.09em] text-text-mute"><th className="px-5 py-3.5">Curso</th><th className="px-5 py-3.5">Categoria</th><th className="px-5 py-3.5">Aulas</th><th className="px-5 py-3.5">Status</th><th className="px-5 py-3.5">Atualização</th><th className="w-16 px-5 py-3.5"><span className="sr-only">Ações</span></th></tr></thead>
+            <tbody>{mockCourses.map((course) => <tr key={course.id} className="border-t border-border/70 hover:bg-primary-pale/20"><td className="px-5 py-4"><Link href={`/admin/cursos/${course.id}`} className="flex items-center gap-3 font-bold text-ink hover:text-primary-active"><span className="grid h-9 w-9 place-items-center rounded-[11px] bg-primary-pale text-primary"><BookOpen className="h-4 w-4" /></span>{course.title}</Link></td><td className="px-5 py-4 text-sm text-text-soft">{course.category}</td><td className="px-5 py-4 text-sm font-semibold text-text-soft">{course.lessons}</td><td className="px-5 py-4"><StatusBadge tone={course.status === "Publicado" ? "positive" : "warning"}>{course.status}</StatusBadge></td><td className="px-5 py-4 text-xs font-medium text-text-mute">{course.updated}</td><td className="px-5 py-4"><Link href={`/admin/cursos/${course.id}`} aria-label={`Gerenciar ${course.title}`} className="grid h-10 w-10 place-items-center rounded-[10px] text-text-mute hover:bg-surface-hover hover:text-ink"><MoreHorizontal className="h-5 w-5" /></Link></td></tr>)}</tbody>
           </table>
         </div>
-      </div>
+
+        <div className="divide-y divide-border md:hidden">
+          {mockCourses.map((course) => <article key={course.id} className="p-4"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-primary-pale text-primary"><BookOpen className="h-4 w-4" /></span><div className="min-w-0 flex-1"><Link href={`/admin/cursos/${course.id}`} className="font-bold leading-5 text-ink">{course.title}</Link><p className="mt-1 text-xs text-text-mute">{course.category} · {course.lessons} aulas</p></div><StatusBadge tone={course.status === "Publicado" ? "positive" : "warning"}>{course.status}</StatusBadge></div><div className="mt-4 flex items-center justify-between"><span className="text-xs font-medium text-text-mute">Atualizado {course.updated.toLowerCase()}</span><Link href={`/admin/cursos/${course.id}`} className="min-h-10 rounded-[10px] bg-primary-pale px-3 py-2 text-sm font-bold text-primary-active">Gerenciar</Link></div></article>)}
+        </div>
+      </section>
     </div>
   );
 }

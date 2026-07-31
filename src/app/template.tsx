@@ -5,13 +5,13 @@ import { motion } from "framer-motion";
 export default function Template({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{
-        duration: 0.6,
-        ease: [0.25, 1, 0.5, 1], // Zen ease
+        duration: 0.18,
+        ease: [0.22, 1, 0.36, 1],
       }}
-      className="flex flex-col flex-grow w-full"
+      className="w-full"
     >
       {children}
     </motion.div>

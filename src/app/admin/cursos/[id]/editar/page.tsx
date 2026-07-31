@@ -10,7 +10,7 @@ export default function AdminCursoEditarPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-300 pb-16">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <header className="sticky top-[76px] z-10 -mx-3 flex flex-col gap-4 rounded-[10px] border border-border bg-bg/95 p-4 shadow-sm backdrop-blur-xl md:flex-row md:items-center md:justify-between">
         <div>
           <Link href={`/admin/cursos/${id}`} className="inline-flex items-center gap-2 text-text-soft hover:text-primary transition-colors text-sm font-medium mb-4">
             <ArrowLeft className="w-4 h-4" />

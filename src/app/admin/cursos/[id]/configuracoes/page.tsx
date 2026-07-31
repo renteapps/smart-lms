@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Settings, Shield, Award, MessageSquare, Clock, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Save, Shield, Award, MessageSquare, Clock, CheckCircle2 } from "lucide-react";
 
 export default function AdminCursoConfiguracoesPage() {
   const params = useParams();
@@ -57,7 +57,7 @@ export default function AdminCursoConfiguracoesPage() {
         </div>
       </div>
 
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <header className="sticky top-[76px] z-10 -mx-3 flex flex-col gap-4 rounded-[10px] border border-border bg-bg/95 p-4 shadow-sm backdrop-blur-xl md:flex-row md:items-center md:justify-between">
         <div>
           <Link href={`/admin/cursos/${id}`} className="inline-flex items-center gap-2 text-text-soft hover:text-primary transition-colors text-sm font-medium mb-4">
             <ArrowLeft className="w-4 h-4" />
@@ -183,7 +183,7 @@ export default function AdminCursoConfiguracoesPage() {
                 className="w-full bg-canvas-soft border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-ink"
                 placeholder="Ex: 365"
               />
-              <p className="text-xs text-text-mute mt-1.5">Deixe em branco ou '0' para acesso vitalício.</p>
+              <p className="text-xs text-text-mute mt-1.5">Deixe em branco ou use zero para acesso vitalício.</p>
             </div>
 
             <div>

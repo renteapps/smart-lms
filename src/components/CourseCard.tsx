@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
-import { PlayCircle } from "lucide-react";
+import { ArrowRight, Clock3, Layers3 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type CourseCardProps = {
   id?: string;
@@ -8,47 +10,81 @@ type CourseCardProps = {
   cover: string;
   progress?: number;
   href?: string;
+  description?: string;
+  duration?: string;
+  lessonCount?: number;
+  level?: "Essencial" | "Intermediário" | "Avançado";
+  className?: string;
+  eager?: boolean;
 };
 
-export default function CourseCard({ id, title, category, cover, progress, href }: CourseCardProps) {
+export default function CourseCard({
+  id,
+  title,
+  category,
+  cover,
+  progress,
+  href,
+  description,
+  duration,
+  lessonCount,
+  level,
+  className,
+  eager = false,
+}: CourseCardProps) {
   const linkUrl = href || (id ? `/courses/${id}` : "#");
 
   return (
-    <div role="button" className="group relative block w-48 md:w-64 shrink-0 transition-all duration-[var(--duration-md)] ease-[var(--ease-zen)] hover:scale-[1.03] hover:z-10 focus:outline-none">
-      <Link href={linkUrl} className="block">
-        <div className="flex flex-col bg-card text-card-foreground rounded-[var(--radius-lg)] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] overflow-hidden transition-shadow duration-[var(--duration-lg)] ease-[var(--ease-zen)] h-full border border-border/30">
-          
-          {/* Cover Image Area */}
-          <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
-            <div 
-              className="absolute inset-0 bg-cover bg-center transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-105"
-              style={{ backgroundImage: `url(${cover})` }}
-            ></div>
-            <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--duration-md)] ease-[var(--ease-zen)] bg-background/20 backdrop-blur-sm">
-              <PlayCircle className="w-12 h-12 text-primary drop-shadow-md" />
+    <Link
+      href={linkUrl}
+      className={cn("editorial-card editorial-card-interactive group flex h-full min-w-0 flex-col overflow-hidden", className)}
+    >
+      <div className="relative aspect-[16/10] overflow-hidden bg-canvas-soft">
+        <Image
+          src={cover}
+          alt={`Capa do curso ${title}`}
+          fill
+          loading={eager ? "eager" : "lazy"}
+          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+          className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.035]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink/45 via-transparent to-transparent" />
+        <span className="absolute left-4 top-4 rounded-full border border-white/50 bg-white/92 px-3 py-1 text-[11px] font-bold text-primary-active backdrop-blur-md">
+          {category}
+        </span>
+        {level && <span className="absolute bottom-4 left-4 rounded-full border border-white/25 bg-ink/72 px-3 py-1 text-[10px] font-bold text-white backdrop-blur-md">{level}</span>}
+      </div>
+
+      <div className="flex flex-1 flex-col p-5">
+        <h3 className="font-display text-lg font-extrabold leading-snug tracking-[-0.025em] text-ink">{title}</h3>
+        {description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-text-soft">{description}</p>}
+
+        {(duration || lessonCount) && (
+          <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-border/75 pt-4 text-xs font-semibold text-text-mute">
+            {duration && <span className="flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" />{duration}</span>}
+            {lessonCount !== undefined && <span className="flex items-center gap-1.5"><Layers3 className="h-3.5 w-3.5" />{lessonCount} aulas</span>}
+          </div>
+        )}
+
+        {progress !== undefined && (
+          <div className="mt-4">
+            <div className="mb-2 flex items-center justify-between text-xs font-bold">
+              <span className="text-text-soft">Seu progresso</span>
+              <span className="text-primary-active">{progress}%</span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-canvas-soft">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
             </div>
           </div>
+        )}
 
-          {/* Content Area */}
-          <div className="flex flex-col p-5 flex-grow">
-            <span className="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wider mb-2 block">
-              {category}
-            </span>
-            <h3 className="text-foreground font-bold text-sm md:text-base leading-tight mb-4 flex-grow">
-              {title}
-            </h3>
-            
-            {progress !== undefined && (
-              <div className="w-full bg-muted h-1.5 mt-auto rounded-full overflow-hidden">
-                <div 
-                  className="bg-primary h-full rounded-full transition-all duration-[var(--duration-lg)] ease-[var(--ease-zen)]" 
-                  style={{ width: `${progress}%` }}
-                ></div>
-              </div>
-            )}
-          </div>
+        <div className="mt-auto flex items-center justify-between pt-5 text-sm font-bold text-primary-active">
+          <span>{progress !== undefined ? "Continuar curso" : "Conhecer curso"}</span>
+          <span className="grid h-9 w-9 place-items-center rounded-[10px] bg-primary-pale transition-[background-color,color,transform] group-hover:translate-x-0.5 group-hover:bg-primary group-hover:text-on-primary">
+            <ArrowRight className="h-4 w-4" />
+          </span>
         </div>
-      </Link>
-    </div>
+      </div>
+    </Link>
   );
 }

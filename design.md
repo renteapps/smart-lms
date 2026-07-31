@@ -1,127 +1,162 @@
 ---
-version: "alpha"
-name: Smart LMS (Soft Skills)
-description: A design philosophy focused on focus, calmness, and inspiration for soft skills learning.
+version: "1.0"
+name: "Smart LMS — Editorial Humano"
+description: "Sistema visual para uma experiência de aprendizagem acolhedora, clara e orientada à prática."
+fonts:
+  display: "Manrope, sans-serif"
+  interface: "DM Sans, sans-serif"
 colors:
-  primary: "#2563EB"
-  primary-container: "#EFF6FF"
-  on-primary: "#FFFFFF"
-  secondary: "#64748B"
-  secondary-container: "#F8FAFC"
-  tertiary: "#93C5FD"
-  tertiary-container: "#E0F2FE"
-  background: "#FDFDFD"
+  background: "#F7F7F4"
   surface: "#FFFFFF"
-  on-surface: "#1E293B"
-  outline: "#E2E8F0"
-  error: "#EF4444"
-typography:
-  h1:
-    fontFamily: Inter, sans-serif
-    fontSize: 2.5rem
-    fontWeight: 700
-    lineHeight: 1.2
-  h2:
-    fontFamily: Inter, sans-serif
-    fontSize: 1.75rem
-    fontWeight: 600
-    lineHeight: 1.3
-  body-md:
-    fontFamily: Inter, sans-serif
-    fontSize: 1rem
-    fontWeight: 400
-    lineHeight: 1.6
-  label-caps:
-    fontFamily: Inter, sans-serif
-    fontSize: 0.75rem
-    fontWeight: 600
-    letterSpacing: 0.05em
-rounded:
-  sm: 8px
-  md: 16px
-  lg: 24px
-  full: 9999px
+  surfaceSoft: "#F0F1EE"
+  ink: "#172033"
+  inkSoft: "#667085"
+  primary: "#3157B7"
+  primaryStrong: "#244596"
+  primarySoft: "#E9EEFB"
+  terracotta: "#C97957"
+  sage: "#73947F"
+  border: "#E1E4E8"
+  positive: "#327A55"
+  warning: "#9A6700"
+  negative: "#B5473C"
+radii:
+  control: "8px"
+  card: "10px"
+  feature: "14px"
+  pill: "999px"
 spacing:
-  xs: 4px
-  sm: 8px
-  md: 16px
-  lg: 32px
-  xl: 64px
+  scale: [4, 8, 12, 16, 24, 32, 48, 64, 96]
 motion:
-  duration-sm: 200ms
-  duration-md: 400ms
-  duration-lg: 800ms
-  easing-zen: "cubic-bezier(0.25, 1, 0.5, 1)"
-components:
-  button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
-    rounded: "{rounded.full}"
-    padding: "{spacing.md}"
-    typography: "{typography.body-md}"
-    transition: "all {motion.duration-md} {motion.easing-zen}"
-  button-primary-hover:
-    backgroundColor: "#1D4ED8"
-  card:
-    backgroundColor: "{colors.surface}"
-    rounded: "{rounded.lg}"
-    padding: "{spacing.lg}"
-    transition: "all {motion.duration-md} {motion.easing-zen}"
+  fast: "160ms"
+  standard: "240ms"
+  slow: "360ms"
+  easing: "cubic-bezier(0.22, 1, 0.36, 1)"
 ---
 
-## Overview
+# Smart LMS — sistema de design
 
-A filosofia de design do nosso LMS é centrada no desenvolvimento humano, criando um ambiente digital que promova o foco, a calma e a inspiração — elementos essenciais para o aprendizado de *soft skills*. A interface reduz o ruído visual, prioriza o respiro (whitespace) e evoca uma estética *premium* através de imagens bonitas, detalhes sutis e gradientes orgânicos.
+## 1. Princípio central
 
-## Colors
+O Smart LMS ajuda pessoas a transformar conhecimento em prática. A interface deve parecer humana, editorial e confiante: acolhedora o bastante para reduzir a ansiedade de aprender e clara o bastante para indicar sempre o próximo passo.
 
-A paleta é ancorada em tons de azul que transmitem serenidade, estabilidade e inteligência, equilibrados com tons neutros calmos para evitar fadiga visual e apoiar a leitura.
+O produto tem duas cadências complementares:
 
-- **Primary ({colors.primary}):** O azul principal. Usado em CTAs, links principais e elementos que requerem foco e atenção.
-- **Secondary ({colors.secondary}):** Cinza azulado (slate). Utilizado em textos secundários, metadados e ícones de suporte para manter a calma na visão.
-- **Background ({colors.background}):** Um off-white leve e sutil, mais amigável que o branco puro, formando a base da aplicação.
-- **Text ({colors.on-surface}):** Chumbo escuro de altíssimo contraste, garantindo legibilidade sem o peso visual de um preto sólido.
-- **Gradients (Degradês):** O design faz uso intencional de gradientes fluidos e etéreos (como a transição sutil entre azuis claros e lavanda `{colors.tertiary-container}`) em fundos e heros, trazendo dinamismo moderno sem agressividade.
+- **Estudante:** narrativa, inspiração, progresso e foco. Usa fotografia humana, respiro e chamadas de ação muito claras.
+- **Admin:** precisão, contexto e eficiência. Compartilha a marca, mas usa maior densidade, navegação persistente e padrões operacionais previsíveis.
 
-## Typography
+## 2. Personalidade
 
-Utilizamos tipografia sem serifa (Inter), limpa e legível. Uma plataforma de aprendizado exige uma experiência editorial perfeita, com foco na leitura contínua.
+- **Humana:** linguagem direta, fotografias de colaboração real e mensagens que reconhecem esforço.
+- **Editorial:** hierarquia forte, títulos expressivos, composições assimétricas controladas e leitura confortável.
+- **Premium:** acabamento cuidadoso, paleta contida, superfícies táteis e movimentos discretos.
+- **Prática:** cada tela responde “onde estou?”, “o que mudou?” e “qual é a próxima ação?”.
 
-- Textos de conteúdo usam uma altura de linha (`lineHeight: 1.6`) confortável e agradável para longas sessões de leitura.
-- O contraste atende aos padrões de acessibilidade visual mais exigentes.
+Evitar estética de streaming, excesso de carrosséis, gradientes elétricos, glassmorphism gratuito, sombras pesadas e grandes áreas vazias sem função.
 
-## Layout & Spacing
+## 3. Cores
 
-O espaçamento em branco (whitespace) é uma ferramenta de design, não apenas uma consequência. Usamos múltiplos generosos como `{spacing.xl}` e `{spacing.lg}` para separar conceitos, agrupar informações logicamente e evitar sobrecarga cognitiva. Menos itens comprimidos significam maior capacidade de concentração e foco no aprendizado.
+### Base
 
-## Elevation & Depth
+- `background #F7F7F4`: canvas quente do tema claro.
+- `surface #FFFFFF`: cards, menus, modais e áreas elevadas.
+- `surface-soft #F0F1EE`: filtros, agrupamentos e estados neutros.
+- `ink #172033`: texto principal e títulos.
+- `ink-soft #667085`: descrições e metadados.
+- `border #E1E4E8`: separadores discretos.
 
-Evitamos delimitações duras, contornos agressivos e caixas rígidas. Cards e áreas de foco são separados usando sombras extremamente suaves, largas e difusas, fazendo os elementos flutuarem sobre o fundo. Elementos de *glassmorphism* (desfoque de fundo) podem ser aplicados em cabeçalhos ou painéis sobrepostos (modais).
+### Marca e acentos
 
-## Shapes
+- `primary #3157B7`: ações principais, links, progresso e navegação ativa.
+- `primary-strong #244596`: hover/pressed e texto azul sobre fundo claro.
+- `primary-soft #E9EEFB`: fundos de seleção e destaque.
+- `terracotta #C97957`: calor humano, destaques editoriais e ilustrações; nunca substituir o CTA primário.
+- `sage #73947F`: equilíbrio, conclusão e bem-estar.
 
-O arredondamento é usado consistentemente (`{rounded.md}` a `{rounded.lg}`) em bordas de imagens, cartões e botões (podendo chegar a `{rounded.full}`). Superfícies curvas transmitem uma sensação de amigabilidade, empatia e humanização — pilares de uma plataforma de *soft skills*.
+Estados positivos, de atenção e negativos sempre combinam cor, ícone e texto. Nunca comunicar estado apenas por cor.
 
-## Motion
+## 4. Tipografia
 
-A animação desempenha um papel crítico na criação de uma atmosfera "zen" e focada. As transições nunca devem ser abruptas ou instantâneas.
+- **Manrope:** marca, títulos de página, números de destaque e chamadas editoriais.
+- **DM Sans:** navegação, texto, formulários, tabelas e controles.
+- Títulos usam entre `600–800`; corpo usa `400–600`.
+- Corpo padrão: `16px / 1.6`. Texto auxiliar nunca menor que `12px / 1.45`.
+- Linhas editoriais devem permanecer entre 55 e 75 caracteres.
+- Evitar caixa-alta em frases; reservar tracking ampliado para eyebrow e metadados curtos.
 
-- **Aparição Suave (Fade In):** Os elementos devem entrar na tela através de *fades* lentos e leves deslocamentos de baixo para cima (efeito de revelação suave).
-- **Sequenciamento (Staggering):** Listas, cartões e blocos de texto não devem aparecer de uma única vez. Um carregamento sequenciado com pequenos atrasos (delays de 100ms a 200ms) guia o olho do usuário e transmite uma sensação de tranquilidade, ordem e controle.
-- **Elegância (Easing):** As curvas de animação (`{motion.easing-zen}`) usam acelerações e desacelerações muito suaves.
-- **Micro-interações:** Efeitos de *hover* em botões e cartões levam ligeiramente mais tempo (`{motion.duration-md}`) para serem completados, reforçando um ambiente relaxante e altamente polido.
+## 5. Layout, densidade e responsividade
 
-## Do's and Don'ts
+- Grid do estudante: máximo de `1280px`, margens de `16/24/40px` e seções de `64–96px`.
+- Grid do admin: máximo de `1440px`, margens de `20/32px` e seções de `24–40px`.
+- Sidebar admin: `272px` expandida e `80px` recolhida.
+- Breakpoints de validação: `390`, `768`, `1280` e `1440px`.
+- Controles clicáveis têm pelo menos `44×44px` em telas de toque.
+- Tabelas administrativas viram cards abaixo de `768px`; não depender de rolagem horizontal para tarefas centrais.
 
-- **Do:** Escolha fotografias bonitas e inspiradoras que mostrem conexões, liderança e comunicação. A estética Premium é essencial.
-- **Do:** Mantenha a interface minimalista. Apenas as informações estritamente necessárias devem competir pela atenção do usuário.
-- **Don't:** Não use cores excessivamente vibrantes, agressivas ou de alerta (ex: neon, vermelhos), a menos que para feedback crítico do sistema.
-- **Don't:** Não encha as telas com linhas separadoras fortes; use espaçamento em branco ou leves diferenças de *background* para agrupar conteúdos.
+## 6. Superfícies e formas
 
-## Setup & Initialization
+- Controles: raio de `8px`; cards: `10px`; áreas de destaque: no máximo `14px`. Pills (`999px`) aparecem somente em filtros, status e ações compactas.
+- Superfícies grandes devem parecer arquitetônicas e precisas: quanto maior o painel, menor deve ser a sensação de “cápsula”. Evitar cantos acima de `14px` em cards, modais, imagens e blocos editoriais.
+- Cards padrão usam borda de 1px e sombra curta. Sombra grande é reservada a modais e elementos flutuantes.
+- Não elevar todos os elementos: profundidade existe para indicar hierarquia, não decoração.
+- Fotografias usam proporções consistentes, `object-fit: cover`, overlay azul-marinho discreto e foco em pessoas praticando colaboração, comunicação e liderança.
 
-Para iniciar o projeto e configurar os componentes de UI base, utilize o seguinte comando:
+## 7. Componentes
 
-```bash
-pnpm dlx shadcn@latest init --preset b2cgo7C9ha --template next
-```
+### Ações
+
+- Um CTA primário por região visual.
+- Botão primário azul; secundário branco com borda; ghost para ações de baixa prioridade; destructive sempre rotulado.
+- Estados `hover`, `focus-visible`, `active`, `disabled` e `loading` são obrigatórios.
+
+### Navegação
+
+- Estudante: header fixo, item ativo evidente e menu móvel completo. Busca, notificações e conta permanecem acessíveis.
+- Sala de aula: shell próprio, sidebar recolhível e drawer móvel. Sem footer ou assistente flutuante.
+- Admin: sidebar agrupada, item ativo, breadcrumbs, busca e conta. Navegação não deve competir com o conteúdo.
+
+### Conteúdo
+
+- `PageHeader` contém eyebrow opcional, título, descrição e ações.
+- Cards de curso priorizam imagem, título, objetivo, duração e progresso.
+- Cards de aula priorizam continuidade: status, tempo e ação.
+- Tabelas têm cabeçalho persistente quando necessário, linhas com hover discreto, ações visíveis e versão em cards no mobile.
+- Formulários agrupam campos por intenção e usam barra de salvamento fixa em editores longos.
+
+### Onboarding
+
+- A troca de pergunta usa deslocamento curto, opacidade e leve desfoque direcional; as opções entram em sequência, sem saltos ou escalas excessivas.
+- Cards de resposta usam numeração, estado selecionado inequívoco e feedback de elevação de até `3px`.
+- O visual “Bolhas dinâmicas” é uma representação direta das opções do admin: uma opção gera exatamente uma bolha.
+- Bolhas não criam sub-bolhas, não se sobrepõem e não escondem ações. Ao selecionar, a bolha cresce cerca de `24px` em tamanho real e redistribui as vizinhas com uma mola compartilhada; o movimento ambiente é lento e interrompido por `prefers-reduced-motion`.
+- Cada bolha é um botão real com `aria-pressed`, foco visível e rótulo legível; seleção nunca depende apenas de cor.
+
+## 8. Motion
+
+- `160ms`: hover, foco e feedback imediato.
+- `240ms`: menus, tabs, acordeões e drawers.
+- `360ms`: entrada de seções ou mudança de contexto.
+- Animar apenas `opacity`, `transform`, cores e sombras necessárias. Nunca usar `transition: all`.
+- A interface deve funcionar integralmente com `prefers-reduced-motion: reduce`; nesse modo, remover deslocamentos, escalas e animações contínuas.
+
+## 9. Acessibilidade
+
+- Contraste mínimo WCAG AA para texto e controles.
+- Foco visível com anel azul e offset suficiente.
+- Hierarquia semântica de títulos sem saltos.
+- Ícones decorativos usam `aria-hidden`; botões de ícone têm nome acessível.
+- Imagens relevantes têm texto alternativo; imagens decorativas usam `alt=""`.
+- Menus, tabs, modais, players e formulários devem ser operáveis por teclado.
+
+## 10. Tema escuro
+
+O tema claro é a experiência principal desta versão. Tokens escuros continuam definidos e coerentes para compatibilidade, mas não há alternância exposta ao usuário nesta rodada. Nenhuma tela deve conter fundos escuros hardcoded fora de mídia, player de vídeo ou preview deliberado.
+
+## 11. Checklist de aceite visual
+
+- A próxima ação é identificável em até três segundos.
+- Navegação ativa e contexto atual estão visíveis.
+- Nenhum elemento fixo cobre ação ou conteúdo importante.
+- Desktop e mobile preservam a mesma ordem de prioridade.
+- Estados vazio, carregando, erro, sucesso e desabilitado pertencem ao mesmo sistema.
+- `design.md`, tokens CSS e componentes usam os mesmos nomes e valores.

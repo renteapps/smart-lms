@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
+import { PageHeader } from "@/components/ui/editorial";
 
 type Banner = {
   id: string;
@@ -100,8 +102,8 @@ export default function AdminHome() {
   };
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out pb-20">
-      <h1 className="text-3xl font-display font-black text-primary mb-8">Editar Home Page</h1>
+    <div className="space-y-7 pb-20">
+      <PageHeader eyebrow="Plataforma" title="Editar Home Page" description="Organize destaques e coleções que aparecem para os estudantes." />
       
       <div className="grid gap-6">
         {/* Carrossel */}
@@ -142,8 +144,8 @@ export default function AdminHome() {
             {banners.map((banner) => (
               <div key={banner.id} className="bg-canvas-soft rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-border/40">
                 <div className="flex items-center gap-4">
-                  <div className="w-24 h-14 bg-bg rounded-lg overflow-hidden shadow-sm">
-                    <img src={banner.image} className="w-full h-full object-cover" alt={banner.title} />
+                  <div className="relative h-14 w-24 overflow-hidden rounded-lg bg-bg shadow-sm">
+                    <Image src={banner.image} fill sizes="96px" className="object-cover" alt={banner.title} />
                   </div>
                   <div>
                     <p className="font-semibold text-ink-deep">{banner.title}</p>

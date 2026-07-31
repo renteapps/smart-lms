@@ -8,9 +8,9 @@ export default function CourseLayout({
 }) {
   return (
     <ZenModeProvider>
-      <div className="flex h-screen overflow-hidden bg-background">
+      <div className="min-h-dvh bg-bg lg:flex lg:h-screen lg:overflow-hidden">
         <CourseSidebar />
-        <main className="flex-1 h-full overflow-y-auto">
+        <main className="min-h-dvh flex-1 pt-16 lg:h-full lg:overflow-y-auto lg:pt-0">
           {children}
         </main>
       </div>

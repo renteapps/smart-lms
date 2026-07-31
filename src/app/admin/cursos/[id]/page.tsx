@@ -14,32 +14,33 @@ export default function AdminCursoDashboard() {
       description: "Edite informações, capas e categorias",
       icon: Edit3,
       href: `/admin/cursos/${id}/editar`,
-      color: "bg-blue-600"
+      color: "bg-primary"
     },
     {
       title: "Módulos",
       description: "Adicione ou edite aulas e módulos",
       icon: List,
       href: `/admin/cursos/${id}/modulos`,
-      color: "bg-emerald-600"
+      color: "bg-positive"
     },
     {
       title: "Configurações",
       description: "Ajustes gerais de exibição do curso",
       icon: Settings,
       href: `/admin/cursos/${id}/configuracoes`,
-      color: "bg-orange-600"
+      color: "bg-accent-orange"
     }
   ];
 
   return (
-    <div>
+    <div className="space-y-7">
       <div className="mb-6">
         <Link href="/admin/cursos" className="inline-flex items-center gap-2 text-text-soft hover:text-primary transition-colors text-sm font-medium mb-4">
           <ArrowLeft className="w-4 h-4" />
           Voltar para Lista
         </Link>
-        <h1 className="text-3xl font-display font-bold">Gerenciar Curso #{id}</h1>
+        <p className="eyebrow">Conteúdo</p>
+        <h1 className="mt-2 text-3xl font-extrabold">Gerenciar curso #{id}</h1>
         <p className="text-text-soft mt-1">Selecione uma área abaixo para gerenciar este curso.</p>
       </div>
       
@@ -50,12 +51,12 @@ export default function AdminCursoDashboard() {
             <Link 
               key={i} 
               href={card.href}
-              className="group block p-6 bg-surface-card rounded-2xl border border-border hover:border-primary transition-all hover:-translate-y-1 shadow-sm hover:shadow-md"
+              className="editorial-card editorial-card-interactive group block p-6"
             >
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white mb-4 ${card.color}`}>
                 <Icon className="w-6 h-6" />
               </div>
-              <h2 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">{card.title}</h2>
+              <h2 className="mb-2 text-xl font-extrabold group-hover:text-primary-active">{card.title}</h2>
               <p className="text-text-soft text-sm leading-relaxed">{card.description}</p>
             </Link>
           );

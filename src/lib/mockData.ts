@@ -9,7 +9,7 @@ export type ContentBlock = {
 export type Lesson = {
   id: string;
   title: string;
-  type: 'video' | 'text' | 'quiz';
+  type: 'video' | 'text' | 'quiz' | 'profile_test';
   videoUrl?: string;
   content: string;
   blocks?: ContentBlock[];
@@ -20,11 +20,18 @@ export type Lesson = {
   slug?: string;
   metaTitle?: string;
   metaDescription?: string;
+  profileTestId?: string;
+  profileTestConfig?: {
+    allowSkipIfCompleted?: boolean;
+    requireRetake?: boolean;
+  };
 };
 
 export type Module = {
   id: string;
   title: string;
+  description?: string;
+  coverUrl?: string;
   order: number;
   lessons: Lesson[];
 };
@@ -44,6 +51,8 @@ export const MOCK_COURSE: Course = {
     {
       id: "m1",
       title: "Módulo 1: Introdução ao React",
+      description: "Fundamentos essenciais do React, configuração de ambiente e diagnósticos iniciais.",
+      coverUrl: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?q=80&w=1600&auto=format&fit=crop",
       order: 1,
       lessons: [
         {
@@ -70,12 +79,28 @@ export const MOCK_COURSE: Course = {
           attachments: [],
           durationInMinutes: 12,
           isCompleted: false
+        },
+        {
+          id: "l-profile-1",
+          title: "Diagnóstico: Descubra seu Perfil de Liderança",
+          type: "profile_test",
+          content: "Avalie suas competências comportamentais antes de avançar para a próxima fase.",
+          attachments: [],
+          durationInMinutes: 10,
+          isCompleted: false,
+          profileTestId: "test-1",
+          profileTestConfig: {
+            allowSkipIfCompleted: true,
+            requireRetake: false
+          }
         }
       ]
     },
     {
       id: "m2",
       title: "Módulo 2: Componentes e Hooks",
+      description: "Aprofundando no desenvolvimento de componentes reutilizáveis e gerenciamento de estado.",
+      coverUrl: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=1600&auto=format&fit=crop",
       order: 2,
       lessons: [
         {

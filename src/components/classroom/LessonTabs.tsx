@@ -9,6 +9,13 @@ interface LessonTabsProps {
   lesson: Lesson;
 }
 
+type StoredNote = {
+  lessonId: string;
+  lessonTitle: string;
+  content: string;
+  updatedAt: string;
+};
+
 export default function LessonTabs({ lesson }: LessonTabsProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "materials" | "comments" | "notes">("overview");
   const [note, setNote] = useState("");
@@ -16,12 +23,10 @@ export default function LessonTabs({ lesson }: LessonTabsProps) {
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
-    const savedNote = localStorage.getItem(`smartlms_note_${lesson.id}`);
-    if (savedNote) {
-      setNote(savedNote);
-    } else {
-      setNote("");
-    }
+    const frame = requestAnimationFrame(() => {
+      setNote(localStorage.getItem(`smartlms_note_${lesson.id}`) || "");
+    });
+    return () => cancelAnimationFrame(frame);
   }, [lesson.id]);
 
   const handleSaveNote = () => {
@@ -38,8 +43,9 @@ export default function LessonTabs({ lesson }: LessonTabsProps) {
     // Also update an array of all notes for the /notas page
     try {
       const allNotesStr = localStorage.getItem('smartlms_all_notes') || '[]';
-      const allNotes = JSON.parse(allNotesStr);
-      const existingNoteIndex = allNotes.findIndex((n: any) => n.lessonId === lesson.id);
+      const parsed: unknown = JSON.parse(allNotesStr);
+      const allNotes: StoredNote[] = Array.isArray(parsed) ? parsed as StoredNote[] : [];
+      const existingNoteIndex = allNotes.findIndex((storedNote) => storedNote.lessonId === lesson.id);
       
       if (existingNoteIndex >= 0) {
         allNotes[existingNoteIndex] = noteData;
@@ -60,36 +66,36 @@ export default function LessonTabs({ lesson }: LessonTabsProps) {
   };
 
   return (
-    <div className="mt-8">
-      <div className="flex items-center gap-6 border-b border-border">
+    <div className="mt-8 overflow-hidden rounded-[10px] border border-border bg-surface shadow-[var(--shadow-card)]">
+      <div className="flex items-center gap-1 overflow-x-auto border-b border-border px-3 hide-scrollbar sm:px-5">
         <button
           onClick={() => setActiveTab("overview")}
-          className={`pb-3 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === "overview" ? "border-primary text-primary" : "border-transparent text-text-soft hover:text-text"
+          className={`min-h-14 shrink-0 border-b-2 px-3 text-sm font-bold ${
+            activeTab === "overview" ? "border-primary text-primary-active" : "border-transparent text-text-soft hover:text-ink"
           }`}
         >
           Visão Geral
         </button>
         <button
           onClick={() => setActiveTab("materials")}
-          className={`pb-3 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === "materials" ? "border-primary text-primary" : "border-transparent text-text-soft hover:text-text"
+          className={`min-h-14 shrink-0 border-b-2 px-3 text-sm font-bold ${
+            activeTab === "materials" ? "border-primary text-primary-active" : "border-transparent text-text-soft hover:text-ink"
           }`}
         >
           Materiais
         </button>
         <button
           onClick={() => setActiveTab("comments")}
-          className={`pb-3 font-medium text-sm border-b-2 transition-colors ${
-            activeTab === "comments" ? "border-primary text-primary" : "border-transparent text-text-soft hover:text-text"
+          className={`min-h-14 shrink-0 border-b-2 px-3 text-sm font-bold ${
+            activeTab === "comments" ? "border-primary text-primary-active" : "border-transparent text-text-soft hover:text-ink"
           }`}
         >
           Comentários
         </button>
         <button
           onClick={() => setActiveTab("notes")}
-          className={`pb-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2 ${
-            activeTab === "notes" ? "border-emerald-500 text-emerald-500" : "border-transparent text-text-soft hover:text-text"
+          className={`flex min-h-14 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-bold ${
+            activeTab === "notes" ? "border-primary text-primary-active" : "border-transparent text-text-soft hover:text-ink"
           }`}
         >
           <StickyNote className="w-4 h-4" />
@@ -97,9 +103,9 @@ export default function LessonTabs({ lesson }: LessonTabsProps) {
         </button>
       </div>
 
-      <div className="py-6">
+      <div className="p-5 sm:p-7">
         {activeTab === "overview" && (
-          <div className="prose prose-invert max-w-none">
+          <div className="max-w-none">
             <h3 className="text-xl font-bold mb-4">Sobre esta aula</h3>
             {lesson.blocks && lesson.blocks.length > 0 ? (
               <BlockViewer blocks={lesson.blocks} />
@@ -120,7 +126,7 @@ export default function LessonTabs({ lesson }: LessonTabsProps) {
                   <li key={idx}>
                     <a
                       href={attachment.url}
-                      className="flex items-center justify-between p-4 bg-surface-card rounded-xl border border-border hover:border-primary transition-colors group"
+                      className="flex min-h-16 items-center justify-between rounded-[13px] border border-border bg-canvas-soft p-4 hover:border-primary/40 hover:bg-primary-pale/30 group"
                     >
                       <div className="flex items-center gap-3">
                         <FileText className="w-5 h-5 text-text-soft group-hover:text-primary transition-colors" />
@@ -148,9 +154,9 @@ export default function LessonTabs({ lesson }: LessonTabsProps) {
               <div className="flex-1 relative">
                 <textarea 
                   placeholder="Adicione um comentário..."
-                  className="w-full bg-surface-card border border-border rounded-xl p-4 pr-12 text-sm focus:outline-none focus:border-primary resize-none min-h-[100px]"
+                  className="min-h-[110px] w-full resize-none rounded-[13px] border border-border bg-canvas-soft p-4 pr-12 text-sm focus:border-primary focus:bg-surface focus:outline-none"
                 ></textarea>
-                <button className="absolute bottom-4 right-4 p-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors">
+                <button aria-label="Enviar comentário" className="absolute bottom-4 right-4 grid h-10 w-10 place-items-center rounded-[11px] bg-primary text-on-primary hover:bg-primary-active">
                   <Send className="w-4 h-4" />
                 </button>
               </div>
@@ -163,7 +169,7 @@ export default function LessonTabs({ lesson }: LessonTabsProps) {
                   <span className="font-bold text-text-soft">AB</span>
                 </div>
                 <div className="flex-1">
-                  <div className="bg-surface-card border border-border rounded-xl p-4">
+                  <div className="rounded-[13px] border border-border bg-canvas-soft p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-bold text-sm">Ana Beatriz</span>
                       <span className="text-xs text-text-soft">Há 2 horas</span>
@@ -197,10 +203,10 @@ export default function LessonTabs({ lesson }: LessonTabsProps) {
               <button
                 onClick={handleSaveNote}
                 disabled={isSaving}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`flex min-h-11 items-center gap-2 rounded-[11px] px-4 text-sm font-bold ${
                   saveSuccess 
                     ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" 
-                    : "bg-primary text-white hover:bg-primary-hover hover:shadow-md"
+                    : "bg-primary text-on-primary hover:bg-primary-active"
                 }`}
               >
                 {isSaving ? (
@@ -219,12 +225,7 @@ export default function LessonTabs({ lesson }: LessonTabsProps) {
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Escreva seus maiores insights sobre a aula aqui..."
-                className="w-full min-h-[300px] bg-surface-card border border-border rounded-xl p-6 text-text focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all resize-y leading-relaxed"
-                style={{
-                  backgroundImage: "linear-gradient(transparent, transparent 27px, rgba(255, 255, 255, 0.03) 28px)",
-                  backgroundSize: "100% 28px",
-                  lineHeight: "28px"
-                }}
+                className="min-h-[300px] w-full resize-y rounded-[14px] border border-border bg-canvas-soft p-6 leading-7 text-text focus:border-primary focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/15"
               />
             </div>
           </div>

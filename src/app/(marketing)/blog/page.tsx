@@ -22,20 +22,21 @@ export default function BlogIndexPage() {
   const remaining = articles.filter((a) => a.slug !== featured.slug);
 
   return (
-    <div className="pt-32 pb-24">
-      <div className="container mx-auto px-4 md:px-6">
-        <header className="mb-16">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6">
-            Insights para sua carreira
+    <div className="pb-24 pt-[76px]">
+      <div className="editorial-container">
+        <header className="mb-12 max-w-4xl pt-14 sm:pt-20">
+          <p className="eyebrow">Revista Smart LMS</p>
+          <h1 className="mt-3 text-4xl font-extrabold tracking-[-0.05em] text-ink md:text-5xl lg:text-6xl">
+            Reflexões para crescer com intenção
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl">
+          <p className="mt-5 max-w-2xl text-xl leading-8 text-text-soft">
             Aprofunde-se em temas como comunicação, liderança e inteligência emocional. 
             Leia no seu tempo ou ouça no trânsito.
           </p>
         </header>
 
         {/* Featured Section */}
-        <section className="mb-24">
+        <section className="mb-20">
           <FeaturedArticle article={featured} />
         </section>
 

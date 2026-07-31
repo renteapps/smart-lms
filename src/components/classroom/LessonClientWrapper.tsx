@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, CheckCircle, Star, Maximize, Minimize } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle, Star, Maximize, Minimize, Brain } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import VideoPlayer from "./VideoPlayer";
 import LessonTabs from "./LessonTabs";
+import ProfileTestRunner from "./ProfileTestRunner";
 import { Lesson, MOCK_COURSE } from "@/lib/mockData";
-import { useRouter } from "next/navigation";
+import { MOCK_PROFILE_TESTS } from "@/lib/mocks/profileTests";
 import { useZenMode } from "@/contexts/ZenModeContext";
 
 interface LessonClientWrapperProps {
@@ -15,12 +16,18 @@ interface LessonClientWrapperProps {
 }
 
 export default function LessonClientWrapper({ lesson, courseId }: LessonClientWrapperProps) {
-  const router = useRouter();
   // Using local state to simulate DB completion
   const [isCompleted, setIsCompleted] = useState(lesson.isCompleted || false);
   const [rating, setRating] = useState(lesson.userRating || 0);
   const [hoveredStar, setHoveredStar] = useState(0);
   const { isZenMode, toggleZenMode } = useZenMode();
+
+  const isProfileTest = lesson.type === 'profile_test';
+
+  // Find profile test if applicable
+  const targetProfileTest = isProfileTest
+    ? MOCK_PROFILE_TESTS.find((t) => t.id === lesson.profileTestId) || MOCK_PROFILE_TESTS[0]
+    : null;
 
   // Find previous and next lessons for navigation
   let prevLessonId: string | null = null;
@@ -36,89 +43,84 @@ export default function LessonClientWrapper({ lesson, courseId }: LessonClientWr
     nextLessonId = allLessons[currentIndex + 1].id;
   }
 
-  const handleMarkComplete = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const newStatus = !isCompleted;
+  const handleMarkComplete = (e?: React.MouseEvent<HTMLButtonElement>) => {
+    const newStatus = true;
     setIsCompleted(newStatus);
     
     // Trigger confetti if marking as completed
-    if (newStatus) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = (rect.left + rect.width / 2) / window.innerWidth;
-      const y = (rect.top + rect.height / 2) / window.innerHeight;
+    const rect = e?.currentTarget?.getBoundingClientRect();
+    const x = rect ? (rect.left + rect.width / 2) / window.innerWidth : 0.5;
+    const y = rect ? (rect.top + rect.height / 2) / window.innerHeight : 0.5;
 
-      import('canvas-confetti').then((module) => {
-        const confetti = module.default;
-        // Efeito de "explosão" dupla mais interessante partindo do botão
-        confetti({
-          particleCount: 80,
-          spread: 60,
-          origin: { x, y },
-          colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
-          startVelocity: 35,
-          gravity: 0.8,
-          ticks: 200
-        });
-        
-        setTimeout(() => {
-          confetti({
-            particleCount: 40,
-            spread: 80,
-            origin: { x, y },
-            colors: ['#fff', '#10b981', '#f59e0b'],
-            startVelocity: 25,
-            gravity: 1,
-            ticks: 150
-          });
-        }, 150);
+    import('canvas-confetti').then((module) => {
+      const confetti = module.default;
+      confetti({
+        particleCount: 80,
+        spread: 60,
+        origin: { x, y },
+        colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+        startVelocity: 35,
+        gravity: 0.8,
+        ticks: 200
       });
-    }
+    });
+  };
 
-    // In a real app, make a fetch/POST request to /api/progress
+  const handleToggleComplete = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!isCompleted) {
+      handleMarkComplete(e);
+    } else {
+      setIsCompleted(false);
+    }
   };
 
   const handleVideoEnded = () => {
     if (!isCompleted) {
       setIsCompleted(true);
-      // Auto advance optionally
-      if (nextLessonId) {
-        // setTimeout(() => router.push(`/courses/${courseId}/lessons/${nextLessonId}`), 2000);
-      }
     }
   };
 
   const handleRate = (value: number) => {
     setRating(value);
-    // In a real app, make a fetch/POST request to /api/rating
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-8">
+    <div className="mx-auto max-w-[1200px] p-4 sm:p-6 lg:p-10">
       {/* Header com Navegação Próxima/Anterior */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-text">
+      <div className="mb-7 grid gap-5 border-b border-border pb-6 xl:grid-cols-[1fr_auto] xl:items-end">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <p className="eyebrow">Etapa {currentIndex + 1} de {allLessons.length}</p>
+            {isProfileTest && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                <Brain className="w-3.5 h-3.5" /> Teste de Perfil
+              </span>
+            )}
+          </div>
+          <h1 className="text-2xl font-extrabold tracking-[-0.035em] text-ink md:text-3xl">
             {lesson.title}
           </h1>
-          <div className="flex items-center gap-4 mt-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-3">
             <button 
-              onClick={handleMarkComplete}
-              className={`flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full transition-colors border ${
+              onClick={handleToggleComplete}
+              className={`flex min-h-11 items-center gap-2 rounded-[11px] border px-3 text-sm font-bold transition-colors ${
                 isCompleted 
-                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
-                  : "bg-surface-card text-text-soft border-border hover:border-primary hover:text-primary"
+                  ? "border-positive/20 bg-positive/10 text-positive" 
+                  : "border-border bg-surface text-text-soft hover:border-primary/40 hover:text-primary-active"
               }`}
             >
               <CheckCircle className="w-4 h-4" />
-              {isCompleted ? "Aula Concluída" : "Marcar como Concluída"}
+              {isCompleted ? "Concluído" : "Marcar como Concluído"}
             </button>
-            <div className="flex items-center gap-1">
+
+            <div className="flex min-h-11 items-center gap-0.5 rounded-[11px] border border-border bg-surface px-2" aria-label="Avaliação da aula">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
                   onClick={() => handleRate(star)}
                   onMouseEnter={() => setHoveredStar(star)}
                   onMouseLeave={() => setHoveredStar(0)}
-                  className="p-1 focus:outline-none transition-transform hover:scale-110"
+                  className="grid h-8 w-8 place-items-center rounded-[8px] hover:bg-canvas-soft"
                   title={`Avaliar com ${star} estrela${star > 1 ? 's' : ''}`}
                 >
                   <Star 
@@ -131,9 +133,10 @@ export default function LessonClientWrapper({ lesson, courseId }: LessonClientWr
                 </button>
               ))}
             </div>
+
             <button
               onClick={toggleZenMode}
-              className="flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-full transition-colors border bg-surface-card text-text-soft border-border hover:border-primary hover:text-primary"
+              className="flex min-h-11 items-center gap-2 rounded-[11px] border border-border bg-surface px-3 text-sm font-bold text-text-soft hover:border-primary/40 hover:text-primary-active"
               title={isZenMode ? "Sair do Modo Foco" : "Modo Foco"}
             >
               {isZenMode ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
@@ -142,17 +145,17 @@ export default function LessonClientWrapper({ lesson, courseId }: LessonClientWr
           </div>
         </div>
         
-        <div className="flex items-center gap-3 self-start md:self-auto">
+        <div className="flex items-center gap-2 self-start xl:self-auto">
           {prevLessonId ? (
             <Link
               href={`/courses/${courseId}/lessons/${prevLessonId}`}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:border-primary text-text-soft hover:text-primary transition-colors text-sm font-medium"
+              className="flex min-h-11 items-center gap-2 rounded-[11px] border border-border bg-surface px-4 text-sm font-bold text-text-soft hover:border-primary/40 hover:text-primary-active"
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Anterior</span>
             </Link>
           ) : (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border opacity-50 cursor-not-allowed text-text-soft text-sm font-medium">
+            <div className="flex min-h-11 items-center gap-2 rounded-[11px] border border-border px-4 text-sm font-bold text-text-mute opacity-50">
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Anterior</span>
             </div>
@@ -161,22 +164,30 @@ export default function LessonClientWrapper({ lesson, courseId }: LessonClientWr
           {nextLessonId ? (
             <Link
               href={`/courses/${courseId}/lessons/${nextLessonId}`}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors text-sm font-medium shadow-sm hover:shadow-md hover:-translate-y-0.5"
+              className="flex min-h-11 items-center gap-2 rounded-[11px] bg-primary px-4 text-sm font-bold text-on-primary shadow-sm hover:bg-primary-active"
             >
-              <span className="hidden sm:inline">Próxima Aula</span>
+              <span className="hidden sm:inline">Próxima Etapa</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           ) : (
-             <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-card text-text-soft cursor-not-allowed transition-colors text-sm font-medium border border-border">
-              <span className="hidden sm:inline">Próxima Aula</span>
+             <div className="flex min-h-11 items-center gap-2 rounded-[11px] border border-border bg-surface text-sm font-bold text-text-mute opacity-50">
+              <span className="hidden sm:inline">Próxima Etapa</span>
               <ArrowRight className="w-4 h-4" />
             </div>
           )}
         </div>
       </div>
 
-      {/* Video Player */}
-      <VideoPlayer lesson={lesson} onEnded={handleVideoEnded} />
+      {/* Main Content: Profile Test Runner vs Video Player */}
+      {isProfileTest && targetProfileTest ? (
+        <ProfileTestRunner
+          test={targetProfileTest}
+          config={lesson.profileTestConfig}
+          onComplete={handleMarkComplete}
+        />
+      ) : (
+        <VideoPlayer lesson={lesson} onEnded={handleVideoEnded} />
+      )}
 
       {/* Tabs */}
       <LessonTabs lesson={lesson} />

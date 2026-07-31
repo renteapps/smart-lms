@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Search, MessageSquare, Filter, AlertTriangle, UserX, Trash2, Send, Globe, Lock } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Search, MessageSquare, Filter, UserX, Trash2, Send, Globe, Lock } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { StatusBadge } from "@/components/ui/editorial";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { toast } from "sonner";
 import {
@@ -75,6 +76,7 @@ export default function AdminComentarios() {
       message: `O professor respondeu seu comentário na aula: ${selectedComment.lessonName}.`,
       targetAudience: "user",
       targetId: selectedComment.studentEmail,
+      channels: ["platform"],
     });
     
     toast.success("Resposta enviada e aluno notificado!");
@@ -118,7 +120,7 @@ export default function AdminComentarios() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="border-b border-border/40 bg-surface-hover/50">
@@ -174,6 +176,16 @@ export default function AdminComentarios() {
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="divide-y divide-border md:hidden">
+          {mockComments.map((comment) => (
+            <article key={comment.id} className="p-4" onClick={() => setSelectedComment(comment)}>
+              <div className="flex items-start justify-between gap-3"><div><p className="font-bold text-ink">{comment.studentName}</p><p className="text-xs text-text-mute">{comment.studentEmail}</p></div><StatusBadge tone={comment.status === "Aguardando" ? "warning" : "positive"}>{comment.status}</StatusBadge></div>
+              <p className="mt-3 text-xs font-bold text-primary-active">{comment.courseName}</p><p className="mt-1 text-xs text-text-mute">{comment.lessonName}</p>
+              <p className="mt-3 line-clamp-3 text-sm leading-6 text-text-soft">{comment.content}</p>
+              <div className="mt-4 flex items-center justify-between"><span className="text-xs font-medium text-text-mute">{comment.timeAgo}</span><button onClick={(event) => { event.stopPropagation(); setSelectedComment(comment); }} className="min-h-10 rounded-[10px] bg-primary-pale px-3 text-sm font-bold text-primary-active">{comment.status === "Aguardando" ? "Responder" : "Ver"}</button></div>
+            </article>
+          ))}
         </div>
       </div>
 

@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { PlayArticleButton } from '@/components/audio/PlayArticleButton';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
+import type { ComponentPropsWithoutRef } from 'react';
 
 export async function generateStaticParams() {
   const slugs = getArticleSlugs();
@@ -32,21 +34,21 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
   // Define components for MDX replacement (could be expanded)
   const components = {
-    h2: (props: any) => <h2 className="text-3xl font-bold text-foreground mt-12 mb-6" {...props} />,
-    h3: (props: any) => <h3 className="text-2xl font-bold text-foreground mt-8 mb-4" {...props} />,
-    p: (props: any) => <p className="text-lg text-muted-foreground leading-relaxed mb-6" {...props} />,
-    ul: (props: any) => <ul className="list-disc list-inside text-lg text-muted-foreground mb-6 space-y-2" {...props} />,
-    li: (props: any) => <li className="text-muted-foreground" {...props} />,
-    blockquote: (props: any) => (
+    h2: (props: ComponentPropsWithoutRef<'h2'>) => <h2 className="mb-6 mt-12 text-3xl font-extrabold tracking-[-0.035em] text-ink" {...props} />,
+    h3: (props: ComponentPropsWithoutRef<'h3'>) => <h3 className="mb-4 mt-8 text-2xl font-extrabold text-ink" {...props} />,
+    p: (props: ComponentPropsWithoutRef<'p'>) => <p className="mb-6 text-lg leading-8 text-text-soft" {...props} />,
+    ul: (props: ComponentPropsWithoutRef<'ul'>) => <ul className="mb-6 list-inside list-disc space-y-2 text-lg text-text-soft" {...props} />,
+    li: (props: ComponentPropsWithoutRef<'li'>) => <li className="text-text-soft" {...props} />,
+    blockquote: (props: ComponentPropsWithoutRef<'blockquote'>) => (
       <blockquote className="border-l-4 border-primary pl-6 my-8 italic text-xl text-muted-foreground" {...props} />
     ),
-    strong: (props: any) => <strong className="font-bold text-primary" {...props} />,
+    strong: (props: ComponentPropsWithoutRef<'strong'>) => <strong className="font-bold text-ink" {...props} />,
   };
 
   return (
-    <article className="pt-32 pb-24">
+    <article className="pb-24 pt-[120px] sm:pt-36">
       {/* Header */}
-      <header className="container mx-auto px-4 md:px-6 mb-16 max-w-4xl">
+      <header className="editorial-container mb-14 max-w-4xl">
         <Link 
           href="/blog"
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors duration-[var(--duration-sm)] mb-8 font-medium"
@@ -65,7 +67,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           </span>
         </div>
 
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-8 leading-tight">
+        <h1 className="mb-8 text-4xl font-extrabold leading-[1.06] tracking-[-0.05em] text-ink md:text-5xl lg:text-6xl">
           {article.title}
         </h1>
 
@@ -105,19 +107,21 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       </header>
 
       {/* Cover Image */}
-      <div className="container mx-auto px-4 md:px-6 mb-16 max-w-5xl">
+      <div className="editorial-container mb-16 max-w-5xl">
         <div className="relative aspect-[21/9] rounded-[var(--radius-xl)] overflow-hidden bg-muted border border-border/30 shadow-sm">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img 
+          <Image 
             src={article.cover} 
             alt={article.title}
-            className="w-full h-full object-cover"
+            fill
+            priority
+            sizes="(max-width: 1024px) 100vw, 1024px"
+            className="object-cover"
           />
         </div>
       </div>
 
       {/* Content */}
-      <div className="container mx-auto px-4 md:px-6 max-w-3xl">
+      <div className="editorial-container max-w-3xl">
         {/* Placeholder para Player de Áudio - Fase 2 */}
         {(article.format === 'audio' || article.format === 'both') && article.audio && (
           <div className="p-8 rounded-[var(--radius-xl)] bg-card border border-border/30 shadow-sm mb-12 flex flex-col items-center justify-center text-center relative overflow-hidden">
@@ -132,7 +136,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           </div>
         )}
 
-        <div className="prose prose-invert prose-emerald max-w-none prose-p:text-muted-foreground prose-headings:text-foreground prose-strong:text-primary">
+        <div className="max-w-none">
           <MDXRemote source={article.body} components={components} />
         </div>
         
@@ -144,8 +148,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               Aprofunde seus conhecimentos e acelere sua carreira no curso completo relacionado a este tema.
             </p>
             <Link 
-              href={`/cursos/${article.relatedCourseSlug}`}
-              className={cn(buttonVariants({ size: "lg" }), "rounded-full font-bold px-8 py-6 text-base transition-all hover:scale-105")}
+              href="/cursos"
+              className={cn(buttonVariants({ size: "lg" }), "min-h-12 rounded-[13px] px-7 font-bold text-base")}
             >
               Conhecer o Curso
             </Link>

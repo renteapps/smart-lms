@@ -102,7 +102,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                   <label className="text-xs font-semibold text-text-mute mb-1 block">Papel (Role)</label>
                   <select 
                     value={question.role}
-                    onChange={(e) => onUpdate({ ...question, role: e.target.value as any })}
+                    onChange={(e) => onUpdate({ ...question, role: e.target.value as Question['role'] })}
                     className="bg-bg border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-primary"
                   >
                     <option value="perfil">Perfil</option>
@@ -117,7 +117,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                   <label className="text-xs font-semibold text-text-mute mb-1 block">Seleção</label>
                   <select 
                     value={question.type}
-                    onChange={(e) => onUpdate({ ...question, type: e.target.value as any })}
+                    onChange={(e) => onUpdate({ ...question, type: e.target.value as Question['type'] })}
                     className="bg-bg border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-primary"
                   >
                     <option value="single">Única</option>
@@ -129,13 +129,16 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                   <label className="text-xs font-semibold text-text-mute mb-1 block">Visual</label>
                   <select 
                     value={question.visualType || 'list'}
-                    onChange={(e) => onUpdate({ ...question, visualType: e.target.value as any })}
+                    onChange={(e) => onUpdate({ ...question, visualType: e.target.value as NonNullable<Question['visualType']> })}
                     className="bg-bg border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-primary"
                   >
                     <option value="list">Lista</option>
                     <option value="cards">Cards (Grid)</option>
-                    <option value="physics">Física (Bolas)</option>
+                    <option value="physics">Bolhas dinâmicas</option>
                   </select>
+                  {question.visualType === 'physics' && (
+                    <p className="mt-1.5 max-w-44 text-[11px] leading-4 text-text-mute">Uma opção por bolha, sem níveis secundários.</p>
+                  )}
                 </div>
               </div>
 

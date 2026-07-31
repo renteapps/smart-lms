@@ -3,8 +3,10 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare, X, Send, Sparkles, Bot } from "lucide-react";
+import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 
 export default function ChatSticker() {
+  const { state: { article } } = useAudioPlayer();
   const [isOpen, setIsOpen] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<{role: 'ai' | 'user', text: string}[]>([
@@ -42,7 +44,10 @@ export default function ChatSticker() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <div
+      className="fixed right-4 z-40 flex flex-col items-end transition-[bottom] duration-[var(--duration-md)] sm:right-6"
+      style={{ bottom: article ? "calc(5.75rem + env(safe-area-inset-bottom))" : "max(1rem, env(safe-area-inset-bottom))" }}
+    >
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -50,8 +55,8 @@ export default function ChatSticker() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }} // smooth spring-like ease
-            className="mb-4 bg-surface/95 backdrop-blur-xl rounded-3xl shadow-2xl shadow-primary/10 w-[340px] sm:w-[380px] overflow-hidden border border-border/50 flex flex-col"
-            style={{ height: '520px', maxHeight: 'calc(100vh - 120px)' }}
+            className="mb-3 flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[12px] border border-border/80 bg-surface/96 shadow-[var(--shadow-float)] backdrop-blur-xl sm:mb-4 sm:w-[380px]"
+            style={{ height: 'min(520px, calc(100vh - 100px))' }}
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-primary to-primary/80 p-5 flex items-center justify-between text-on-primary relative overflow-hidden">
@@ -72,6 +77,7 @@ export default function ChatSticker() {
               </div>
               <button 
                 onClick={() => setIsOpen(false)}
+                aria-label="Fechar assistente"
                 className="text-white/80 hover:text-white transition-all hover:bg-white/20 p-2 rounded-full relative z-10 hover:rotate-90 active:scale-90"
               >
                 <X size={20} />
@@ -168,7 +174,8 @@ export default function ChatSticker() {
         whileHover={{ scale: 1.05, y: -2 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 text-on-primary rounded-full shadow-xl shadow-primary/30 flex items-center justify-center transition-all ml-auto relative group border border-primary/20 backdrop-blur-sm"
+        aria-label={isOpen ? "Fechar assistente" : "Abrir assistente"}
+        className="relative ml-auto flex h-13 w-13 items-center justify-center rounded-[10px] border border-primary/20 bg-primary text-on-primary shadow-lg shadow-primary/20 transition-[background-color,box-shadow,transform] sm:h-14 sm:w-14"
       >
         <AnimatePresence mode="wait">
           {isOpen ? (
@@ -179,7 +186,7 @@ export default function ChatSticker() {
               exit={{ rotate: 90, opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <X size={28} />
+              <X size={24} />
             </motion.div>
           ) : (
             <motion.div
@@ -189,7 +196,7 @@ export default function ChatSticker() {
               exit={{ rotate: -90, opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <MessageSquare size={28} />
+              <MessageSquare size={23} />
             </motion.div>
           )}
         </AnimatePresence>
