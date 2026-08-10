@@ -6,48 +6,10 @@ import { CalendarDays, CheckCircle2, Clock3, LayoutList, Lock, Play, Route, Spar
 import LessonCard from "@/components/LessonCard";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { cn } from "@/lib/utils";
-
-type TrilhaItem = {
-  courseId: string;
-  lessonId: string;
-  title: string;
-  moduleName?: string;
-  duration?: string;
-  cover: string;
-  progress?: number;
-  locked?: boolean;
-  reason?: string;
-  scheduledDate?: string;
-};
-
-const day = 86_400_000;
-
-const MOCK_TRILHA: TrilhaItem[] = [
-  { courseId: "c1", lessonId: "l1", title: "Fundamentos da Liderança", moduleName: "Módulo 1 · A base", duration: "15 min", cover: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=85&w=1000&auto=format&fit=crop", reason: "Foco em liderança", scheduledDate: new Date().toISOString() },
-  { courseId: "c1", lessonId: "l2", title: "O papel do líder moderno", moduleName: "Módulo 1 · A base", duration: "22 min", cover: "https://images.unsplash.com/photo-1552664730-d307ca884978?q=85&w=1000&auto=format&fit=crop", reason: "Continuação", scheduledDate: new Date().toISOString() },
-  { courseId: "c2", lessonId: "l3", title: "Comunicação não violenta", moduleName: "Módulo 1 · Empatia", duration: "20 min", cover: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=85&w=1000&auto=format&fit=crop", reason: "Foco em empatia", scheduledDate: new Date(Date.now() + day).toISOString() },
-  { courseId: "c2", lessonId: "l4", title: "Como ouvir na essência", moduleName: "Módulo 1 · Empatia", duration: "18 min", cover: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=85&w=1000&auto=format&fit=crop", reason: "Prática de escuta", scheduledDate: new Date(Date.now() + day).toISOString() },
-  { courseId: "c2", lessonId: "l5", title: "Lidando com conflitos", moduleName: "Módulo 2 · Resolução", duration: "35 min", cover: "https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=85&w=1000&auto=format&fit=crop", reason: "Foco em mediação", scheduledDate: new Date(Date.now() + day).toISOString() },
-  { courseId: "c3", lessonId: "l6", title: "Gestão de tempo eficaz", moduleName: "Módulo 1 · Bases", duration: "10 min", cover: "https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=85&w=1000&auto=format&fit=crop", reason: "Próxima etapa", locked: true, scheduledDate: new Date(Date.now() + day * 2).toISOString() },
-  { courseId: "c3", lessonId: "l7", title: "Técnica Pomodoro 2.0", moduleName: "Módulo 1 · Bases", duration: "12 min", cover: "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?q=85&w=1000&auto=format&fit=crop", reason: "Prática recomendada", locked: true, scheduledDate: new Date(Date.now() + day * 2).toISOString() },
-];
-
-function normalizeSavedTrail(raw: string): TrilhaItem[] {
-  const parsed: unknown = JSON.parse(raw);
-  const items = Array.isArray(parsed)
-    ? parsed
-    : typeof parsed === "object" && parsed !== null && "items" in parsed && Array.isArray(parsed.items)
-      ? parsed.items
-      : [];
-
-  return (items as TrilhaItem[]).map((item, index) => ({
-    ...item,
-    scheduledDate: item.scheduledDate || new Date(Date.now() + index * day).toISOString(),
-  }));
-}
+import { createDemoTrail, normalizeSavedTrail, type UserTrailContent } from "@/lib/userTrail";
 
 export default function MinhaTrilhaPage() {
-  const [trilha, setTrilha] = useState<TrilhaItem[]>(MOCK_TRILHA);
+  const [trilha, setTrilha] = useState<UserTrailContent[]>(() => createDemoTrail());
   const [isLoaded, setIsLoaded] = useState(false);
   const [viewMode, setViewMode] = useState<"timeline" | "calendar">("timeline");
   const { addNotification } = useNotifications();
@@ -81,7 +43,7 @@ export default function MinhaTrilhaPage() {
     }
   }, [addNotification, isLoaded, trilha]);
 
-  const groupedByDate = useMemo(() => trilha.reduce<Record<string, TrilhaItem[]>>((groups, item) => {
+  const groupedByDate = useMemo(() => trilha.reduce<Record<string, UserTrailContent[]>>((groups, item) => {
     const label = item.scheduledDate
       ? new Date(item.scheduledDate).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })
       : "Sem data";

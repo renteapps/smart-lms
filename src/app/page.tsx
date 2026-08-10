@@ -20,6 +20,7 @@ import CtaBand from "@/components/CtaBand";
 import { HomeBlogSection } from "@/components/blog/HomeBlogSection";
 import { getAllArticles } from "@/lib/blog";
 import { CATALOG_COURSES, CONTINUE_LESSONS } from "@/lib/catalog";
+import WeeklyTrailSection from "@/components/WeeklyTrailSection";
 
 const week = [
   { day: "Seg", complete: true },
@@ -144,6 +145,8 @@ export default function Home() {
       <section className="editorial-container py-8 sm:py-10">
         <DailyPill />
       </section>
+
+      <WeeklyTrailSection />
 
       <section className="editorial-container py-10 sm:py-14">
         <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
