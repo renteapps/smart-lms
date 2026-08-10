@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Route, Save, PlayCircle, BarChart3, ListChecks, Plus } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Route, Save, PlayCircle, BarChart3, ListChecks, Plus, TriangleAlert } from 'lucide-react';
 import { Questionnaire, Question, ContentMapping } from '@/types/trilha';
 import { mockQuestionnaire } from '@/lib/mocks/trilhaMocks';
 import { QuestionEditor } from '@/components/admin/onboarding/QuestionEditor';
 import { ContentPickerModal } from '@/components/admin/onboarding/ContentPickerModal';
 import { TrailPreview } from '@/components/admin/onboarding/TrailPreview';
 import { toast } from 'sonner';
+import { loadQuestionnaire, saveQuestionnaire } from '@/lib/trailStorage';
+import { validateQuestionnaire } from '@/lib/matching';
 
 export default function AdminOnboardingPage() {
   const [questionnaire, setQuestionnaire] = useState<Questionnaire>(mockQuestionnaire);
@@ -16,6 +18,12 @@ export default function AdminOnboardingPage() {
   // Modal state
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [activePickerContext, setActivePickerContext] = useState<{ qIdx: number, oIdx: number } | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setQuestionnaire(loadQuestionnaire()));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   const handleUpdateQuestion = (index: number, updatedQuestion: Question) => {
     const newQuestions = [...questionnaire.questions];
@@ -34,10 +42,10 @@ export default function AdminOnboardingPage() {
         { label: 'Opção 1', tags: [], contentMappings: [] }
       ]
     };
-    setQuestionnaire({
-      ...questionnaire,
-      questions: [...questionnaire.questions, newQuestion]
-    });
+    const availabilityIndex = questionnaire.questions.findIndex((question) => question.type === 'availability');
+    const questions = [...questionnaire.questions];
+    questions.splice(availabilityIndex < 0 ? questions.length : availabilityIndex, 0, newQuestion);
+    setQuestionnaire({ ...questionnaire, questions });
   };
 
   const openPicker = (qIdx: number, oIdx: number) => {
@@ -70,8 +78,16 @@ export default function AdminOnboardingPage() {
   };
 
   const handleSave = () => {
-    // Aqui seria a chamada de API
-    toast.success('Questionário e trilhas salvas com sucesso!');
+    const errors = validateQuestionnaire(questionnaire);
+    setValidationErrors(errors);
+    if (errors.length > 0) {
+      toast.error('Revise as pendências antes de salvar.');
+      return;
+    }
+    const saved = { ...questionnaire, version: questionnaire.version + 1, status: 'published' as const };
+    saveQuestionnaire(saved);
+    setQuestionnaire(saved);
+    toast.success('Questionário publicado e conectado ao onboarding.');
   };
 
   return (
@@ -139,8 +155,14 @@ export default function AdminOnboardingPage() {
 
       {/* Tab Content */}
       <div className="min-h-[500px]">
+        {validationErrors.length > 0 && (
+          <div className="mb-5 rounded-[12px] border border-warning/30 bg-warning/8 p-4 text-sm text-warning">
+            <p className="flex items-center gap-2 font-bold"><TriangleAlert size={17} /> Pendências para publicar</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">{validationErrors.map((error) => <li key={error}>{error}</li>)}</ul>
+          </div>
+        )}
         {activeTab === 'questions' && (
-          <div className="flex flex-col gap-4 max-w-4xl">
+          <div className="flex flex-col gap-4 max-w-5xl">
             {questionnaire.questions.map((question, idx) => (
               <QuestionEditor 
                 key={question.id}
@@ -162,7 +184,7 @@ export default function AdminOnboardingPage() {
         )}
 
         {activeTab === 'preview' && (
-          <div className="max-w-4xl">
+          <div className="max-w-6xl">
             <TrailPreview questionnaire={questionnaire} />
           </div>
         )}

@@ -2,13 +2,14 @@
 
 import { ArrowLeft, ArrowRight, CheckCircle, Star, Maximize, Minimize, Brain } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import VideoPlayer from "./VideoPlayer";
 import LessonTabs from "./LessonTabs";
 import ProfileTestRunner from "./ProfileTestRunner";
 import { Lesson, MOCK_COURSE } from "@/lib/mockData";
 import { MOCK_PROFILE_TESTS } from "@/lib/mocks/profileTests";
 import { useZenMode } from "@/contexts/ZenModeContext";
+import { readLearningTrail, setTrailItemCompletion } from "@/lib/trailStorage";
 
 interface LessonClientWrapperProps {
   lesson: Lesson;
@@ -23,6 +24,14 @@ export default function LessonClientWrapper({ lesson, courseId }: LessonClientWr
   const { isZenMode, toggleZenMode } = useZenMode();
 
   const isProfileTest = lesson.type === 'profile_test';
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const trailItem = readLearningTrail().data?.items.find((item) => item.id === lesson.id);
+      if (trailItem) setIsCompleted(trailItem.status === 'completed');
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [lesson.id]);
 
   // Find profile test if applicable
   const targetProfileTest = isProfileTest
@@ -46,6 +55,7 @@ export default function LessonClientWrapper({ lesson, courseId }: LessonClientWr
   const handleMarkComplete = (e?: React.MouseEvent<HTMLButtonElement>) => {
     const newStatus = true;
     setIsCompleted(newStatus);
+    setTrailItemCompletion(lesson.id, true);
     
     // Trigger confetti if marking as completed
     const rect = e?.currentTarget?.getBoundingClientRect();
@@ -71,12 +81,14 @@ export default function LessonClientWrapper({ lesson, courseId }: LessonClientWr
       handleMarkComplete(e);
     } else {
       setIsCompleted(false);
+      setTrailItemCompletion(lesson.id, false);
     }
   };
 
   const handleVideoEnded = () => {
     if (!isCompleted) {
       setIsCompleted(true);
+      setTrailItemCompletion(lesson.id, true);
     }
   };
 

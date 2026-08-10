@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Question, QuestionOption } from '@/types/trilha';
-import { ChevronDown, ChevronUp, GripVertical, Settings2, Plus, Type } from 'lucide-react';
+import { ChevronDown, ChevronUp, GripVertical, Settings2, Plus, Type, CalendarClock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OptionMappingRow } from './OptionMappingRow';
 
@@ -58,9 +58,9 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
           <div className="flex items-center gap-2 mt-1 text-xs text-text-soft">
             <span className="capitalize">{question.role}</span>
             <span>•</span>
-            <span>{question.type === 'single' ? 'Escolha Única' : 'Múltipla Escolha'}</span>
+            <span>{question.type === 'availability' ? 'Rotina semanal' : question.type === 'single' ? 'Escolha Única' : 'Múltipla Escolha'}</span>
             <span>•</span>
-            <span>{question.options.length} opções</span>
+            <span>{question.type === 'availability' ? 'Agenda automática' : `${question.options.length} opções`}</span>
           </div>
         </div>
 
@@ -110,6 +110,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                     <option value="interesse">Interesse</option>
                     <option value="nivel">Nível</option>
                     <option value="restricao">Restrição</option>
+                    <option value="disponibilidade">Disponibilidade</option>
                   </select>
                 </div>
 
@@ -117,11 +118,21 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                   <label className="text-xs font-semibold text-text-mute mb-1 block">Seleção</label>
                   <select 
                     value={question.type}
-                    onChange={(e) => onUpdate({ ...question, type: e.target.value as Question['type'] })}
+                    onChange={(e) => {
+                      const type = e.target.value as Question['type'];
+                      onUpdate({
+                        ...question,
+                        type,
+                        role: type === 'availability' ? 'disponibilidade' : question.role === 'disponibilidade' ? 'perfil' : question.role,
+                        options: type === 'availability' ? [] : question.options.length > 0 ? question.options : [{ label: 'Opção 1', tags: [], contentMappings: [] }],
+                        availabilityConfig: type === 'availability' ? question.availabilityConfig || { minutePresets: [15, 30, 45, 60, 90], minMinutes: 10, maxMinutes: 240 } : undefined,
+                      });
+                    }}
                     className="bg-bg border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-primary"
                   >
                     <option value="single">Única</option>
                     <option value="multiple">Múltipla</option>
+                    <option value="availability">Disponibilidade</option>
                   </select>
                 </div>
                 
@@ -142,7 +153,18 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                 </div>
               </div>
 
-              {/* Options List */}
+              {question.type === 'availability' ? (
+                <div className="rounded-xl border border-primary/25 bg-primary/5 p-5">
+                  <div className="flex items-start gap-3">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-primary-pale text-primary"><CalendarClock size={20} /></span>
+                    <div>
+                      <h4 className="font-bold text-ink">Configuração inteligente da rotina</h4>
+                      <p className="mt-1 text-sm leading-6 text-text-soft">O aluno escolherá dias específicos e uma meta de 10 a 240 minutos por sessão. Esta pergunta não associa conteúdos e deve permanecer por último.</p>
+                      <p className="mt-3 text-xs font-semibold text-primary-active">Sugestões exibidas: {(question.availabilityConfig?.minutePresets || [15, 30, 45, 60, 90]).join(', ')} minutos</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between mb-1">
                   <h4 className="text-sm font-bold text-ink-deep flex items-center gap-2">
@@ -171,6 +193,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                   Adicionar Opção
                 </button>
               </div>
+              )}
 
             </div>
           </motion.div>

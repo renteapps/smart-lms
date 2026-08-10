@@ -1,124 +1,85 @@
-import React, { useMemo } from 'react';
-import { Questionnaire, ContentMapping } from '@/types/trilha';
-import { Calendar, Video, Folder, BookOpen, FileText, Link as LinkIcon, Sparkles } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+'use client';
 
-interface TrailPreviewProps {
-  questionnaire: Questionnaire;
-}
+import React, { useMemo, useState } from 'react';
+import { Questionnaire, StudyAvailability, Weekday } from '@/types/trilha';
+import { generateLearningTrail } from '@/lib/matching';
+import { CalendarDays, Clock3, Sparkles, TriangleAlert } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface TrailPreviewProps { questionnaire: Questionnaire }
+
+const DAYS: Array<{ value: Weekday; label: string }> = [
+  { value: 1, label: 'Seg' }, { value: 2, label: 'Ter' }, { value: 3, label: 'Qua' },
+  { value: 4, label: 'Qui' }, { value: 5, label: 'Sex' }, { value: 6, label: 'Sáb' }, { value: 0, label: 'Dom' },
+];
+
+const roleLabels = { essential: 'Essencial', deepening: 'Aprofundamento', extra: 'Extra' };
 
 export const TrailPreview: React.FC<TrailPreviewProps> = ({ questionnaire }) => {
-  
-  // Extract all content mappings from the questionnaire to simulate a generated trail
-  const allMappings = useMemo(() => {
-    const mappings: ContentMapping[] = [];
-    questionnaire.questions.forEach(q => {
-      q.options.forEach(opt => {
-        if (opt.contentMappings) {
-          mappings.push(...opt.contentMappings);
-        }
-      });
-    });
+  const contentQuestions = questionnaire.questions.filter((question) => question.type !== 'availability');
+  const [answers, setAnswers] = useState<Record<string, string[]>>(() => Object.fromEntries(
+    contentQuestions.map((question) => [question.id, question.options[0] ? [question.options[0].label] : []]),
+  ));
+  const [availability, setAvailability] = useState<StudyAvailability>({ weekdays: [1, 3, 5], minutesPerSession: 30 });
 
-    // Remove duplicates by ID (in a real scenario, this would depend on user answers)
-    const uniqueMap = new Map<string, ContentMapping>();
-    mappings.forEach(m => uniqueMap.set(m.id, m));
-    
-    // Sort by unlockAfterDays
-    return Array.from(uniqueMap.values()).sort((a, b) => a.unlockAfterDays - b.unlockAfterDays);
-  }, [questionnaire]);
-
-  const getIconForType = (type: string) => {
-    switch (type) {
-      case 'lesson': return <Video size={16} className="text-blue-400" />;
-      case 'module': return <Folder size={16} className="text-yellow-400" />;
-      case 'course': return <BookOpen size={16} className="text-green-400" />;
-      case 'article': return <FileText size={16} className="text-purple-400" />;
-      case 'external_link': return <LinkIcon size={16} className="text-gray-400" />;
-      default: return <FileText size={16} />;
-    }
-  };
-
-  const getDayLabel = (days: number) => {
-    if (days === 0) return 'Imediato (Dia 0)';
-    if (days === 1) return 'Dia Seguinte (Dia 1)';
-    return `Dia ${days}`;
-  };
-
-  // Group by unlock days
-  const groupedTimeline = useMemo(() => {
-    const groups: Record<number, ContentMapping[]> = {};
-    allMappings.forEach(m => {
-      if (!groups[m.unlockAfterDays]) groups[m.unlockAfterDays] = [];
-      groups[m.unlockAfterDays].push(m);
-    });
+  const trail = useMemo(
+    () => generateLearningTrail('preview', answers, questionnaire, availability),
+    [answers, availability, questionnaire],
+  );
+  const sessions = useMemo(() => trail.items.reduce<Record<string, typeof trail.items>>((groups, item) => {
+    groups[item.sessionId] = [...(groups[item.sessionId] || []), item];
     return groups;
-  }, [allMappings]);
+  }, {}), [trail]);
 
-  const sortedDays = Object.keys(groupedTimeline).map(Number).sort((a, b) => a - b);
+  const toggleAnswer = (questionId: string, label: string, single: boolean) => {
+    setAnswers((current) => {
+      const selected = current[questionId] || [];
+      return { ...current, [questionId]: single ? [label] : selected.includes(label) ? selected.filter((item) => item !== label) : [...selected, label] };
+    });
+  };
+
+  const toggleDay = (day: Weekday) => setAvailability((current) => ({
+    ...current,
+    weekdays: current.weekdays.includes(day) ? current.weekdays.filter((item) => item !== day) : [...current.weekdays, day],
+  }));
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="bg-primary/10 border border-primary/30 rounded-2xl p-6 text-center">
-        <div className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg shadow-primary/20">
-          <Sparkles size={24} />
+    <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+      <aside className="space-y-5">
+        <div className="rounded-[14px] border border-primary/25 bg-primary/5 p-5">
+          <Sparkles className="h-5 w-5 text-primary" />
+          <h3 className="mt-3 text-xl font-bold text-ink">Simule um perfil real</h3>
+          <p className="mt-2 text-sm leading-6 text-text-soft">A prévia usa as mesmas regras do aluno e explica por que cada conteúdo entrou.</p>
         </div>
-        <h3 className="text-xl font-bold text-ink-deep mb-2">Simulação de Trilha</h3>
-        <p className="text-sm text-text-soft max-w-md mx-auto">
-          Esta é uma visão consolidada de <strong>todos</strong> os conteúdos mapeados neste questionário. 
-          Na prática, o aluno verá apenas a intersecção de suas respostas.
-        </p>
-      </div>
+        {contentQuestions.map((question) => (
+          <fieldset key={question.id} className="rounded-[12px] border border-border bg-surface p-4">
+            <legend className="px-1 text-sm font-bold text-ink">{question.text}</legend>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {question.options.map((option) => {
+                const selected = answers[question.id]?.includes(option.label);
+                return <button key={option.label} type="button" aria-pressed={selected} onClick={() => toggleAnswer(question.id, option.label, question.type === 'single')} className={cn('rounded-[9px] border px-3 py-2 text-xs font-semibold', selected ? 'border-primary bg-primary-pale text-primary-active' : 'border-border text-text-soft')}>{option.label}</button>;
+              })}
+            </div>
+          </fieldset>
+        ))}
+        <div className="rounded-[12px] border border-border bg-surface p-4">
+          <p className="text-sm font-bold text-ink">Rotina simulada</p>
+          <div className="mt-3 flex flex-wrap gap-2">{DAYS.map((day) => <button key={day.value} type="button" aria-pressed={availability.weekdays.includes(day.value)} onClick={() => toggleDay(day.value)} className={cn('grid h-10 min-w-10 place-items-center rounded-[9px] border text-xs font-bold', availability.weekdays.includes(day.value) ? 'border-primary bg-primary text-white' : 'border-border text-text-soft')}>{day.label}</button>)}</div>
+          <label className="mt-4 flex items-center gap-3 text-sm font-semibold text-text-soft"><Clock3 size={16} /><input type="number" min="10" max="240" value={availability.minutesPerSession} onChange={(event) => setAvailability((current) => ({ ...current, minutesPerSession: Math.max(10, Math.min(240, Number(event.target.value) || 10)) }))} className="w-20 rounded-[8px] border border-border bg-bg px-2 py-1.5 text-text outline-none focus:border-primary" /> minutos por sessão</label>
+        </div>
+      </aside>
 
-      <div className="relative pl-4 border-l-2 border-border/60 ml-4 space-y-8 pb-8">
-        {allMappings.length === 0 ? (
-          <div className="text-text-mute text-sm italic py-4">
-            Nenhum conteúdo mapeado ainda. Adicione mapeamentos nas opções do questionário.
-          </div>
-        ) : (
-          sortedDays.map((day, idx) => (
-            <motion.div 
-              key={day}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              className="relative"
-            >
-              <div className="absolute -left-[25px] top-1 w-3 h-3 rounded-full bg-primary ring-4 ring-bg" />
-              
-              <div className="flex items-center gap-2 mb-4 text-primary font-bold">
-                <Calendar size={18} />
-                <h4>{getDayLabel(day)}</h4>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {groupedTimeline[day].map(item => (
-                  <div 
-                    key={item.id}
-                    className="bg-surface border border-border/60 rounded-xl p-4 shadow-sm hover:border-primary/50 transition-colors"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-bg shrink-0">
-                        {getIconForType(item.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h5 className="font-semibold text-sm text-text truncate" title={item.title}>
-                          {item.title}
-                        </h5>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs font-medium text-text-mute uppercase tracking-wider">
-                            {item.type}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          ))
+      <section className="rounded-[14px] border border-border bg-surface p-5 sm:p-6">
+        <div className="flex items-center justify-between gap-4 border-b border-border pb-4"><div><p className="eyebrow">Agenda calculada</p><h3 className="mt-1 text-2xl font-extrabold text-ink">{Object.keys(sessions).length} sessões · {trail.items.length} conteúdos</h3></div><CalendarDays className="h-7 w-7 text-primary" /></div>
+        {trail.items.length === 0 ? <p className="py-16 text-center text-sm text-text-mute">Selecione respostas com conteúdos associados para gerar a simulação.</p> : (
+          <div className="mt-6 space-y-7">{Object.entries(sessions).map(([sessionId, items]) => (
+            <div key={sessionId}>
+              <div className="mb-3 flex items-center gap-3"><strong className="text-sm capitalize text-ink">{new Date(`${items[0].scheduledDate}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' })}</strong><span className="h-px flex-1 bg-border" /><span className="text-xs font-semibold text-text-mute">{items.reduce((sum, item) => sum + item.durationMin, 0)} min</span></div>
+              <div className="space-y-2">{items.map((item) => <article key={item.id} className="rounded-[10px] border border-border bg-bg p-4"><div className="flex items-start justify-between gap-3"><div><span className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-primary-active">{roleLabels[item.learningRole]}</span><h4 className="mt-1 font-bold text-ink">{item.title}</h4><p className="mt-1 text-xs text-text-soft">{item.reason}</p></div><span className="shrink-0 text-xs font-bold text-text-mute">{item.durationMin} min</span></div>{item.overBudget && <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-warning"><TriangleAlert size={14} /> Acima da meta; ficará sozinho nesta sessão.</p>}</article>)}</div>
+            </div>
+          ))}</div>
         )}
-      </div>
+      </section>
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { ContentMapping, QuestionOption } from '@/types/trilha';
-import { X, Clock, Plus, GripVertical, FileText, Video, Folder, BookOpen, Link as LinkIcon } from 'lucide-react';
-import { motion, Reorder } from 'framer-motion';
+import { X, Clock, Plus, GripVertical, FileText, Video, Folder, BookOpen, Link as LinkIcon, Layers3 } from 'lucide-react';
+import { Reorder } from 'framer-motion';
 
 interface OptionMappingRowProps {
   option: QuestionOption;
@@ -48,11 +48,11 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
     });
   };
 
-  const handleUpdateDays = (mappingId: string, days: number) => {
+  const handleUpdateMapping = (mappingId: string, patch: Partial<ContentMapping>) => {
     onUpdate({
       ...option,
       contentMappings: option.contentMappings?.map(m => 
-        m.id === mappingId ? { ...m, unlockAfterDays: days } : m
+        m.id === mappingId ? { ...m, ...patch } : m
       )
     });
   };
@@ -119,17 +119,33 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
                     {mapping.title}
                   </div>
                   
-                  <div className="flex items-center gap-2 border-l border-border/60 pl-3">
-                    <Clock size={14} className="text-text-mute" />
-                    <span className="text-xs text-text-soft">Liberar em</span>
-                    <input 
-                      type="number"
-                      min="0"
-                      value={mapping.unlockAfterDays}
-                      onChange={(e) => handleUpdateDays(mapping.id, parseInt(e.target.value) || 0)}
-                      className="w-12 rounded bg-bg px-1.5 py-1 text-center text-xs outline-none border border-transparent focus:border-primary"
-                    />
-                    <span className="text-xs text-text-soft">dias</span>
+                  <div className="flex flex-wrap items-center justify-end gap-2 border-l border-border/60 pl-3">
+                    <Layers3 size={14} className="text-text-mute" />
+                    <select
+                      aria-label={`Papel pedagógico de ${mapping.title}`}
+                      value={mapping.learningRole}
+                      onChange={(event) => handleUpdateMapping(mapping.id, { learningRole: event.target.value as ContentMapping['learningRole'] })}
+                      className="rounded border border-border/70 bg-bg px-2 py-1 text-xs font-semibold outline-none focus:border-primary"
+                    >
+                      <option value="essential">Essencial</option>
+                      <option value="deepening">Aprofundamento</option>
+                      <option value="extra">Extra</option>
+                    </select>
+                    {(mapping.type === 'article' || mapping.type === 'external_link') && (
+                      <label className="flex items-center gap-1 text-xs text-text-soft">
+                        <Clock size={13} />
+                        <input
+                          aria-label={`Duração estimada de ${mapping.title}`}
+                          type="number"
+                          min="1"
+                          max="240"
+                          value={mapping.estimatedDurationMin || 10}
+                          onChange={(event) => handleUpdateMapping(mapping.id, { estimatedDurationMin: Number(event.target.value) || 10 })}
+                          className="w-12 rounded border border-border/70 bg-bg px-1.5 py-1 text-center outline-none focus:border-primary"
+                        />
+                        min
+                      </label>
+                    )}
                   </div>
 
                   <button 

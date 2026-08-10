@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Check, LoaderCircle, Sparkles } from 'lucide-react';
-import { mockEligibleLessons, mockQuestionnaire } from '@/lib/mocks/trilhaMocks';
+import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock3, LoaderCircle, Sparkles } from 'lucide-react';
+import { mockQuestionnaire } from '@/lib/mocks/trilhaMocks';
 import { generateLearningTrail } from '@/lib/matching';
 import { cn } from '@/lib/utils';
+import { LearningTrail, Questionnaire, StudyAvailability, Weekday } from '@/types/trilha';
+import { loadQuestionnaire, readLearningTrail, saveLearningTrail } from '@/lib/trailStorage';
 
 const PhysicsKeywordSelector = dynamic(
   () => import('@/components/PhysicsKeywordSelector').then((module) => module.default),
@@ -17,15 +19,25 @@ const PhysicsKeywordSelector = dynamic(
   },
 );
 
+const WEEKDAYS: Array<{ value: Weekday; short: string; label: string }> = [
+  { value: 1, short: 'Seg', label: 'Segunda' }, { value: 2, short: 'Ter', label: 'Terça' },
+  { value: 3, short: 'Qua', label: 'Quarta' }, { value: 4, short: 'Qui', label: 'Quinta' },
+  { value: 5, short: 'Sex', label: 'Sexta' }, { value: 6, short: 'Sáb', label: 'Sábado' },
+  { value: 0, short: 'Dom', label: 'Domingo' },
+];
+
 export default function OnboardingPage() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
+  const [questionnaire, setQuestionnaire] = useState<Questionnaire>(mockQuestionnaire);
+  const [availability, setAvailability] = useState<StudyAvailability>({ weekdays: [1, 3, 5], minutesPerSession: 30 });
+  const [existingTrail, setExistingTrail] = useState<LearningTrail | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const questions = mockQuestionnaire.questions;
+  const questions = questionnaire.questions;
   const question = questions[currentStep];
   const currentAnswers = answers[question.id] || [];
   const progress = ((currentStep + 1) / questions.length) * 100;
@@ -34,7 +46,21 @@ export default function OnboardingPage() {
     window.scrollTo({ top: 0, left: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   }, [currentStep, reduceMotion]);
 
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      setQuestionnaire(loadQuestionnaire());
+      const stored = readLearningTrail();
+      if (stored.data) {
+        setExistingTrail(stored.data);
+        setAnswers(stored.data.answers || {});
+        setAvailability(stored.data.availability);
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
   const handleToggleSelect = (optionLabel: string) => {
+    if (question.type === 'availability') return;
     const isSingle = question.type === 'single';
 
     setAnswers((current) => {
@@ -50,14 +76,23 @@ export default function OnboardingPage() {
     });
   };
 
+  const toggleWeekday = (weekday: Weekday) => {
+    setAvailability((current) => ({
+      ...current,
+      weekdays: current.weekdays.includes(weekday)
+        ? current.weekdays.filter((item) => item !== weekday)
+        : [...current.weekdays, weekday],
+    }));
+  };
+
   const isSelected = (label: string) => currentAnswers.includes(label);
 
   const handleFinish = () => {
     setIsGenerating(true);
     window.setTimeout(() => {
-      const trail = generateLearningTrail('user-1', answers, mockQuestionnaire, mockEligibleLessons);
-      localStorage.setItem('minha_trilha', JSON.stringify(trail));
-      router.push('/');
+      const trail = generateLearningTrail('user-1', answers, questionnaire, availability, existingTrail);
+      saveLearningTrail(trail);
+      router.push('/minha-trilha');
     }, 2500);
   };
 
@@ -154,12 +189,63 @@ export default function OnboardingPage() {
               <p className="eyebrow">Pergunta {currentStep + 1}</p>
               <h1 className="mx-auto mt-3 max-w-3xl text-3xl font-extrabold leading-[1.08] tracking-[-0.045em] text-ink sm:text-4xl md:text-[44px]">{question.text}</h1>
               <p className="mt-4 text-sm font-medium text-text-mute">
-                {question.type === 'multiple' ? 'Você pode selecionar mais de uma opção.' : 'Escolha a opção que melhor representa você agora.'}
+                {question.type === 'availability' ? 'Monte uma rotina realista — você poderá ajustá-la quando precisar.' : question.type === 'multiple' ? 'Você pode selecionar mais de uma opção.' : 'Escolha a opção que melhor representa você agora.'}
               </p>
             </div>
 
             <div className="p-5 sm:p-8 lg:p-10">
-              {question.visualType === 'physics' ? (
+              {question.type === 'availability' ? (
+                <div className="mx-auto max-w-3xl space-y-8">
+                  <fieldset>
+                    <legend className="flex items-center gap-2 text-base font-extrabold text-ink"><CalendarDays className="h-5 w-5 text-primary" /> Em quais dias você quer estudar?</legend>
+                    <p className="mt-2 text-sm text-text-soft">Escolha os dias que realmente cabem na sua rotina. Você poderá ajustar depois.</p>
+                    <div className="mt-5 grid grid-cols-4 gap-2 sm:grid-cols-7">
+                      {WEEKDAYS.map((day) => {
+                        const selected = availability.weekdays.includes(day.value);
+                        return (
+                          <motion.button
+                            key={day.value}
+                            type="button"
+                            aria-pressed={selected}
+                            aria-label={day.label}
+                            whileTap={reduceMotion ? undefined : { scale: 0.97 }}
+                            onClick={() => toggleWeekday(day.value)}
+                            className={cn('flex min-h-16 flex-col items-center justify-center rounded-[10px] border text-sm font-extrabold outline-none focus-visible:ring-3 focus-visible:ring-primary/25', selected ? 'border-primary bg-primary text-white shadow-sm' : 'border-border bg-surface text-text-soft hover:border-primary/35')}
+                          >
+                            {selected && <Check className="mb-1 h-3.5 w-3.5" />}
+                            {day.short}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+
+                  <fieldset className="border-t border-border pt-7">
+                    <legend className="flex items-center gap-2 text-base font-extrabold text-ink"><Clock3 className="h-5 w-5 text-primary" /> Quanto tempo por sessão?</legend>
+                    <p className="mt-2 text-sm text-text-soft">Usaremos esse limite para montar sessões possíveis, sem cortar uma aula ao meio.</p>
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      {(question.availabilityConfig?.minutePresets || [15, 30, 45, 60, 90]).map((minutes) => (
+                        <button key={minutes} type="button" aria-pressed={availability.minutesPerSession === minutes} onClick={() => setAvailability((current) => ({ ...current, minutesPerSession: minutes }))} className={cn('min-h-11 rounded-[9px] border px-4 text-sm font-bold outline-none focus-visible:ring-3 focus-visible:ring-primary/25', availability.minutesPerSession === minutes ? 'border-primary bg-primary-pale text-primary-active' : 'border-border bg-surface text-text-soft hover:border-primary/35')}>{minutes} min</button>
+                      ))}
+                      <label className="flex min-h-11 items-center gap-2 rounded-[9px] border border-border bg-surface px-3 text-sm font-semibold text-text-soft focus-within:border-primary">
+                        Outro
+                        <input
+                          type="number"
+                          aria-label="Minutos personalizados por sessão"
+                          min={question.availabilityConfig?.minMinutes || 10}
+                          max={question.availabilityConfig?.maxMinutes || 240}
+                          value={availability.minutesPerSession}
+                          onChange={(event) => setAvailability((current) => ({ ...current, minutesPerSession: Math.max(10, Math.min(240, Number(event.target.value) || 10)) }))}
+                          className="w-14 bg-transparent text-right font-bold text-ink outline-none"
+                        /> min
+                      </label>
+                    </div>
+                    <div className="mt-6 rounded-[10px] border border-primary/20 bg-primary-pale/45 p-4 text-sm text-primary-active">
+                      Sua meta será de <strong>{availability.weekdays.length * availability.minutesPerSession} minutos por semana</strong>, divididos em {availability.weekdays.length} {availability.weekdays.length === 1 ? 'sessão' : 'sessões'}.
+                    </div>
+                  </fieldset>
+                </div>
+              ) : question.visualType === 'physics' ? (
                 <PhysicsKeywordSelector options={question.options} selectedLabels={currentAnswers} onToggleSelect={handleToggleSelect} />
               ) : question.visualType === 'cards' ? (
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -225,13 +311,15 @@ export default function OnboardingPage() {
             <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-border/70 bg-canvas-soft/45 px-5 py-4 sm:px-8">
               <button onClick={handlePrevious} disabled={currentStep === 0} className="inline-flex min-h-11 items-center gap-2 rounded-[8px] px-3 text-sm font-bold text-text-soft hover:bg-surface hover:text-ink disabled:invisible"><ArrowLeft className="h-4 w-4" /> Voltar</button>
               <p className="order-first w-full text-center text-xs font-semibold text-text-mute sm:order-none sm:w-auto">
-                {currentAnswers.length > 0 ? `${currentAnswers.length} ${currentAnswers.length === 1 ? 'resposta selecionada' : 'respostas selecionadas'}` : 'Selecione uma resposta para continuar'}
+                {question.type === 'availability'
+                  ? availability.weekdays.length > 0 ? `${availability.weekdays.length} ${availability.weekdays.length === 1 ? 'dia escolhido' : 'dias escolhidos'} · ${availability.minutesPerSession} min` : 'Escolha ao menos um dia'
+                  : currentAnswers.length > 0 ? `${currentAnswers.length} ${currentAnswers.length === 1 ? 'resposta selecionada' : 'respostas selecionadas'}` : 'Selecione uma resposta para continuar'}
               </p>
               <motion.button
                 whileHover={reduceMotion ? undefined : { y: -1 }}
                 whileTap={reduceMotion ? undefined : { scale: 0.985 }}
                 onClick={handleNext}
-                disabled={currentAnswers.length === 0}
+                disabled={question.type === 'availability' ? availability.weekdays.length === 0 || availability.minutesPerSession < 10 : currentAnswers.length === 0}
                 className="inline-flex min-h-12 items-center gap-2 rounded-[9px] bg-primary px-6 font-bold text-on-primary shadow-md hover:bg-primary-active disabled:cursor-not-allowed disabled:opacity-35"
               >
                 {currentStep === questions.length - 1 ? 'Montar trilha' : 'Continuar'} <ArrowRight className="h-4 w-4" />

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Video, Folder, BookOpen, FileText, Link as LinkIcon, Check, Plus } from 'lucide-react';
-import { getMockContentByType, MockContentItem } from '@/lib/mocks/onboardingMocks';
+import { getMockContentByType } from '@/lib/mocks/onboardingMocks';
 import { ContentMapping } from '@/types/trilha';
 
 interface ContentPickerModalProps {
@@ -27,6 +27,7 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
   // For external links manually added
   const [customLinkTitle, setCustomLinkTitle] = useState('');
   const [customLinkUrl, setCustomLinkUrl] = useState('');
+  const [customLinkDuration, setCustomLinkDuration] = useState(10);
 
   const contents = useMemo(() => getMockContentByType(activeTab), [activeTab]);
 
@@ -62,7 +63,8 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
           title: item.title,
           slug: item.slug,
           url: item.url,
-          unlockAfterDays: 0 // default 0 days (imediato)
+          learningRole: 'essential',
+          estimatedDurationMin: item.estimatedDurationMin,
         });
       }
     });
@@ -74,16 +76,18 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
         type: 'external_link',
         title: customLinkTitle,
         url: customLinkUrl,
-        unlockAfterDays: 0
+        learningRole: 'essential',
+        estimatedDurationMin: customLinkDuration,
       });
     }
 
     onAddMappings(newMappings);
     
     // Reset state and close
-    setSelectedIds(newSet => new Set());
+    setSelectedIds(new Set());
     setCustomLinkTitle('');
     setCustomLinkUrl('');
+    setCustomLinkDuration(10);
     onClose();
   };
 
@@ -168,7 +172,7 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                     <LinkIcon size={16} />
                     Adicionar Link Personalizado
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_120px] gap-3">
                     <input 
                       type="text" 
                       placeholder="Título do Link (ex: Entrar no Grupo VIP)"
@@ -176,6 +180,16 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                       onChange={e => setCustomLinkTitle(e.target.value)}
                       className="bg-surface border border-border/60 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
                     />
+                    <label className="flex items-center gap-2 rounded-lg border border-border/60 bg-surface px-3 text-xs font-semibold text-text-soft">
+                      <input
+                        type="number"
+                        min="1"
+                        max="240"
+                        value={customLinkDuration}
+                        onChange={(event) => setCustomLinkDuration(Number(event.target.value) || 10)}
+                        className="w-12 bg-transparent text-sm text-text outline-none"
+                      /> min
+                    </label>
                     <input 
                       type="url" 
                       placeholder="https://..."
