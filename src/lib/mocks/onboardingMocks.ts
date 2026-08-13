@@ -42,6 +42,7 @@ export const MOCK_CONTENT_ITEMS: MockContentItem[] = [
   ...lessonItems,
   { id: 'a1', type: 'article', title: 'Como criar uma rotina de aprendizagem sustentável', slug: 'rotina-aprendizagem', category: 'Produtividade', estimatedDurationMin: 8 },
   { id: 'a2', type: 'article', title: 'Prática deliberada: como aprender fazendo', slug: 'pratica-deliberada', category: 'Aprendizagem', estimatedDurationMin: 10 },
+  { id: 'a3', type: 'article', title: 'O que trava sua promoção quase nunca é técnica', slug: 'primeiro-artigo', category: 'Carreira', estimatedDurationMin: 6 },
   { id: 'ext1', type: 'external_link', title: 'Checklist para sua primeira semana', url: 'https://example.com/checklist', category: 'Material de apoio', estimatedDurationMin: 5 },
 ];
 

@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
-import { ContentBlock } from '@/lib/mockData';
-import { Play, HelpCircle, Quote, Lightbulb, Check, X } from 'lucide-react';
+"use client";
+
+import React, { useState } from "react";
+import { Button, Card, Chip, Table, Typography } from "@heroui/react";
+import { Check, HelpCircle, Lightbulb, X } from "lucide-react";
+import { ContentBlock } from "@/lib/mockData";
+import { cn } from "@/lib/utils";
 
 function QuizViewerBlock({ block }: { block: ContentBlock }) {
   const options = block.metadata?.options || [];
@@ -21,67 +25,78 @@ function QuizViewerBlock({ block }: { block: ContentBlock }) {
   };
 
   return (
-    <div className="my-8 bg-surface-card border border-border rounded-2xl p-6 md:p-8 shadow-sm">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-          <HelpCircle className="w-5 h-5 text-primary" />
+    <Card variant="secondary" className="my-10 gap-0 p-0">
+      <Card.Header className="gap-3 px-6 pt-6 sm:px-8 sm:pt-8">
+        <div className="flex items-center gap-3">
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground">
+            <HelpCircle className="size-4.5" aria-hidden="true" />
+          </span>
+          <p className="eyebrow">Verifique seu conhecimento</p>
         </div>
-        <h3 className="text-lg font-bold text-text">Verifique seu conhecimento</h3>
-      </div>
-      <p className="text-lg text-text mb-6 font-medium">{block.content}</p>
-      <div className="space-y-3">
+        <Card.Title className="font-display text-lg font-bold leading-snug tracking-[-0.02em] text-foreground sm:text-xl">
+          {block.content}
+        </Card.Title>
+      </Card.Header>
+
+      <Card.Content className="gap-2.5 px-6 pt-5 sm:px-8">
         {options.map((opt: string, i: number) => {
           if (!opt) return null;
-          
-          let stateStyles = "border-border hover:border-primary hover:bg-primary/5 text-text";
-          let icon = null;
 
-          if (isSubmitted) {
-            if (i === correctAnswer) {
-              stateStyles = "border-emerald-500 bg-emerald-500/10 text-emerald-600";
-              icon = <Check className="w-5 h-5 text-emerald-500" />;
-            } else if (i === selectedOption) {
-              stateStyles = "border-error bg-error/10 text-error";
-              icon = <X className="w-5 h-5 text-error" />;
-            } else {
-              stateStyles = "border-border opacity-50";
-            }
-          } else if (i === selectedOption) {
-            stateStyles = "border-primary bg-primary/10 text-primary";
-          }
+          const isChosen = i === selectedOption;
+          const isRight = isSubmitted && i === correctAnswer;
+          const isWrong = isSubmitted && isChosen && i !== correctAnswer;
 
           return (
             <button
               key={i}
+              type="button"
               onClick={() => handleSelect(i)}
               disabled={isSubmitted}
-              className={`w-full text-left px-5 py-4 rounded-xl border transition-all flex items-center justify-between gap-4 ${stateStyles}`}
+              aria-pressed={isChosen}
+              className={cn(
+                "flex min-h-14 w-full items-center justify-between gap-4 rounded-xl border border-hairline bg-surface px-5 py-3.5 text-left text-base transition-[border-color,background-color,color] duration-[var(--duration-md)]",
+                !isSubmitted && "hover:border-accent hover:bg-accent-soft/45",
+                !isSubmitted && isChosen && "border-accent bg-accent-soft text-accent-soft-foreground",
+                isRight && "border-success bg-success-soft text-success-soft-foreground",
+                isWrong && "border-danger bg-danger-soft text-danger-soft-foreground",
+                isSubmitted && !isRight && !isWrong && "opacity-55",
+              )}
             >
-              <div className="flex items-center gap-4">
-                {!isSubmitted && (
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${i === selectedOption ? 'border-primary' : 'border-text-soft'}`}>
-                    {i === selectedOption && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
-                  </div>
-                )}
+              <span className="flex items-center gap-4">
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "grid size-5 shrink-0 place-items-center rounded-full border-2 transition-colors",
+                    isChosen ? "border-current" : "border-separator",
+                  )}
+                >
+                  {isChosen && <span className="size-2.5 rounded-full bg-current" />}
+                </span>
                 <span className="font-medium">{opt}</span>
-              </div>
-              {icon && <div>{icon}</div>}
+              </span>
+              {isRight && <Check className="size-5 shrink-0" aria-hidden="true" />}
+              {isWrong && <X className="size-5 shrink-0" aria-hidden="true" />}
             </button>
           );
         })}
-      </div>
-      
-      {!isSubmitted && selectedOption !== null && (
-        <div className="mt-6 flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <button
-            onClick={handleSubmit}
-            className="px-6 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary-hover transition-colors shadow-sm"
+      </Card.Content>
+
+      <Card.Footer className="justify-end px-6 pb-6 pt-5 sm:px-8 sm:pb-8">
+        {isSubmitted ? (
+          <Chip
+            color={selectedOption === correctAnswer ? "success" : "danger"}
+            variant="soft"
+            size="sm"
           >
-            Confirmar Resposta
-          </button>
-        </div>
-      )}
-    </div>
+            {selectedOption === correctAnswer ? "Resposta correta" : "Resposta incorreta"}
+          </Chip>
+        ) : (
+          <Button variant="primary" onClick={handleSubmit} isDisabled={selectedOption === null}>
+            Confirmar resposta
+          </Button>
+        )}
+      </Card.Footer>
+    </Card>
   );
 }
 
@@ -89,6 +104,14 @@ interface BlockViewerProps {
   blocks: ContentBlock[];
 }
 
+/**
+ * Renderiza o conteúdo editorial de uma aula.
+ *
+ * Os blocos de texto vivem dentro de `Typography.Prose` — é ele que dá ritmo a
+ * HTML solto (listas, ênfases, links) sem que cada bloco precise carregar as
+ * próprias classes. Os títulos vindos do editor descem um nível (h1 → h2) para
+ * não competirem com o h1 da aula.
+ */
 export default function BlockViewer({ blocks }: BlockViewerProps) {
   if (!blocks || blocks.length === 0) {
     return null;
@@ -96,87 +119,110 @@ export default function BlockViewer({ blocks }: BlockViewerProps) {
 
   const renderBlock = (block: ContentBlock) => {
     switch (block.type) {
-      case 'h1':
-        return <h1 className="text-3xl md:text-4xl font-bold text-text my-8 leading-tight" dangerouslySetInnerHTML={{ __html: block.content }} />;
-      case 'h2':
-        return <h2 className="text-2xl md:text-3xl font-bold text-text mt-8 mb-4 leading-snug" dangerouslySetInnerHTML={{ __html: block.content }} />;
-      case 'video':
+      case "h1":
         return (
-          <div className="my-8 rounded-2xl overflow-hidden bg-surface-card border border-border shadow-sm aspect-video">
-            <iframe 
-              src={block.metadata?.url} 
-              className="w-full h-full"
-              allowFullScreen
-              title="Video content"
-            />
+          <h2
+            className="display-3 mt-12 mb-4 text-foreground first:mt-0"
+            dangerouslySetInnerHTML={{ __html: block.content }}
+          />
+        );
+      case "h2":
+        return (
+          <h3
+            className="mt-10 mb-3 font-display text-xl font-bold tracking-[-0.02em] text-foreground sm:text-2xl"
+            dangerouslySetInnerHTML={{ __html: block.content }}
+          />
+        );
+      case "video":
+        return (
+          <div className="my-10 aspect-video overflow-hidden rounded-2xl border border-hairline bg-black shadow-elev-3">
+            <iframe src={block.metadata?.url} className="size-full" allowFullScreen title="Vídeo do conteúdo" />
           </div>
         );
-      case 'quiz':
+      case "quiz":
         return <QuizViewerBlock block={block} />;
-      case 'reflexao':
+      case "reflexao":
         return (
-          <div className="my-8 bg-gradient-to-br from-tertiary-container to-surface border-l-4 border-primary rounded-r-2xl p-6 md:p-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-5">
-              <Lightbulb className="w-24 h-24" />
-            </div>
-            <div className="flex items-center gap-2 mb-4">
-              <Lightbulb className="w-5 h-5 text-primary" />
-              <div className="text-sm font-bold text-primary uppercase tracking-wider">Para Refletir</div>
-            </div>
-            <div className="text-lg text-text-soft leading-relaxed relative z-10" dangerouslySetInnerHTML={{ __html: block.content }} />
-          </div>
-        );
-      case 'citacao':
-        return (
-          <div className="border-l-4 border-border pl-6 py-2 my-8 italic">
-            <div className="text-2xl text-text-soft font-serif leading-relaxed mb-4" dangerouslySetInnerHTML={{ __html: `"${block.content}"` }} />
-            {block.metadata?.author && (
-              <p className="text-base text-text font-medium flex items-center gap-2">
-                <span className="w-4 h-[1px] bg-border"></span>
-                {block.metadata.author}
+          <Card variant="secondary" className="relative my-10 gap-0 overflow-hidden p-0">
+            <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-accent" />
+            <Card.Content className="gap-3 px-6 py-6 sm:px-8 sm:py-8">
+              <p className="eyebrow flex items-center gap-2 text-accent">
+                <Lightbulb className="size-4" aria-hidden="true" />
+                Para refletir
               </p>
-            )}
-          </div>
+              <div
+                className="text-lg leading-8 text-foreground"
+                dangerouslySetInnerHTML={{ __html: block.content }}
+              />
+            </Card.Content>
+          </Card>
         );
-      case 'table':
+      case "citacao":
+        return (
+          <figure className="my-10 border-l-2 border-accent pl-6">
+            <blockquote
+              className="font-display text-xl font-medium italic leading-relaxed text-foreground sm:text-2xl"
+              dangerouslySetInnerHTML={{ __html: `“${block.content}”` }}
+            />
+            {block.metadata?.author && (
+              <figcaption className="mt-4 flex items-center gap-2 text-sm font-semibold text-muted">
+                <span aria-hidden="true" className="h-px w-5 bg-separator" />
+                {block.metadata.author}
+              </figcaption>
+            )}
+          </figure>
+        );
+      case "table": {
         const tableData: string[][] = block.metadata?.tableData || [];
         if (tableData.length === 0) return null;
-        
+
+        const [head, ...rows] = tableData;
+
         return (
-          <div className="my-8 overflow-x-auto rounded-xl border border-border">
-            <table className="w-full border-collapse text-left text-sm whitespace-nowrap">
-              <thead className="bg-surface-hover/50 text-text font-medium border-b border-border">
-                <tr>
-                  {tableData[0]?.map((cell, i) => (
-                    <th key={i} className="px-6 py-4">{cell}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-surface text-text-soft divide-y divide-border">
-                {tableData.slice(1).map((row, i) => (
-                  <tr key={i} className="hover:bg-surface-hover/30 transition-colors">
-                    {row.map((cell, j) => (
-                      <td key={j} className="px-6 py-4">{cell}</td>
+          <div className="my-10">
+            <Table.Root>
+              <Table.ScrollContainer>
+                <Table.Content aria-label="Tabela do conteúdo da aula">
+                  <Table.Header>
+                    {head.map((cell, i) => (
+                      <Table.Column key={i} id={`col-${i}`} isRowHeader={i === 0}>
+                        {cell}
+                      </Table.Column>
                     ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </Table.Header>
+                  <Table.Body>
+                    {rows.map((row, i) => (
+                      <Table.Row key={i} id={`row-${i}`}>
+                        {row.map((cell, j) => (
+                          <Table.Cell key={j} id={`cell-${i}-${j}`}>
+                            {cell}
+                          </Table.Cell>
+                        ))}
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Content>
+              </Table.ScrollContainer>
+            </Table.Root>
           </div>
         );
-      case 'paragraph':
+      }
+      case "paragraph":
       default:
-        return <div className="text-lg text-text-soft leading-relaxed my-4 prose prose-p:my-0 max-w-none" dangerouslySetInnerHTML={{ __html: block.content }} />;
+        return (
+          <div
+            className="my-5 text-[1.0625rem] leading-8 text-foreground"
+            dangerouslySetInnerHTML={{ __html: block.content }}
+          />
+        );
     }
   };
 
   return (
-    <div className="block-viewer max-w-none">
+    <Typography.Prose className="block-viewer max-w-none">
       {blocks.map((block, index) => (
-        <React.Fragment key={block.id || index}>
-          {renderBlock(block)}
-        </React.Fragment>
+        <React.Fragment key={block.id || index}>{renderBlock(block)}</React.Fragment>
       ))}
-    </div>
+    </Typography.Prose>
   );
 }

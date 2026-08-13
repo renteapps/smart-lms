@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateLearningTrail, replanLearningTrail, schedulePendingItems, validateQuestionnaire } from './matching';
+import { applySessionFeedback, generateLearningTrail, postponeTrailSession, removeTrailItem, replanLearningTrail, restoreTrailItem, schedulePendingItems, updateTrailAvailability, validateQuestionnaire } from './matching';
 import { mockQuestionnaire } from './mocks/trilhaMocks';
 import { ContentMapping, LearningTrailItem, Questionnaire } from '@/types/trilha';
 
@@ -105,5 +105,51 @@ describe('adaptive learning trail', () => {
     const trail = generateLearningTrail('u1', { q: ['Ambos'] }, questionnaire, { weekdays: [1], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10), resolver);
     expect(trail.items).toHaveLength(2);
     expect(trail.items.some((item) => item.warnings?.some((warning) => warning.includes('Ciclo')))).toBe(true);
+  });
+
+  it('adapts the next session target from load feedback', () => {
+    const trail = generateLearningTrail('u1', {
+      q_formato: ['Teoria Profunda (Conceitos base)'], q_objetivo: ['Sair do zero com segurança'],
+    }, mockQuestionnaire, { weekdays: [1, 3, 5], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10));
+    const sessionId = trail.items[0].sessionId;
+    trail.items[0] = { ...trail.items[0], status: 'completed' };
+
+    const lighter = applySessionFeedback(trail, sessionId, 'heavy', new Date(2026, 7, 10));
+    expect(lighter.adaptiveMinutesPerSession).toBe(20);
+    expect(lighter.feedbackHistory?.[0].rating).toBe('heavy');
+    expect(lighter.items.filter((item) => item.status === 'pending').every((item) => item.scheduledDate >= '2026-08-12')).toBe(true);
+
+    const raisedAgain = applySessionFeedback(lighter, sessionId, 'light', new Date(2026, 7, 10));
+    expect(raisedAgain.adaptiveMinutesPerSession).toBe(30);
+    expect(raisedAgain.feedbackHistory).toHaveLength(1);
+  });
+
+  it('updates routine, postpones sessions and preserves completed history', () => {
+    const trail = generateLearningTrail('u1', {
+      q_formato: ['Teoria Profunda (Conceitos base)'], q_objetivo: ['Sair do zero com segurança'],
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 20 }, undefined, new Date(2026, 7, 10));
+    trail.items[0] = { ...trail.items[0], status: 'completed' };
+    const completedDate = trail.items[0].scheduledDate;
+    const adjusted = updateTrailAvailability(trail, { weekdays: [2, 4], minutesPerSession: 45 }, new Date(2026, 7, 10));
+    expect(adjusted.items[0].scheduledDate).toBe(completedDate);
+    expect(adjusted.items.filter((item) => item.status === 'pending')[0].scheduledDate).toBe('2026-08-11');
+
+    const firstPendingSession = adjusted.items.find((item) => item.status === 'pending')!.sessionId;
+    const postponed = postponeTrailSession(adjusted, firstPendingSession);
+    expect(postponed.items.find((item) => item.status === 'pending')!.scheduledDate).toBe('2026-08-13');
+  });
+
+  it('removes and restores pending content without losing it', () => {
+    const trail = generateLearningTrail('u1', {
+      q_formato: ['Teoria Profunda (Conceitos base)'], q_objetivo: ['Sair do zero com segurança'],
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10));
+    const target = trail.items.at(-1)!;
+    const removed = removeTrailItem(trail, target.id, new Date(2026, 7, 10));
+    expect(removed.items.some((item) => item.id === target.id)).toBe(false);
+    expect(removed.excludedItems?.some((item) => item.id === target.id)).toBe(true);
+
+    const restored = restoreTrailItem(removed, target.id, new Date(2026, 7, 10));
+    expect(restored.items.some((item) => item.id === target.id)).toBe(true);
+    expect(restored.excludedItems).toEqual([]);
   });
 });

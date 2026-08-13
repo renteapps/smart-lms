@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Edit3, List, Settings, ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight, Edit3, List, Settings } from "lucide-react";
+import { Card } from "@heroui/react";
+import { PageHeader } from "@/components/ui/editorial";
 
 export default function AdminCursoDashboard() {
   const params = useParams();
@@ -14,50 +16,61 @@ export default function AdminCursoDashboard() {
       description: "Edite informações, capas e categorias",
       icon: Edit3,
       href: `/admin/cursos/${id}/editar`,
-      color: "bg-primary"
+      tone: "bg-accent-soft text-accent-soft-foreground",
     },
     {
       title: "Módulos",
       description: "Adicione ou edite aulas e módulos",
       icon: List,
       href: `/admin/cursos/${id}/modulos`,
-      color: "bg-positive"
+      tone: "bg-success-soft text-success-soft-foreground",
     },
     {
       title: "Configurações",
       description: "Ajustes gerais de exibição do curso",
       icon: Settings,
       href: `/admin/cursos/${id}/configuracoes`,
-      color: "bg-accent-orange"
-    }
+      tone: "bg-warning-soft text-warning-soft-foreground",
+    },
   ];
 
   return (
     <div className="space-y-7">
-      <div className="mb-6">
-        <Link href="/admin/cursos" className="inline-flex items-center gap-2 text-text-soft hover:text-primary transition-colors text-sm font-medium mb-4">
-          <ArrowLeft className="w-4 h-4" />
+      <div>
+        <Link
+          href="/admin/cursos"
+          className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-accent"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
           Voltar para Lista
         </Link>
-        <p className="eyebrow">Conteúdo</p>
-        <h1 className="mt-2 text-3xl font-extrabold">Gerenciar curso #{id}</h1>
-        <p className="text-text-soft mt-1">Selecione uma área abaixo para gerenciar este curso.</p>
+        <PageHeader
+          eyebrow="Conteúdo"
+          title={`Gerenciar curso #${id}`}
+          description="Selecione uma área abaixo para gerenciar este curso."
+        />
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {cards.map((card, i) => {
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        {cards.map((card) => {
           const Icon = card.icon;
           return (
-            <Link 
-              key={i} 
-              href={card.href}
-              className="editorial-card editorial-card-interactive group block p-6"
-            >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white mb-4 ${card.color}`}>
-                <Icon className="w-6 h-6" />
-              </div>
-              <h2 className="mb-2 text-xl font-extrabold group-hover:text-primary-active">{card.title}</h2>
-              <p className="text-text-soft text-sm leading-relaxed">{card.description}</p>
+            <Link key={card.href} href={card.href} className="group block rounded-xl">
+              <Card className="h-full transition-shadow group-hover:shadow-overlay">
+                <Card.Header>
+                  <span className={`mb-2 grid size-12 place-items-center rounded-xl ${card.tone}`}>
+                    <Icon className="size-6" aria-hidden="true" />
+                  </span>
+                  <Card.Title className="group-hover:text-accent">{card.title}</Card.Title>
+                  <Card.Description>{card.description}</Card.Description>
+                </Card.Header>
+                <Card.Footer>
+                  <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
+                    Abrir
+                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                  </span>
+                </Card.Footer>
+              </Card>
             </Link>
           );
         })}

@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, X, Send, Sparkles, Bot } from "lucide-react";
+import { motion } from "framer-motion";
+import { MessageSquare, Send, X } from "lucide-react";
+import { Button, Input, Label, Popover, Separator, TextField } from "@heroui/react";
+import { SparkIcon } from "@/components/ui/AnimatedIcon";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
+import { cn } from "@/lib/utils";
 
 export default function ChatSticker() {
   const { state: { article } } = useAudioPlayer();
@@ -25,11 +28,11 @@ export default function ChatSticker() {
 
   const handleSend = () => {
     if (!input.trim()) return;
-    
+
     setMessages(prev => [...prev, { role: 'user', text: input }]);
     setInput('');
     setIsTyping(true);
-    
+
     // Simulate AI response
     setTimeout(() => {
       setIsTyping(false);
@@ -44,165 +47,135 @@ export default function ChatSticker() {
   };
 
   return (
+    /*
+     * O gatilho é o único elemento fixo; o painel é um Popover do HeroUI, que
+     * já resolve posicionamento, foco, Escape e clique fora — três coisas que
+     * um overlay caseiro erraria em silêncio. O estado da conversa vive aqui
+     * fora, então fechar e reabrir não perde nada do que foi escrito.
+     */
     <div
       className="fixed right-4 z-40 flex flex-col items-end transition-[bottom] duration-[var(--duration-md)] sm:right-6"
       style={{ bottom: article ? "calc(5.75rem + env(safe-area-inset-bottom))" : "max(1rem, env(safe-area-inset-bottom))" }}
     >
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95, transformOrigin: 'bottom right' }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }} // smooth spring-like ease
-            className="mb-3 flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[12px] border border-border/80 bg-surface/96 shadow-[var(--shadow-float)] backdrop-blur-xl sm:mb-4 sm:w-[380px]"
-            style={{ height: 'min(520px, calc(100vh - 100px))' }}
-          >
-            {/* Header */}
-            <div className="bg-gradient-to-r from-primary to-primary/80 p-5 flex items-center justify-between text-on-primary relative overflow-hidden">
-              {/* Decorative background blur in header */}
-              <div className="absolute top-0 right-0 -mr-8 -mt-8 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-              
-              <div className="flex items-center gap-3 relative z-10">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-white/30 shadow-sm">
-                  <Bot size={22} className="text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold font-manrope text-base leading-tight">Assistente IA</h3>
-                  <p className="text-xs text-white/80 font-medium mt-0.5 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-                    Online agora
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsOpen(false)}
-                aria-label="Fechar assistente"
-                className="text-white/80 hover:text-white transition-all hover:bg-white/20 p-2 rounded-full relative z-10 hover:rotate-90 active:scale-90"
-              >
-                <X size={20} />
-              </button>
-            </div>
+      <Popover.Root isOpen={isOpen} onOpenChange={setIsOpen}>
+        <Popover.Trigger
+          aria-label={isOpen ? "Fechar assistente" : "Abrir assistente de IA"}
+          className="press grid size-14 place-items-center rounded-2xl bg-accent text-accent-foreground shadow-elev-4 transition-[background-color,transform] duration-[var(--duration-md)] hover:bg-accent-hover"
+        >
+          {isOpen ? (
+            <X className="size-6" aria-hidden="true" />
+          ) : (
+            <MessageSquare className="size-6" aria-hidden="true" />
+          )}
+        </Popover.Trigger>
 
-            {/* Chat Area */}
-            <div className="flex-1 p-5 overflow-y-auto bg-gradient-to-b from-bg/30 to-bg/50 flex flex-col gap-4 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+        <Popover.Content
+          placement="top end"
+          className="material-thick h-[min(32rem,calc(100vh-9rem))] w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl p-0"
+        >
+          <Popover.Dialog aria-label="Assistente de IA" className="flex h-full flex-col p-0">
+            <header className="flex items-center gap-3 px-5 py-4">
+              <span className="icon-draw grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground">
+                <SparkIcon size={20} />
+              </span>
+              <div className="min-w-0">
+                <Popover.Heading className="font-display text-base font-extrabold tracking-tight text-foreground">
+                  Assistente IA
+                </Popover.Heading>
+                <p className="mt-0.5 flex items-center gap-1.5 text-xs font-semibold text-muted">
+                  <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />
+                  Online agora
+                </p>
+              </div>
+            </header>
+
+            <Separator />
+
+            <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-5">
               {messages.map((msg, idx) => (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  key={idx} 
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-2`}
+                <div
+                  key={idx}
+                  className={cn("flex items-end gap-2", msg.role === "user" ? "justify-end" : "justify-start")}
                 >
-                  {msg.role === 'ai' && (
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-auto mb-1">
-                      <Sparkles size={14} className="text-primary" />
-                    </div>
+                  {msg.role === "ai" && (
+                    <span
+                      aria-hidden="true"
+                      className="grid size-7 shrink-0 place-items-center rounded-full bg-accent-soft text-accent-soft-foreground"
+                    >
+                      <SparkIcon size={14} />
+                    </span>
                   )}
-                  
-                  <div 
-                    className={`max-w-[80%] p-3.5 text-[15px] leading-relaxed shadow-sm ${
-                      msg.role === 'user' 
-                        ? 'bg-gradient-to-br from-primary to-primary/90 text-on-primary rounded-2xl rounded-tr-sm' 
-                        : 'bg-surface border border-border/40 text-text rounded-2xl rounded-tl-sm'
-                    }`}
+
+                  {/*
+                   * As bolhas são opacas de propósito: o painel é acrílico e
+                   * texto longo sobre material perde contraste.
+                   */}
+                  <p
+                    className={cn(
+                      "max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-elev-1",
+                      msg.role === "user"
+                        ? "rounded-br-sm bg-accent text-accent-foreground"
+                        : "rounded-bl-sm border border-hairline bg-surface text-foreground",
+                    )}
                   >
                     {msg.text}
-                  </div>
-                </motion.div>
+                  </p>
+                </div>
               ))}
-              
+
               {isTyping && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex justify-start gap-2"
-                >
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-auto mb-1">
-                    <Sparkles size={14} className="text-primary" />
+                <div className="flex items-end gap-2" aria-live="polite">
+                  <span
+                    aria-hidden="true"
+                    className="grid size-7 shrink-0 place-items-center rounded-full bg-accent-soft text-accent-soft-foreground"
+                  >
+                    <SparkIcon size={14} />
+                  </span>
+                  <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-hairline bg-surface px-4 py-4 shadow-elev-1">
+                    <span className="sr-only">Assistente digitando</span>
+                    {[0, 0.2, 0.4].map((delay) => (
+                      <motion.span
+                        key={delay}
+                        aria-hidden="true"
+                        className="size-1.5 rounded-full bg-accent"
+                        animate={{ y: [0, -5, 0] }}
+                        transition={{ duration: 0.6, repeat: Infinity, delay }}
+                      />
+                    ))}
                   </div>
-                  <div className="bg-surface border border-border/40 p-4 rounded-2xl rounded-tl-sm flex items-center gap-1 shadow-sm">
-                    <motion.div 
-                      className="w-1.5 h-1.5 bg-primary/60 rounded-full"
-                      animate={{ y: [0, -5, 0] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                    />
-                    <motion.div 
-                      className="w-1.5 h-1.5 bg-primary/60 rounded-full"
-                      animate={{ y: [0, -5, 0] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
-                    />
-                    <motion.div 
-                      className="w-1.5 h-1.5 bg-primary/60 rounded-full"
-                      animate={{ y: [0, -5, 0] }}
-                      transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
-                    />
-                  </div>
-                </motion.div>
+                </div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Area */}
-            <div className="p-4 bg-surface border-t border-border/50">
-              <div className="flex items-center gap-2 bg-bg border border-border/80 rounded-full px-2 py-1.5 shadow-inner focus-within:ring-2 focus-within:ring-primary/40 focus-within:border-primary/50 transition-all">
-                <input 
-                  type="text" 
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  placeholder="Mensagem para a IA..." 
-                  className="flex-1 bg-transparent border-none px-4 py-2 text-sm focus:outline-none focus:ring-0 placeholder:text-text-mute text-text"
-                />
-                <button 
-                  onClick={handleSend}
-                  disabled={!input.trim()}
-                  className="bg-primary text-on-primary p-2.5 rounded-full disabled:opacity-40 disabled:scale-95 transition-all hover:bg-primary-active hover:scale-105 active:scale-95 flex items-center justify-center"
-                >
-                  <Send size={16} className="ml-0.5" />
-                </button>
-              </div>
-              <div className="text-center mt-3">
-                <span className="text-[10px] text-text-mute font-medium tracking-wide uppercase">IA pode cometer erros. Verifique informações.</span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <Separator />
 
-      <motion.button
-        whileHover={{ scale: 1.05, y: -2 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
-        aria-label={isOpen ? "Fechar assistente" : "Abrir assistente"}
-        className="relative ml-auto flex h-13 w-13 items-center justify-center rounded-[10px] border border-primary/20 bg-primary text-on-primary shadow-lg shadow-primary/20 transition-[background-color,box-shadow,transform] sm:h-14 sm:w-14"
-      >
-        <AnimatePresence mode="wait">
-          {isOpen ? (
-            <motion.div
-              key="close"
-              initial={{ rotate: -90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: 90, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <X size={24} />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="open"
-              initial={{ rotate: 90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: -90, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <MessageSquare size={23} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-        
-        {/* Animated sparkles removed as requested */}
-      </motion.button>
+            <footer className="px-5 py-4">
+              <div className="flex items-end gap-2">
+                <TextField value={input} onChange={setInput} fullWidth className="flex-1">
+                  <Label className="sr-only">Mensagem para a assistente</Label>
+                  <Input
+                    placeholder="Mensagem para a IA..."
+                    onKeyDown={handleKeyPress}
+                  />
+                </TextField>
+                <Button
+                  isIconOnly
+                  aria-label="Enviar mensagem"
+                  onClick={handleSend}
+                  isDisabled={!input.trim()}
+                  className="size-11 shrink-0"
+                >
+                  <Send className="size-4" aria-hidden="true" />
+                </Button>
+              </div>
+              <p className="mt-3 text-center text-xs text-muted">
+                A IA pode cometer erros. Verifique informações importantes.
+              </p>
+            </footer>
+          </Popover.Dialog>
+        </Popover.Content>
+      </Popover.Root>
     </div>
   );
 }

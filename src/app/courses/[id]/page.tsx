@@ -1,9 +1,13 @@
 import { MOCK_COURSE } from "@/lib/mockData";
 import CourseOverviewClient from "@/components/classroom/CourseOverviewClient";
 
+/**
+ * Capa do curso. Todo o cálculo (progresso, próxima aula) acontece no servidor;
+ * a camada interativa vive em `CourseOverviewClient`.
+ */
 export default async function CourseOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  
+
   // No mundo real, buscaríamos o curso pelo resolvedParams.id
   const course = { ...MOCK_COURSE, id };
 
@@ -13,7 +17,7 @@ export default async function CourseOverviewPage({ params }: { params: Promise<{
     return acc + mod.lessons.filter(l => l.isCompleted).length;
   }, 0);
   const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
-  
+
   // Pegar a primeira aula não concluída, ou a primeira do curso se for novo
   let nextLesson = null;
   for (const courseModule of course.modules) {

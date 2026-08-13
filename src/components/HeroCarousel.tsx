@@ -1,9 +1,13 @@
 "use client";
 
-import { Info, Play } from "lucide-react";
-import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import Link from "next/link";
+import { Info } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Button, buttonVariants } from "@heroui/react";
+import { PlayIcon } from "@/components/ui/AnimatedIcon";
+import { cn } from "@/lib/utils";
 
 const mockHeroes = [
   {
@@ -24,61 +28,103 @@ const mockHeroes = [
 
 export default function HeroCarousel() {
   const [current, setCurrent] = useState(0);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
+    // Movimento automático é o primeiro a cair quando o sistema pede sossego.
+    if (reduceMotion) return;
+
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % mockHeroes.length);
     }, 8000);
     return () => clearInterval(timer);
-  }, []);
+  }, [reduceMotion]);
 
   const hero = mockHeroes[current];
 
   return (
-    <div className="relative w-full h-[70vh] md:h-[85vh] flex items-center">
-      {/* Backdrop */}
-      <div className="absolute inset-0 z-0">
-        <div 
-          className="absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out"
-          style={{ backgroundImage: `url(${hero.backdrop})` }}
-        ></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent"></div>
+    <div className="relative flex h-[70vh] w-full items-center md:h-[85vh]">
+      {/*
+       * O fundo troca por fusão cruzada, não por corte: a imagem antiga só sai
+       * depois que a nova está no lugar, o que evita o piscar do canvas entre
+       * os slides.
+       */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={hero.id}
+            className="absolute inset-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.9, ease: [0.2, 0, 0, 1] }}
+          >
+            <Image
+              src={hero.backdrop}
+              alt=""
+              fill
+              priority={hero.id === mockHeroes[0].id}
+              sizes="100vw"
+              className="object-cover"
+            />
+          </motion.div>
+        </AnimatePresence>
+
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent"
+        />
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 px-4 md:px-12 w-full max-w-3xl">
-        <span className="text-primary font-bold text-sm md:text-base uppercase tracking-widest mb-4 block">
-          {hero.category}
-        </span>
-        <h1 className="text-5xl md:text-7xl font-display font-extrabold leading-[1.1] mb-6">
-          {hero.title}
-        </h1>
-        <p className="text-muted-foreground text-lg md:text-xl mb-8 max-w-xl">
-          {hero.subtitle}
-        </p>
+      <div className="editorial-container relative z-10">
+        <div className="max-w-3xl">
+          <p className="eyebrow">{hero.category}</p>
+          <h1 className="display-1 mt-4 text-foreground">{hero.title}</h1>
+          <p className="lede mt-6">{hero.subtitle}</p>
 
-        <div className="flex flex-wrap gap-4">
-          <Button render={<Link href="/courses/c1" className="flex items-center gap-2" />} nativeButton={false} size="lg" className="rounded-[var(--radius-xl)] font-bold px-8">
-            <Play className="w-5 h-5 fill-current" />
-            Assistir
-          </Button>
-          <Button variant="outline" size="lg" className="rounded-[var(--radius-xl)] font-semibold px-8 border-border bg-background/60 hover:bg-muted backdrop-blur">
-            <Info className="w-5 h-5 mr-2" />
-            Mais Informações
-          </Button>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link
+              href="/courses/c1"
+              className={cn(buttonVariants({ variant: "primary", size: "lg" }), "icon-draw")}
+            >
+              <PlayIcon size={20} />
+              Assistir
+            </Link>
+            <Button variant="outline" size="lg">
+              <Info className="size-5" aria-hidden="true" />
+              Mais Informações
+            </Button>
+          </div>
         </div>
       </div>
-      
-      {/* Dots */}
-      <div className="absolute bottom-12 right-12 z-10 flex gap-2">
-        {mockHeroes.map((_, idx) => (
-          <button 
-            key={idx}
+
+      <div
+        className="editorial-container absolute inset-x-0 bottom-10 z-10 flex items-center justify-end gap-1"
+        role="tablist"
+        aria-label="Destaques"
+      >
+        {mockHeroes.map((item, idx) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
             onClick={() => setCurrent(idx)}
-            className={`w-2 h-2 rounded-full transition-all duration-[var(--duration-md)] ease-[var(--ease-zen)] ${idx === current ? 'bg-primary w-6' : 'bg-foreground/30 hover:bg-foreground/50'}`}
-            aria-label={`Ir para slide ${idx + 1}`}
-          />
+            aria-selected={idx === current}
+            aria-label={`Ir para ${item.title}`}
+            className="grid h-11 w-9 place-items-center rounded-lg"
+          >
+            <span
+              aria-hidden="true"
+              className={cn(
+                "h-1.5 rounded-full transition-all duration-[var(--duration-md)] ease-[var(--ease-zen)]",
+                idx === current ? "w-8 bg-accent" : "w-4 bg-foreground/25 hover:bg-foreground/45",
+              )}
+            />
+          </button>
         ))}
       </div>
     </div>

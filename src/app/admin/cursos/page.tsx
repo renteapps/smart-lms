@@ -1,6 +1,10 @@
+"use client";
+
 import Link from "next/link";
-import { BookOpen, MoreHorizontal, Plus, Search } from "lucide-react";
+import { BookOpen, Plus } from "lucide-react";
+import { Card, EmptyState, Label, SearchField, Table, buttonVariants } from "@heroui/react";
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
+import { cn } from "@/lib/utils";
 
 const mockCourses = [
   { id: "1", title: "Inteligência Emocional no Trabalho", category: "Comportamental", lessons: 15, status: "Publicado", updated: "Hoje, 09:42" },
@@ -11,27 +15,124 @@ const mockCourses = [
 ];
 
 export default function AdminCursosList() {
+  const isEmpty = mockCourses.length === 0;
+
   return (
     <div className="space-y-7">
-      <PageHeader eyebrow="Conteúdo" title="Cursos" description="Crie, organize e acompanhe todo o catálogo de aprendizagem." actions={<Link href="/admin/cursos/novo" className="inline-flex min-h-11 items-center gap-2 rounded-[11px] bg-primary px-4 text-sm font-bold text-on-primary shadow-sm hover:bg-primary-active"><Plus className="h-4 w-4" /> Novo curso</Link>} />
+      <PageHeader
+        eyebrow="Conteúdo"
+        title="Cursos"
+        description="Crie, organize e acompanhe todo o catálogo de aprendizagem."
+        actions={
+          <Link href="/admin/cursos/novo" className={cn(buttonVariants({ variant: "primary" }), "gap-2")}>
+            <Plus className="size-4" aria-hidden="true" /> Novo curso
+          </Link>
+        }
+      />
 
-      <section className="editorial-card overflow-hidden">
-        <div className="flex flex-col gap-4 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <label className="relative block w-full sm:max-w-md"><span className="sr-only">Buscar curso</span><Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-mute" /><input placeholder="Buscar curso..." className="h-11 w-full rounded-[11px] border border-border bg-canvas-soft pl-10 pr-4 text-sm focus:border-primary focus:bg-surface focus:outline-none" /></label>
-          <div className="flex items-center gap-2 text-xs font-semibold text-text-mute"><StatusBadge tone="positive">24 publicados</StatusBadge><StatusBadge tone="warning">3 rascunhos</StatusBadge></div>
-        </div>
+      <Card>
+        <Card.Header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <SearchField className="w-full sm:max-w-md" aria-label="Buscar curso">
+            <Label className="sr-only">Buscar curso</Label>
+            <SearchField.Group>
+              <SearchField.SearchIcon />
+              <SearchField.Input placeholder="Buscar curso..." />
+              <SearchField.ClearButton />
+            </SearchField.Group>
+          </SearchField>
+          <div className="flex items-center gap-2">
+            <StatusBadge tone="positive">24 publicados</StatusBadge>
+            <StatusBadge tone="warning">3 rascunhos</StatusBadge>
+          </div>
+        </Card.Header>
 
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full text-left">
-            <thead><tr className="bg-canvas-soft/75 text-[11px] font-bold uppercase tracking-[0.09em] text-text-mute"><th className="px-5 py-3.5">Curso</th><th className="px-5 py-3.5">Categoria</th><th className="px-5 py-3.5">Aulas</th><th className="px-5 py-3.5">Status</th><th className="px-5 py-3.5">Atualização</th><th className="w-16 px-5 py-3.5"><span className="sr-only">Ações</span></th></tr></thead>
-            <tbody>{mockCourses.map((course) => <tr key={course.id} className="border-t border-border/70 hover:bg-primary-pale/20"><td className="px-5 py-4"><Link href={`/admin/cursos/${course.id}`} className="flex items-center gap-3 font-bold text-ink hover:text-primary-active"><span className="grid h-9 w-9 place-items-center rounded-[11px] bg-primary-pale text-primary"><BookOpen className="h-4 w-4" /></span>{course.title}</Link></td><td className="px-5 py-4 text-sm text-text-soft">{course.category}</td><td className="px-5 py-4 text-sm font-semibold text-text-soft">{course.lessons}</td><td className="px-5 py-4"><StatusBadge tone={course.status === "Publicado" ? "positive" : "warning"}>{course.status}</StatusBadge></td><td className="px-5 py-4 text-xs font-medium text-text-mute">{course.updated}</td><td className="px-5 py-4"><Link href={`/admin/cursos/${course.id}`} aria-label={`Gerenciar ${course.title}`} className="grid h-10 w-10 place-items-center rounded-[10px] text-text-mute hover:bg-surface-hover hover:text-ink"><MoreHorizontal className="h-5 w-5" /></Link></td></tr>)}</tbody>
-          </table>
-        </div>
+        <Card.Content className="px-0 pb-0">
+          {isEmpty ? (
+            <EmptyState className="flex flex-col items-center gap-2 px-6 py-14 text-center">
+              <span className="grid size-11 place-items-center rounded-xl bg-background-secondary">
+                <BookOpen className="size-5 text-muted" aria-hidden="true" />
+              </span>
+              <p className="font-semibold text-foreground">Nenhum curso no catálogo</p>
+              <p className="text-sm text-muted">Crie o primeiro curso para começar a montar as trilhas.</p>
+              <Link href="/admin/cursos/novo" className={cn(buttonVariants({ variant: "primary", size: "sm" }), "mt-2 gap-2")}>
+                <Plus className="size-4" aria-hidden="true" /> Novo curso
+              </Link>
+            </EmptyState>
+          ) : (
+            <>
+              <div className="hidden md:block">
+                <Table.Root>
+                  <Table.ScrollContainer>
+                    <Table.Content aria-label="Catálogo de cursos">
+                      <Table.Header>
+                        <Table.Column isRowHeader>Curso</Table.Column>
+                        <Table.Column>Categoria</Table.Column>
+                        <Table.Column>Aulas</Table.Column>
+                        <Table.Column>Status</Table.Column>
+                        <Table.Column>Atualização</Table.Column>
+                      </Table.Header>
+                      <Table.Body>
+                        {mockCourses.map((course) => (
+                          <Table.Row key={course.id} id={course.id}>
+                            <Table.Cell>
+                              <Link
+                                href={`/admin/cursos/${course.id}`}
+                                className="flex items-center gap-3 font-semibold text-foreground hover:text-accent"
+                              >
+                                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground">
+                                  <BookOpen className="size-4" aria-hidden="true" />
+                                </span>
+                                {course.title}
+                              </Link>
+                            </Table.Cell>
+                            <Table.Cell>{course.category}</Table.Cell>
+                            <Table.Cell>{course.lessons}</Table.Cell>
+                            <Table.Cell>
+                              <StatusBadge tone={course.status === "Publicado" ? "positive" : "warning"}>
+                                {course.status}
+                              </StatusBadge>
+                            </Table.Cell>
+                            <Table.Cell className="text-muted">{course.updated}</Table.Cell>
+                          </Table.Row>
+                        ))}
+                      </Table.Body>
+                    </Table.Content>
+                  </Table.ScrollContainer>
+                </Table.Root>
+              </div>
 
-        <div className="divide-y divide-border md:hidden">
-          {mockCourses.map((course) => <article key={course.id} className="p-4"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-primary-pale text-primary"><BookOpen className="h-4 w-4" /></span><div className="min-w-0 flex-1"><Link href={`/admin/cursos/${course.id}`} className="font-bold leading-5 text-ink">{course.title}</Link><p className="mt-1 text-xs text-text-mute">{course.category} · {course.lessons} aulas</p></div><StatusBadge tone={course.status === "Publicado" ? "positive" : "warning"}>{course.status}</StatusBadge></div><div className="mt-4 flex items-center justify-between"><span className="text-xs font-medium text-text-mute">Atualizado {course.updated.toLowerCase()}</span><Link href={`/admin/cursos/${course.id}`} className="min-h-10 rounded-[10px] bg-primary-pale px-3 py-2 text-sm font-bold text-primary-active">Gerenciar</Link></div></article>)}
-        </div>
-      </section>
+              <ul className="divide-y divide-separator md:hidden">
+                {mockCourses.map((course) => (
+                  <li key={course.id} className="p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground">
+                        <BookOpen className="size-4" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/admin/cursos/${course.id}`} className="block font-semibold leading-5 text-foreground">
+                          {course.title}
+                        </Link>
+                        <p className="mt-1 text-xs text-muted">
+                          {course.category} · {course.lessons} aulas
+                        </p>
+                      </div>
+                      <StatusBadge tone={course.status === "Publicado" ? "positive" : "warning"}>
+                        {course.status}
+                      </StatusBadge>
+                    </div>
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <span className="text-xs text-muted">Atualizado {course.updated.toLowerCase()}</span>
+                      <Link href={`/admin/cursos/${course.id}`} className={buttonVariants({ variant: "secondary", size: "sm" })}>
+                        Gerenciar
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </Card.Content>
+      </Card>
     </div>
   );
 }

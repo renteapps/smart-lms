@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Layers, Image as ImageIcon, Sparkles, Check, Link2 } from "lucide-react";
+import { Button, Chip, Input, Label, Modal, TextArea, TextField } from "@heroui/react";
+import { Layers, Image as ImageIcon, Sparkles, Check } from "lucide-react";
 import { Module } from "@/lib/mockData";
 
 interface AddEditModuleModalProps {
@@ -65,177 +66,126 @@ export default function AddEditModuleModal({
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-surface border border-border rounded-2xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative my-8">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-ink">
-                {initialModule ? "Editar Módulo" : "Adicionar Novo Módulo"}
-              </h2>
-              <p className="text-xs text-text-soft">
-                Defina o nome, descrição detalhada e a capa em proporção 16:9.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 text-text-soft hover:text-ink hover:bg-canvas-soft rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-          
-          {/* Título do Módulo */}
-          <div>
-            <label className="block text-sm font-bold text-ink mb-1">
-              Nome / Título do Módulo <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Módulo 3: Gerenciamento Avançado de Estado"
-              className="w-full px-4 py-2.5 bg-canvas border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/50"
-              required
-            />
-          </div>
-
-          {/* Descrição do Módulo */}
-          <div>
-            <label className="block text-sm font-bold text-ink mb-1">
-              Descrição do Módulo
-            </label>
-            <textarea
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descreva os objetivos de aprendizagem e os tópicos abordados neste módulo..."
-              className="w-full px-4 py-2.5 bg-canvas border border-border rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
-            />
-          </div>
-
-          {/* Capa 16:9 */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-bold text-ink flex items-center gap-1.5">
-                <ImageIcon className="w-4 h-4 text-primary" />
-                Capa do Módulo (Proporção 16:9)
-              </label>
-              <span className="text-xs font-semibold text-text-soft bg-canvas-soft px-2.5 py-0.5 rounded-full border border-border">
-                16:9 HD
-              </span>
-            </div>
-
-            {/* Preview Box 16:9 */}
-            <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-border bg-canvas-soft group shadow-sm">
-              {coverUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={coverUrl}
-                  alt="Prévia da capa 16:9"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = PRESET_COVERS[0].url;
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-text-soft">
-                  <ImageIcon className="w-8 h-8 mb-1 opacity-40" />
-                  <span className="text-xs">Sem capa selecionada</span>
+    <Modal.Root isOpen={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Modal.Backdrop>
+        <Modal.Container size="lg" scroll="inside">
+          <Modal.Dialog>
+            <form onSubmit={handleSubmit}>
+              <Modal.Header>
+                <div className="flex items-center gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground">
+                    <Layers className="size-5" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <Modal.Heading>
+                      {initialModule ? "Editar Módulo" : "Adicionar Novo Módulo"}
+                    </Modal.Heading>
+                    <p className="text-xs text-muted">
+                      Defina o nome, descrição detalhada e a capa em proporção 16:9.
+                    </p>
+                  </div>
                 </div>
-              )}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
-                <span className="text-white text-xs font-bold bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-sm">
-                  Prévia em Proporção 16:9
-                </span>
-              </div>
-            </div>
+              </Modal.Header>
 
-            {/* URL Input */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-soft">
-                <Link2 className="w-4 h-4" />
-              </div>
-              <input
-                type="url"
-                value={coverUrl}
-                onChange={(e) => setCoverUrl(e.target.value)}
-                placeholder="https://exemplo.com/imagem-capa-16x9.jpg"
-                className="w-full pl-10 pr-4 py-2.5 bg-canvas border border-border rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
-            </div>
+              <Modal.Body className="space-y-6">
+                <TextField value={title} onChange={setTitle} isRequired>
+                  <Label>Nome / Título do Módulo</Label>
+                  <Input placeholder="Ex: Módulo 3: Gerenciamento Avançado de Estado" />
+                </TextField>
 
-            {/* Preset Covers */}
-            <div>
-              <p className="text-xs font-bold text-text-soft mb-2 flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Sugestões de Capas 16:9
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {PRESET_COVERS.map((preset) => {
-                  const isSelected = coverUrl === preset.url;
-                  return (
-                    <button
-                      key={preset.name}
-                      type="button"
-                      onClick={() => setCoverUrl(preset.url)}
-                      className={`relative aspect-video rounded-lg overflow-hidden border transition-all text-left group ${
-                        isSelected ? "border-primary ring-2 ring-primary/40" : "border-border hover:border-primary/40"
-                      }`}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={preset.url} alt={preset.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                      <div className="absolute inset-0 bg-black/40 p-1.5 flex flex-col justify-between">
-                        {isSelected && (
-                          <div className="self-end bg-primary text-white p-0.5 rounded-full">
-                            <Check className="w-3 h-3" />
-                          </div>
-                        )}
-                        <span className="text-[10px] font-bold text-white truncate drop-shadow mt-auto">
-                          {preset.name}
-                        </span>
+                <TextField value={description} onChange={setDescription}>
+                  <Label>Descrição do Módulo</Label>
+                  <TextArea
+                    rows={3}
+                    placeholder="Descreva os objetivos de aprendizagem e os tópicos abordados neste módulo..."
+                  />
+                </TextField>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                      <ImageIcon className="size-4 text-accent" aria-hidden="true" />
+                      Capa do Módulo
+                    </p>
+                    <Chip variant="soft" size="sm">16:9 HD</Chip>
+                  </div>
+
+                  {/* Preview Box 16:9 */}
+                  <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-border bg-background-secondary shadow-surface">
+                    {coverUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={coverUrl}
+                        alt="Prévia da capa em proporção 16:9"
+                        className="size-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = PRESET_COVERS[0].url;
+                        }}
+                      />
+                    ) : (
+                      <div className="flex size-full flex-col items-center justify-center text-muted">
+                        <ImageIcon className="mb-1 size-8 opacity-40" aria-hidden="true" />
+                        <span className="text-xs">Sem capa selecionada</span>
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+                    )}
+                  </div>
 
-          </div>
+                  <TextField value={coverUrl} onChange={setCoverUrl}>
+                    <Label>URL da capa</Label>
+                    <Input type="url" placeholder="https://exemplo.com/imagem-capa-16x9.jpg" />
+                  </TextField>
 
-          {/* Footer CTAs */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 text-sm font-bold text-text-soft hover:text-ink hover:bg-canvas-soft rounded-xl transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2.5 text-sm font-bold text-white bg-primary hover:bg-primary-hover rounded-xl transition-colors shadow-sm hover:shadow flex items-center gap-2"
-            >
-              <Layers className="w-4 h-4" />
-              {initialModule ? "Salvar Alterações" : "Criar Módulo"}
-            </button>
-          </div>
+                  <div>
+                    <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-muted">
+                      <Sparkles className="size-3.5 text-warning" aria-hidden="true" /> Sugestões de capas 16:9
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {PRESET_COVERS.map((preset) => {
+                        const isSelected = coverUrl === preset.url;
+                        return (
+                          <button
+                            key={preset.name}
+                            type="button"
+                            aria-pressed={isSelected}
+                            onClick={() => setCoverUrl(preset.url)}
+                            className={`group relative aspect-video overflow-hidden rounded-lg border text-left outline-none transition-all focus-visible:ring-2 focus-visible:ring-accent ${
+                              isSelected ? "border-accent ring-2 ring-accent" : "border-border hover:border-accent"
+                            }`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={preset.url} alt="" className="size-full object-cover transition-transform group-hover:scale-105" />
+                            <span className="absolute inset-0 flex flex-col justify-between bg-black/40 p-1.5">
+                              {isSelected && (
+                                <span className="self-end rounded-full bg-accent p-0.5 text-accent-foreground">
+                                  <Check className="size-3" aria-hidden="true" />
+                                </span>
+                              )}
+                              <span className="mt-auto truncate text-[10px] font-semibold text-white">
+                                {preset.name}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </Modal.Body>
 
-        </form>
-
-      </div>
-    </div>
+              <Modal.Footer>
+                <Button type="button" variant="tertiary" onClick={onClose}>
+                  Cancelar
+                </Button>
+                <Button type="submit" variant="primary" isDisabled={!title.trim()}>
+                  <Layers className="size-4" aria-hidden="true" />
+                  {initialModule ? "Salvar Alterações" : "Criar Módulo"}
+                </Button>
+              </Modal.Footer>
+            </form>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </Modal.Root>
   );
 }

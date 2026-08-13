@@ -23,6 +23,7 @@ export type EligibleLesson = {
 export type ContentType = 'lesson' | 'module' | 'course' | 'article' | 'external_link';
 export type SchedulableContentType = 'lesson' | 'article' | 'external_link';
 export type LearningRole = 'essential' | 'deepening' | 'extra';
+export type SessionLoadRating = 'light' | 'right' | 'heavy';
 
 export type ContentMapping = {
   id: string;
@@ -91,6 +92,16 @@ export type LearningTrailItem = ResolvedContent & {
   warnings?: string[];
 };
 
+export type SessionFeedback = {
+  sessionId: string;
+  rating: SessionLoadRating;
+  submittedAt: string;
+  plannedMinutes: number;
+  completedMinutes: number;
+  previousTargetMinutes: number;
+  nextTargetMinutes: number;
+};
+
 export type LearningTrail = {
   formatVersion: 3;
   userId: string;
@@ -100,4 +111,7 @@ export type LearningTrail = {
   questionnaireVersion: number;
   answers: Record<string, string[]>;
   availability: StudyAvailability;
+  adaptiveMinutesPerSession?: number;
+  feedbackHistory?: SessionFeedback[];
+  excludedItems?: LearningTrailItem[];
 };

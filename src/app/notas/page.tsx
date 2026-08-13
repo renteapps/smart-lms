@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, FileText, Search, StickyNote, Trash2 } from "lucide-react";
+import { ArrowUpRight, Trash2 } from "lucide-react";
+import { Button, buttonVariants, Card, EmptyState, Label, SearchField, Skeleton } from "@heroui/react";
+import { NoteIcon } from "@/components/ui/AnimatedIcon";
+import { Reveal } from "@/components/ui/Reveal";
+import { Rise } from "@/components/ui/Rise";
+import { isAgentNote } from "@/lib/agentNotes";
 
 interface Note {
   lessonId: string;
@@ -11,25 +16,29 @@ interface Note {
   updatedAt: string;
 }
 
+const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+
 export default function NotasPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoaded, setIsLoaded] = useState(false);
 
+  /*
+   * Sem requestAnimationFrame: rAF não dispara em aba oculta, e a página
+   * ficaria presa no esqueleto até receber foco. Ler o localStorage é barato
+   * o bastante para acontecer no próprio efeito.
+   */
   useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      const savedNotes = localStorage.getItem("smartlms_all_notes");
-      if (savedNotes) {
-        try {
-          const parsed: unknown = JSON.parse(savedNotes);
-          if (Array.isArray(parsed)) setNotes(parsed as Note[]);
-        } catch {
-          // Ignora dados locais corrompidos sem bloquear a página.
-        }
+    const savedNotes = localStorage.getItem("smartlms_all_notes");
+    if (savedNotes) {
+      try {
+        const parsed: unknown = JSON.parse(savedNotes);
+        if (Array.isArray(parsed)) setNotes(parsed as Note[]);
+      } catch {
+        // Ignora dados locais corrompidos sem bloquear a página.
       }
-      setIsLoaded(true);
-    });
-    return () => cancelAnimationFrame(frame);
+    }
+    setIsLoaded(true);
   }, []);
 
   const handleDelete = (lessonId: string) => {
@@ -46,31 +55,127 @@ export default function NotasPage() {
 
   return (
     <div className="pt-[76px]">
-      <section className="border-b border-border bg-accent-sage/8">
-        <div className="editorial-container grid gap-8 py-14 sm:py-18 lg:grid-cols-[1fr_auto] lg:items-end">
-          <div><div className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent-sage/15 px-3 py-1.5 text-xs font-bold text-positive"><StickyNote className="h-3.5 w-3.5" /> Caderno pessoal</div><h1 className="max-w-3xl text-4xl font-extrabold tracking-[-0.05em] text-ink sm:text-6xl">Ideias que merecem continuar com você.</h1><p className="mt-5 max-w-2xl text-lg leading-8 text-text-soft">Releia seus insights e transforme anotações em pequenas ações para a rotina.</p></div>
-          <label className="relative block w-full lg:w-80"><span className="sr-only">Buscar nas anotações</span><Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-text-mute" /><input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Buscar nas anotações" className="h-12 w-full rounded-[13px] border border-border bg-surface pl-12 pr-4 text-sm shadow-sm focus:border-primary focus:outline-none" /></label>
+      <section className="border-b border-hairline">
+        <div className="editorial-container grid gap-10 py-14 sm:py-20 lg:grid-cols-[1fr_auto] lg:items-end">
+          <Rise>
+            <p className="eyebrow">Caderno pessoal</p>
+            <h1 className="display-1 mt-3 max-w-3xl text-foreground">Ideias que merecem continuar com você.</h1>
+            <p className="lede mt-6">
+              Releia seus insights e transforme anotações em pequenas ações para a rotina.
+            </p>
+          </Rise>
+
+          {isLoaded && notes.length > 0 && (
+            <SearchField value={searchQuery} onChange={setSearchQuery} className="w-full lg:w-80">
+              <Label className="sr-only">Buscar nas anotações</Label>
+              <SearchField.Group>
+                <SearchField.SearchIcon />
+                <SearchField.Input placeholder="Buscar nas anotações" />
+                <SearchField.ClearButton />
+              </SearchField.Group>
+            </SearchField>
+          )}
         </div>
       </section>
 
       <section className="editorial-container py-10 sm:py-14">
         {!isLoaded ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">{[1, 2, 3].map((item) => <div key={item} className="h-64 animate-pulse rounded-[10px] border border-border bg-surface" />)}</div>
-        ) : notes.length === 0 ? (
-          <div className="editorial-card flex flex-col items-center justify-center px-6 py-20 text-center"><span className="grid h-16 w-16 place-items-center rounded-[20px] bg-primary-pale text-primary"><FileText className="h-7 w-7" /></span><h2 className="mt-6 text-2xl font-extrabold text-ink">Seu caderno ainda está em branco</h2><p className="mt-3 max-w-md leading-7 text-text-soft">Durante uma aula, abra a aba “Anotações” para registrar ideias, perguntas e decisões.</p><Link href="/cursos" className="mt-7 inline-flex min-h-12 items-center gap-2 rounded-[13px] bg-primary px-5 font-bold text-on-primary hover:bg-primary-active">Escolher uma aula <ArrowUpRight className="h-4 w-4" /></Link></div>
-        ) : filteredNotes.length === 0 ? (
-          <div className="editorial-card py-16 text-center"><h2 className="text-xl font-extrabold text-ink">Nada encontrado</h2><p className="mt-2 text-text-soft">Tente buscar por outro termo.</p></div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredNotes.map((note) => (
-              <article key={note.lessonId} className="editorial-card editorial-card-interactive group flex min-h-72 flex-col p-5 sm:p-6">
-                <div className="flex items-start justify-between gap-4"><span className="text-xs font-bold uppercase tracking-[0.08em] text-text-mute">{new Date(note.updatedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}</span><button onClick={() => handleDelete(note.lessonId)} aria-label={`Excluir anotação de ${note.lessonTitle}`} className="grid h-10 w-10 place-items-center rounded-[10px] text-text-mute opacity-100 hover:bg-negative/10 hover:text-negative md:opacity-0 md:group-hover:opacity-100"><Trash2 className="h-4 w-4" /></button></div>
-                <h2 className="mt-3 text-lg font-extrabold leading-snug text-ink">{note.lessonTitle}</h2>
-                <p className="mt-4 line-clamp-6 flex-1 whitespace-pre-wrap text-sm leading-6 text-text-soft">{note.content}</p>
-                <Link href={`/courses/c1/lessons/${note.lessonId}`} className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-[11px] bg-canvas-soft px-4 text-sm font-bold text-ink hover:bg-primary-pale hover:text-primary-active">Reabrir aula <ArrowUpRight className="h-4 w-4" /></Link>
-              </article>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" aria-label="Carregando suas anotações" aria-busy="true">
+            {[1, 2, 3].map((item) => (
+              <Card key={item} className="gap-4">
+                <Card.Content className="gap-4">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-11 w-full" />
+                </Card.Content>
+              </Card>
             ))}
           </div>
+        ) : notes.length === 0 ? (
+          <EmptyState className="gap-5 py-24">
+            <span className="icon-draw grid size-14 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground">
+              <NoteIcon size={28} />
+            </span>
+            <div className="max-w-md text-center">
+              <p className="display-3 text-foreground">Seu caderno ainda está em branco</p>
+              <p className="mt-3 text-sm leading-6 text-muted">
+                Durante uma aula, abra a aba “Anotações” para registrar ideias, perguntas e decisões.
+              </p>
+            </div>
+            <Link href="/cursos" className={buttonVariants({ variant: "primary" })}>
+              Escolher uma aula <ArrowUpRight className="size-4" aria-hidden="true" />
+            </Link>
+          </EmptyState>
+        ) : filteredNotes.length === 0 ? (
+          <EmptyState className="gap-5 py-24">
+            <span className="icon-draw grid size-14 place-items-center rounded-2xl bg-default text-default-foreground">
+              <NoteIcon size={28} />
+            </span>
+            <div className="max-w-md text-center">
+              <p className="display-3 text-foreground">Nada encontrado</p>
+              <p className="mt-3 text-sm leading-6 text-muted">
+                Nenhuma anotação corresponde a “{searchQuery}”. Tente buscar por outro termo.
+              </p>
+            </div>
+            <Button variant="secondary" onClick={() => setSearchQuery("")}>
+              Limpar busca
+            </Button>
+          </EmptyState>
+        ) : (
+          <>
+            <p className="mb-7 text-sm text-muted" aria-live="polite" data-numeric>
+              <strong className="font-bold text-foreground">{filteredNotes.length}</strong>{" "}
+              {filteredNotes.length === 1 ? "anotação" : "anotações"}
+            </p>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {filteredNotes.map((note, index) => (
+                <Rise key={note.lessonId} className="min-w-0" delay={Math.min(index, 5) * 60}>
+                  <Reveal className="h-full rounded-2xl">
+                    <Card className="group h-full min-h-72 border-hairline">
+                      <Card.Header className="flex-row items-start justify-between gap-3">
+                        <time
+                          dateTime={note.updatedAt}
+                          className="eyebrow pt-1.5 normal-case tracking-[0.06em]"
+                        >
+                          {dateFormatter.format(new Date(note.updatedAt))}
+                        </time>
+                        <Button
+                          isIconOnly
+                          size="sm"
+                          variant="ghost"
+                          aria-label={`Excluir anotação de ${note.lessonTitle}`}
+                          onClick={() => handleDelete(note.lessonId)}
+                          className="shrink-0 text-muted opacity-100 transition-opacity hover:text-danger md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                        </Button>
+                      </Card.Header>
+
+                      <Card.Content className="gap-3">
+                        <h2 className="font-display text-lg font-extrabold leading-snug tracking-[-0.02em] text-foreground">
+                          {note.lessonTitle}
+                        </h2>
+                        <p className="line-clamp-6 whitespace-pre-wrap text-sm leading-6 text-muted">{note.content}</p>
+                      </Card.Content>
+
+                      <Card.Footer className="mt-auto">
+                        {/* Anotação vinda de uma conversa não tem aula para reabrir. */}
+                        <Link
+                          href={isAgentNote(note.lessonId) ? "/agentes" : `/courses/c1/lessons/${note.lessonId}`}
+                          className={buttonVariants({ variant: "secondary", fullWidth: true })}
+                        >
+                          {isAgentNote(note.lessonId) ? "Voltar aos agentes" : "Reabrir aula"}{" "}
+                          <ArrowUpRight className="size-4" aria-hidden="true" />
+                        </Link>
+                      </Card.Footer>
+                    </Card>
+                  </Reveal>
+                </Rise>
+              ))}
+            </div>
+          </>
         )}
       </section>
     </div>

@@ -2,7 +2,23 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, BookOpen, Clock, Settings, UserRound, GraduationCap, ShieldCheck, List, Mail, KeyRound, MonitorOff, Phone, Briefcase } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  Briefcase,
+  Clock,
+  GraduationCap,
+  KeyRound,
+  List,
+  Mail,
+  MonitorOff,
+  Phone,
+  Settings,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
+import { Button, Card } from "@heroui/react";
 import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
 
 const mockUsers = {
@@ -15,7 +31,7 @@ const mockUsers = {
 export default function AdminUserDashboard() {
   const params = useParams();
   const id = params.id as string;
-  
+
   // Use mock data or a fallback if not found
   const user = mockUsers[id as keyof typeof mockUsers] || {
     id,
@@ -34,136 +50,139 @@ export default function AdminUserDashboard() {
       description: "Atualize os dados pessoais e de contato",
       icon: UserRound,
       href: `/admin/users/${id}/editar`,
-      color: "bg-primary"
+      tone: "bg-accent-soft text-accent-soft-foreground",
     },
     {
       title: "Matrículas",
       description: "Gerencie os cursos e trilhas do usuário",
       icon: BookOpen,
       href: `/admin/users/${id}/matriculas`,
-      color: "bg-positive"
+      tone: "bg-success-soft text-success-soft-foreground",
     },
     {
       title: "Histórico",
       description: "Visualize acessos e atividades recentes",
       icon: Clock,
       href: `/admin/users/${id}/historico`,
-      color: "bg-text-soft" // Using a generic color that exists
+      tone: "bg-default text-default-foreground",
     },
     {
       title: "Configurações",
       description: "Permissões e acesso à plataforma",
       icon: Settings,
       href: `/admin/users/${id}/configuracoes`,
-      color: "bg-accent-orange"
+      tone: "bg-warning-soft text-warning-soft-foreground",
     }
   ];
 
   return (
     <div className="space-y-7">
-      <div className="mb-6">
-        <Link href="/admin/users" className="inline-flex items-center gap-2 text-text-soft hover:text-primary transition-colors text-sm font-medium mb-4">
-          <ArrowLeft className="w-4 h-4" />
+      <div>
+        <Link
+          href="/admin/users"
+          className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-accent"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
           Voltar para Lista
         </Link>
-        <PageHeader 
-          eyebrow="Perfil" 
-          title={user.name} 
-          description={user.email} 
+        <PageHeader
+          eyebrow="Perfil"
+          title={user.name}
+          description={user.email}
           actions={<StatusBadge tone={user.status === "Ativo" ? "positive" : "negative"}>{user.status}</StatusBadge>}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard 
-          label="Papel" 
-          value={user.role} 
-          icon={user.role === "Instrutora" || user.role === "Instrutor" ? ShieldCheck : GraduationCap} 
-          tone="primary" 
+        <StatCard
+          label="Papel"
+          value={user.role}
+          icon={user.role === "Instrutora" || user.role === "Instrutor" ? ShieldCheck : GraduationCap}
+          tone="primary"
         />
-        <StatCard 
-          label="Progresso Geral" 
-          value={user.progress} 
-          icon={BookOpen} 
-          tone="sage" 
-        />
-        <StatCard 
-          label="Último Acesso" 
-          value={user.lastSeen.split(",")[0]} 
+        <StatCard label="Progresso Geral" value={user.progress} icon={BookOpen} tone="sage" />
+        <StatCard
+          label="Último Acesso"
+          value={user.lastSeen.split(",")[0]}
           helper={user.lastSeen.includes(",") ? user.lastSeen.split(",")[1].trim() : ""}
-          icon={Clock} 
-          tone="neutral" 
+          icon={Clock}
+          tone="neutral"
         />
-        <StatCard 
-          label="Matrículas" 
-          value={user.enrollments.toString()} 
-          icon={List} 
-          tone="terracotta" 
-        />
+        <StatCard label="Matrículas" value={user.enrollments.toString()} icon={List} tone="terracotta" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
-        <section className="editorial-card p-5 sm:p-6 lg:col-span-2 space-y-4">
-          <h2 className="text-lg font-bold text-ink">Resumo do Perfil</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-6 pt-2 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <Card.Header>
+            <Card.Title>Resumo do Perfil</Card.Title>
+            <Card.Description>Dados profissionais e de contato registrados</Card.Description>
+          </Card.Header>
+          <Card.Content className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-canvas-soft text-text-soft">
-                <Briefcase className="h-4 w-4" />
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-background-secondary text-muted">
+                <Briefcase className="size-4" aria-hidden="true" />
               </span>
               <div>
-                <p className="text-xs text-text-mute font-medium">Empresa / Departamento</p>
-                <p className="text-sm font-semibold text-ink">Smart Corp · Tecnologia</p>
+                <p className="text-xs text-muted">Empresa / Departamento</p>
+                <p className="text-sm font-semibold text-foreground">Smart Corp · Tecnologia</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-canvas-soft text-text-soft">
-                <Phone className="h-4 w-4" />
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-background-secondary text-muted">
+                <Phone className="size-4" aria-hidden="true" />
               </span>
               <div>
-                <p className="text-xs text-text-mute font-medium">Telefone</p>
-                <p className="text-sm font-semibold text-ink">(11) 98765-4321</p>
+                <p className="text-xs text-muted">Telefone</p>
+                <p className="text-sm font-semibold text-foreground">(11) 98765-4321</p>
               </div>
             </div>
-          </div>
-        </section>
+          </Card.Content>
+        </Card>
 
-        <section className="editorial-card p-5 sm:p-6 space-y-4">
-          <h2 className="text-lg font-bold text-ink">Ações de Suporte</h2>
-          <div className="flex flex-col gap-2">
-            <button className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-surface-hover text-left transition-colors border border-transparent hover:border-border group">
-              <Mail className="h-4 w-4 text-text-soft group-hover:text-primary transition-colors" />
-              <span className="text-sm font-semibold text-ink group-hover:text-primary transition-colors">Reenviar e-mail de acesso</span>
-            </button>
-            <button className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-surface-hover text-left transition-colors border border-transparent hover:border-border group">
-              <KeyRound className="h-4 w-4 text-text-soft group-hover:text-primary transition-colors" />
-              <span className="text-sm font-semibold text-ink group-hover:text-primary transition-colors">Redefinir Senha</span>
-            </button>
-            <button className="flex items-center gap-3 w-full p-2.5 rounded-lg hover:bg-negative/5 text-left transition-colors border border-transparent hover:border-negative/20 group">
-              <MonitorOff className="h-4 w-4 text-negative/70 group-hover:text-negative transition-colors" />
-              <span className="text-sm font-semibold text-negative/90 group-hover:text-negative transition-colors">Forçar Logoff</span>
-            </button>
-          </div>
-        </section>
+        <Card>
+          <Card.Header>
+            <Card.Title>Ações de Suporte</Card.Title>
+            <Card.Description>Resolva problemas de acesso do usuário</Card.Description>
+          </Card.Header>
+          <Card.Content className="flex flex-col gap-2">
+            <Button variant="tertiary" fullWidth className="justify-start gap-3">
+              <Mail className="size-4" aria-hidden="true" />
+              Reenviar e-mail de acesso
+            </Button>
+            <Button variant="tertiary" fullWidth className="justify-start gap-3">
+              <KeyRound className="size-4" aria-hidden="true" />
+              Redefinir Senha
+            </Button>
+            <Button variant="danger-soft" fullWidth className="justify-start gap-3">
+              <MonitorOff className="size-4" aria-hidden="true" />
+              Forçar Logoff
+            </Button>
+          </Card.Content>
+        </Card>
       </div>
-      
+
       <div className="pt-4">
-        <h2 className="mb-4 text-xl font-extrabold text-ink">Gerenciar Usuário</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {cards.map((card, i) => {
+        <h2 className="mb-4 font-display text-xl font-bold text-foreground">Gerenciar Usuário</h2>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {cards.map((card) => {
             const Icon = card.icon;
-            // Handle bg-text-soft properly by using a known class or standard tailwind class for the icon container
-            const colorClass = card.color === "bg-text-soft" ? "bg-canvas-soft text-text-soft border border-border" : card.color + " text-white";
             return (
-              <Link 
-                key={i} 
-                href={card.href}
-                className="editorial-card editorial-card-interactive group block p-6"
-              >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${colorClass}`}>
-                  <Icon className="w-6 h-6" />
-                </div>
-                <h3 className="mb-2 text-lg font-extrabold text-ink group-hover:text-primary-active">{card.title}</h3>
-                <p className="text-text-soft text-sm leading-relaxed">{card.description}</p>
+              <Link key={card.href} href={card.href} className="group block rounded-xl">
+                <Card className="h-full transition-shadow group-hover:shadow-overlay">
+                  <Card.Header>
+                    <span className={`mb-2 grid size-12 place-items-center rounded-xl ${card.tone}`}>
+                      <Icon className="size-6" aria-hidden="true" />
+                    </span>
+                    <Card.Title className="group-hover:text-accent">{card.title}</Card.Title>
+                    <Card.Description>{card.description}</Card.Description>
+                  </Card.Header>
+                  <Card.Footer>
+                    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
+                      Abrir
+                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                    </span>
+                  </Card.Footer>
+                </Card>
               </Link>
             );
           })}

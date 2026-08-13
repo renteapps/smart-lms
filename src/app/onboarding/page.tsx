@@ -10,6 +10,7 @@ import { generateLearningTrail } from '@/lib/matching';
 import { cn } from '@/lib/utils';
 import { LearningTrail, Questionnaire, StudyAvailability, Weekday } from '@/types/trilha';
 import { loadQuestionnaire, readLearningTrail, saveLearningTrail } from '@/lib/trailStorage';
+import { recordTrailEvent } from '@/lib/trailAnalytics';
 
 const PhysicsKeywordSelector = dynamic(
   () => import('@/components/PhysicsKeywordSelector').then((module) => module.default),
@@ -49,6 +50,7 @@ export default function OnboardingPage() {
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       setQuestionnaire(loadQuestionnaire());
+      recordTrailEvent('onboarding_started');
       const stored = readLearningTrail();
       if (stored.data) {
         setExistingTrail(stored.data);
@@ -58,6 +60,14 @@ export default function OnboardingPage() {
     });
     return () => cancelAnimationFrame(frame);
   }, []);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => recordTrailEvent('onboarding_step_viewed', {
+      step: currentStep + 1,
+      label: question.text,
+    }));
+    return () => cancelAnimationFrame(frame);
+  }, [currentStep, question.text]);
 
   const handleToggleSelect = (optionLabel: string) => {
     if (question.type === 'availability') return;
@@ -92,6 +102,11 @@ export default function OnboardingPage() {
     window.setTimeout(() => {
       const trail = generateLearningTrail('user-1', answers, questionnaire, availability, existingTrail);
       saveLearningTrail(trail);
+      recordTrailEvent('plan_generated', {
+        contentCount: trail.items.length,
+        sessionCount: new Set(trail.items.map((item) => item.sessionId)).size,
+        weeklyMinutes: availability.weekdays.length * availability.minutesPerSession,
+      });
       router.push('/minha-trilha');
     }, 2500);
   };

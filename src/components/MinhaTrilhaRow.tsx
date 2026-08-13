@@ -1,11 +1,13 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import CarouselRow from './CarouselRow';
-import LessonCard from './LessonCard';
-import { LearningTrail } from '@/types/trilha';
-import Link from 'next/link';
-import { readLearningTrail } from '@/lib/trailStorage';
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { buttonVariants } from "@heroui/react";
+import CarouselRow from "./CarouselRow";
+import LessonCard from "./LessonCard";
+import { ArrowIcon } from "@/components/ui/AnimatedIcon";
+import { LearningTrail } from "@/types/trilha";
+import { readLearningTrail } from "@/lib/trailStorage";
 
 export default function MinhaTrilhaRow() {
   const [trail, setTrail] = useState<LearningTrail | null>(null);
@@ -19,12 +21,28 @@ export default function MinhaTrilhaRow() {
   if (pendingLessons.length === 0) return null;
 
   return (
-    <div className="relative z-30 mb-8 mt-[-10vh] px-4 md:mt-[-15vh]">
-      <div className="mb-4 flex items-center justify-between px-2 md:px-8">
-        <div><h2 className="text-xl font-bold text-text md:text-2xl">Minha Trilha</h2><p className="mt-1 text-xs font-medium text-text-mute">Próximos conteúdos da sua agenda personalizada</p></div>
-        <Link href="/minha-trilha" className="text-sm font-bold text-primary-active hover:text-primary">Ver agenda</Link>
+    /*
+     * A linha sobe sobre o herói de propósito: a sobreposição é o que
+     * transforma duas faixas empilhadas numa composição só e sinaliza que há
+     * mais conteúdo abaixo da dobra.
+     */
+    <div className="relative z-30 mb-10 -mt-[10vh] md:-mt-[15vh]">
+      <div className="editorial-container flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="eyebrow">Sua agenda</p>
+          <h2 className="display-3 mt-2 text-foreground">Minha Trilha</h2>
+          <p className="mt-2 text-sm text-muted">Próximos conteúdos da sua agenda personalizada</p>
+        </div>
+        <Link
+          href="/minha-trilha"
+          className={`${buttonVariants({ variant: "tertiary" })} icon-draw shrink-0`}
+        >
+          Ver agenda
+          <ArrowIcon size={16} />
+        </Link>
       </div>
-      <CarouselRow>
+
+      <CarouselRow label="Próximos conteúdos da sua trilha">
         {pendingLessons.map((item) => (
           <LessonCard
             key={item.id}

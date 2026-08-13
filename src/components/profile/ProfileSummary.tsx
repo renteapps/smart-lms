@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Award } from "lucide-react";
+import { ArrowUpRight, Award, Mail, MapPin } from "lucide-react";
+import { Avatar, buttonVariants, Card, Chip } from "@heroui/react";
 import {
   defaultProfile,
   PROFILE_SAVED_EVENT,
@@ -42,39 +43,60 @@ export function ProfileSummary() {
     };
   }, []);
 
-  return (
-    <div className="editorial-card overflow-hidden">
-      <div className="h-20 bg-primary-pale" aria-hidden="true">
-        <div className="h-full w-full bg-[radial-gradient(circle_at_15%_20%,rgba(49,87,183,0.15),transparent_28%),radial-gradient(circle_at_85%_10%,rgba(201,121,87,0.16),transparent_26%)]" />
-      </div>
-      <div className="px-5 pb-5">
-        <div className="-mt-10 grid h-20 w-20 place-items-center rounded-[14px] border-4 border-surface bg-primary font-display text-2xl font-extrabold text-on-primary shadow-sm">
-          {getInitials(profile.name)}
-        </div>
-        <h2 className="mt-4 text-xl font-extrabold text-ink">{profile.name || "Seu nome"}</h2>
-        <p className="mt-1 text-sm text-text-soft">{profile.role || "Seu cargo"} · {profile.company || "Sua empresa"}</p>
-        <p className="mt-1 break-all text-sm text-text-mute">{profile.email}</p>
-        {(profile.city || profile.state || profile.country) && (
-          <p className="mt-1 text-sm text-text-soft">
-            {[profile.city, profile.state, profile.country].filter(Boolean).join(", ")}
-          </p>
-        )}
+  const location = [profile.city, profile.state, profile.country].filter(Boolean).join(", ");
 
-        <div className="mt-5 rounded-[10px] border border-primary/15 bg-primary-pale/70 p-4">
-          <div className="flex items-start gap-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-surface text-primary shadow-sm">
-              <Award className="h-4.5 w-4.5" aria-hidden="true" />
-            </span>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.08em] text-primary-active">Perfil de liderança</p>
-              <p className="mt-1 text-sm font-extrabold text-ink">Comunicadora empática</p>
-            </div>
+  return (
+    <Card className="gap-0 overflow-hidden border-hairline p-0">
+      {/* Faixa de cor da marca: só tokens, sem gradiente hardcoded. */}
+      <div
+        aria-hidden="true"
+        className="h-24 bg-gradient-to-br from-accent-soft via-surface to-success-soft"
+      />
+
+      <Card.Content className="gap-0 px-5 pb-5 pt-0">
+        <Avatar size="lg" color="accent" className="-mt-10 size-20 ring-4 ring-surface">
+          <Avatar.Fallback className="font-display text-2xl font-extrabold">{getInitials(profile.name)}</Avatar.Fallback>
+        </Avatar>
+
+        <h2 className="mt-4 font-display text-xl font-extrabold tracking-[-0.025em] text-foreground">
+          {profile.name || "Seu nome"}
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          {profile.role || "Seu cargo"} · {profile.company || "Sua empresa"}
+        </p>
+
+        <dl className="mt-4 space-y-2 text-sm">
+          <div className="flex items-start gap-2">
+            <dt className="sr-only">E-mail</dt>
+            <Mail className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden="true" />
+            <dd className="min-w-0 break-all text-muted">{profile.email}</dd>
           </div>
-          <Link href="/onboarding" className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-primary-active hover:text-primary">
-            Atualizar diagnóstico <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
+          {location && (
+            <div className="flex items-start gap-2">
+              <dt className="sr-only">Localização</dt>
+              <MapPin className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden="true" />
+              <dd className="min-w-0 text-muted">{location}</dd>
+            </div>
+          )}
+        </dl>
+      </Card.Content>
+
+      <Card.Footer className="mt-2 flex-col items-start gap-3 border-t border-hairline bg-accent-soft/40 px-5 py-4">
+        <div className="flex items-start gap-3">
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface text-accent shadow-elev-1">
+            <Award className="size-4" aria-hidden="true" />
+          </span>
+          <div>
+            <Chip size="sm" variant="soft" color="accent">
+              Perfil de liderança
+            </Chip>
+            <p className="mt-1.5 font-display text-sm font-extrabold text-foreground">Comunicadora empática</p>
+          </div>
         </div>
-      </div>
-    </div>
+        <Link href="/onboarding" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+          Atualizar diagnóstico <ArrowUpRight className="size-3.5" aria-hidden="true" />
+        </Link>
+      </Card.Footer>
+    </Card>
   );
 }

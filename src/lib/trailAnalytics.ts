@@ -1,0 +1,125 @@
+import { LearningTrail, LearningTrailItem, SessionLoadRating } from '@/types/trilha';
+
+export const ANALYTICS_STORAGE_KEY = '@smartlms:trail-analytics:v1';
+
+export type TrailAnalyticsEventType =
+  | 'onboarding_started'
+  | 'onboarding_step_viewed'
+  | 'plan_generated'
+  | 'trail_replanned'
+  | 'routine_adjusted'
+  | 'session_postponed'
+  | 'session_feedback'
+  | 'content_removed'
+  | 'content_restored'
+  | 'content_completed';
+
+export type TrailAnalyticsEvent = {
+  id: string;
+  type: TrailAnalyticsEventType;
+  occurredAt: string;
+  payload?: Record<string, string | number | boolean>;
+};
+
+export type TrailAnalyticsData = {
+  formatVersion: 1;
+  events: TrailAnalyticsEvent[];
+};
+
+export type TrailAnalyticsSummary = {
+  plannedSessions: number;
+  completedSessions: number;
+  completionRate: number;
+  averageSupportedMinutes: number;
+  replanRate: number;
+  replanCount: number;
+  onboardingStarts: number;
+  onboardingCompletions: number;
+  onboardingCompletionRate: number;
+  stepViews: Array<{ step: number; label: string; views: number; dropRate: number }>;
+  ignoredContents: Array<{ id: string; title: string; count: number }>;
+  feedbackCounts: Record<SessionLoadRating, number>;
+};
+
+function emptyAnalytics(): TrailAnalyticsData {
+  return { formatVersion: 1, events: [] };
+}
+
+export function readTrailAnalytics(): TrailAnalyticsData {
+  if (typeof window === 'undefined') return emptyAnalytics();
+  const raw = window.localStorage.getItem(ANALYTICS_STORAGE_KEY);
+  if (!raw) return emptyAnalytics();
+  try {
+    const parsed = JSON.parse(raw) as TrailAnalyticsData;
+    return parsed.formatVersion === 1 && Array.isArray(parsed.events) ? parsed : emptyAnalytics();
+  } catch {
+    return emptyAnalytics();
+  }
+}
+
+export function recordTrailEvent(type: TrailAnalyticsEventType, payload?: TrailAnalyticsEvent['payload']): void {
+  if (typeof window === 'undefined') return;
+  const analytics = readTrailAnalytics();
+  const event: TrailAnalyticsEvent = {
+    id: `${Date.now()}-${analytics.events.length}`,
+    type,
+    occurredAt: new Date().toISOString(),
+    payload,
+  };
+  window.localStorage.setItem(ANALYTICS_STORAGE_KEY, JSON.stringify({
+    formatVersion: 1,
+    events: [...analytics.events, event].slice(-500),
+  } satisfies TrailAnalyticsData));
+}
+
+export function summarizeTrailAnalytics(data: TrailAnalyticsData, trail: LearningTrail | null): TrailAnalyticsSummary {
+  const sessions = new Map<string, LearningTrailItem[]>();
+  trail?.items.forEach((item) => sessions.set(item.sessionId, [...(sessions.get(item.sessionId) || []), item]));
+  const plannedSessions = sessions.size;
+  const completedSessions = [...sessions.values()].filter((items) => items.length > 0 && items.every((item) => item.status === 'completed')).length;
+  const feedback = trail?.feedbackHistory || [];
+  const supported = feedback.filter((item) => item.rating !== 'heavy' && item.completedMinutes > 0);
+  const replanTypes = new Set<TrailAnalyticsEventType>(['trail_replanned', 'routine_adjusted', 'session_postponed']);
+  const replans = data.events.filter((event) => replanTypes.has(event.type)).length;
+  const starts = data.events.filter((event) => event.type === 'onboarding_started').length;
+  const completions = data.events.filter((event) => event.type === 'plan_generated').length;
+
+  const stepMap = new Map<number, { label: string; views: number }>();
+  data.events.filter((event) => event.type === 'onboarding_step_viewed').forEach((event) => {
+    const step = Number(event.payload?.step || 0);
+    const current = stepMap.get(step) || { label: String(event.payload?.label || `Etapa ${step}`), views: 0 };
+    current.views += 1;
+    stepMap.set(step, current);
+  });
+  const sortedSteps = [...stepMap.entries()].sort(([a], [b]) => a - b);
+  const stepViews = sortedSteps.map(([step, value], index) => {
+    const nextViews = sortedSteps[index + 1]?.[1].views ?? completions;
+    return { step, label: value.label, views: value.views, dropRate: value.views ? Math.max(0, Math.round(((value.views - nextViews) / value.views) * 100)) : 0 };
+  });
+
+  const ignoredMap = new Map<string, { id: string; title: string; count: number }>();
+  data.events.filter((event) => event.type === 'content_removed').forEach((event) => {
+    const id = String(event.payload?.contentId || 'unknown');
+    const current = ignoredMap.get(id) || { id, title: String(event.payload?.title || 'Conteúdo'), count: 0 };
+    current.count += 1;
+    ignoredMap.set(id, current);
+  });
+
+  const feedbackCounts: Record<SessionLoadRating, number> = { light: 0, right: 0, heavy: 0 };
+  feedback.forEach((item) => { feedbackCounts[item.rating] += 1; });
+
+  return {
+    plannedSessions,
+    completedSessions,
+    completionRate: plannedSessions ? Math.round((completedSessions / plannedSessions) * 100) : 0,
+    averageSupportedMinutes: supported.length ? Math.round(supported.reduce((sum, item) => sum + item.completedMinutes, 0) / supported.length) : 0,
+    replanRate: plannedSessions ? Math.min(100, Math.round((replans / plannedSessions) * 100)) : 0,
+    replanCount: replans,
+    onboardingStarts: starts,
+    onboardingCompletions: completions,
+    onboardingCompletionRate: starts ? Math.min(100, Math.round((completions / starts) * 100)) : 0,
+    stepViews,
+    ignoredContents: [...ignoredMap.values()].sort((a, b) => b.count - a.count),
+    feedbackCounts,
+  };
+}

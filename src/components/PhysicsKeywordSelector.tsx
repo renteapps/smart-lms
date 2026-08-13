@@ -3,6 +3,7 @@
 import { CSSProperties } from 'react';
 import { Check, MousePointer2 } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { Chip } from '@heroui/react';
 import { QuestionOption } from '@/types/trilha';
 import { cn } from '@/lib/utils';
 
@@ -15,6 +16,7 @@ type PhysicsKeywordSelectorProps = {
 type BubbleStyle = CSSProperties & {
   '--bubble-accent': string;
   '--bubble-soft': string;
+  '--bubble-on': string;
 };
 
 const LAYOUT_SPRING = {
@@ -24,11 +26,19 @@ const LAYOUT_SPRING = {
   mass: 0.78,
 };
 
+/**
+ * Identidades das bolhas.
+ *
+ * Vêm dos papéis semânticos do tema — nada de hex — e a quarta é a tinta do
+ * texto, que dá uma bolha "sólida" no meio das coloridas e quebra a monotonia
+ * sem inventar cor nova. Todas trazem o par `-foreground` correspondente, então
+ * o contraste do rótulo selecionado é garantido em qualquer tema.
+ */
 const BUBBLE_PALETTES = [
-  { accent: '#3157B7', soft: '#E9EEFB' },
-  { accent: '#527160', soft: '#EDF3EF' },
-  { accent: '#A85F43', soft: '#F7EEE9' },
-  { accent: '#667085', soft: '#F0F1F3' },
+  { accent: 'var(--accent)', soft: 'var(--accent-soft)', on: 'var(--accent-foreground)' },
+  { accent: 'var(--success)', soft: 'var(--success-soft)', on: 'var(--success-foreground)' },
+  { accent: 'var(--warning)', soft: 'var(--warning-soft)', on: 'var(--warning-foreground)' },
+  { accent: 'var(--foreground)', soft: 'var(--background-secondary)', on: 'var(--background)' },
 ];
 
 function getBubbleSize(label: string) {
@@ -45,18 +55,19 @@ export default function PhysicsKeywordSelector({
   const reduceMotion = useReducedMotion();
 
   return (
-    <div className="relative w-full overflow-hidden rounded-[14px] border border-border bg-[linear-gradient(145deg,var(--surface),var(--canvas-soft))] px-4 py-5 shadow-[inset_0_1px_0_rgb(255,255,255,0.8)] sm:px-7 sm:py-6">
-      <div className="pointer-events-none absolute -left-16 top-1/3 h-44 w-44 rounded-full bg-primary-pale/70 blur-3xl" />
-      <div className="pointer-events-none absolute -right-14 bottom-0 h-40 w-40 rounded-full bg-accent-orange/8 blur-3xl" />
+    <div className="relative w-full overflow-hidden rounded-2xl border border-hairline bg-gradient-to-br from-surface to-background-secondary px-4 py-5 shadow-elev-1 sm:px-7 sm:py-6">
+      <div aria-hidden="true" className="pointer-events-none absolute -left-16 top-1/3 size-44 rounded-full bg-accent-soft/70 blur-3xl" />
+      <div aria-hidden="true" className="pointer-events-none absolute -right-14 bottom-0 size-40 rounded-full bg-warning-soft/60 blur-3xl" />
 
-      <div className="relative mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-4">
-        <p className="flex items-center gap-2 text-sm font-semibold text-text-soft">
-          <MousePointer2 className="h-4 w-4 text-primary" />
+      <div className="relative mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-separator pb-4">
+        <p className="flex items-center gap-2 text-sm font-semibold text-muted">
+          <MousePointer2 className="size-4 text-accent" aria-hidden="true" />
           Toque nas bolhas que mais combinam com você
         </p>
-        <span className="rounded-full bg-surface px-3 py-1 text-xs font-bold text-primary-active shadow-sm ring-1 ring-border">
-          {selectedLabels.length} {selectedLabels.length === 1 ? 'selecionada' : 'selecionadas'}
-        </span>
+        <Chip color={selectedLabels.length > 0 ? 'accent' : 'default'} variant="soft" size="sm">
+          <span data-numeric>{selectedLabels.length}</span>{' '}
+          {selectedLabels.length === 1 ? 'selecionada' : 'selecionadas'}
+        </Chip>
       </div>
 
       <motion.div layout className="relative flex min-h-[380px] flex-wrap content-center items-center justify-center gap-x-3 gap-y-5 sm:min-h-[410px] sm:gap-x-5 sm:gap-y-6">
@@ -68,9 +79,10 @@ export default function PhysicsKeywordSelector({
           const style: BubbleStyle = {
             '--bubble-accent': palette.accent,
             '--bubble-soft': palette.soft,
+            '--bubble-on': palette.on,
             background: isSelected
-              ? `linear-gradient(145deg, color-mix(in srgb, ${palette.accent} 82%, white), ${palette.accent})`
-              : `radial-gradient(circle at 32% 24%, white 0%, ${palette.soft} 72%)`,
+              ? `linear-gradient(145deg, color-mix(in oklab, ${palette.accent} 84%, white), ${palette.accent})`
+              : `radial-gradient(circle at 32% 24%, var(--surface) 0%, ${palette.soft} 72%)`,
           };
 
           return (
@@ -112,10 +124,10 @@ export default function PhysicsKeywordSelector({
                 }}
                 style={style}
                 className={cn(
-                  'relative isolate grid h-full w-full place-items-center rounded-full border px-4 text-center outline-none transition-[border-color,box-shadow,color] duration-[var(--duration-md)] focus-visible:ring-3 focus-visible:ring-primary/30',
+                  'relative isolate grid size-full place-items-center rounded-full border px-4 text-center outline-none transition-[border-color,box-shadow,color] duration-[var(--duration-md)] focus-visible:ring-3 focus-visible:ring-focus',
                   isSelected
-                    ? 'z-10 border-white/55 text-white shadow-[0_20px_42px_color-mix(in_srgb,var(--bubble-accent)_25%,transparent)]'
-                    : 'border-[color-mix(in_srgb,var(--bubble-accent)_30%,white)] text-ink shadow-[0_8px_20px_rgb(23,32,51,0.07)] hover:border-[var(--bubble-accent)] hover:shadow-[0_13px_28px_rgb(23,32,51,0.11)]',
+                    ? 'z-10 border-[color-mix(in_oklab,white_45%,transparent)] text-[var(--bubble-on)] shadow-elev-3'
+                    : 'border-[color-mix(in_oklab,var(--bubble-accent)_26%,var(--surface))] text-foreground shadow-elev-1 hover:border-[var(--bubble-accent)] hover:shadow-elev-2',
                 )}
               >
                 <motion.span
@@ -124,16 +136,18 @@ export default function PhysicsKeywordSelector({
                   transition={reduceMotion ? { duration: 0 } : { duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                   className="pointer-events-none absolute -inset-2 -z-10 rounded-full border border-[var(--bubble-accent)]"
                 />
-                <span aria-hidden="true" className="pointer-events-none absolute inset-[7%] rounded-full bg-[linear-gradient(145deg,rgba(255,255,255,0.42),transparent_48%)]" />
-                <span aria-hidden="true" className="pointer-events-none absolute left-[20%] top-[15%] h-1.5 w-1.5 rounded-full bg-white/75 shadow-[0_0_8px_white]" />
-                <span className="relative z-10 max-w-[11ch] text-sm font-extrabold leading-[1.18] tracking-[-0.02em] sm:text-[15px]">{option.label}</span>
+                <span aria-hidden="true" className="pointer-events-none absolute inset-[7%] rounded-full bg-linear-[145deg,color-mix(in_oklab,white_42%,transparent),transparent_48%]" />
+                <span aria-hidden="true" className="pointer-events-none absolute left-[20%] top-[15%] size-1.5 rounded-full bg-white/75" />
+                <span className="relative z-10 max-w-[11ch] text-sm font-extrabold leading-[1.18] tracking-[-0.02em] sm:text-[0.9375rem]">
+                  {option.label}
+                </span>
                 <motion.span
                   aria-hidden="true"
                   animate={{ opacity: isSelected ? 1 : 0, scale: isSelected ? 1 : 0.65 }}
                   transition={reduceMotion ? { duration: 0 } : LAYOUT_SPRING}
-                  className="absolute bottom-[11%] right-[11%] grid h-7 w-7 place-items-center rounded-full border border-white/55 bg-white text-[var(--bubble-accent)] shadow-sm"
+                  className="absolute bottom-[11%] right-[11%] grid size-7 place-items-center rounded-full border border-hairline bg-surface text-[var(--bubble-accent)] shadow-elev-1"
                 >
-                  <Check className="h-4 w-4 stroke-[3]" />
+                  <Check className="size-4 stroke-[3]" />
                 </motion.span>
               </motion.button>
             </motion.div>
@@ -141,7 +155,7 @@ export default function PhysicsKeywordSelector({
         })}
       </motion.div>
 
-      <p className="relative mt-5 text-center text-xs font-medium text-text-mute">
+      <p className="relative mt-5 text-center text-xs font-medium text-muted">
         Cada bolha representa exatamente uma opção cadastrada no questionário.
       </p>
     </div>

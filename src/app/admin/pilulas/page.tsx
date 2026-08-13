@@ -5,7 +5,6 @@ import {
   Edit3,
   Lightbulb,
   Plus,
-  Search,
   Trash2,
   Eye,
   Copy,
@@ -16,17 +15,31 @@ import {
   CheckCircle2,
   Calendar,
   Sparkles,
-  SlidersHorizontal,
   Clock,
   Heart,
 } from 'lucide-react';
+import {
+  Button,
+  Card,
+  Chip,
+  EmptyState,
+  Label,
+  ListBox,
+  ListBoxItem,
+  SearchField,
+  Select,
+  Table,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
+  toast,
+} from '@heroui/react';
 import { PageHeader, StatCard, StatusBadge } from '@/components/ui/editorial';
 import { Pilula, PilulaStatus } from '@/types/pilula';
 import { INITIAL_PILULAS } from '@/lib/mocks/pilulaMocks';
 import { PilulaFormModal } from '@/components/admin/pilulas/PilulaFormModal';
 import { PilulaPreviewModal } from '@/components/admin/pilulas/PilulaPreviewModal';
 import { PilulaDeleteDialog } from '@/components/admin/pilulas/PilulaDeleteDialog';
-import { toast } from 'sonner';
 
 const toneForStatus = (status: PilulaStatus) => {
   switch (status) {
@@ -92,6 +105,17 @@ export default function AdminPilulasPage() {
 
   // Extract available categories
   const categoriesList = Array.from(new Set(pilulas.map((p) => p.category)));
+
+  const draftCount = pilulas.filter((p) => p.status === 'Rascunho').length;
+
+  const statusFilters: { id: PilulaStatus | 'all'; label: string; count: number }[] = [
+    { id: 'all', label: 'Todas', count: pilulas.length },
+    { id: 'Ativa', label: 'Ativas', count: activeCount },
+    { id: 'Programada', label: 'Programadas', count: scheduledCount },
+    { id: 'Rascunho', label: 'Rascunhos', count: draftCount },
+  ];
+
+  const isFiltering = searchTerm.trim() !== '' || statusFilter !== 'all' || categoryFilter !== 'all';
 
   // Handlers
   const handleOpenCreate = () => {
@@ -172,24 +196,22 @@ export default function AdminPilulasPage() {
   };
 
   return (
-    <div className="space-y-7 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-7">
       {/* Header */}
       <PageHeader
         eyebrow="Microlearning"
         title="Pílulas de Conhecimento"
         description="Crie práticas curtas e desafiadoras que conectam o conteúdo acadêmico à rotina diária dos alunos."
         actions={
-          <button
-            onClick={handleOpenCreate}
-            className="inline-flex min-h-11 items-center gap-2 rounded-[11px] bg-primary px-5 text-sm font-bold text-on-primary hover:bg-primary-active shadow-sm transition-all hover:scale-[1.02]"
-          >
-            <Plus className="h-4.5 w-4.5" /> Nova Pílula
-          </button>
+          <Button variant="primary" onClick={handleOpenCreate}>
+            <Plus className="size-4" aria-hidden="true" />
+            Nova pílula
+          </Button>
         }
       />
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Total de Pílulas"
           value={totalPilulas.toString()}
@@ -220,304 +242,304 @@ export default function AdminPilulasPage() {
         />
       </div>
 
-      {/* Controls Container (Search + Filter Tabs + Category Dropdown) */}
-      <section className="editorial-card overflow-hidden">
-        <div className="border-b border-border/70 p-4 sm:p-5 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-canvas-soft/30">
-          {/* Search bar */}
-          <div className="relative w-full md:w-80">
-            <span className="sr-only">Buscar pílulas</span>
-            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-mute" />
-            <input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar pílula ou prática..."
-              className="h-11 w-full rounded-[11px] border border-border bg-canvas-soft pl-10 pr-4 text-sm focus:border-primary focus:bg-surface focus:outline-none transition-all text-text placeholder:text-text-mute"
-            />
-          </div>
+      <Card>
+        {/* Controls: search + category + status */}
+        <Card.Header className="flex flex-col gap-4 border-b border-separator pb-5 md:flex-row md:items-end md:justify-between">
+          <SearchField value={searchTerm} onChange={setSearchTerm} className="w-full md:w-80">
+            <Label>Buscar pílulas</Label>
+            <SearchField.Group>
+              <SearchField.SearchIcon />
+              <SearchField.Input placeholder="Buscar pílula ou prática…" />
+              <SearchField.ClearButton />
+            </SearchField.Group>
+          </SearchField>
 
-          {/* Filters right side */}
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            {/* Category Select */}
-            <div className="flex items-center gap-1.5 bg-surface border border-border rounded-[11px] px-3 py-1.5">
-              <SlidersHorizontal className="w-3.5 h-3.5 text-text-mute" />
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="bg-transparent text-xs font-bold text-text focus:outline-none cursor-pointer"
-              >
-                <option value="all">Todas as categorias</option>
-                {categoriesList.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Status Filter Buttons */}
-            <div className="flex items-center gap-1 bg-canvas-soft p-1 rounded-[11px] border border-border/60 overflow-x-auto max-w-full">
-              <button
-                onClick={() => setStatusFilter('all')}
-                className={`px-3 py-1.5 rounded-[9px] text-xs font-bold transition-all ${
-                  statusFilter === 'all'
-                    ? 'bg-surface text-ink shadow-xs'
-                    : 'text-text-mute hover:text-text'
-                }`}
-              >
-                Todas ({pilulas.length})
-              </button>
-              <button
-                onClick={() => setStatusFilter('Ativa')}
-                className={`px-3 py-1.5 rounded-[9px] text-xs font-bold transition-all ${
-                  statusFilter === 'Ativa'
-                    ? 'bg-positive text-white shadow-xs'
-                    : 'text-text-mute hover:text-text'
-                }`}
-              >
-                Ativas ({pilulas.filter((p) => p.status === 'Ativa').length})
-              </button>
-              <button
-                onClick={() => setStatusFilter('Programada')}
-                className={`px-3 py-1.5 rounded-[9px] text-xs font-bold transition-all ${
-                  statusFilter === 'Programada'
-                    ? 'bg-primary text-on-primary shadow-xs'
-                    : 'text-text-mute hover:text-text'
-                }`}
-              >
-                Programadas ({pilulas.filter((p) => p.status === 'Programada').length})
-              </button>
-              <button
-                onClick={() => setStatusFilter('Rascunho')}
-                className={`px-3 py-1.5 rounded-[9px] text-xs font-bold transition-all ${
-                  statusFilter === 'Rascunho'
-                    ? 'bg-warning text-yellow-950 shadow-xs'
-                    : 'text-text-mute hover:text-text'
-                }`}
-              >
-                Rascunhos ({pilulas.filter((p) => p.status === 'Rascunho').length})
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Empty state */}
-        {filteredPilulas.length === 0 ? (
-          <div className="p-12 text-center space-y-3">
-            <div className="w-14 h-14 bg-primary-pale text-primary rounded-2xl flex items-center justify-center mx-auto text-xl">
-              <Lightbulb className="w-7 h-7" />
-            </div>
-            <h3 className="font-extrabold text-lg text-ink">Nenhuma pílula encontrada</h3>
-            <p className="text-sm text-text-soft max-w-md mx-auto">
-              Não encontramos nenhuma pílula com os critérios de busca ou filtros selecionados.
-            </p>
-            <button
-              onClick={handleOpenCreate}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-primary text-on-primary hover:bg-primary-active transition-all"
+          <div className="flex w-full flex-wrap items-end gap-3 md:w-auto">
+            <Select
+              selectedKey={categoryFilter}
+              onSelectionChange={(key) => setCategoryFilter(String(key))}
+              className="w-full sm:w-56"
             >
-              <Plus className="w-4 h-4" />
-              Criar Nova Pílula
-            </button>
+              <Label>Categoria</Label>
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  {[{ id: 'all', label: 'Todas as categorias' }, ...categoriesList.map((cat) => ({ id: cat, label: cat }))].map(
+                    (opt) => (
+                      <ListBoxItem key={opt.id} id={opt.id}>
+                        {opt.label}
+                      </ListBoxItem>
+                    ),
+                  )}
+                </ListBox>
+              </Select.Popover>
+            </Select>
+
+            <ToggleButtonGroup
+              aria-label="Filtrar por status"
+              selectionMode="single"
+              disallowEmptySelection
+              selectedKeys={new Set([statusFilter])}
+              onSelectionChange={(keys) => {
+                const [first] = Array.from(keys);
+                if (first) setStatusFilter(first as PilulaStatus | 'all');
+              }}
+              size="sm"
+            >
+              {statusFilters.map((filter) => (
+                <ToggleButton key={filter.id} id={filter.id}>
+                  {filter.label} ({filter.count})
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
           </div>
-        ) : (
-          <>
-            {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-canvas-soft/75 text-[11px] font-bold uppercase tracking-[0.09em] text-text-mute border-b border-border/60">
-                    <th className="px-5 py-3.5">Pílula & Categoria</th>
-                    <th className="px-5 py-3.5">Prática Sugerida</th>
-                    <th className="px-5 py-3.5">Duração & Engajamento</th>
-                    <th className="px-5 py-3.5">Status</th>
-                    <th className="w-36 px-5 py-3.5 text-right">
-                      <span>Ações</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {filteredPilulas.map((item) => {
-                    const FormatIcon = iconForFormat(item.format);
-                    return (
-                      <tr key={item.id} className="group border-t border-border/70 hover:bg-primary-pale/20 transition-colors">
-                        {/* Title & Category */}
-                        <td className="px-5 py-4 align-top max-w-xs">
-                          <div className="flex items-start gap-3">
-                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[11px] bg-accent-orange/12 text-accent-orange">
-                              <FormatIcon className="h-4.5 w-4.5" />
-                            </span>
-                            <div className="min-w-0">
-                              <p className="font-bold text-ink text-sm leading-snug line-clamp-2">
-                                {item.title}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-canvas-soft text-text-soft border border-border/50">
-                                  {item.category}
-                                </span>
-                                {item.courseTitle && (
-                                  <span className="text-[10px] font-semibold text-primary truncate max-w-[150px]" title={item.courseTitle}>
-                                    {item.courseTitle}
+        </Card.Header>
+
+        <Card.Content className="p-0">
+          {filteredPilulas.length === 0 ? (
+            <EmptyState className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+              <span className="grid size-14 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground">
+                <Lightbulb className="size-7" aria-hidden="true" />
+              </span>
+              <h3 className="font-display text-lg font-bold text-foreground">Nenhuma pílula encontrada</h3>
+              <p className="max-w-md text-sm text-muted">
+                {isFiltering
+                  ? 'Não encontramos nenhuma pílula com os critérios de busca ou filtros selecionados.'
+                  : 'Você ainda não criou nenhuma pílula de conhecimento.'}
+              </p>
+              <Button variant="primary" onClick={handleOpenCreate}>
+                <Plus className="size-4" aria-hidden="true" />
+                Criar nova pílula
+              </Button>
+            </EmptyState>
+          ) : (
+            <>
+              {/* Desktop table */}
+              <div className="hidden md:block">
+                <Table.Root>
+                  <Table.ScrollContainer>
+                    <Table.Content aria-label="Pílulas de conhecimento">
+                      <Table.Header>
+                        <Table.Column isRowHeader>Pílula e categoria</Table.Column>
+                        <Table.Column>Prática sugerida</Table.Column>
+                        <Table.Column>Duração e engajamento</Table.Column>
+                        <Table.Column>Status</Table.Column>
+                        <Table.Column>Ações</Table.Column>
+                      </Table.Header>
+                      <Table.Body items={filteredPilulas}>
+                        {(item: Pilula) => {
+                          const FormatIcon = iconForFormat(item.format);
+                          return (
+                            <Table.Row id={item.id}>
+                              <Table.Cell>
+                                <div className="flex max-w-xs items-start gap-3">
+                                  <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-warning-soft text-warning-soft-foreground">
+                                    <FormatIcon className="size-4" aria-hidden="true" />
                                   </span>
+                                  <div className="min-w-0">
+                                    <p className="line-clamp-2 text-sm leading-snug font-semibold text-foreground">
+                                      {item.title}
+                                    </p>
+                                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                                      <Chip color="default" variant="soft" size="sm">
+                                        {item.category}
+                                      </Chip>
+                                      {item.courseTitle && (
+                                        <span className="max-w-[150px] truncate text-xs font-medium text-accent">
+                                          {item.courseTitle}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </Table.Cell>
+
+                              <Table.Cell>
+                                <div className="max-w-md">
+                                  <p className="line-clamp-2 text-sm leading-relaxed font-medium text-foreground">
+                                    {item.challenge}
+                                  </p>
+                                  <p className="mt-1 line-clamp-1 text-xs text-muted">{item.summary}</p>
+                                </div>
+                              </Table.Cell>
+
+                              <Table.Cell>
+                                <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                                  <Clock className="size-3.5 text-muted" aria-hidden="true" />
+                                  <span>{item.estimatedMinutes} min</span>
+                                </div>
+                                <div className="mt-1.5 flex items-center gap-3 text-xs text-muted">
+                                  <span className="flex items-center gap-1">
+                                    <CheckCircle2 className="size-3 text-success" aria-hidden="true" />
+                                    {item.completionsCount} conclusões
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Heart className="size-3 text-danger" aria-hidden="true" />
+                                    {item.likesCount} curtidas
+                                  </span>
+                                </div>
+                              </Table.Cell>
+
+                              <Table.Cell>
+                                <StatusBadge tone={toneForStatus(item.status)}>{item.status}</StatusBadge>
+                                {item.status === 'Programada' && item.publishDate && (
+                                  <p className="mt-1 text-xs tabular-nums text-muted">
+                                    {new Date(item.publishDate).toLocaleDateString('pt-BR')}
+                                  </p>
                                 )}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
+                              </Table.Cell>
 
-                        {/* Practical Challenge */}
-                        <td className="max-w-md px-5 py-4 text-sm leading-relaxed text-text-soft align-top">
-                          <p className="line-clamp-2 text-ink/90 font-medium">{item.challenge}</p>
-                          <p className="text-xs text-text-mute line-clamp-1 mt-1 italic">{item.summary}</p>
-                        </td>
+                              <Table.Cell>
+                                <div className="flex justify-end gap-1">
+                                  <Tooltip.Root>
+                                    <Tooltip.Trigger>
+                                      <Button
+                                        isIconOnly
+                                        variant="ghost"
+                                        size="sm"
+                                        aria-label={`Visualizar prévia de ${item.title}`}
+                                        onClick={() => setPreviewPilula(item)}
+                                      >
+                                        <Eye className="size-4" aria-hidden="true" />
+                                      </Button>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content>Visualizar prévia</Tooltip.Content>
+                                  </Tooltip.Root>
 
-                        {/* Duration & Engagement */}
-                        <td className="px-5 py-4 align-top text-xs text-text-mute">
-                          <div className="flex items-center gap-1.5 font-semibold text-text">
-                            <Clock className="w-3.5 h-3.5 text-text-mute" />
-                            <span>{item.estimatedMinutes} min</span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-1.5">
-                            <span className="flex items-center gap-1" title="Alunos concluíram">
-                              <CheckCircle2 className="w-3 h-3 text-positive" />
-                              <span>{item.completionsCount}</span>
-                            </span>
-                            <span className="flex items-center gap-1" title="Curtidas">
-                              <Heart className="w-3 h-3 text-negative" />
-                              <span>{item.likesCount}</span>
-                            </span>
-                          </div>
-                        </td>
+                                  <Tooltip.Root>
+                                    <Tooltip.Trigger>
+                                      <Button
+                                        isIconOnly
+                                        variant="ghost"
+                                        size="sm"
+                                        aria-label={`Duplicar ${item.title}`}
+                                        onClick={() => handleDuplicate(item)}
+                                      >
+                                        <Copy className="size-4" aria-hidden="true" />
+                                      </Button>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content>Duplicar como rascunho</Tooltip.Content>
+                                  </Tooltip.Root>
 
-                        {/* Status */}
-                        <td className="px-5 py-4 align-top">
-                          <StatusBadge tone={toneForStatus(item.status)}>{item.status}</StatusBadge>
-                          {item.status === 'Programada' && item.publishDate && (
-                            <p className="text-[10px] text-text-mute mt-1 font-mono">
-                              {new Date(item.publishDate).toLocaleDateString('pt-BR')}
-                            </p>
-                          )}
-                        </td>
+                                  <Tooltip.Root>
+                                    <Tooltip.Trigger>
+                                      <Button
+                                        isIconOnly
+                                        variant="ghost"
+                                        size="sm"
+                                        aria-label={`Editar ${item.title}`}
+                                        onClick={() => handleOpenEdit(item)}
+                                      >
+                                        <Edit3 className="size-4" aria-hidden="true" />
+                                      </Button>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content>Editar pílula</Tooltip.Content>
+                                  </Tooltip.Root>
 
-                        {/* Actions */}
-                        <td className="px-5 py-4 align-top text-right">
-                          <div className="flex justify-end gap-1 opacity-100 md:opacity-80 md:group-hover:opacity-100 transition-opacity">
-                            {/* Preview */}
-                            <button
-                              onClick={() => setPreviewPilula(item)}
-                              aria-label={`Visualizar ${item.title}`}
-                              title="Visualizar Prévia"
-                              className="grid h-9 w-9 place-items-center rounded-[10px] text-text-mute hover:bg-canvas-alt hover:text-text transition-colors"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
+                                  <Tooltip.Root>
+                                    <Tooltip.Trigger>
+                                      <Button
+                                        isIconOnly
+                                        variant="danger-soft"
+                                        size="sm"
+                                        aria-label={`Excluir ${item.title}`}
+                                        onClick={() => setDeletePilulaTarget(item)}
+                                      >
+                                        <Trash2 className="size-4" aria-hidden="true" />
+                                      </Button>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content>Excluir pílula</Tooltip.Content>
+                                  </Tooltip.Root>
+                                </div>
+                              </Table.Cell>
+                            </Table.Row>
+                          );
+                        }}
+                      </Table.Body>
+                    </Table.Content>
+                  </Table.ScrollContainer>
+                </Table.Root>
+              </div>
 
-                            {/* Duplicate */}
-                            <button
-                              onClick={() => handleDuplicate(item)}
-                              aria-label={`Duplicar ${item.title}`}
-                              title="Duplicar como Rascunho"
-                              className="grid h-9 w-9 place-items-center rounded-[10px] text-text-mute hover:bg-canvas-alt hover:text-text transition-colors"
-                            >
-                              <Copy className="h-4 w-4" />
-                            </button>
-
-                            {/* Edit */}
-                            <button
-                              onClick={() => handleOpenEdit(item)}
-                              aria-label={`Editar ${item.title}`}
-                              title="Editar Pílula"
-                              className="grid h-9 w-9 place-items-center rounded-[10px] text-text-mute hover:bg-primary-pale hover:text-primary transition-colors"
-                            >
-                              <Edit3 className="h-4 w-4" />
-                            </button>
-
-                            {/* Delete */}
-                            <button
-                              onClick={() => setDeletePilulaTarget(item)}
-                              aria-label={`Excluir ${item.title}`}
-                              title="Excluir Pílula"
-                              className="grid h-9 w-9 place-items-center rounded-[10px] text-text-mute hover:bg-negative/10 hover:text-negative transition-colors"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Card List View */}
-            <div className="divide-y divide-border md:hidden">
-              {filteredPilulas.map((item) => {
-                const FormatIcon = iconForFormat(item.format);
-                return (
-                  <article key={item.id} className="p-4 space-y-3">
-                    <div className="flex items-start gap-3">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-accent-orange/12 text-accent-orange">
-                        <FormatIcon className="h-5 w-5" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-bold text-ink text-base leading-snug">{item.title}</h3>
-                          <StatusBadge tone={toneForStatus(item.status)}>{item.status}</StatusBadge>
-                        </div>
-                        <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-canvas-soft text-text-soft">
-                          {item.category}
+              {/* Mobile card list */}
+              <ul className="divide-y divide-separator md:hidden">
+                {filteredPilulas.map((item) => {
+                  const FormatIcon = iconForFormat(item.format);
+                  return (
+                    <li key={item.id} className="space-y-3 p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-warning-soft text-warning-soft-foreground">
+                          <FormatIcon className="size-5" aria-hidden="true" />
                         </span>
-                        <p className="mt-2 text-sm leading-relaxed text-text-soft">{item.challenge}</p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="text-base leading-snug font-semibold text-foreground">{item.title}</h3>
+                            <StatusBadge tone={toneForStatus(item.status)}>{item.status}</StatusBadge>
+                          </div>
+                          <div className="mt-1">
+                            <Chip color="default" variant="soft" size="sm">
+                              {item.category}
+                            </Chip>
+                          </div>
+                          <p className="mt-2 text-sm leading-relaxed text-muted">{item.challenge}</p>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center justify-between pt-2 text-xs text-text-mute border-t border-border/40">
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
                         <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" />
+                          <Clock className="size-3.5" aria-hidden="true" />
                           {item.estimatedMinutes} min
                         </span>
                         <span className="flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-positive" />
+                          <CheckCircle2 className="size-3.5 text-success" aria-hidden="true" />
                           {item.completionsCount} conclusões
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setPreviewPilula(item)}
-                          className="p-2 rounded-lg text-text-mute hover:bg-canvas-soft"
-                          title="Prévia"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDuplicate(item)}
-                          className="p-2 rounded-lg text-text-mute hover:bg-canvas-soft"
-                          title="Duplicar"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleOpenEdit(item)}
-                          className="px-3 py-1.5 rounded-lg bg-primary-pale text-xs font-bold text-primary-active"
-                        >
+                      <div className="flex items-center gap-2">
+                        <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(item)} className="flex-1">
+                          <Edit3 className="size-4" aria-hidden="true" />
                           Editar
-                        </button>
-                        <button
-                          onClick={() => setDeletePilulaTarget(item)}
-                          className="p-2 rounded-lg text-negative hover:bg-negative/10"
+                        </Button>
+                        <Button
+                          isIconOnly
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Visualizar prévia de ${item.title}`}
+                          onClick={() => setPreviewPilula(item)}
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                          <Eye className="size-4" aria-hidden="true" />
+                        </Button>
+                        <Button
+                          isIconOnly
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Duplicar ${item.title}`}
+                          onClick={() => handleDuplicate(item)}
+                        >
+                          <Copy className="size-4" aria-hidden="true" />
+                        </Button>
+                        <Button
+                          isIconOnly
+                          variant="danger-soft"
+                          size="sm"
+                          aria-label={`Excluir ${item.title}`}
+                          onClick={() => setDeletePilulaTarget(item)}
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                        </Button>
                       </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </section>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+        </Card.Content>
+      </Card>
 
       {/* Form Modal (Create / Edit) */}
       <PilulaFormModal

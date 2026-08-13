@@ -1,4 +1,7 @@
+"use client";
+
 import React, { useEffect, useRef } from 'react';
+import { Button } from '@heroui/react';
 import { Type, Heading1, Heading2, Video, HelpCircle, Lightbulb, Quote, Table } from 'lucide-react';
 
 export type BlockType = 'paragraph' | 'h1' | 'h2' | 'video' | 'quiz' | 'reflexao' | 'citacao' | 'table';
@@ -42,8 +45,8 @@ export default function SlashMenu({ x, y, isOpen, onSelect, onClose, filter, sel
 
   if (!isOpen) return null;
 
-  const filteredItems = MENU_ITEMS.filter(item => 
-    item.label.toLowerCase().includes(filter.toLowerCase()) || 
+  const filteredItems = MENU_ITEMS.filter(item =>
+    item.label.toLowerCase().includes(filter.toLowerCase()) ||
     item.shortcut.includes(filter.toLowerCase())
   );
 
@@ -52,35 +55,45 @@ export default function SlashMenu({ x, y, isOpen, onSelect, onClose, filter, sel
   return (
     <div
       ref={menuRef}
-      className="absolute z-50 w-64 bg-surface/90 backdrop-blur-md border border-border rounded-xl shadow-xl py-2 flex flex-col max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
+      role="listbox"
+      aria-label="Blocos disponíveis"
+      className="absolute z-50 flex max-h-64 w-64 flex-col overflow-y-auto rounded-xl border border-border bg-overlay py-2 shadow-overlay animate-in fade-in zoom-in-95 duration-200"
       style={{ top: y, left: x }}
     >
-      <div className="px-3 pb-2 text-xs font-semibold text-text-soft uppercase tracking-wider mb-1 border-b border-border">
+      <div className="mb-1 border-b border-border px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-muted">
         Blocos Básicos
       </div>
-      {filteredItems.map((item, idx) => (
-        <button
-          key={item.id}
-          className={`flex items-center gap-3 px-4 py-2 text-left transition-colors ${
-            idx === selectedIndex ? 'bg-primary/10 text-primary' : 'hover:bg-surface-hover text-text-soft'
-          }`}
-          onClick={() => onSelect(item.type)}
-        >
-          <div className={`w-8 h-8 rounded-md border flex items-center justify-center transition-colors ${
-            idx === selectedIndex ? 'bg-primary border-primary text-white' : 'bg-surface-card border-border'
-          }`}>
-            <item.icon className="w-4 h-4" />
-          </div>
-          <div>
-            <div className={`text-sm font-medium ${idx === selectedIndex ? 'text-primary' : 'text-text'}`}>
-              {item.label}
-            </div>
-            <div className={`text-xs ${idx === selectedIndex ? 'text-primary/70' : 'text-text-soft'}`}>
-              Atalho: /{item.shortcut}
-            </div>
-          </div>
-        </button>
-      ))}
+      {filteredItems.map((item, idx) => {
+        const isActive = idx === selectedIndex;
+        const MenuButton = Button as any;
+        return (
+          <MenuButton
+            key={item.id}
+            role="option"
+            aria-selected={isActive}
+            variant={isActive ? 'secondary' : 'ghost'}
+            fullWidth
+            className="h-auto justify-start gap-3 rounded-none px-4 py-2 text-left"
+            onClick={() => onSelect(item.type)}
+          >
+            <span
+              className={`grid size-8 shrink-0 place-items-center rounded-md border ${
+                isActive ? 'border-accent bg-accent text-accent-foreground' : 'border-border bg-surface-secondary text-muted'
+              }`}
+            >
+              <item.icon className="size-4" aria-hidden="true" />
+            </span>
+            <span className="min-w-0">
+              <span className={`block truncate text-sm font-medium ${isActive ? 'text-accent' : 'text-foreground'}`}>
+                {item.label}
+              </span>
+              <span className="block text-xs text-muted">
+                Atalho: /{item.shortcut}
+              </span>
+            </span>
+          </MenuButton>
+        );
+      })}
     </div>
   );
 }

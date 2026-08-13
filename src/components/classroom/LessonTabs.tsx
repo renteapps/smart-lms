@@ -1,8 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FileText, Download, MessageSquare, Send, StickyNote, Save, Check } from "lucide-react";
+import {
+  Avatar,
+  Button,
+  Card,
+  EmptyState,
+  Label,
+  Spinner,
+  Tabs,
+  TextArea,
+  TextField,
+  Typography,
+} from "@heroui/react";
+import { Check, Download, FileText, MessageSquare, Save, Send, StickyNote } from "lucide-react";
 import { Lesson } from "@/lib/mockData";
+import { NoteIcon } from "@/components/ui/AnimatedIcon";
 import BlockViewer from "./BlockViewer";
 
 interface LessonTabsProps {
@@ -16,8 +29,10 @@ type StoredNote = {
   updatedAt: string;
 };
 
+type TabKey = "overview" | "materials" | "comments" | "notes";
+
 export default function LessonTabs({ lesson }: LessonTabsProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "materials" | "comments" | "notes">("overview");
+  const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [note, setNote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -39,20 +54,20 @@ export default function LessonTabs({ lesson }: LessonTabsProps) {
       updatedAt: new Date().toISOString()
     };
     localStorage.setItem(`smartlms_note_${lesson.id}`, note); // old raw note
-    
+
     // Also update an array of all notes for the /notas page
     try {
       const allNotesStr = localStorage.getItem('smartlms_all_notes') || '[]';
       const parsed: unknown = JSON.parse(allNotesStr);
       const allNotes: StoredNote[] = Array.isArray(parsed) ? parsed as StoredNote[] : [];
       const existingNoteIndex = allNotes.findIndex((storedNote) => storedNote.lessonId === lesson.id);
-      
+
       if (existingNoteIndex >= 0) {
         allNotes[existingNoteIndex] = noteData;
       } else {
         allNotes.push(noteData);
       }
-      
+
       localStorage.setItem('smartlms_all_notes', JSON.stringify(allNotes));
     } catch (e) {
       console.error('Failed to save notes list', e);
@@ -66,171 +81,160 @@ export default function LessonTabs({ lesson }: LessonTabsProps) {
   };
 
   return (
-    <div className="mt-8 overflow-hidden rounded-[10px] border border-border bg-surface shadow-[var(--shadow-card)]">
-      <div className="flex items-center gap-1 overflow-x-auto border-b border-border px-3 hide-scrollbar sm:px-5">
-        <button
-          onClick={() => setActiveTab("overview")}
-          className={`min-h-14 shrink-0 border-b-2 px-3 text-sm font-bold ${
-            activeTab === "overview" ? "border-primary text-primary-active" : "border-transparent text-text-soft hover:text-ink"
-          }`}
-        >
-          Visão Geral
-        </button>
-        <button
-          onClick={() => setActiveTab("materials")}
-          className={`min-h-14 shrink-0 border-b-2 px-3 text-sm font-bold ${
-            activeTab === "materials" ? "border-primary text-primary-active" : "border-transparent text-text-soft hover:text-ink"
-          }`}
-        >
-          Materiais
-        </button>
-        <button
-          onClick={() => setActiveTab("comments")}
-          className={`min-h-14 shrink-0 border-b-2 px-3 text-sm font-bold ${
-            activeTab === "comments" ? "border-primary text-primary-active" : "border-transparent text-text-soft hover:text-ink"
-          }`}
-        >
-          Comentários
-        </button>
-        <button
-          onClick={() => setActiveTab("notes")}
-          className={`flex min-h-14 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-bold ${
-            activeTab === "notes" ? "border-primary text-primary-active" : "border-transparent text-text-soft hover:text-ink"
-          }`}
-        >
-          <StickyNote className="w-4 h-4" />
-          Anotações
-        </button>
-      </div>
+    <Card className="mt-10 gap-0 overflow-hidden p-0">
+      <Tabs.Root
+        selectedKey={activeTab}
+        onSelectionChange={(key) => setActiveTab(String(key) as TabKey)}
+      >
+        <Tabs.List aria-label="Recursos da aula" className="px-3 sm:px-6">
+          <Tabs.Tab id="overview">Visão geral</Tabs.Tab>
+          <Tabs.Tab id="materials">Materiais</Tabs.Tab>
+          <Tabs.Tab id="comments">Comentários</Tabs.Tab>
+          <Tabs.Tab id="notes">
+            <StickyNote className="size-4" aria-hidden="true" />
+            Anotações
+          </Tabs.Tab>
+        </Tabs.List>
 
-      <div className="p-5 sm:p-7">
-        {activeTab === "overview" && (
-          <div className="max-w-none">
-            <h3 className="text-xl font-bold mb-4">Sobre esta aula</h3>
-            {lesson.blocks && lesson.blocks.length > 0 ? (
-              <BlockViewer blocks={lesson.blocks} />
-            ) : (
-              <p className="text-text-soft leading-relaxed">
+        {/* --- Visão geral --------------------------------------------------- */}
+        <Tabs.Panel id="overview" className="px-5 py-8 sm:px-8 sm:py-10">
+          <h2 className="display-3 mb-6 text-foreground">Sobre esta aula</h2>
+          {lesson.blocks && lesson.blocks.length > 0 ? (
+            <BlockViewer blocks={lesson.blocks} />
+          ) : (
+            <Typography.Prose className="max-w-[68ch]">
+              <p className="text-[1.0625rem] leading-8">
                 {lesson.content || "Nenhuma descrição fornecida para esta aula."}
               </p>
-            )}
-          </div>
-        )}
+            </Typography.Prose>
+          )}
+        </Tabs.Panel>
 
-        {activeTab === "materials" && (
-          <div>
-            <h3 className="text-xl font-bold mb-4">Materiais Complementares</h3>
-            {lesson.attachments && lesson.attachments.length > 0 ? (
-              <ul className="space-y-3">
-                {lesson.attachments.map((attachment, idx) => (
-                  <li key={idx}>
-                    <a
-                      href={attachment.url}
-                      className="flex min-h-16 items-center justify-between rounded-[13px] border border-border bg-canvas-soft p-4 hover:border-primary/40 hover:bg-primary-pale/30 group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-text-soft group-hover:text-primary transition-colors" />
-                        <span className="font-medium text-sm">{attachment.name}</span>
-                      </div>
-                      <Download className="w-5 h-5 text-text-soft group-hover:text-primary transition-colors" />
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-text-soft">Nenhum material anexado a esta aula.</p>
-            )}
-          </div>
-        )}
+        {/* --- Materiais ----------------------------------------------------- */}
+        <Tabs.Panel id="materials" className="px-5 py-8 sm:px-8 sm:py-10">
+          <h2 className="display-3 mb-6 text-foreground">Materiais complementares</h2>
+          {lesson.attachments && lesson.attachments.length > 0 ? (
+            <ul className="flex max-w-[68ch] flex-col gap-3">
+              {lesson.attachments.map((attachment, idx) => (
+                <li key={idx}>
+                  <a
+                    href={attachment.url}
+                    className="lift group flex min-h-16 items-center justify-between gap-4 rounded-xl border border-hairline bg-surface px-4 py-3 shadow-elev-1"
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground">
+                        <FileText className="size-4.5" aria-hidden="true" />
+                      </span>
+                      <span className="truncate text-sm font-semibold text-foreground">{attachment.name}</span>
+                    </span>
+                    <Download
+                      className="size-5 shrink-0 text-muted transition-colors duration-[var(--duration-md)] group-hover:text-accent"
+                      aria-hidden="true"
+                    />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState className="py-10">
+              <span className="icon-draw mx-auto grid size-12 place-items-center rounded-xl bg-background-secondary text-muted">
+                <NoteIcon size={22} />
+              </span>
+              <p className="mt-4 text-sm font-semibold text-foreground">Nenhum material anexado</p>
+              <p className="mt-1 text-sm text-muted">Esta aula não tem arquivos para baixar.</p>
+            </EmptyState>
+          )}
+        </Tabs.Panel>
 
-        {activeTab === "comments" && (
-          <div>
-            <h3 className="text-xl font-bold mb-4">Comentários e Dúvidas</h3>
-            
-            <div className="flex gap-4 mb-8">
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                <span className="font-bold text-primary">Você</span>
-              </div>
-              <div className="flex-1 relative">
-                <textarea 
-                  placeholder="Adicione um comentário..."
-                  className="min-h-[110px] w-full resize-none rounded-[13px] border border-border bg-canvas-soft p-4 pr-12 text-sm focus:border-primary focus:bg-surface focus:outline-none"
-                ></textarea>
-                <button aria-label="Enviar comentário" className="absolute bottom-4 right-4 grid h-10 w-10 place-items-center rounded-[11px] bg-primary text-on-primary hover:bg-primary-active">
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+        {/* --- Comentários --------------------------------------------------- */}
+        <Tabs.Panel id="comments" className="px-5 py-8 sm:px-8 sm:py-10">
+          <h2 className="display-3 mb-6 text-foreground">Comentários e dúvidas</h2>
 
-            <div className="space-y-6">
-              {/* Mock comment */}
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-surface-hover flex items-center justify-center flex-shrink-0">
-                  <span className="font-bold text-text-soft">AB</span>
-                </div>
-                <div className="flex-1">
-                  <div className="rounded-[13px] border border-border bg-canvas-soft p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bold text-sm">Ana Beatriz</span>
-                      <span className="text-xs text-text-soft">Há 2 horas</span>
-                    </div>
-                    <p className="text-sm text-text-soft">
-                      Excelente aula! Consegui entender perfeitamente o conceito explicado.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4 mt-2 ml-2">
-                    <button className="text-xs font-semibold text-text-soft hover:text-text transition-colors">Responder</button>
-                    <button className="flex items-center gap-1 text-xs text-text-soft hover:text-text transition-colors">
-                      <MessageSquare className="w-3 h-3" />
-                      0 respostas
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "notes" && (
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-xl font-bold">Suas Anotações</h3>
-                <p className="text-sm text-text-soft mt-1">
-                  Espaço minimalista para seus pensamentos. Suas anotações são salvas localmente.
-                </p>
-              </div>
-              <button
-                onClick={handleSaveNote}
-                disabled={isSaving}
-                className={`flex min-h-11 items-center gap-2 rounded-[11px] px-4 text-sm font-bold ${
-                  saveSuccess 
-                    ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" 
-                    : "bg-primary text-on-primary hover:bg-primary-active"
-                }`}
+          <div className="flex max-w-[68ch] gap-4">
+            <Avatar size="md" color="accent" className="mt-1 shrink-0">
+              <Avatar.Fallback>VC</Avatar.Fallback>
+            </Avatar>
+            <div className="relative flex-1">
+              <TextField>
+                <Label className="sr-only">Escrever um comentário</Label>
+                <TextArea rows={4} placeholder="Adicione um comentário..." className="pr-14" />
+              </TextField>
+              <Button
+                isIconOnly
+                variant="primary"
+                size="sm"
+                aria-label="Enviar comentário"
+                className="absolute bottom-3 right-3 rounded-lg"
               >
-                {isSaving ? (
-                  <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                ) : saveSuccess ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-                {isSaving ? "Salvando..." : saveSuccess ? "Salvo!" : "Salvar Anotação"}
-              </button>
-            </div>
-            
-            <div className="relative group">
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Escreva seus maiores insights sobre a aula aqui..."
-                className="min-h-[300px] w-full resize-y rounded-[14px] border border-border bg-canvas-soft p-6 leading-7 text-text focus:border-primary focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary/15"
-              />
+                <Send className="size-4" aria-hidden="true" />
+              </Button>
             </div>
           </div>
-        )}
-      </div>
-    </div>
+
+          <ul className="mt-10 flex max-w-[68ch] flex-col gap-6">
+            {/* Mock comment */}
+            <li className="flex gap-4">
+              <Avatar size="md" className="mt-1 shrink-0">
+                <Avatar.Fallback>AB</Avatar.Fallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <div className="rounded-xl border border-hairline bg-background-secondary p-4">
+                  <div className="mb-1.5 flex items-center justify-between gap-3">
+                    <span className="text-sm font-bold text-foreground">Ana Beatriz</span>
+                    <span className="text-xs text-muted">Há 2 horas</span>
+                  </div>
+                  <p className="text-sm leading-6 text-muted">
+                    Excelente aula! Consegui entender perfeitamente o conceito explicado.
+                  </p>
+                </div>
+                <div className="mt-2 flex items-center gap-1">
+                  <Button variant="ghost" size="sm">Responder</Button>
+                  <Button variant="ghost" size="sm" className="gap-1.5 text-muted">
+                    <MessageSquare className="size-3.5" aria-hidden="true" />
+                    0 respostas
+                  </Button>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </Tabs.Panel>
+
+        {/* --- Anotações ----------------------------------------------------- */}
+        <Tabs.Panel id="notes" className="px-5 py-8 sm:px-8 sm:py-10">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="display-3 text-foreground">Suas anotações</h2>
+              <p className="mt-2 text-sm text-muted">
+                Espaço minimalista para seus pensamentos. Suas anotações são salvas localmente.
+              </p>
+            </div>
+            <Button
+              variant={saveSuccess ? "secondary" : "primary"}
+              onClick={handleSaveNote}
+              isDisabled={isSaving}
+              className="gap-2"
+            >
+              {isSaving ? (
+                <Spinner className="size-4" />
+              ) : saveSuccess ? (
+                <Check className="size-4 text-success" aria-hidden="true" />
+              ) : (
+                <Save className="size-4" aria-hidden="true" />
+              )}
+              {isSaving ? "Salvando..." : saveSuccess ? "Salvo!" : "Salvar anotação"}
+            </Button>
+          </div>
+
+          <TextField value={note} onChange={setNote}>
+            <Label className="sr-only">Anotações desta aula</Label>
+            <TextArea
+              rows={12}
+              placeholder="Escreva seus maiores insights sobre a aula aqui..."
+              className="min-h-72 resize-y leading-8"
+            />
+          </TextField>
+        </Tabs.Panel>
+      </Tabs.Root>
+    </Card>
   );
 }

@@ -5,6 +5,7 @@ import {
   LearningTrailItem,
   Questionnaire,
   ResolvedContent,
+  SessionLoadRating,
   StudyAvailability,
   Weekday,
 } from '@/types/trilha';
@@ -241,7 +242,8 @@ export function generateLearningTrail(
   );
 
   const candidates = collectCandidates(answers, questionnaire, resolver);
-  const draftItems: LearningTrailItem[] = candidates.map((candidate, index) => {
+  const excludedIds = new Set((existingTrail?.excludedItems || []).map((item) => item.id));
+  const draftItems: LearningTrailItem[] = candidates.filter((candidate) => !excludedIds.has(candidate.id)).map((candidate, index) => {
     const completed = existingCompleted.get(candidate.id);
     return {
       id: candidate.id,
@@ -281,6 +283,111 @@ export function generateLearningTrail(
       weekdays: [...new Set(availability.weekdays)].sort() as Weekday[],
       minutesPerSession: Math.max(10, Math.min(240, availability.minutesPerSession)),
     },
+    adaptiveMinutesPerSession: existingTrail?.adaptiveMinutesPerSession,
+    feedbackHistory: existingTrail?.feedbackHistory || [],
+    excludedItems: existingTrail?.excludedItems || [],
+  };
+}
+
+function effectiveAvailability(trail: LearningTrail): StudyAvailability {
+  return {
+    ...trail.availability,
+    minutesPerSession: trail.adaptiveMinutesPerSession || trail.availability.minutesPerSession,
+  };
+}
+
+export function updateTrailAvailability(
+  trail: LearningTrail,
+  availability: StudyAvailability,
+  startDate = new Date(),
+): LearningTrail {
+  const normalized: StudyAvailability = {
+    weekdays: [...new Set(availability.weekdays)].sort() as Weekday[],
+    minutesPerSession: Math.max(10, Math.min(240, availability.minutesPerSession)),
+  };
+  return {
+    ...trail,
+    availability: normalized,
+    adaptiveMinutesPerSession: undefined,
+    items: schedulePendingItems(trail.items, normalized, startDate),
+    replannedAt: Date.now(),
+  };
+}
+
+export function applySessionFeedback(
+  trail: LearningTrail,
+  sessionId: string,
+  rating: SessionLoadRating,
+  now = new Date(),
+): LearningTrail {
+  const sessionItems = trail.items.filter((item) => item.sessionId === sessionId);
+  const previousTarget = trail.adaptiveMinutesPerSession || trail.availability.minutesPerSession;
+  const delta = rating === 'light' ? 10 : rating === 'heavy' ? -10 : 0;
+  const nextTarget = Math.max(10, Math.min(240, previousTarget + delta));
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const feedback = {
+    sessionId,
+    rating,
+    submittedAt: now.toISOString(),
+    plannedMinutes: sessionItems.reduce((sum, item) => sum + item.durationMin, 0),
+    completedMinutes: sessionItems.filter((item) => item.status === 'completed').reduce((sum, item) => sum + item.durationMin, 0),
+    previousTargetMinutes: previousTarget,
+    nextTargetMinutes: nextTarget,
+  };
+
+  return {
+    ...trail,
+    adaptiveMinutesPerSession: nextTarget,
+    feedbackHistory: [...(trail.feedbackHistory || []).filter((item) => item.sessionId !== sessionId), feedback],
+    items: schedulePendingItems(trail.items, { ...trail.availability, minutesPerSession: nextTarget }, tomorrow),
+    replannedAt: Date.now(),
+  };
+}
+
+export function postponeTrailSession(trail: LearningTrail, sessionId: string): LearningTrail {
+  const session = trail.items.filter((item) => item.sessionId === sessionId && item.status === 'pending');
+  if (session.length === 0) return trail;
+  const targetDate = session[0].scheduledDate;
+  const shiftedDates = new Map<string, string>();
+  const futureDates = [...new Set(trail.items
+    .filter((item) => item.status === 'pending' && item.scheduledDate >= targetDate)
+    .map((item) => item.scheduledDate))].sort();
+  futureDates.forEach((date) => {
+    shiftedDates.set(date, toLocalDateKey(nextPreferredDate(fromLocalDateKey(date), trail.availability.weekdays, false)));
+  });
+
+  return {
+    ...trail,
+    items: trail.items.map((item) => {
+      const shifted = item.status === 'pending' ? shiftedDates.get(item.scheduledDate) : undefined;
+      return shifted ? { ...item, scheduledDate: shifted, sessionId: `${shifted}-postponed`, rescheduled: true } : item;
+    }),
+    replannedAt: Date.now(),
+  };
+}
+
+export function removeTrailItem(trail: LearningTrail, contentId: string, startDate = new Date()): LearningTrail {
+  const removed = trail.items.find((item) => item.id === contentId);
+  if (!removed || removed.status === 'completed') return trail;
+  const remaining = trail.items.filter((item) => item.id !== contentId);
+  return {
+    ...trail,
+    items: schedulePendingItems(remaining, effectiveAvailability(trail), startDate),
+    excludedItems: [...(trail.excludedItems || []).filter((item) => item.id !== contentId), removed],
+    replannedAt: Date.now(),
+  };
+}
+
+export function restoreTrailItem(trail: LearningTrail, contentId: string, startDate = new Date()): LearningTrail {
+  const restored = trail.excludedItems?.find((item) => item.id === contentId);
+  if (!restored) return trail;
+  const items = [...trail.items, { ...restored, status: 'pending' as const, completedAt: undefined }].sort((a, b) => a.order - b.order);
+  return {
+    ...trail,
+    items: schedulePendingItems(items, effectiveAvailability(trail), startDate),
+    excludedItems: trail.excludedItems?.filter((item) => item.id !== contentId),
+    replannedAt: Date.now(),
   };
 }
 
@@ -290,7 +397,7 @@ export function replanLearningTrail(trail: LearningTrail, startDate = new Date()
   const hasOverdue = overdueIds.size > 0;
   if (!hasOverdue) return { trail, changed: false };
 
-  const replannedItems = schedulePendingItems(trail.items, trail.availability, startDate).map((item) => ({
+  const replannedItems = schedulePendingItems(trail.items, effectiveAvailability(trail), startDate).map((item) => ({
     ...item,
     rescheduled: overdueIds.has(item.id) || item.rescheduled,
   }));

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, CheckCircle2, Heart, Lightbulb, Target } from "lucide-react";
-import { toast } from "sonner";
+import { CheckCircle2, Heart } from "lucide-react";
+import { Button, Card, Chip, toast } from "@heroui/react";
+import { ArrowIcon, SparkIcon } from "@/components/ui/AnimatedIcon";
+import { cn } from "@/lib/utils";
 
 interface DailyPillProps {
   challenge?: string;
@@ -31,45 +33,86 @@ export default function DailyPill({
   };
 
   return (
-    <article className={`editorial-card flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6 transition-all ${accepted ? "border-positive/25 bg-positive/[0.035]" : ""}`}>
-      <div className="flex min-w-0 items-start gap-4">
-        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[15px] bg-accent-orange/12 text-accent-orange">
-          <Lightbulb className="h-5 w-5" />
-        </span>
-        <div>
-          <div className="flex items-center gap-2">
-            <Target className="h-3.5 w-3.5 text-primary" />
-            <h3 className="eyebrow">{title}</h3>
-          </div>
-          <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-body-text sm:text-base">{challenge}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-3 shrink-0">
-        <button
-          type="button"
-          aria-pressed={liked}
-          onClick={handleLike}
-          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-[12px] px-3.5 text-sm font-bold border transition-all ${
-            liked
-              ? "border-negative/30 bg-negative/10 text-negative"
-              : "border-border bg-surface text-text-mute hover:border-negative/30 hover:text-negative"
-          }`}
-          title={liked ? "Descurtir pílula" : "Curtir pílula"}
-        >
-          <Heart className={`h-4 w-4 transition-transform active:scale-125 ${liked ? "fill-negative text-negative" : ""}`} />
-          <span>{likesCount}</span>
-        </button>
+    /*
+     * A pílula do dia é um bloco de uma linha só: o desafio é a informação, o
+     * resto é moldura. A trilha de cor na borda esquerda troca de accent para
+     * success quando a prática é aceita — o estado muda de material, não só de
+     * texto, e continua legível sem depender da cor (há ícone e rótulo).
+     */
+    <Card className="icon-draw relative gap-0 overflow-hidden p-0">
+      <span
+        aria-hidden="true"
+        className={cn(
+          "absolute inset-y-0 left-0 w-1 transition-colors duration-[var(--duration-md)]",
+          accepted ? "bg-success" : "bg-accent",
+        )}
+      />
 
-        <button
-          type="button"
-          aria-pressed={accepted}
-          onClick={() => setAccepted((current) => !current)}
-          className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-[12px] px-4 text-sm font-bold transition-all ${accepted ? "bg-positive text-white hover:bg-positive/90" : "bg-primary-pale text-primary-active hover:bg-primary hover:text-on-primary"}`}
-        >
-          {accepted ? <><CheckCircle2 className="h-4 w-4" /> Prática adicionada</> : <>Aceitar prática <ArrowRight className="h-4 w-4" /></>}
-        </button>
-      </div>
-    </article>
+      <Card.Content
+        className={cn(
+          "flex flex-col gap-6 p-6 pl-7 transition-colors duration-[var(--duration-md)] sm:flex-row sm:items-center sm:justify-between sm:gap-10 sm:p-8 sm:pl-9",
+          accepted && "bg-success-soft",
+        )}
+      >
+        <div className="flex min-w-0 items-start gap-5">
+          <span
+            className={cn(
+              "grid size-12 shrink-0 place-items-center rounded-xl transition-colors duration-[var(--duration-md)]",
+              accepted
+                ? "bg-success text-success-foreground"
+                : "bg-warning-soft text-warning-soft-foreground",
+            )}
+          >
+            <SparkIcon size={22} />
+          </span>
+
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="eyebrow">{title}</h3>
+              {accepted && (
+                <Chip color="success" variant="soft" size="sm">
+                  <CheckCircle2 className="size-3" aria-hidden="true" />
+                  Na sua rotina
+                </Chip>
+              )}
+            </div>
+            <p className="mt-2.5 max-w-2xl font-display text-lg font-bold leading-snug tracking-tight text-foreground sm:text-xl">
+              {challenge}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-3">
+          <Button
+            variant={liked ? "danger-soft" : "outline"}
+            aria-pressed={liked}
+            aria-label={liked ? "Descurtir pílula" : "Curtir pílula"}
+            onClick={handleLike}
+          >
+            <Heart
+              className={cn("size-4 transition-transform active:scale-125", liked && "fill-current")}
+              aria-hidden="true"
+            />
+            <span data-numeric>{likesCount}</span>
+          </Button>
+
+          <Button
+            variant={accepted ? "secondary" : "primary"}
+            aria-pressed={accepted}
+            onClick={() => setAccepted((current) => !current)}
+          >
+            {accepted ? (
+              <>
+                <CheckCircle2 className="size-4 text-success" aria-hidden="true" /> Prática adicionada
+              </>
+            ) : (
+              <>
+                Aceitar prática <ArrowIcon size={16} />
+              </>
+            )}
+          </Button>
+        </div>
+      </Card.Content>
+    </Card>
   );
 }
-

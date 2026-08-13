@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, ChevronRight, X } from "lucide-react";
-import { defaultProfile, PROFILE_SAVED_EVENT, PROFILE_STORAGE_KEY, type ProfilePreferences } from "@/components/profile/ProfileEditor";
 import { usePathname } from "next/navigation";
+import { AlertCircle, ChevronRight, X } from "lucide-react";
+import { Alert, Button, buttonVariants } from "@heroui/react";
+import { defaultProfile, PROFILE_SAVED_EVENT, PROFILE_STORAGE_KEY, type ProfilePreferences } from "@/components/profile/ProfileEditor";
 
 export function ProfileBanner() {
   const [isVisible, setIsVisible] = useState(false);
@@ -26,7 +27,7 @@ export function ProfileBanner() {
 
       // Check if essential fields are missing
       const isComplete = profile.phone && profile.country && profile.state && profile.city && profile.gender && profile.birthDate;
-      
+
       setIsVisible(!isComplete);
     };
 
@@ -50,29 +51,29 @@ export function ProfileBanner() {
   }
 
   return (
-    <div className="fixed inset-x-0 top-[76px] z-40 flex items-center justify-between gap-4 bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary shadow-md sm:px-6">
-      <div className="flex items-center gap-3">
-        <AlertCircle className="h-4.5 w-4.5 shrink-0 opacity-80" aria-hidden="true" />
-        <p>
-          <span className="hidden sm:inline">Seu perfil está incompleto. </span>
-          Complete suas informações para uma experiência personalizada.
-        </p>
-      </div>
-      <div className="flex items-center gap-2">
-        <Link 
-          href="/perfil" 
-          className="group flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 transition-colors hover:bg-white/20"
-        >
-          Completar <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-        </Link>
-        <button 
-          onClick={() => setIsDismissed(true)}
-          className="rounded-full p-1 text-on-primary/70 transition-colors hover:bg-white/10 hover:text-on-primary"
-          aria-label="Fechar aviso"
-        >
-          <X className="h-4.5 w-4.5" aria-hidden="true" />
-        </button>
-      </div>
+    <div className="pointer-events-none fixed inset-x-0 top-[76px] z-40 px-4 pt-3 sm:px-6">
+      <Alert
+        status="accent"
+        className="editorial-container pointer-events-auto items-center gap-3 shadow-elev-3 sm:gap-4"
+      >
+        <Alert.Indicator>
+          <AlertCircle className="size-5" aria-hidden="true" />
+        </Alert.Indicator>
+        <Alert.Content className="min-w-0">
+          <Alert.Title>Seu perfil está incompleto</Alert.Title>
+          <Alert.Description className="hidden sm:block">
+            Complete suas informações para uma experiência personalizada.
+          </Alert.Description>
+        </Alert.Content>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <Link href="/perfil" className={buttonVariants({ variant: "primary", size: "sm" })}>
+            Completar <ChevronRight className="size-4" aria-hidden="true" />
+          </Link>
+          <Button isIconOnly size="sm" variant="ghost" aria-label="Fechar aviso" onClick={() => setIsDismissed(true)}>
+            <X className="size-4" aria-hidden="true" />
+          </Button>
+        </div>
+      </Alert>
     </div>
   );
 }

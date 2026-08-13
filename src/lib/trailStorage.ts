@@ -1,6 +1,7 @@
 import { LearningTrail, LearningTrailItem, Questionnaire } from '@/types/trilha';
 import { DEFAULT_AVAILABILITY, schedulePendingItems, toLocalDateKey } from '@/lib/matching';
 import { mockEligibleLessons, mockQuestionnaire } from '@/lib/mocks/trilhaMocks';
+import { recordTrailEvent } from '@/lib/trailAnalytics';
 
 export const QUESTIONNAIRE_STORAGE_KEY = '@smartlms:questionnaire:v3';
 export const TRAIL_STORAGE_KEY = 'minha_trilha';
@@ -81,6 +82,7 @@ export function saveLearningTrail(trail: LearningTrail): void {
 export function setTrailItemCompletion(contentId: string, completed: boolean): LearningTrail | null {
   const result = readLearningTrail();
   if (!result.data) return null;
+  const previous = result.data.items.find((item) => item.id === contentId);
   const now = new Date();
   const trail: LearningTrail = {
     ...result.data,
@@ -92,5 +94,8 @@ export function setTrailItemCompletion(contentId: string, completed: boolean): L
     } : item),
   };
   saveLearningTrail(trail);
+  if (completed && previous?.status !== 'completed') {
+    recordTrailEvent('content_completed', { contentId, title: previous?.title || contentId, durationMin: previous?.durationMin || 0 });
+  }
   return trail;
 }

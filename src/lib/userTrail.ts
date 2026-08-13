@@ -16,11 +16,6 @@ export type UserTrailContent = {
 const DAY_IN_MS = 86_400_000;
 const DEFAULT_COVER =
   "https://images.unsplash.com/photo-1521737711867-e3b97375f902?q=85&w=1000&auto=format&fit=crop";
-const LEGACY_LESSON_ROUTES: Record<string, string> = {
-  "lesson-1": "l1",
-  "lesson-2": "l2",
-  "lesson-3": "l3",
-};
 
 const DEMO_CONTENT: Array<Omit<UserTrailContent, "scheduledDate"> & { dayOffset: number }> = [
   { courseId: "c1", lessonId: "l1", title: "Fundamentos da Liderança", moduleName: "Módulo 1 · A base", duration: "15 min", cover: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=85&w=1000&auto=format&fit=crop", reason: "Foco em liderança", dayOffset: 0 },
@@ -70,7 +65,7 @@ export function normalizeSavedTrail(raw: string, now = new Date()): UserTrailCon
 
     return [{
       courseId: typeof rawItem.courseId === "string" ? rawItem.courseId : "c1",
-      lessonId: LEGACY_LESSON_ROUTES[rawItem.lessonId] ?? rawItem.lessonId,
+      lessonId: rawItem.lessonId,
       title: typeof rawItem.title === "string" ? rawItem.title : catalogLesson?.title ?? "Conteúdo da sua trilha",
       moduleName: typeof rawItem.moduleName === "string" ? rawItem.moduleName : catalogLesson?.courseSlug,
       duration: parseDuration(rawItem.duration, catalogLesson ? Math.round(catalogLesson.duration / 60) : undefined),
@@ -111,4 +106,59 @@ export function getDurationInMinutes(duration?: string) {
   if (!duration) return 0;
   const value = Number.parseInt(duration, 10);
   return Number.isNaN(value) ? 0 : value;
+}
+
+export type TrailFocusDay = {
+  /** Início do dia em foco. */
+  date: Date;
+  items: UserTrailContent[];
+  /** 0 = hoje, 1 = amanhã, 2+ = dias à frente. */
+  offsetInDays: number;
+  totalMinutes: number;
+};
+
+function startOfDay(date: Date) {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+/**
+ * Escolhe o dia que a home deve mostrar: hoje, se houver conteúdo agendado;
+ * caso contrário, o próximo dia que tiver.
+ *
+ * Dias passados são descartados — a home responde "o que eu faço agora", e um
+ * conteúdo de terça-feira exibido na quinta só gera culpa, não ação. O histórico
+ * continua acessível em /minha-trilha.
+ *
+ * Retorna `null` quando não há nada agendado de hoje em diante.
+ */
+export function getFocusDay(items: UserTrailContent[], now = new Date()): TrailFocusDay | null {
+  const today = startOfDay(now);
+
+  const upcoming = items
+    .flatMap((item) => {
+      if (!item.scheduledDate) return [];
+      const scheduled = new Date(item.scheduledDate);
+      if (Number.isNaN(scheduled.getTime())) return [];
+
+      const day = startOfDay(scheduled);
+      if (day < today) return [];
+
+      return [{ item, day }];
+    })
+    .sort((a, b) => a.day.getTime() - b.day.getTime());
+
+  const first = upcoming[0];
+  if (!first) return null;
+
+  const focusTime = first.day.getTime();
+  const dayItems = upcoming.filter((entry) => entry.day.getTime() === focusTime).map((entry) => entry.item);
+
+  return {
+    date: first.day,
+    items: dayItems,
+    offsetInDays: Math.round((focusTime - today.getTime()) / DAY_IN_MS),
+    totalMinutes: dayItems.reduce((total, item) => total + getDurationInMinutes(item.duration), 0),
+  };
 }

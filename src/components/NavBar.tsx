@@ -3,16 +3,18 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { BookOpen, FileText, Home, Menu, Route, Search, User } from "lucide-react";
+import { BookOpen, Bot, FileText, Home, Menu, Route, Search, User } from "lucide-react";
+import { Drawer } from "@heroui/react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { NotificationBell } from "./NotificationBell";
 import { BrandMark } from "./BrandMark";
-import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
   { href: "/", label: "Início", icon: Home },
   { href: "/cursos", label: "Cursos", icon: BookOpen },
   { href: "/minha-trilha", label: "Minha Trilha", icon: Route },
+  { href: "/agentes", label: "Agentes", icon: Bot },
   { href: "/blog", label: "Insights", icon: FileText },
   { href: "/notas", label: "Anotações", icon: FileText },
 ];
@@ -21,6 +23,7 @@ export default function NavBar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 8);
@@ -29,106 +32,195 @@ export default function NavBar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const isActive = (href: string) => href === "/" ? pathname === "/" : pathname.startsWith(href);
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+
+  /*
+   * Dentro da pílula os controles acompanham a curvatura da peça e perdem a
+   * superfície opaca: dois materiais empilhados matam o vidro.
+   */
+  const controlRadius = isScrolled ? "rounded-full" : "rounded-lg";
 
   return (
+    /*
+     * No topo o header é uma faixa full-bleed; ao rolar ele se recolhe numa
+     * pílula flutuante de liquid glass. Só transitam medidas explícitas
+     * (altura, max-width, raio, padding) — `max-width` em vez de `width` para
+     * que em telas estreitas a pílula continue acompanhando o container e a
+     * animação não tenha nada a interpolar.
+     */
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color,box-shadow] duration-[var(--duration-md)]",
+        "fixed inset-x-0 top-0 z-50 border-b border-transparent transition-[background-color,padding-top,backdrop-filter] duration-[var(--duration-md)] ease-[var(--ease-precise)]",
         isScrolled
-          ? "border-border/90 bg-background/94 shadow-[0_8px_30px_rgb(23,32,51,0.05)] backdrop-blur-xl"
-          : "border-transparent bg-background/80 backdrop-blur-md"
+          ? "bg-transparent pt-2 backdrop-blur-[0px] sm:pt-3"
+          : "bg-background/60 pt-0 backdrop-blur-md",
       )}
     >
-      <div className="editorial-container flex h-[76px] items-center justify-between gap-5">
+      <div
+        className={cn(
+          "editorial-container flex items-center justify-between gap-5",
+          "transition-[height,max-width,border-radius,padding,background,box-shadow] duration-[var(--duration-md)] ease-[var(--spring)]",
+          isScrolled
+            ? /* 30px = metade da altura: pílula exata e, ao contrário de
+                 `rounded-full` (infinito), um raio que dá para interpolar. */
+              "liquid-glass h-[60px] max-w-[72rem] rounded-[30px] pl-4 pr-2 sm:pr-3"
+            : "h-[76px] max-w-[80rem] rounded-none px-0",
+        )}
+      >
         <div className="flex min-w-0 items-center gap-9">
           <BrandMark />
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Navegação principal">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                aria-current={isActive(link.href) ? "page" : undefined}
-                className={cn(
-                  "relative rounded-[10px] px-3 py-2 text-sm font-semibold",
-                  isActive(link.href)
-                    ? "bg-primary-pale text-primary-active"
-                    : "text-text-soft hover:bg-surface-hover hover:text-ink"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const active = isActive(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "relative px-3 py-2 text-sm font-semibold transition-colors",
+                    controlRadius,
+                    active
+                      ? "text-accent-soft-foreground"
+                      : "text-muted hover:text-foreground",
+                  )}
+                >
+                  {/*
+                   * A pílula ativa desliza entre os itens em vez de piscar.
+                   * `layoutId` compartilhado faz o framer-motion interpolar a
+                   * posição; com reduced-motion vira uma troca simples.
+                   */}
+                  {active && (
+                    <motion.span
+                      aria-hidden="true"
+                      className={cn("absolute inset-0 -z-10 bg-accent-soft", controlRadius)}
+                      layoutId={reduceMotion ? undefined : "nav-active-pill"}
+                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                    />
+                  )}
+                  <span className="underline-grow">{link.label}</span>
+                </Link>
+              );
+            })}
           </nav>
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">
-          <Link href="/cursos" aria-label="Buscar conteúdos" className="flex h-11 items-center gap-2 rounded-[12px] px-3 text-text-soft hover:bg-surface-hover hover:text-ink xl:min-w-44 xl:border xl:border-border xl:bg-surface xl:shadow-sm">
-            <Search className="h-5 w-5" />
+          <Link
+            href="/cursos"
+            aria-label="Buscar conteúdos"
+            className={cn(
+              "icon-rotate press flex h-11 items-center gap-2 px-3 text-muted transition-colors hover:bg-surface-hover hover:text-foreground xl:min-w-44 xl:border",
+              isScrolled ? "rounded-full" : "rounded-xl",
+              isScrolled
+                ? "xl:border-hairline xl:bg-surface/40"
+                : "xl:border-border xl:bg-surface xl:shadow-surface",
+            )}
+          >
+            <Search className="size-5" aria-hidden="true" />
             <span className="hidden text-sm font-semibold xl:inline">Buscar conteúdos</span>
           </Link>
-          <div className="grid h-11 w-11 place-items-center rounded-[12px] text-text-soft hover:bg-surface-hover hover:text-ink">
-            <NotificationBell />
-          </div>
+
+          <NotificationBell />
+
           <Link
             href="/perfil"
             aria-label="Abrir perfil"
             aria-current={isActive("/perfil") ? "page" : undefined}
             className={cn(
-              "hidden h-11 items-center gap-2 rounded-[12px] border px-2 pr-3 text-sm font-semibold shadow-sm sm:flex",
+              "press hidden h-11 items-center gap-2 border px-2 pr-3 text-sm font-semibold transition-colors sm:flex",
+              isScrolled ? "rounded-full shadow-none" : "rounded-xl shadow-surface",
               isActive("/perfil")
-                ? "border-primary/20 bg-primary-pale text-primary-active"
-                : "border-border bg-surface text-ink hover:border-primary/30"
+                ? "border-accent/20 bg-accent-soft text-accent-soft-foreground"
+                : "text-foreground hover:bg-surface-hover",
+              !isActive("/perfil") &&
+                (isScrolled ? "border-hairline bg-surface/40" : "border-border bg-surface"),
             )}
           >
-            <span className="grid h-7 w-7 place-items-center rounded-[9px] bg-primary-pale text-primary">
-              <User className="h-4 w-4" />
+            <span
+              className={cn(
+                "grid size-7 place-items-center bg-accent-soft text-accent-soft-foreground",
+                isScrolled ? "rounded-full" : "rounded-lg",
+              )}
+            >
+              <User className="size-4" aria-hidden="true" />
             </span>
             <span className="hidden xl:inline">Meu perfil</span>
           </Link>
 
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger
-              render={<button aria-label="Abrir menu" className="grid h-11 w-11 place-items-center rounded-[12px] text-ink hover:bg-surface-hover lg:hidden" />}
+          <Drawer.Root isOpen={mobileOpen} onOpenChange={setMobileOpen}>
+            <Drawer.Trigger
+              aria-label="Abrir menu"
+              className={cn(
+                "press grid size-11 place-items-center text-foreground transition-colors hover:bg-surface-hover lg:hidden",
+                isScrolled ? "rounded-full" : "rounded-xl",
+              )}
             >
-              <Menu className="h-5 w-5" />
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[min(88vw,360px)] border-l border-border bg-background p-0">
-              <div className="border-b border-border p-6">
-                <BrandMark />
-                <SheetTitle className="sr-only">Menu principal</SheetTitle>
-                <SheetDescription className="mt-5 text-sm leading-6 text-text-soft">
-                  Aprenda no seu ritmo e acompanhe cada passo da sua evolução.
-                </SheetDescription>
-              </div>
-              <nav className="flex flex-1 flex-col gap-1 p-4" aria-label="Menu móvel">
-                {navLinks.map((link) => {
-                  const Icon = link.icon;
-                  return (
+              <AnimatePresence initial={false} mode="wait">
+                <motion.span
+                  key={mobileOpen ? "aberto" : "fechado"}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: mobileOpen ? -90 : 90, opacity: 0 }}
+                  initial={{ rotate: mobileOpen ? 90 : -90, opacity: 0 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.18 }}
+                >
+                  <Menu className="size-5" aria-hidden="true" />
+                </motion.span>
+              </AnimatePresence>
+            </Drawer.Trigger>
+
+            <Drawer.Backdrop>
+              <Drawer.Content placement="right" className="w-[min(88vw,360px)]">
+                <Drawer.Dialog>
+                  <Drawer.Header className="gap-4">
+                    <BrandMark />
+                    <Drawer.Heading className="sr-only">Menu principal</Drawer.Heading>
+                    <p className="text-sm leading-6 text-muted">
+                      Aprenda no seu ritmo e acompanhe cada passo da sua evolução.
+                    </p>
+                  </Drawer.Header>
+
+                  <Drawer.Body>
+                    <nav className="flex flex-col gap-1" aria-label="Menu móvel">
+                      {navLinks.map((link) => {
+                        const Icon = link.icon;
+                        return (
+                          <Link
+                            key={link.href}
+                            href={link.href}
+                            aria-current={isActive(link.href) ? "page" : undefined}
+                            onClick={() => setMobileOpen(false)}
+                            className={cn(
+                              "flex min-h-12 items-center gap-3 rounded-xl px-4 text-base font-semibold transition-colors",
+                              isActive(link.href)
+                                ? "bg-accent-soft text-accent-soft-foreground"
+                                : "text-muted hover:bg-surface-hover hover:text-foreground",
+                            )}
+                          >
+                            <Icon className="size-5" aria-hidden="true" />
+                            {link.label}
+                          </Link>
+                        );
+                      })}
+                    </nav>
+                  </Drawer.Body>
+
+                  <Drawer.Footer>
                     <Link
-                      key={link.href}
-                      href={link.href}
-                      aria-current={isActive(link.href) ? "page" : undefined}
+                      href="/perfil"
                       onClick={() => setMobileOpen(false)}
-                      className={cn(
-                        "flex min-h-12 items-center gap-3 rounded-[12px] px-4 text-base font-semibold",
-                        isActive(link.href) ? "bg-primary-pale text-primary-active" : "text-text-soft hover:bg-surface-hover hover:text-ink"
-                      )}
+                      className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-border bg-surface px-4 text-left font-semibold text-foreground shadow-surface transition-colors hover:bg-surface-hover"
                     >
-                      <Icon className="h-5 w-5" />
-                      {link.label}
+                      <span className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground">
+                        <User className="size-4" aria-hidden="true" />
+                      </span>
+                      Acessar meu perfil
                     </Link>
-                  );
-                })}
-              </nav>
-              <div className="border-t border-border p-5">
-                <Link href="/perfil" onClick={() => setMobileOpen(false)} className="flex min-h-12 w-full items-center gap-3 rounded-[12px] bg-surface px-4 text-left font-semibold text-ink shadow-sm">
-                  <span className="grid h-8 w-8 place-items-center rounded-[10px] bg-primary-pale text-primary"><User className="h-4 w-4" /></span>
-                  Acessar meu perfil
-                </Link>
-              </div>
-            </SheetContent>
-          </Sheet>
+                  </Drawer.Footer>
+                </Drawer.Dialog>
+              </Drawer.Content>
+            </Drawer.Backdrop>
+          </Drawer.Root>
         </div>
       </div>
     </header>

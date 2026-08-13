@@ -1,4 +1,7 @@
+"use client";
+
 import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import { Button, Card, Input, Label, Radio, RadioGroup, TextArea, TextField } from '@heroui/react';
 import { ContentBlock } from '@/lib/mockData';
 import SlashMenu, { BlockType, MENU_ITEMS } from './SlashMenu';
 import RichTextEditor from './RichTextEditor';
@@ -13,7 +16,7 @@ interface BlockEditorProps {
 export default function BlockEditor({ initialBlocks, onChange }: BlockEditorProps) {
   const [blocks, setBlocks] = useState<ContentBlock[]>(initialBlocks.length > 0 ? initialBlocks : [{ id: 'b_' + Date.now(), type: 'paragraph', content: '' }]);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
-  
+
   const [slashMenuState, setSlashMenuState] = useState<{
     isOpen: boolean;
     x: number;
@@ -25,7 +28,7 @@ export default function BlockEditor({ initialBlocks, onChange }: BlockEditorProp
 
   const containerRef = useRef<HTMLDivElement>(null);
   const blockRefs = useRef<(HTMLTextAreaElement | HTMLInputElement | HTMLDivElement | null)[]>([]);
-  
+
   const historyRef = useRef<ContentBlock[][]>([blocks]);
   const historyIndexRef = useRef<number>(0);
   const isUndoRedoAction = useRef<boolean>(false);
@@ -129,8 +132,8 @@ export default function BlockEditor({ initialBlocks, onChange }: BlockEditorProp
     const block = blocks[index];
 
     if (slashMenuState.isOpen) {
-      const filteredItems = MENU_ITEMS.filter(item => 
-        item.label.toLowerCase().includes(slashMenuState.filter.toLowerCase()) || 
+      const filteredItems = MENU_ITEMS.filter(item =>
+        item.label.toLowerCase().includes(slashMenuState.filter.toLowerCase()) ||
         item.shortcut.includes(slashMenuState.filter.toLowerCase())
       );
 
@@ -183,6 +186,27 @@ export default function BlockEditor({ initialBlocks, onChange }: BlockEditorProp
     }
   };
 
+  /** Abre ou fecha o menu de comandos conforme a presença de "/" no texto do bloco. */
+  const syncSlashMenu = (value: string, index: number, anchor: Element | null) => {
+    const slashIndex = value.lastIndexOf('/');
+    if (slashIndex !== -1 && (slashIndex === 0 || value[slashIndex - 1] === ' ' || value[slashIndex - 1] === '\n')) {
+      const filter = value.substring(slashIndex + 1);
+      const rect = anchor?.getBoundingClientRect() || { left: 0, bottom: 0 };
+      const containerRect = containerRef.current?.getBoundingClientRect() || { top: 0, left: 0 };
+
+      setSlashMenuState(prev => ({
+        isOpen: true,
+        x: rect.left - containerRect.left + 20,
+        y: rect.bottom - containerRect.top + 10,
+        blockIndex: index,
+        filter,
+        selectedIndex: prev.isOpen ? prev.selectedIndex : 0
+      }));
+    } else {
+      setSlashMenuState(prev => ({ ...prev, isOpen: false }));
+    }
+  };
+
   const handleRichTextChange = (html: string, text: string, index: number) => {
     const block = blocks[index];
 
@@ -202,51 +226,18 @@ export default function BlockEditor({ initialBlocks, onChange }: BlockEditorProp
     }
 
     updateBlock(index, { content: html }, false);
-
-    const slashIndex = text.lastIndexOf('/');
-    if (slashIndex !== -1 && (slashIndex === 0 || text[slashIndex - 1] === ' ' || text[slashIndex - 1] === '\n')) {
-      const filter = text.substring(slashIndex + 1);
-      const rect = blockRefs.current[index]?.getBoundingClientRect() || { left: 0, bottom: 0 };
-      const containerRect = containerRef.current?.getBoundingClientRect() || { top: 0, left: 0 };
-      
-      setSlashMenuState(prev => ({
-        isOpen: true,
-        x: rect.left - containerRect.left + 20,
-        y: rect.bottom - containerRect.top + 10,
-        blockIndex: index,
-        filter,
-        selectedIndex: prev.isOpen ? prev.selectedIndex : 0
-      }));
-    } else {
-      setSlashMenuState(prev => ({ ...prev, isOpen: false }));
-    }
+    syncSlashMenu(text, index, blockRefs.current[index]);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>, index: number) => {
-    const value = e.target.value;
+  const handleContentChange = (value: string, index: number) => {
     updateBlock(index, { content: value }, false);
 
-    const slashIndex = value.lastIndexOf('/');
-    if (slashIndex !== -1 && (slashIndex === 0 || value[slashIndex - 1] === ' ' || value[slashIndex - 1] === '\n')) {
-      const filter = value.substring(slashIndex + 1);
-      const rect = e.target.getBoundingClientRect();
-      const containerRect = containerRef.current?.getBoundingClientRect() || { top: 0, left: 0 };
-      
-      setSlashMenuState(prev => ({
-        isOpen: true,
-        x: rect.left - containerRect.left + 20,
-        y: rect.bottom - containerRect.top + 10,
-        blockIndex: index,
-        filter,
-        selectedIndex: prev.isOpen ? prev.selectedIndex : 0
-      }));
-    } else {
-      setSlashMenuState(prev => ({ ...prev, isOpen: false }));
-    }
+    const element = blockRefs.current[index];
+    syncSlashMenu(value, index, element);
 
-    if (e.target.tagName === 'TEXTAREA') {
-      e.target.style.height = 'auto';
-      e.target.style.height = e.target.scrollHeight + 'px';
+    if (element instanceof HTMLTextAreaElement) {
+      element.style.height = 'auto';
+      element.style.height = element.scrollHeight + 'px';
     }
   };
 
@@ -255,7 +246,7 @@ export default function BlockEditor({ initialBlocks, onChange }: BlockEditorProp
     const block = blocks[index];
     const slashIndex = block.content.lastIndexOf('/');
     const newContent = block.content.substring(0, slashIndex);
-    
+
     const newBlocks = [...blocks];
     newBlocks[index] = { ...newBlocks[index], type, content: newContent };
     pushHistory(newBlocks);
@@ -264,15 +255,23 @@ export default function BlockEditor({ initialBlocks, onChange }: BlockEditorProp
   };
 
   const renderBlockInput = (block: ContentBlock, index: number) => {
-    const commonProps = {
-      ref: (el: any) => blockRefs.current[index] = el,
-      value: block.content,
-      onChange: (e: any) => handleChange(e, index),
-      onKeyDown: (e: any) => handleKeyDown(e, index),
-      onFocus: () => setFocusedIndex(index),
-      className: "w-full bg-transparent border-none focus:outline-none resize-none overflow-hidden",
-      placeholder: "Digite algo..."
-    };
+    /** Textarea "solta" dos blocos estruturados (vídeo / quiz), com o mesmo comportamento de teclado. */
+    const renderContentTextArea = (props: { label: string; placeholder: string; rows?: number; className?: string }) => (
+      <TextField
+        aria-label={props.label}
+        value={block.content}
+        onChange={(value) => handleContentChange(value, index)}
+      >
+        <TextArea
+          ref={(el) => { blockRefs.current[index] = el; }}
+          rows={props.rows}
+          placeholder={props.placeholder}
+          className={props.className}
+          onKeyDown={(e) => handleKeyDown(e, index)}
+          onFocus={() => setFocusedIndex(index)}
+        />
+      </TextField>
+    );
 
     switch (block.type) {
       case 'h1':
@@ -303,66 +302,79 @@ export default function BlockEditor({ initialBlocks, onChange }: BlockEditorProp
         );
       case 'video':
         return (
-          <div className="bg-surface border border-border rounded-lg p-4 space-y-3">
-            <div className="text-sm font-semibold text-primary mb-1">Bloco de Vídeo</div>
-            <input
-              type="text"
-              className="w-full bg-surface-card border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary"
-              placeholder="URL do Vídeo (Youtube, Vimeo...)"
-              value={block.metadata?.url || ''}
-              onChange={(e) => updateBlock(index, { metadata: { ...block.metadata, url: e.target.value } }, true)}
-            />
-            <textarea {...commonProps} className={`${commonProps.className} text-sm text-text-soft min-h-[40px]`} placeholder="Descrição opcional..." />
-          </div>
+          <Card variant="secondary">
+            <Card.Header>
+              <Card.Title className="text-sm text-accent">Bloco de Vídeo</Card.Title>
+            </Card.Header>
+            <Card.Content className="space-y-3">
+              <TextField
+                value={block.metadata?.url || ''}
+                onChange={(value) => updateBlock(index, { metadata: { ...block.metadata, url: value } }, true)}
+              >
+                <Label>URL do vídeo</Label>
+                <Input type="url" placeholder="Youtube, Vimeo..." />
+              </TextField>
+              {renderContentTextArea({ label: 'Descrição do vídeo', placeholder: 'Descrição opcional...', rows: 2 })}
+            </Card.Content>
+          </Card>
         );
       case 'table':
         return <TableBlockEditor block={block} index={index} updateBlock={updateBlock} />;
-      case 'quiz':
-        const options = block.metadata?.options || ['', '', '', ''];
-        const correctAnswer = block.metadata?.correctAnswer ?? 0;
+      case 'quiz': {
+        const options: string[] = block.metadata?.options || ['', '', '', ''];
+        const correctAnswer: number = block.metadata?.correctAnswer ?? 0;
         return (
-          <div className="bg-surface border border-border rounded-lg p-4 space-y-3">
-            <div className="text-sm font-semibold text-primary mb-1">Bloco de Quiz</div>
-            <textarea {...commonProps} className={`${commonProps.className} font-medium`} placeholder="Qual é a pergunta?" rows={2} />
-            <div className="text-xs text-text-soft">Selecione o botão de rádio da resposta correta:</div>
-            <div className="space-y-2 mt-2">
-              {options.map((opt: string, i: number) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input 
-                    type="radio" 
-                    name={`quiz-${block.id}`}
-                    checked={correctAnswer === i}
-                    onChange={() => updateBlock(index, { metadata: { ...block.metadata, correctAnswer: i } }, true)}
-                    className="w-4 h-4 text-primary cursor-pointer accent-primary" 
-                    title="Marcar como correta"
-                  />
-                  <input
-                    type="text"
-                    className={`flex-1 bg-surface-card border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:border-primary transition-colors ${correctAnswer === i ? 'border-primary/50' : 'border-border'}`}
-                    placeholder={`Opção ${i + 1}`}
-                    value={opt}
-                    onChange={(e) => {
-                      const newOpts = [...options];
-                      newOpts[i] = e.target.value;
-                      updateBlock(index, { metadata: { ...block.metadata, options: newOpts } }, false);
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
+          <Card variant="secondary">
+            <Card.Header>
+              <Card.Title className="text-sm text-accent">Bloco de Quiz</Card.Title>
+              <Card.Description>Marque o botão de rádio da resposta correta.</Card.Description>
+            </Card.Header>
+            <Card.Content className="space-y-4">
+              {renderContentTextArea({ label: 'Pergunta do quiz', placeholder: 'Qual é a pergunta?', rows: 2, className: 'font-medium' })}
+
+              <RadioGroup
+                aria-label="Resposta correta"
+                value={String(correctAnswer)}
+                onChange={(value) => updateBlock(index, { metadata: { ...block.metadata, correctAnswer: Number(value) } }, true)}
+                className="gap-2"
+              >
+                {options.map((opt: string, i: number) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Radio value={String(i)} aria-label={`Marcar opção ${i + 1} como correta`}>
+                      <Radio.Control>
+                        <Radio.Indicator />
+                      </Radio.Control>
+                    </Radio>
+                    <TextField
+                      aria-label={`Texto da opção ${i + 1}`}
+                      value={opt}
+                      onChange={(value) => {
+                        const newOpts = [...options];
+                        newOpts[i] = value;
+                        updateBlock(index, { metadata: { ...block.metadata, options: newOpts } }, false);
+                      }}
+                      className="flex-1"
+                    >
+                      <Input placeholder={`Opção ${i + 1}`} />
+                    </TextField>
+                  </div>
+                ))}
+              </RadioGroup>
+            </Card.Content>
+          </Card>
         );
+      }
       case 'reflexao':
         return (
-          <div className="bg-tertiary-container border-l-4 border-primary rounded-r-lg p-4">
-            <div className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Para Refletir</div>
+          <div className="rounded-r-lg border-l-4 border-accent bg-accent-soft p-4">
+            <div className="mb-2 text-xs font-bold uppercase tracking-wider text-accent-soft-foreground">Para Refletir</div>
             <div ref={(el) => { blockRefs.current[index] = el; }} className="w-full">
               <RichTextEditor
                 content={block.content}
                 onChange={(html, text) => handleRichTextChange(html, text, index)}
                 onKeyDown={(e: any) => handleKeyDown(e, index)}
                 onFocus={() => setFocusedIndex(index)}
-                className="text-primary w-full"
+                className="text-accent-soft-foreground w-full"
                 placeholder="Escreva um ponto de reflexão..."
               />
             </div>
@@ -370,24 +382,24 @@ export default function BlockEditor({ initialBlocks, onChange }: BlockEditorProp
         );
       case 'citacao':
         return (
-          <div className="border-l-4 border-border pl-4 italic">
+          <div className="space-y-2 border-l-4 border-border pl-4 italic">
             <div ref={(el) => { blockRefs.current[index] = el; }} className="w-full">
               <RichTextEditor
                 content={block.content}
                 onChange={(html, text) => handleRichTextChange(html, text, index)}
                 onKeyDown={(e: any) => handleKeyDown(e, index)}
                 onFocus={() => setFocusedIndex(index)}
-                className="text-xl text-text-soft font-serif w-full"
+                className="text-xl text-muted font-serif w-full"
                 placeholder="Citação inspiradora..."
               />
             </div>
-            <input
-              type="text"
-              className="mt-2 text-sm text-text bg-transparent border-none focus:outline-none"
-              placeholder="- Autor"
+            <TextField
+              aria-label="Autor da citação"
               value={block.metadata?.author || ''}
-              onChange={(e) => updateBlock(index, { metadata: { ...block.metadata, author: e.target.value } }, false)}
-            />
+              onChange={(value) => updateBlock(index, { metadata: { ...block.metadata, author: value } }, false)}
+            >
+              <Input placeholder="- Autor" />
+            </TextField>
           </div>
         );
       case 'paragraph':
@@ -421,35 +433,43 @@ export default function BlockEditor({ initialBlocks, onChange }: BlockEditorProp
 
       <div className="space-y-1">
         {blocks.map((block, index) => (
-          <div 
-            key={block.id} 
-            className="group flex gap-2 items-start hover:bg-surface-hover/50 p-1 rounded-lg transition-colors"
+          <div
+            key={block.id}
+            className="group flex items-start gap-2 rounded-lg p-1 transition-colors hover:bg-surface-secondary"
           >
-            <div className="flex flex-col gap-1 w-6 pt-1 opacity-0 group-hover:opacity-100 transition-opacity items-center flex-shrink-0">
-              <button 
-                type="button"
-                className="text-border hover:text-primary transition-colors cursor-grab"
-                title="Mover (não implementado)"
+            <div className="flex w-9 shrink-0 flex-col items-center gap-1 pt-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+              <Button
+                isIconOnly
+                size="sm"
+                variant="ghost"
+                aria-label="Mover bloco (em breve)"
+                isDisabled
+                className="cursor-grab"
               >
-                <GripVertical className="w-4 h-4" />
-              </button>
-              <button 
-                type="button"
+                <GripVertical className="size-4" aria-hidden="true" />
+              </Button>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="ghost"
+                aria-label="Adicionar bloco abaixo"
                 onClick={() => addBlock(index)}
-                className="text-border hover:text-primary transition-colors"
               >
-                <Plus className="w-4 h-4" />
-              </button>
-              <button 
-                type="button"
+                <Plus className="size-4" aria-hidden="true" />
+              </Button>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="ghost"
+                aria-label="Excluir bloco"
+                isDisabled={blocks.length === 1}
                 onClick={() => deleteBlock(index)}
-                className="text-border hover:text-error transition-colors"
               >
-                <Trash2 className="w-3 h-3" />
-              </button>
+                <Trash2 className="size-4 text-danger" aria-hidden="true" />
+              </Button>
             </div>
-            
-            <div className="flex-1 max-w-full">
+
+            <div className="max-w-full flex-1">
               {renderBlockInput(block, index)}
             </div>
           </div>

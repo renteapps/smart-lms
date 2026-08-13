@@ -1,6 +1,10 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Clock3, Lock, Play } from "lucide-react";
+import { Card, Chip, Label, ProgressBar } from "@heroui/react";
+import { Reveal } from "@/components/ui/Reveal";
 import { cn } from "@/lib/utils";
 
 type LessonCardProps = {
@@ -16,40 +20,73 @@ type LessonCardProps = {
   className?: string;
 };
 
-export default function LessonCard({ id, title, moduleName, cover, duration, progress, locked, reason, href, className }: LessonCardProps) {
+export default function LessonCard({
+  id,
+  title,
+  moduleName,
+  cover,
+  duration,
+  progress,
+  locked,
+  reason,
+  href,
+  className,
+}: LessonCardProps) {
   const linkUrl = href || (id ? `/courses/c1/lessons/${id}` : "#");
 
   const content = (
     <>
-      <div className="relative w-[38%] min-w-[112px] overflow-hidden bg-canvas-soft">
+      <div className="relative w-[38%] min-w-[112px] shrink-0 overflow-hidden bg-background-secondary">
         <Image
           src={cover}
           alt={`Capa da aula ${title}`}
           fill
           sizes="(max-width: 768px) 38vw, 180px"
-          className={cn("object-cover transition-transform duration-[var(--duration-lg)] group-hover:scale-[1.04]", locked && "grayscale")}
+          className={cn(
+            "object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.04]",
+            locked && "grayscale",
+          )}
         />
-        <div className={cn("absolute inset-0", locked ? "bg-ink/38" : "bg-ink/12")} />
-        <span className="absolute left-1/2 top-1/2 grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/92 text-primary shadow-lg">
-          {locked ? <Lock className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4 fill-current" />}
+        <div aria-hidden="true" className={cn("absolute inset-0", locked ? "bg-foreground/45" : "bg-foreground/10")} />
+        {/* Material sobre imagem: o disco deixa a capa aparecer por trás do ícone. */}
+        <span
+          aria-hidden="true"
+          className="material-thick absolute left-1/2 top-1/2 grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-accent"
+        >
+          {locked ? <Lock className="size-4" /> : <Play className="ml-0.5 size-4 fill-current" />}
         </span>
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col p-4">
-        {reason && <span className={cn("mb-2 w-fit rounded-full px-2.5 py-1 text-[10px] font-bold", locked ? "bg-canvas-soft text-text-mute" : "bg-primary-pale text-primary-active")}>{reason}</span>}
-        {moduleName && <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-primary-active">{moduleName}</span>}
-        <h3 className="mt-1 line-clamp-2 font-display text-[0.95rem] font-bold leading-snug text-ink">{title}</h3>
-        <div className="mt-auto flex items-center gap-1.5 pt-3 text-xs font-semibold text-text-mute">
-          <Clock3 className="h-3.5 w-3.5" /> {duration}
-          {locked && <span className="ml-auto">Em breve</span>}
+        {reason && (
+          <Chip size="sm" variant="soft" color={locked ? "default" : "accent"} className="mb-2 w-fit">
+            {reason}
+          </Chip>
+        )}
+        {moduleName && (
+          <span className="truncate text-[0.625rem] font-bold uppercase tracking-[0.09em] text-accent">{moduleName}</span>
+        )}
+        <h3 className="mt-1 line-clamp-2 font-display text-[0.95rem] font-bold leading-snug tracking-[-0.015em] text-foreground">
+          {title}
+        </h3>
+
+        <div className="mt-auto flex items-center gap-1.5 pt-3 text-xs font-semibold text-muted" data-numeric>
+          <Clock3 className="size-3.5" aria-hidden="true" /> {duration}
+          {locked && (
+            <Chip size="sm" variant="soft" color="default" className="ml-auto">
+              Em breve
+            </Chip>
+          )}
         </div>
+
         {progress !== undefined && (
-          <div className="mt-3">
-            <div className="h-1.5 overflow-hidden rounded-full bg-canvas-soft">
-              <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
-            </div>
-            <span className="mt-1.5 block text-[10px] font-bold text-primary-active">{progress}% concluído</span>
-          </div>
+          <ProgressBar value={progress} color="accent" size="sm" className="mt-3" data-numeric>
+            <Label className="text-[0.625rem] font-bold text-muted">Progresso</Label>
+            <ProgressBar.Output className="text-[0.625rem] font-bold text-accent" />
+            <ProgressBar.Track>
+              <ProgressBar.Fill />
+            </ProgressBar.Track>
+          </ProgressBar>
         )}
       </div>
     </>
@@ -57,21 +94,23 @@ export default function LessonCard({ id, title, moduleName, cover, duration, pro
 
   if (locked) {
     return (
-      <div
+      <Card
         aria-disabled="true"
-        className={cn("editorial-card group flex min-w-0 cursor-not-allowed overflow-hidden opacity-80", className || "w-80")}
+        className={cn(
+          "group flex min-w-0 cursor-not-allowed flex-row gap-0 overflow-hidden border-hairline p-0 opacity-75",
+          className || "w-80",
+        )}
       >
         {content}
-      </div>
+      </Card>
     );
   }
 
   return (
-    <Link
-      href={linkUrl}
-      className={cn("editorial-card editorial-card-interactive group flex min-w-0 overflow-hidden", className || "w-80")}
-    >
-      {content}
+    <Link href={linkUrl} className={cn("group block min-w-0 rounded-2xl", className || "w-80")}>
+      <Reveal className="h-full rounded-2xl">
+        <Card className="lift flex h-full flex-row gap-0 overflow-hidden border-hairline p-0">{content}</Card>
+      </Reveal>
     </Link>
   );
 }

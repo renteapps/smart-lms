@@ -1,5 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
+import { Card, Chip } from "@heroui/react";
 import { cn } from "@/lib/utils";
 
 type PageHeaderProps = {
@@ -12,62 +15,75 @@ type PageHeaderProps = {
 
 export function PageHeader({ eyebrow, title, description, actions, className }: PageHeaderProps) {
   return (
-    <header className={cn("flex flex-col gap-5 border-b border-border/80 pb-6 sm:flex-row sm:items-end sm:justify-between", className)}>
+    <header
+      className={cn(
+        "flex flex-col gap-5 border-b border-separator pb-6 sm:flex-row sm:items-end sm:justify-between",
+        className,
+      )}
+    >
       <div className="max-w-3xl">
         {eyebrow && <p className="eyebrow mb-2">{eyebrow}</p>}
-        <h1 className="font-display text-3xl font-extrabold tracking-[-0.035em] text-ink sm:text-4xl">{title}</h1>
-        {description && <p className="mt-2 max-w-2xl text-sm leading-6 text-text-soft sm:text-base">{description}</p>}
+        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{title}</h1>
+        {description && <p className="mt-2 max-w-2xl text-sm leading-6 text-muted sm:text-base">{description}</p>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-3">{actions}</div>}
     </header>
   );
 }
 
+type StatTone = "primary" | "sage" | "terracotta" | "neutral";
+
 type StatCardProps = {
   label: string;
   value: string;
   helper?: string;
   icon: LucideIcon;
-  tone?: "primary" | "sage" | "terracotta" | "neutral";
+  tone?: StatTone;
 };
 
-const toneClasses = {
-  primary: "bg-primary-pale text-primary",
-  sage: "bg-accent-sage/14 text-positive",
-  terracotta: "bg-accent-orange/14 text-accent-orange",
-  neutral: "bg-canvas-soft text-text-soft",
+const statToneClasses: Record<StatTone, string> = {
+  primary: "bg-accent-soft text-accent-soft-foreground",
+  sage: "bg-success-soft text-success-soft-foreground",
+  terracotta: "bg-warning-soft text-warning-soft-foreground",
+  neutral: "bg-default text-default-foreground",
 };
 
 export function StatCard({ label, value, helper, icon: Icon, tone = "primary" }: StatCardProps) {
   return (
-    <article className="editorial-card p-5 sm:p-6">
-      <div className="flex items-start justify-between gap-4">
+    <Card>
+      <Card.Content className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-text-soft">{label}</p>
-          <p className="mt-3 font-display text-3xl font-extrabold tracking-[-0.04em] text-ink">{value}</p>
-          {helper && <p className="mt-2 text-xs font-medium text-text-mute">{helper}</p>}
+          <p className="text-sm font-medium text-muted">{label}</p>
+          <p className="mt-3 font-display text-3xl font-bold tracking-tight text-foreground">{value}</p>
+          {helper && <p className="mt-2 text-xs text-muted">{helper}</p>}
         </div>
-        <span className={cn("grid h-11 w-11 place-items-center rounded-[14px]", toneClasses[tone])}>
-          <Icon className="h-5 w-5" aria-hidden="true" />
+        <span className={cn("grid size-11 shrink-0 place-items-center rounded-xl", statToneClasses[tone])}>
+          <Icon className="size-5" aria-hidden="true" />
         </span>
-      </div>
-    </article>
+      </Card.Content>
+    </Card>
   );
 }
 
+type StatusTone = "positive" | "warning" | "negative" | "neutral" | "primary";
+
 type StatusBadgeProps = {
   children: ReactNode;
-  tone?: "positive" | "warning" | "negative" | "neutral" | "primary";
+  tone?: StatusTone;
 };
 
-const statusClasses = {
-  positive: "bg-positive/10 text-positive",
-  warning: "bg-warning/10 text-warning",
-  negative: "bg-negative/10 text-negative",
-  neutral: "bg-canvas-soft text-text-soft",
-  primary: "bg-primary-pale text-primary-active",
-};
+const statusColors = {
+  positive: "success",
+  warning: "warning",
+  negative: "danger",
+  neutral: "default",
+  primary: "accent",
+} as const satisfies Record<StatusTone, "success" | "warning" | "danger" | "default" | "accent">;
 
 export function StatusBadge({ children, tone = "neutral" }: StatusBadgeProps) {
-  return <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold", statusClasses[tone])}>{children}</span>;
+  return (
+    <Chip color={statusColors[tone]} variant="soft" size="sm">
+      {children}
+    </Chip>
+  );
 }

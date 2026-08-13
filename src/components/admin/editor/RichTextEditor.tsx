@@ -8,6 +8,7 @@ import Link from '@tiptap/extension-link';
 import Highlight from '@tiptap/extension-highlight';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
+import { Button, Separator } from '@heroui/react';
 import { Bold, Italic, Link as LinkIcon, Highlighter, Palette } from 'lucide-react';
 
 interface RichTextEditorProps {
@@ -21,7 +22,7 @@ interface RichTextEditorProps {
 
 export default function RichTextEditor({ content, onChange, onFocus, onKeyDown, placeholder, className }: RichTextEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -31,7 +32,7 @@ export default function RichTextEditor({ content, onChange, onFocus, onKeyDown, 
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: 'text-primary underline cursor-pointer',
+          class: 'text-accent underline cursor-pointer',
         },
       }),
       Highlight.configure({ multicolor: true }),
@@ -42,6 +43,7 @@ export default function RichTextEditor({ content, onChange, onFocus, onKeyDown, 
     editorProps: {
       attributes: {
         class: `prose prose-sm sm:prose-base focus:outline-none max-w-none ${className || ''}`,
+        'data-placeholder': placeholder || '',
       },
     },
     onUpdate: ({ editor }) => {
@@ -89,89 +91,114 @@ export default function RichTextEditor({ content, onChange, onFocus, onKeyDown, 
 
   const textColors = [
     { label: 'Padrão', value: '' },
-    { label: 'Primária', value: 'var(--primary)' },
-    { label: 'Erro', value: 'var(--error)' },
-    { label: 'Sucesso', value: '#10b981' },
-    { label: 'Cinza', value: 'var(--text-soft)' },
+    { label: 'Destaque', value: 'var(--accent)' },
+    { label: 'Erro', value: 'var(--danger)' },
+    { label: 'Sucesso', value: 'var(--success)' },
+    { label: 'Neutra', value: 'var(--muted)' },
   ];
 
+  // Painéis de cor abrem no hover e no foco do gatilho: uma Popover do HeroUI seria
+  // desmontada junto com a BubbleMenu do Tiptap ao tirar o foco do editor.
+  const swatchPanelClass =
+    'absolute left-0 top-full z-50 mt-1 hidden gap-1 rounded-md border border-border bg-overlay p-1 shadow-overlay group-hover:flex group-focus-within:flex';
+
   return (
-    <div 
-      className="relative w-full" 
+    <div
+      className="relative w-full"
       ref={containerRef}
       onKeyDown={onKeyDown} // Bubble events up
     >
       {editor && (
-        <BubbleMenu 
-          editor={editor} 
-          className="flex items-center gap-1 bg-surface-card border border-border rounded-lg shadow-lg p-1"
+        <BubbleMenu
+          editor={editor}
+          className="flex items-center gap-1 rounded-lg border border-border bg-overlay p-1 shadow-overlay"
         >
-          <button
+          <Button
+            isIconOnly
+            size="sm"
+            aria-label="Negrito"
+            aria-pressed={editor.isActive('bold')}
+            variant={editor.isActive('bold') ? 'secondary' : 'ghost'}
             onClick={() => editor.chain().focus().toggleBold().run()}
-            className={`p-1.5 rounded-md hover:bg-surface-hover transition-colors ${editor.isActive('bold') ? 'bg-primary/10 text-primary' : 'text-text-soft'}`}
-            title="Negrito"
           >
-            <Bold className="w-4 h-4" />
-          </button>
-          
-          <button
+            <Bold className="size-4" aria-hidden="true" />
+          </Button>
+
+          <Button
+            isIconOnly
+            size="sm"
+            aria-label="Itálico"
+            aria-pressed={editor.isActive('italic')}
+            variant={editor.isActive('italic') ? 'secondary' : 'ghost'}
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={`p-1.5 rounded-md hover:bg-surface-hover transition-colors ${editor.isActive('italic') ? 'bg-primary/10 text-primary' : 'text-text-soft'}`}
-            title="Itálico"
           >
-            <Italic className="w-4 h-4" />
-          </button>
+            <Italic className="size-4" aria-hidden="true" />
+          </Button>
 
-          <button
+          <Button
+            isIconOnly
+            size="sm"
+            aria-label="Link"
+            aria-pressed={editor.isActive('link')}
+            variant={editor.isActive('link') ? 'secondary' : 'ghost'}
             onClick={setLink}
-            className={`p-1.5 rounded-md hover:bg-surface-hover transition-colors ${editor.isActive('link') ? 'bg-primary/10 text-primary' : 'text-text-soft'}`}
-            title="Link"
           >
-            <LinkIcon className="w-4 h-4" />
-          </button>
+            <LinkIcon className="size-4" aria-hidden="true" />
+          </Button>
 
-          <div className="w-[1px] h-4 bg-border mx-1"></div>
+          <Separator orientation="vertical" className="mx-1 h-4" />
 
           {/* Highlight Colors */}
-          <div className="relative group">
-            <button
-              className={`p-1.5 rounded-md hover:bg-surface-hover transition-colors ${editor.isActive('highlight') ? 'bg-primary/10 text-primary' : 'text-text-soft'}`}
-              title="Marca-texto"
+          <div className="group relative">
+            <Button
+              isIconOnly
+              size="sm"
+              aria-label="Marca-texto"
+              aria-pressed={editor.isActive('highlight')}
+              variant={editor.isActive('highlight') ? 'secondary' : 'ghost'}
             >
-              <Highlighter className="w-4 h-4" />
-            </button>
-            <div className="absolute top-full left-0 mt-1 hidden group-hover:flex bg-surface-card border border-border p-1 rounded-md shadow-lg gap-1 z-50">
-              <button 
+              <Highlighter className="size-4" aria-hidden="true" />
+            </Button>
+            <div className={swatchPanelClass}>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="outline"
+                aria-label="Remover marca-texto"
                 onClick={() => editor.chain().focus().unsetHighlight().run()}
-                className="w-6 h-6 rounded border border-border flex items-center justify-center text-xs text-text-soft hover:bg-surface-hover"
-                title="Remover"
               >
-                ✕
-              </button>
+                <span aria-hidden="true">✕</span>
+              </Button>
               {highlightColors.map(color => (
-                <button
+                <Button
                   key={color.value}
-                  onClick={() => editor.chain().focus().setHighlight({ color: color.value }).run()}
-                  className="w-6 h-6 rounded border border-black/10 hover:scale-110 transition-transform"
+                  isIconOnly
+                  size="sm"
+                  variant="outline"
+                  aria-label={`Marca-texto ${color.label}`}
                   style={{ backgroundColor: color.value }}
-                  title={color.label}
-                />
+                  onClick={() => editor.chain().focus().setHighlight({ color: color.value }).run()}
+                >
+                  <span className="sr-only">{color.label}</span>
+                </Button>
               ))}
             </div>
           </div>
 
           {/* Text Colors */}
-          <div className="relative group">
-            <button
-              className="p-1.5 rounded-md hover:bg-surface-hover transition-colors text-text-soft"
-              title="Cor do Texto"
-            >
-              <Palette className="w-4 h-4" />
-            </button>
-            <div className="absolute top-full left-0 mt-1 hidden group-hover:flex bg-surface-card border border-border p-1 rounded-md shadow-lg gap-1 z-50">
+          <div className="group relative">
+            <Button isIconOnly size="sm" variant="ghost" aria-label="Cor do texto">
+              <Palette className="size-4" aria-hidden="true" />
+            </Button>
+            <div className={swatchPanelClass}>
               {textColors.map(color => (
-                <button
+                <Button
                   key={color.label}
+                  isIconOnly
+                  size="sm"
+                  variant="outline"
+                  aria-label={`Cor do texto: ${color.label}`}
+                  style={{ color: color.value || 'inherit' }}
                   onClick={() => {
                     if (color.value) {
                       editor.chain().focus().setColor(color.value).run();
@@ -179,12 +206,9 @@ export default function RichTextEditor({ content, onChange, onFocus, onKeyDown, 
                       editor.chain().focus().unsetColor().run();
                     }
                   }}
-                  className="w-6 h-6 rounded border border-border hover:scale-110 transition-transform flex items-center justify-center"
-                  style={{ color: color.value || 'inherit', backgroundColor: color.value ? `${color.value}10` : 'transparent' }}
-                  title={color.label}
                 >
-                  <span className="text-xs font-bold font-serif">A</span>
-                </button>
+                  <span className="font-serif text-xs font-bold" aria-hidden="true">A</span>
+                </Button>
               ))}
             </div>
           </div>
@@ -195,12 +219,12 @@ export default function RichTextEditor({ content, onChange, onFocus, onKeyDown, 
       <div className={`tiptap-container ${content.length === 0 ? 'is-empty' : ''}`} data-placeholder={placeholder}>
         <EditorContent editor={editor} />
       </div>
-      
+
       <style>{`
         .tiptap-container.is-empty .ProseMirror:before {
           content: attr(data-placeholder);
           float: left;
-          color: var(--text-soft);
+          color: var(--muted);
           pointer-events: none;
           height: 0;
           font-style: italic;

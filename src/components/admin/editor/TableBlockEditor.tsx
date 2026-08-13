@@ -1,4 +1,7 @@
-import React from 'react';
+"use client";
+
+import React, { useState } from 'react';
+import { AlertDialog, Button, Card, Input, TextField } from '@heroui/react';
 import { ContentBlock } from '@/lib/mockData';
 import { Trash2, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Plus } from 'lucide-react';
 
@@ -8,7 +11,11 @@ interface TableBlockEditorProps {
   updateBlock: (index: number, newBlock: Partial<ContentBlock>) => void;
 }
 
+type PendingDeletion = { kind: 'row' | 'column'; index: number };
+
 export default function TableBlockEditor({ block, index, updateBlock }: TableBlockEditorProps) {
+  const [pendingDeletion, setPendingDeletion] = useState<PendingDeletion | null>(null);
+
   const tableData: string[][] = block.metadata?.tableData || [
     ['', '', ''],
     ['', '', ''],
@@ -31,18 +38,22 @@ export default function TableBlockEditor({ block, index, updateBlock }: TableBlo
 
   const deleteRow = (rIndex: number) => {
     if (tableData.length <= 1) return;
-    if (window.confirm('Tem certeza que deseja apagar esta linha?')) {
-      const newData = tableData.filter((_, i) => i !== rIndex);
-      updateTableData(newData);
-    }
+    setPendingDeletion({ kind: 'row', index: rIndex });
   };
 
   const deleteColumn = (cIndex: number) => {
     if (tableData[0]?.length <= 1) return;
-    if (window.confirm('Tem certeza que deseja apagar esta coluna?')) {
-      const newData = tableData.map(row => row.filter((_, i) => i !== cIndex));
-      updateTableData(newData);
+    setPendingDeletion({ kind: 'column', index: cIndex });
+  };
+
+  const confirmDeletion = () => {
+    if (!pendingDeletion) return;
+    if (pendingDeletion.kind === 'row') {
+      updateTableData(tableData.filter((_, i) => i !== pendingDeletion.index));
+    } else {
+      updateTableData(tableData.map(row => row.filter((_, i) => i !== pendingDeletion.index)));
     }
+    setPendingDeletion(null);
   };
 
   const moveRow = (rIndex: number, direction: 'up' | 'down') => {
@@ -76,62 +87,149 @@ export default function TableBlockEditor({ block, index, updateBlock }: TableBlo
   };
 
   return (
-    <div className="bg-surface border border-border rounded-lg p-4 space-y-3 overflow-x-auto">
-      <div className="flex items-center justify-between">
-        <div className="text-sm font-semibold text-primary mb-1">Bloco de Tabela</div>
+    <Card variant="secondary">
+      <Card.Header className="flex flex-row flex-wrap items-center justify-between gap-3">
+        <Card.Title className="text-sm text-accent">Bloco de Tabela</Card.Title>
         <div className="flex gap-2">
-          <button type="button" onClick={addColumn} className="flex items-center gap-1 text-xs text-text-soft hover:text-primary transition-colors border border-border px-2 py-1 rounded">
-            <Plus className="w-3 h-3" /> Coluna
-          </button>
-          <button type="button" onClick={addRow} className="flex items-center gap-1 text-xs text-text-soft hover:text-primary transition-colors border border-border px-2 py-1 rounded">
-            <Plus className="w-3 h-3" /> Linha
-          </button>
+          <Button size="sm" variant="outline" onClick={addColumn}>
+            <Plus className="size-3.5" aria-hidden="true" /> Coluna
+          </Button>
+          <Button size="sm" variant="outline" onClick={addRow}>
+            <Plus className="size-3.5" aria-hidden="true" /> Linha
+          </Button>
         </div>
-      </div>
-      <div className="relative pt-6 pl-6">
-        {/* Column Controls */}
-        <div className="absolute top-0 left-6 right-0 flex">
-          {tableData[0]?.map((_, cIndex) => (
-            <div key={`col-ctrl-${cIndex}`} className="flex-1 flex justify-center gap-1 opacity-0 hover:opacity-100 transition-opacity">
-              <button type="button" onClick={() => moveColumn(cIndex, 'left')} disabled={cIndex === 0} className="p-1 text-text-soft hover:text-primary disabled:opacity-30"><ArrowLeft className="w-3 h-3" /></button>
-              <button type="button" onClick={() => deleteColumn(cIndex)} className="p-1 text-error/70 hover:text-error"><Trash2 className="w-3 h-3" /></button>
-              <button type="button" onClick={() => moveColumn(cIndex, 'right')} disabled={cIndex === tableData[0].length - 1} className="p-1 text-text-soft hover:text-primary disabled:opacity-30"><ArrowRight className="w-3 h-3" /></button>
-            </div>
-          ))}
-        </div>
+      </Card.Header>
 
+      <Card.Content className="overflow-x-auto">
         <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              <th className="w-10" />
+              {tableData[0]?.map((_, cIndex) => (
+                <th key={`col-ctrl-${cIndex}`} className="p-1">
+                  <div className="flex justify-center gap-0.5">
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Mover coluna ${cIndex + 1} para a esquerda`}
+                      isDisabled={cIndex === 0}
+                      onClick={() => moveColumn(cIndex, 'left')}
+                    >
+                      <ArrowLeft className="size-3.5" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Excluir coluna ${cIndex + 1}`}
+                      isDisabled={tableData[0].length <= 1}
+                      onClick={() => deleteColumn(cIndex)}
+                    >
+                      <Trash2 className="size-3.5 text-danger" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Mover coluna ${cIndex + 1} para a direita`}
+                      isDisabled={cIndex === tableData[0].length - 1}
+                      onClick={() => moveColumn(cIndex, 'right')}
+                    >
+                      <ArrowRight className="size-3.5" aria-hidden="true" />
+                    </Button>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
           <tbody>
             {tableData.map((row, rIndex) => (
-              <tr key={rIndex} className="group/row relative">
-                {/* Row Controls */}
-                <td className="absolute -left-6 top-0 bottom-0 flex flex-col justify-center gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity w-6">
-                  <button type="button" onClick={() => moveRow(rIndex, 'up')} disabled={rIndex === 0} className="text-text-soft hover:text-primary disabled:opacity-30"><ArrowUp className="w-3 h-3" /></button>
-                  <button type="button" onClick={() => deleteRow(rIndex)} className="text-error/70 hover:text-error"><Trash2 className="w-3 h-3" /></button>
-                  <button type="button" onClick={() => moveRow(rIndex, 'down')} disabled={rIndex === tableData.length - 1} className="text-text-soft hover:text-primary disabled:opacity-30"><ArrowDown className="w-3 h-3" /></button>
+              <tr key={rIndex}>
+                <td className="w-10 p-1 align-middle">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Mover linha ${rIndex + 1} para cima`}
+                      isDisabled={rIndex === 0}
+                      onClick={() => moveRow(rIndex, 'up')}
+                    >
+                      <ArrowUp className="size-3.5" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Excluir linha ${rIndex + 1}`}
+                      isDisabled={tableData.length <= 1}
+                      onClick={() => deleteRow(rIndex)}
+                    >
+                      <Trash2 className="size-3.5 text-danger" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      isIconOnly
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Mover linha ${rIndex + 1} para baixo`}
+                      isDisabled={rIndex === tableData.length - 1}
+                      onClick={() => moveRow(rIndex, 'down')}
+                    >
+                      <ArrowDown className="size-3.5" aria-hidden="true" />
+                    </Button>
+                  </div>
                 </td>
 
                 {row.map((cell, cIndex) => (
-                  <td key={cIndex} className="border border-border p-0 relative group/cell">
-                    <input
-                      type="text"
+                  <td key={cIndex} className="border border-border p-1">
+                    <TextField
+                      aria-label={
+                        rIndex === 0
+                          ? `Cabeçalho da coluna ${cIndex + 1}`
+                          : `Linha ${rIndex}, coluna ${cIndex + 1}`
+                      }
                       value={cell}
-                      onChange={(e) => {
+                      onChange={(value) => {
                         const newData = [...tableData];
                         newData[rIndex] = [...newData[rIndex]];
-                        newData[rIndex][cIndex] = e.target.value;
+                        newData[rIndex][cIndex] = value;
                         updateTableData(newData);
                       }}
-                      className={`w-full bg-transparent px-3 py-2 text-sm focus:outline-none focus:bg-surface-hover transition-colors ${rIndex === 0 ? 'font-semibold text-text' : 'text-text-soft'}`}
-                      placeholder={rIndex === 0 ? "Cabeçalho" : "Célula"}
-                    />
+                    >
+                      <Input
+                        className={rIndex === 0 ? 'font-semibold' : ''}
+                        placeholder={rIndex === 0 ? 'Cabeçalho' : 'Célula'}
+                      />
+                    </TextField>
                   </td>
                 ))}
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
-    </div>
+      </Card.Content>
+
+      <AlertDialog.Root isOpen={pendingDeletion !== null} onOpenChange={(open) => !open && setPendingDeletion(null)}>
+        <AlertDialog.Backdrop>
+          <AlertDialog.Container size="sm">
+            <AlertDialog.Dialog>
+              <AlertDialog.Header>
+                <AlertDialog.Heading>
+                  {pendingDeletion?.kind === 'row' ? 'Apagar esta linha?' : 'Apagar esta coluna?'}
+                </AlertDialog.Heading>
+              </AlertDialog.Header>
+              <AlertDialog.Body>
+                O conteúdo {pendingDeletion?.kind === 'row' ? 'da linha' : 'da coluna'} será removido da tabela e não poderá ser recuperado.
+              </AlertDialog.Body>
+              <AlertDialog.Footer>
+                <Button variant="tertiary" onClick={() => setPendingDeletion(null)}>Cancelar</Button>
+                <Button variant="danger" onClick={confirmDeletion}>Apagar</Button>
+              </AlertDialog.Footer>
+            </AlertDialog.Dialog>
+          </AlertDialog.Container>
+        </AlertDialog.Backdrop>
+      </AlertDialog.Root>
+    </Card>
   );
 }

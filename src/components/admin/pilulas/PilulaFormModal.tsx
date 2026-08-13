@@ -2,8 +2,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { Pilula, PilulaCategory, PilulaFormat, PilulaStatus } from '@/types/pilula';
-import { X, Sparkles, Lightbulb, FileText, Video, Headphones, Target, Clock, BookOpen, Calendar, Link as LinkIcon } from 'lucide-react';
-import { toast } from 'sonner';
+import { Sparkles, Lightbulb, FileText, Video, Headphones, Target, Clock, BookOpen, Calendar, Link as LinkIcon } from 'lucide-react';
+import {
+  Button,
+  Description,
+  Input,
+  Label,
+  ListBox,
+  ListBoxItem,
+  Modal,
+  Radio,
+  RadioGroup,
+  Select,
+  TextArea,
+  TextField,
+  toast,
+} from '@heroui/react';
 
 interface PilulaFormModalProps {
   isOpen: boolean;
@@ -27,6 +41,13 @@ const FORMATS: { value: PilulaFormat; label: string; icon: React.ElementType; de
   { value: 'texto', label: 'Texto Curto', icon: FileText, description: 'Leitura rápida de conceito ou insight' },
   { value: 'video', label: 'Vídeo pílula', icon: Video, description: 'Vídeo expositivo ou explicativo curto' },
   { value: 'audio', label: 'Áudio / Podpill', icon: Headphones, description: 'Áudio explicativo para escuta rápida' },
+];
+
+const STATUS_OPTIONS: { value: PilulaStatus; label: string }[] = [
+  { value: 'Ativa', label: 'Ativa (visível agora)' },
+  { value: 'Programada', label: 'Programada (agendada)' },
+  { value: 'Rascunho', label: 'Rascunho' },
+  { value: 'Arquivada', label: 'Arquivada' },
 ];
 
 export function PilulaFormModal({ isOpen, onClose, onSave, pilulaToEdit }: PilulaFormModalProps) {
@@ -82,22 +103,22 @@ export function PilulaFormModal({ isOpen, onClose, onSave, pilulaToEdit }: Pilul
     e.preventDefault();
 
     if (!title.trim()) {
-      toast.error('Informe o título da pílula.');
+      toast.danger('Informe o título da pílula.');
       return;
     }
 
     if (!summary.trim()) {
-      toast.error('Informe o resumo/conceito da pílula.');
+      toast.danger('Informe o resumo/conceito da pílula.');
       return;
     }
 
     if (!challenge.trim()) {
-      toast.error('Informe a prática sugerida ou desafio do dia.');
+      toast.danger('Informe a prática sugerida ou desafio do dia.');
       return;
     }
 
     if (status === 'Programada' && !publishDate) {
-      toast.error('Informe a data de agendamento para pílulas programadas.');
+      toast.danger('Informe a data de agendamento para pílulas programadas.');
       return;
     }
 
@@ -121,251 +142,214 @@ export function PilulaFormModal({ isOpen, onClose, onSave, pilulaToEdit }: Pilul
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-      />
+    <Modal.Root
+      isOpen={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <Modal.Backdrop>
+        <Modal.Container size="lg" scroll="inside">
+          <Modal.Dialog className="max-w-3xl sm:w-[48rem]">
+            <Modal.Header>
+              <div className="flex items-center gap-3">
+                <Modal.Icon className="bg-accent-soft text-accent-soft-foreground">
+                  <Lightbulb className="size-5" aria-hidden="true" />
+                </Modal.Icon>
+                <div>
+                  <Modal.Heading className="font-display text-lg font-bold">
+                    {pilulaToEdit ? 'Editar pílula de conhecimento' : 'Nova pílula de conhecimento'}
+                  </Modal.Heading>
+                  <p className="text-xs text-muted">
+                    Crie microconteúdos dinâmicos para engajar os alunos no dia a dia.
+                  </p>
+                </div>
+              </div>
+            </Modal.Header>
 
-      {/* Modal Container */}
-      <div className="relative w-full max-w-3xl rounded-3xl bg-surface border border-border/80 shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/60 px-6 py-5 bg-canvas-soft/50">
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary-pale text-primary font-bold">
-              <Lightbulb className="h-5 w-5" />
-            </span>
-            <div>
-              <h2 className="text-xl font-extrabold text-ink">
-                {pilulaToEdit ? 'Editar Pílula de Conhecimento' : 'Nova Pílula de Conhecimento'}
-              </h2>
-              <p className="text-xs text-text-soft">
-                Crie microconteúdos dinâmicos para engajar os alunos no dia a dia.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="grid h-9 w-9 place-items-center rounded-xl text-text-mute hover:bg-canvas-alt hover:text-text transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+            <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+              <Modal.Body className="space-y-6 py-2">
+                {/* Title */}
+                <TextField value={title} onChange={setTitle} isRequired fullWidth>
+                  <Label>Título da pílula</Label>
+                  <Input placeholder="Ex.: Escuta ativa na prática" />
+                </TextField>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-bold text-ink mb-1.5">
-              Título da Pílula <span className="text-negative">*</span>
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Escuta Ativa na Prática"
-              className="w-full h-11 rounded-xl border border-border bg-canvas-soft px-4 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none transition-all font-medium"
-              required
-            />
-          </div>
-
-          {/* Grid Category & Status & Estimated Time */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Category */}
-            <div>
-              <label className="block text-sm font-bold text-ink mb-1.5">Categoria</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full h-11 rounded-xl border border-border bg-canvas-soft px-3.5 text-sm text-text focus:border-primary focus:bg-surface focus:outline-none transition-all"
-              >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-                <option value="Outra">Outra...</option>
-              </select>
-              {category === 'Outra' && (
-                <input
-                  type="text"
-                  value={customCategory}
-                  onChange={(e) => setCustomCategory(e.target.value)}
-                  placeholder="Especifique a categoria"
-                  className="mt-2 w-full h-10 rounded-xl border border-border bg-canvas-soft px-3.5 text-sm focus:border-primary focus:bg-surface focus:outline-none"
-                />
-              )}
-            </div>
-
-            {/* Status */}
-            <div>
-              <label className="block text-sm font-bold text-ink mb-1.5">Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as PilulaStatus)}
-                className="w-full h-11 rounded-xl border border-border bg-canvas-soft px-3.5 text-sm text-text focus:border-primary focus:bg-surface focus:outline-none transition-all"
-              >
-                <option value="Ativa">Ativa (Visível agora)</option>
-                <option value="Programada">Programada (Agendada)</option>
-                <option value="Rascunho">Rascunho</option>
-                <option value="Arquivada">Arquivada</option>
-              </select>
-            </div>
-
-            {/* Estimated Minutes */}
-            <div>
-              <label className="block text-sm font-bold text-ink mb-1.5 flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-text-mute" />
-                Tempo (min)
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={60}
-                value={estimatedMinutes}
-                onChange={(e) => setEstimatedMinutes(parseInt(e.target.value) || 1)}
-                className="w-full h-11 rounded-xl border border-border bg-canvas-soft px-4 text-sm text-text focus:border-primary focus:bg-surface focus:outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          {/* Schedule Date (if programmed) */}
-          {status === 'Programada' && (
-            <div className="p-4 rounded-2xl bg-primary-pale/30 border border-primary/20">
-              <label className="block text-sm font-bold text-primary-active mb-1 flex items-center gap-2">
-                <Calendar className="w-4 h-4" /> Data de Publicação Programada
-              </label>
-              <input
-                type="date"
-                value={publishDate}
-                onChange={(e) => setPublishDate(e.target.value)}
-                className="w-full h-11 rounded-xl border border-border bg-surface px-4 text-sm focus:border-primary focus:outline-none"
-                required
-              />
-            </div>
-          )}
-
-          {/* Format Selector */}
-          <div>
-            <label className="block text-sm font-bold text-ink mb-2">Formato da Pílula</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {FORMATS.map((f) => {
-                const IconComponent = f.icon;
-                const isSelected = format === f.value;
-                return (
-                  <button
-                    key={f.value}
-                    type="button"
-                    onClick={() => setFormat(f.value)}
-                    className={`flex items-start gap-3 p-3.5 rounded-2xl border text-left transition-all ${
-                      isSelected
-                        ? 'border-primary bg-primary-pale/40 ring-1 ring-primary/30'
-                        : 'border-border bg-canvas-soft hover:bg-canvas-alt'
-                    }`}
-                  >
-                    <span
-                      className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${
-                        isSelected ? 'bg-primary text-on-primary' : 'bg-surface text-text-mute border border-border'
-                      }`}
+                {/* Category, status & duration */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div className="space-y-2">
+                    <Select
+                      selectedKey={category}
+                      onSelectionChange={(key) => setCategory(String(key))}
                     >
-                      <IconComponent className="h-4.5 w-4.5" />
+                      <Label>Categoria</Label>
+                      <Select.Trigger>
+                        <Select.Value />
+                        <Select.Indicator />
+                      </Select.Trigger>
+                      <Select.Popover>
+                        <ListBox>
+                          {[...CATEGORIES.map((cat) => ({ id: cat, label: cat })), { id: 'Outra', label: 'Outra…' }].map(
+                            (opt) => (
+                              <ListBoxItem key={opt.id} id={opt.id}>
+                                {opt.label}
+                              </ListBoxItem>
+                            ),
+                          )}
+                        </ListBox>
+                      </Select.Popover>
+                    </Select>
+
+                    {category === 'Outra' && (
+                      <TextField value={customCategory} onChange={setCustomCategory} fullWidth>
+                        <Label className="sr-only">Categoria personalizada</Label>
+                        <Input placeholder="Especifique a categoria" />
+                      </TextField>
+                    )}
+                  </div>
+
+                  <Select
+                    selectedKey={status}
+                    onSelectionChange={(key) => setStatus(String(key) as PilulaStatus)}
+                  >
+                    <Label>Status</Label>
+                    <Select.Trigger>
+                      <Select.Value />
+                      <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                      <ListBox>
+                        {STATUS_OPTIONS.map((opt) => (
+                          <ListBoxItem key={opt.value} id={opt.value}>
+                            {opt.label}
+                          </ListBoxItem>
+                        ))}
+                      </ListBox>
+                    </Select.Popover>
+                  </Select>
+
+                  <TextField
+                    value={String(estimatedMinutes)}
+                    onChange={(value) => setEstimatedMinutes(parseInt(value, 10) || 1)}
+                    fullWidth
+                  >
+                    <Label>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Clock className="size-4 text-muted" aria-hidden="true" />
+                        Tempo (min)
+                      </span>
+                    </Label>
+                    <Input type="number" min={1} max={60} inputMode="numeric" />
+                  </TextField>
+                </div>
+
+                {/* Schedule date (only when scheduled) */}
+                {status === 'Programada' && (
+                  <div className="rounded-xl border border-accent/30 bg-accent-soft p-4">
+                    <TextField value={publishDate} onChange={setPublishDate} isRequired fullWidth>
+                      <Label>
+                        <span className="inline-flex items-center gap-2">
+                          <Calendar className="size-4" aria-hidden="true" />
+                          Data de publicação programada
+                        </span>
+                      </Label>
+                      <Input type="date" />
+                    </TextField>
+                  </div>
+                )}
+
+                {/* Format selector */}
+                <RadioGroup
+                  value={format}
+                  onChange={(value) => setFormat(value as PilulaFormat)}
+                  className="gap-3"
+                >
+                  <Label>Formato da pílula</Label>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {FORMATS.map((option) => {
+                      const IconComponent = option.icon;
+                      return (
+                        <Radio key={option.value} value={option.value} className="w-full">
+                          <Radio.Content className="w-full items-start gap-3 rounded-xl border border-border bg-background-secondary p-3.5 text-left data-[selected]:border-accent data-[selected]:bg-accent-soft">
+                            <Radio.Control className="mt-1">
+                              <Radio.Indicator />
+                            </Radio.Control>
+                            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface text-muted">
+                              <IconComponent className="size-4" aria-hidden="true" />
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block text-sm font-semibold text-foreground">{option.label}</span>
+                              <span className="mt-0.5 block text-xs leading-tight font-normal text-muted">
+                                {option.description}
+                              </span>
+                            </span>
+                          </Radio.Content>
+                        </Radio>
+                      );
+                    })}
+                  </div>
+                </RadioGroup>
+
+                {/* Summary */}
+                <TextField value={summary} onChange={setSummary} isRequired fullWidth>
+                  <Label>Conceito / resumo da pílula</Label>
+                  <TextArea rows={3} placeholder="Explique o insight ou teoria em poucas frases para o aluno…" />
+                  <Description>O aluno lê isso antes de executar a prática.</Description>
+                </TextField>
+
+                {/* Challenge */}
+                <TextField value={challenge} onChange={setChallenge} isRequired fullWidth>
+                  <Label>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Target className="size-4 text-warning" aria-hidden="true" />
+                      Prática sugerida / desafio do dia
                     </span>
-                    <div>
-                      <p className={`text-sm font-bold ${isSelected ? 'text-primary' : 'text-ink'}`}>
-                        {f.label}
-                      </p>
-                      <p className="text-xs text-text-soft leading-tight mt-0.5">{f.description}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                  </Label>
+                  <TextArea
+                    rows={3}
+                    placeholder="Instrução prática acionável. Ex.: 'Hoje, aguarde 2 segundos antes de responder…'"
+                  />
+                </TextField>
 
-          {/* Summary */}
-          <div>
-            <label className="block text-sm font-bold text-ink mb-1.5">
-              Conceito / Resumo da Pílula <span className="text-negative">*</span>
-            </label>
-            <textarea
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              rows={3}
-              placeholder="Explique o insight ou teoria em poucas frases para o aluno..."
-              className="w-full rounded-xl border border-border bg-canvas-soft p-4 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none transition-all resize-none"
-              required
-            />
-          </div>
+                {/* Course relation & media URL */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <TextField value={courseTitle} onChange={setCourseTitle} fullWidth>
+                    <Label>
+                      <span className="inline-flex items-center gap-1.5">
+                        <BookOpen className="size-4 text-muted" aria-hidden="true" />
+                        Curso / trilha associado
+                      </span>
+                    </Label>
+                    <Input placeholder="Ex.: Comunicação Assertiva & Feedback" />
+                    <Description>Opcional.</Description>
+                  </TextField>
 
-          {/* Challenge / Action */}
-          <div>
-            <label className="block text-sm font-bold text-ink mb-1.5 flex items-center gap-1.5">
-              <Target className="w-4 h-4 text-accent-orange" />
-              Prática Sugerida / Desafio do Dia <span className="text-negative">*</span>
-            </label>
-            <textarea
-              value={challenge}
-              onChange={(e) => setChallenge(e.target.value)}
-              rows={3}
-              placeholder="Instrução prática acionável. Ex: 'Hoje, aguarde 2 segundos antes de responder...'"
-              className="w-full rounded-xl border border-border bg-canvas-soft p-4 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none transition-all resize-none"
-              required
-            />
-          </div>
+                  <TextField value={mediaUrl} onChange={setMediaUrl} fullWidth>
+                    <Label>
+                      <span className="inline-flex items-center gap-1.5">
+                        <LinkIcon className="size-4 text-muted" aria-hidden="true" />
+                        URL de mídia (vídeo/áudio)
+                      </span>
+                    </Label>
+                    <Input type="url" placeholder="https://…" />
+                    <Description>Opcional.</Description>
+                  </TextField>
+                </div>
+              </Modal.Body>
 
-          {/* Course relation & Media URL */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Course Title */}
-            <div>
-              <label className="block text-sm font-bold text-ink mb-1.5 flex items-center gap-1.5">
-                <BookOpen className="w-4 h-4 text-text-mute" />
-                Curso / Trilha Associado (Opcional)
-              </label>
-              <input
-                type="text"
-                value={courseTitle}
-                onChange={(e) => setCourseTitle(e.target.value)}
-                placeholder="Ex: Comunicação Assertiva & Feedback"
-                className="w-full h-11 rounded-xl border border-border bg-canvas-soft px-4 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none transition-all"
-              />
-            </div>
-
-            {/* Media URL (Optional) */}
-            <div>
-              <label className="block text-sm font-bold text-ink mb-1.5 flex items-center gap-1.5">
-                <LinkIcon className="w-4 h-4 text-text-mute" />
-                URL de Mídia (Vídeo/Áudio - Opcional)
-              </label>
-              <input
-                type="url"
-                value={mediaUrl}
-                onChange={(e) => setMediaUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full h-11 rounded-xl border border-border bg-canvas-soft px-4 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border/60">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-2.5 rounded-xl font-bold text-sm text-text-soft hover:bg-canvas-soft transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-primary text-on-primary hover:bg-primary-active transition-all shadow-sm"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>{pilulaToEdit ? 'Salvar Alterações' : 'Criar Pílula'}</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+              <Modal.Footer>
+                <Button variant="tertiary" type="button" onClick={onClose}>
+                  Cancelar
+                </Button>
+                <Button variant="primary" type="submit">
+                  <Sparkles className="size-4" aria-hidden="true" />
+                  {pilulaToEdit ? 'Salvar alterações' : 'Criar pílula'}
+                </Button>
+              </Modal.Footer>
+            </form>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </Modal.Root>
   );
 }

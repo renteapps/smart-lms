@@ -3,7 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { Award, BookOpen, CheckCircle2, ChevronDown, Clock3, FileText, Play, PlayCircle, Brain } from "lucide-react";
+import { Award, BookOpen, Brain, CheckCircle2, Clock3, FileText, Play, PlayCircle } from "lucide-react";
+import { Card, Chip, Disclosure, EmptyState, ProgressBar, Separator, buttonVariants } from "@heroui/react";
+import { CourseIcon } from "@/components/ui/AnimatedIcon";
+import { Reveal } from "@/components/ui/Reveal";
+import { Rise } from "@/components/ui/Rise";
 import type { Course, Lesson } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
 
@@ -15,75 +19,225 @@ type CourseOverviewClientProps = {
   nextLesson: Lesson | null;
 };
 
+const LESSON_KIND: Record<string, string> = {
+  profile_test: "Teste de perfil",
+  video: "Vídeo",
+  quiz: "Quiz",
+  text: "Leitura",
+};
+
+function lessonIcon(lesson: Lesson) {
+  if (lesson.isCompleted) return <CheckCircle2 className="size-4" aria-hidden="true" />;
+  if (lesson.type === "profile_test") return <Brain className="size-4" aria-hidden="true" />;
+  if (lesson.type === "video") return <PlayCircle className="size-4" aria-hidden="true" />;
+  return <FileText className="size-4" aria-hidden="true" />;
+}
+
+/**
+ * Capa do curso.
+ *
+ * A imagem do herói é o único gesto expressivo da tela — daí para baixo tudo é
+ * superfície calma, para que "o que vem agora" seja a informação mais rápida de
+ * achar. O painel de progresso acompanha a rolagem porque é a resposta que a
+ * pessoa volta a procurar enquanto navega pelo plano.
+ */
 export default function CourseOverviewClient({ course, totalLessons, completedLessons, progressPercentage, nextLesson }: CourseOverviewClientProps) {
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>(() => Object.fromEntries(course.modules.map((courseModule) => [courseModule.id, true])));
   const totalMinutes = course.modules.reduce((total, courseModule) => total + courseModule.lessons.reduce((moduleTotal, lesson) => moduleTotal + lesson.durationInMinutes, 0), 0);
+  const durationLabel = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}min`;
 
   return (
-    <div className="min-h-screen pt-[76px]">
-      <section className="editorial-container py-8 sm:py-10">
-        <div className="relative overflow-hidden rounded-[14px] bg-ink text-white shadow-[0_28px_80px_rgb(23,32,51,0.18)]">
-          <Image src="https://images.unsplash.com/photo-1552664730-d307ca884978?q=90&w=1800&auto=format&fit=crop" alt="Grupo participando de uma dinâmica de aprendizagem" fill priority sizes="(max-width: 1280px) 100vw, 1280px" className="object-cover opacity-55" />
-          <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/92 to-ink/15" />
+    <div className="min-h-screen pt-19">
+      <section className="editorial-container py-8 sm:py-12">
+        <div className="relative isolate overflow-hidden rounded-2xl bg-foreground shadow-elev-4">
+          <Image
+            src="https://images.unsplash.com/photo-1552664730-d307ca884978?q=90&w=1800&auto=format&fit=crop"
+            alt="Grupo participando de uma dinâmica de aprendizagem"
+            fill
+            priority
+            sizes="(max-width: 1280px) 100vw, 1280px"
+            className="object-cover opacity-55"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-gradient-to-r from-foreground via-foreground/90 to-foreground/20"
+          />
+
           <div className="relative z-10 max-w-3xl px-6 py-14 sm:px-10 sm:py-20 lg:px-16">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/65">Comunicação · Curso essencial</p>
-            <h1 className="mt-4 text-4xl font-extrabold leading-[1.03] tracking-[-0.055em] sm:text-6xl">{course.title}</h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-white/75 sm:text-lg">{course.description}</p>
-            <div className="mt-7 flex flex-wrap gap-5 text-sm font-semibold text-white/75">
-              <span className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> {totalLessons} aulas</span>
-              <span className="flex items-center gap-2"><Clock3 className="h-4 w-4" /> {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}min</span>
-              <span className="flex items-center gap-2"><Award className="h-4 w-4" /> Certificado incluso</span>
+            <p className="eyebrow text-background/70">Comunicação · Curso essencial</p>
+            <h1 className="display-1 mt-4 text-background">{course.title}</h1>
+            <p className="lede mt-5 text-background/75">{course.description}</p>
+
+            <div className="mt-8 flex flex-wrap gap-2.5">
+              <span className="material-thin flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold text-background">
+                <BookOpen className="size-4" aria-hidden="true" />
+                <span data-numeric>{totalLessons} aulas</span>
+              </span>
+              <span className="material-thin flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold text-background">
+                <Clock3 className="size-4" aria-hidden="true" />
+                <span data-numeric>{durationLabel}</span>
+              </span>
+              <span className="material-thin flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-semibold text-background">
+                <Award className="size-4" aria-hidden="true" />
+                Certificado incluso
+              </span>
             </div>
+
             {nextLesson && (
-              <Link href={`/courses/${course.id}/lessons/${nextLesson.id}`} className="mt-9 inline-flex min-h-12 items-center gap-2 rounded-[13px] bg-primary px-6 font-bold text-on-primary shadow-lg hover:bg-[#4268c8] hover:-translate-y-0.5">
-                <Play className="h-4 w-4 fill-current" /> {completedLessons === 0 ? "Começar curso" : "Continuar próxima aula"}
+              <Link
+                href={`/courses/${course.id}/lessons/${nextLesson.id}`}
+                className={buttonVariants({ variant: "primary", size: "lg", className: "press mt-9 gap-2" })}
+              >
+                <Play className="size-4 fill-current" aria-hidden="true" />
+                {completedLessons === 0 ? "Começar curso" : "Continuar próxima aula"}
               </Link>
             )}
           </div>
         </div>
       </section>
 
-      <section className="editorial-container grid gap-8 pb-20 pt-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+      <section className="editorial-container grid gap-10 pb-24 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
         <div>
-          <div className="mb-6">
-            <p className="eyebrow">Plano do curso</p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.04em] text-ink">O que você vai praticar</h2>
-          </div>
-          <div className="space-y-4">
-            {course.modules.map((courseModule) => {
-              const isExpanded = expandedModules[courseModule.id];
-              return (
-                <article key={courseModule.id} className="editorial-card overflow-hidden">
-                  <button onClick={() => setExpandedModules((current) => ({ ...current, [courseModule.id]: !current[courseModule.id] }))} aria-expanded={isExpanded} className="flex min-h-20 w-full items-center justify-between gap-4 p-5 text-left hover:bg-surface-hover sm:p-6">
-                    <div><span className="text-xs font-bold uppercase tracking-[0.1em] text-primary-active">Módulo {courseModule.order}</span><h3 className="mt-1 text-lg font-extrabold text-ink sm:text-xl">{courseModule.title}</h3></div>
-                    <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-canvas-soft text-text-soft transition-transform", isExpanded && "rotate-180")}><ChevronDown className="h-5 w-5" /></span>
-                  </button>
-                  {isExpanded && (
-                    <div className="border-t border-border">
-                      {courseModule.lessons.map((lesson, lessonIndex) => (
-                        <Link key={lesson.id} href={`/courses/${course.id}/lessons/${lesson.id}`} className="group flex min-h-18 items-center gap-4 border-b border-border/70 px-5 py-4 last:border-b-0 hover:bg-primary-pale/35 sm:px-6">
-                          <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-[11px]", lesson.isCompleted ? "bg-positive/10 text-positive" : lesson.type === "profile_test" ? "bg-purple-500/10 text-purple-600 dark:text-purple-400" : "bg-canvas-soft text-text-mute group-hover:bg-primary-pale group-hover:text-primary")}>
-                            {lesson.isCompleted ? <CheckCircle2 className="h-4 w-4" /> : lesson.type === "profile_test" ? <Brain className="h-4 w-4" /> : lesson.type === "video" ? <PlayCircle className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+          <Rise>
+            <header className="mb-7">
+              <p className="eyebrow">Plano do curso</p>
+              <h2 className="display-2 mt-2 text-foreground">O que você vai praticar</h2>
+            </header>
+          </Rise>
+
+          {course.modules.length === 0 ? (
+            <EmptyState className="py-16">
+              <span className="icon-draw mx-auto grid size-14 place-items-center rounded-2xl bg-background-secondary text-muted">
+                <CourseIcon size={26} />
+              </span>
+              <p className="mt-5 font-display text-lg font-bold text-foreground">Conteúdo a caminho</p>
+              <p className="mt-1.5 text-sm text-muted">Os módulos deste curso ainda estão sendo publicados.</p>
+            </EmptyState>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {course.modules.map((courseModule, moduleIndex) => (
+                <Rise key={courseModule.id} delay={moduleIndex * 70}>
+                  <Card className="gap-0 overflow-hidden p-0">
+                    <Disclosure
+                      isExpanded={expandedModules[courseModule.id]}
+                      onExpandedChange={() => setExpandedModules((current) => ({ ...current, [courseModule.id]: !current[courseModule.id] }))}
+                    >
+                      <Disclosure.Heading level={3}>
+                        <Disclosure.Trigger className="flex min-h-20 w-full items-center gap-4 p-5 text-left transition-colors duration-[var(--duration-md)] hover:bg-surface-secondary sm:p-6">
+                          <span className="min-w-0 flex-1">
+                            <span className="eyebrow block text-accent">Módulo {courseModule.order}</span>
+                            <span className="mt-1 block font-display text-lg font-bold tracking-[-0.02em] text-foreground sm:text-xl">
+                              {courseModule.title}
+                            </span>
                           </span>
-                          <div className="min-w-0 flex-1"><p className={cn("truncate text-sm font-bold", lesson.isCompleted ? "text-text-soft" : "text-ink group-hover:text-primary-active")}>{lessonIndex + 1}. {lesson.title}</p><p className="mt-1 text-xs font-medium text-text-mute">{lesson.type === "profile_test" ? "Teste de Perfil" : lesson.type === "video" ? "Vídeo" : "Leitura"}</p></div>
-                          <span className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-text-mute"><Clock3 className="h-3.5 w-3.5" /> {lesson.durationInMinutes} min</span>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </article>
-              );
-            })}
-          </div>
+                          <span className="shrink-0 text-xs font-semibold text-muted" data-numeric>
+                            {courseModule.lessons.length} aulas
+                          </span>
+                          <Disclosure.Indicator className="text-muted" />
+                        </Disclosure.Trigger>
+                      </Disclosure.Heading>
+
+                      <Disclosure.Content>
+                        <Separator />
+                        <ul>
+                          {courseModule.lessons.map((lesson, lessonIndex) => (
+                            <li key={lesson.id} className="border-b border-separator last:border-b-0">
+                              <Link
+                                href={`/courses/${course.id}/lessons/${lesson.id}`}
+                                className="group flex min-h-18 items-center gap-4 px-5 py-4 transition-colors duration-[var(--duration-md)] hover:bg-accent-soft/40 sm:px-6"
+                              >
+                                <span
+                                  className={cn(
+                                    "grid size-9 shrink-0 place-items-center rounded-lg transition-colors duration-[var(--duration-md)]",
+                                    lesson.isCompleted
+                                      ? "bg-success-soft text-success-soft-foreground"
+                                      : lesson.type === "profile_test"
+                                        ? "bg-accent-soft text-accent-soft-foreground"
+                                        : "bg-background-secondary text-muted group-hover:bg-accent-soft group-hover:text-accent-soft-foreground",
+                                  )}
+                                >
+                                  {lessonIcon(lesson)}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span
+                                    className={cn(
+                                      "block truncate text-sm font-bold",
+                                      lesson.isCompleted ? "text-muted" : "text-foreground group-hover:text-accent",
+                                    )}
+                                  >
+                                    <span data-numeric>{lessonIndex + 1}.</span> {lesson.title}
+                                  </span>
+                                  <span className="mt-1 block text-xs font-medium text-muted">
+                                    {LESSON_KIND[lesson.type] ?? "Leitura"}
+                                  </span>
+                                </span>
+                                <span className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-muted" data-numeric>
+                                  <Clock3 className="size-3.5" aria-hidden="true" />
+                                  {lesson.durationInMinutes} min
+                                </span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </Disclosure.Content>
+                    </Disclosure>
+                  </Card>
+                </Rise>
+              ))}
+            </div>
+          )}
         </div>
 
-        <aside className="editorial-card p-6 lg:sticky lg:top-24">
-          <div className="flex items-center justify-between"><div><p className="text-sm font-semibold text-text-soft">Seu progresso</p><p className="mt-2 font-display text-4xl font-extrabold tracking-[-0.05em] text-primary-active">{progressPercentage}%</p></div><span className="grid h-12 w-12 place-items-center rounded-[15px] bg-primary-pale text-primary"><Award className="h-6 w-6" /></span></div>
-          <div className="mt-5 h-2 overflow-hidden rounded-full bg-canvas-soft"><div className="h-full rounded-full bg-primary" style={{ width: `${progressPercentage}%` }} /></div>
-          <p className="mt-2 text-xs font-semibold text-text-mute">{completedLessons} de {totalLessons} aulas concluídas</p>
-          <div className="my-6 h-px bg-border" />
-          <div className="space-y-4 text-sm"><div className="flex items-center justify-between"><span className="text-text-soft">Tempo estimado</span><strong className="text-ink">{Math.floor(totalMinutes / 60)}h {totalMinutes % 60}min</strong></div><div className="flex items-center justify-between"><span className="text-text-soft">Certificado</span><strong className="text-positive">Incluso</strong></div></div>
-          {nextLesson && <Link href={`/courses/${course.id}/lessons/${nextLesson.id}`} className="mt-7 flex min-h-12 w-full items-center justify-center gap-2 rounded-[13px] bg-primary font-bold text-on-primary hover:bg-primary-active"><Play className="h-4 w-4 fill-current" /> Continuar curso</Link>}
+        <aside className="lg:sticky lg:top-24">
+          <Reveal edge className="rounded-2xl">
+            <Card className="gap-0 p-0">
+              <Card.Content className="gap-0 p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-muted">Seu progresso</p>
+                    <p className="mt-2 font-display text-4xl font-extrabold tracking-[-0.045em] text-accent" data-numeric>
+                      {progressPercentage}%
+                    </p>
+                  </div>
+                  <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground">
+                    <Award className="size-6" aria-hidden="true" />
+                  </span>
+                </div>
+
+                <ProgressBar value={progressPercentage} color="accent" size="md" className="mt-5" aria-label="Progresso no curso">
+                  <ProgressBar.Track>
+                    <ProgressBar.Fill />
+                  </ProgressBar.Track>
+                </ProgressBar>
+                <p className="mt-2 text-xs font-semibold text-muted" data-numeric>
+                  {completedLessons} de {totalLessons} aulas concluídas
+                </p>
+
+                <Separator className="my-6" />
+
+                <dl className="flex flex-col gap-4 text-sm">
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="text-muted">Tempo estimado</dt>
+                    <dd className="font-bold text-foreground" data-numeric>{durationLabel}</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="text-muted">Certificado</dt>
+                    <dd><Chip color="success" variant="soft" size="sm">Incluso</Chip></dd>
+                  </div>
+                </dl>
+
+                {nextLesson && (
+                  <Link
+                    href={`/courses/${course.id}/lessons/${nextLesson.id}`}
+                    className={buttonVariants({ variant: "primary", fullWidth: true, className: "mt-7 gap-2" })}
+                  >
+                    <Play className="size-4 fill-current" aria-hidden="true" />
+                    Continuar curso
+                  </Link>
+                )}
+              </Card.Content>
+            </Card>
+          </Reveal>
         </aside>
       </section>
     </div>

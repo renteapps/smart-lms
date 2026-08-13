@@ -1,22 +1,56 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowRight, Route } from "lucide-react";
+import { buttonVariants } from "@heroui/react";
+import { TrailIcon, ArrowIcon } from "@/components/ui/AnimatedIcon";
+import { Reveal } from "@/components/ui/Reveal";
+import { Rise } from "@/components/ui/Rise";
+import { cn } from "@/lib/utils";
 
 export default function CtaBand() {
   return (
-    <section className="editorial-container py-12 sm:py-18">
-      <div className="relative overflow-hidden rounded-[14px] bg-ink p-7 text-white shadow-[var(--shadow-card)] sm:p-10 lg:flex lg:items-center lg:justify-between lg:gap-10 lg:p-12">
-        <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full border-[48px] border-white/5" aria-hidden="true" />
-        <div className="max-w-2xl">
-          <span className="grid h-12 w-12 place-items-center rounded-[15px] bg-white/10 text-white"><Route className="h-5 w-5" /></span>
-          <h2 className="mt-6 text-3xl font-extrabold tracking-[-0.04em] md:text-4xl">
-            Um próximo passo feito para você.
-          </h2>
-          <p className="mt-4 text-lg leading-8 text-white/70">
-            Responda algumas perguntas e receba uma trilha que combina seus objetivos, desafios e ritmo.
-          </p>
-        </div>
-        <Link href="/onboarding" className="relative mt-7 inline-flex min-h-12 shrink-0 items-center gap-2 rounded-[13px] bg-white px-6 font-bold text-ink hover:bg-primary-pale lg:mt-0">Montar minha trilha <ArrowRight className="h-4 w-4" /></Link>
-      </div>
+    <section className="editorial-container section-rhythm">
+      <Rise>
+        {/*
+         * Único bloco invertido da home. O `Reveal` faz o foco de luz correr
+         * pela superfície escura — é sobre fundo profundo que o efeito do
+         * Fluent realmente aparece, e ele substitui qualquer ornamento.
+         */}
+        <Reveal
+          edge
+          className="icon-draw overflow-hidden rounded-2xl bg-background-inverse text-background shadow-elev-4"
+        >
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-24 -top-32 size-96 rounded-full bg-accent/25 blur-3xl"
+          />
+
+          <div className="relative grid gap-10 p-8 sm:p-12 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:p-16">
+            <div className="max-w-2xl">
+              <span className="grid size-12 place-items-center rounded-2xl bg-background/10 text-background">
+                <TrailIcon size={24} />
+              </span>
+              {/* `.eyebrow` fixa a cor em `--muted`; sobre o bloco invertido o rótulo é escrito à mão. */}
+              <p className="mt-8 text-xs font-semibold uppercase tracking-[0.09em] text-background/65">
+                Trilha personalizada
+              </p>
+              <h2 className="display-2 mt-3">Um próximo passo feito para você.</h2>
+              <p className="mt-5 max-w-xl text-lg leading-8 text-background/70">
+                Responda algumas perguntas e receba uma trilha que combina seus objetivos, desafios e
+                ritmo.
+              </p>
+            </div>
+
+            <Link
+              href="/onboarding"
+              className={cn(buttonVariants({ variant: "primary", size: "lg" }), "shrink-0")}
+            >
+              Montar minha trilha
+              <ArrowIcon size={18} />
+            </Link>
+          </div>
+        </Reveal>
+      </Rise>
     </section>
   );
 }
