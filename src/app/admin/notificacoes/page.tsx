@@ -1,22 +1,95 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useNotifications } from "@/contexts/NotificationContext";
-import { Send, Trash2, Eye, MousePointerClick, MailOpen } from "lucide-react";
+import {
+  Send,
+  Trash2,
+  Eye,
+  MousePointerClick,
+  MailOpen,
+  Mail,
+  ExternalLink,
+  Tag,
+  Copy,
+  Check,
+  Laptop,
+  Smartphone,
+  X,
+  RefreshCw,
+} from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 import { AutomationsTab } from "./AutomationsTab";
+import { CustomEmailTemplate, EmailTemplateType } from "@/types/resend";
+import {
+  getCustomTemplates,
+  getDefaultTemplateDefinitions,
+  interpolateVariables,
+} from "@/lib/emailTemplates";
 
 export default function AdminNotificacoes() {
   const [activeTab, setActiveTab] = useState<"manual" | "automations">("manual");
 
   const { addNotification, notifications, deleteNotification } = useNotifications();
 
+  // Basic Notification Fields
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
-  const [targetAudience, setTargetAudience] = useState<"all" | "course" | "user" | "inactive_7d" | "inactive_30d" | "new_users" | "course_completed" | "course_abandoned">("all");
+  const [targetAudience, setTargetAudience] = useState<
+    | "all"
+    | "course"
+    | "user"
+    | "inactive_7d"
+    | "inactive_30d"
+    | "new_users"
+    | "course_completed"
+    | "course_abandoned"
+  >("all");
   const [targetId, setTargetId] = useState("");
   const [channels, setChannels] = useState<("platform" | "push" | "email")[]>(["platform"]);
+
+  // Custom Email Fields
+  const [emailTemplate, setEmailTemplate] = useState<EmailTemplateType>("notification");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailPreviewText, setEmailPreviewText] = useState("");
+  const [emailTitle, setEmailTitle] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [emailButtonText, setEmailButtonText] = useState("Acessar Plataforma");
+  const [emailButtonUrl, setEmailButtonUrl] = useState("https://smartlms.com/cursos");
+
+  // Templates Cache & Preview
+  const [availableTemplates, setAvailableTemplates] = useState<Record<string, CustomEmailTemplate>>({});
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
+  const [copiedTag, setCopiedTag] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+
+  const activeInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadTemplates() {
+      try {
+        const res = await fetch("/api/admin/integracoes/resend");
+        const data = await res.json();
+        if (isMounted && data.success && data.templates) {
+          setAvailableTemplates(data.templates);
+        } else if (isMounted) {
+          setAvailableTemplates(getCustomTemplates());
+        }
+      } catch {
+        if (isMounted) {
+          setAvailableTemplates(getCustomTemplates());
+        }
+      }
+    }
+    loadTemplates();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const toggleChannel = (channel: "platform" | "push" | "email") => {
     setChannels((prev) =>
@@ -24,7 +97,32 @@ export default function AdminNotificacoes() {
     );
   };
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleInsertTag = (tag: string) => {
+    navigator.clipboard.writeText(tag);
+    setCopiedTag(tag);
+    toast.success(`Tag ${tag} copiada!`);
+    setTimeout(() => setCopiedTag(null), 2000);
+
+    if (activeInputRef.current) {
+      const input = activeInputRef.current;
+      const start = input.selectionStart || 0;
+      const end = input.selectionEnd || 0;
+      const val = input.value;
+      const newVal = val.substring(0, start) + tag + val.substring(end);
+
+      if (input.name === "emailSubject") setEmailSubject(newVal);
+      else if (input.name === "emailTitle") setEmailTitle(newVal);
+      else if (input.name === "emailBody") setEmailBody(newVal);
+      else if (input.name === "emailPreviewText") setEmailPreviewText(newVal);
+
+      setTimeout(() => {
+        input.focus();
+        input.setSelectionRange(start + tag.length, start + tag.length);
+      }, 50);
+    }
+  };
+
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!title || !message) {
@@ -34,7 +132,7 @@ export default function AdminNotificacoes() {
 
     const requiresId = ["course", "user", "course_completed", "course_abandoned"].includes(targetAudience);
     if (requiresId && !targetId) {
-      toast.error("Informe o ID necessário para este público.");
+      toast.error("Informe o ID ou E-mail necessário para este público.");
       return;
     }
 
@@ -43,38 +141,144 @@ export default function AdminNotificacoes() {
       return;
     }
 
-    addNotification({
-      title,
-      message,
-      targetAudience,
-      targetId: ["course", "user", "course_completed", "course_abandoned"].includes(targetAudience) ? targetId : undefined,
-      channels,
-    });
+    setIsSending(true);
 
-    toast.success("Notificação enviada com sucesso!");
-    setTitle("");
-    setMessage("");
-    setTargetId("");
-    setChannels(["platform"]);
+    try {
+      // 1. Salva a notificação interna
+      addNotification({
+        title,
+        message,
+        targetAudience,
+        targetId: requiresId ? targetId : undefined,
+        channels,
+        emailDetails: channels.includes("email")
+          ? {
+              template: emailTemplate,
+              subject: emailSubject || title,
+              previewText: emailPreviewText || title,
+              emailTitle: emailTitle || title,
+              emailBody: emailBody || message,
+              buttonText: emailButtonText,
+              buttonUrl: emailButtonUrl,
+            }
+          : undefined,
+      });
+
+      // 2. Se o canal de e-mail estiver selecionado, dispara via Resend
+      if (channels.includes("email")) {
+        const recipient =
+          targetAudience === "user" && targetId.includes("@")
+            ? targetId
+            : "alunos@smartlms.com";
+
+        const res = await fetch("/api/email/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: recipient,
+            subject: emailSubject || `🔔 ${title}`,
+            template: emailTemplate,
+            data: {
+              notificationTitle: emailTitle || title,
+              notificationMessage: emailBody || message,
+              previewText: emailPreviewText || title,
+              actionUrl: emailButtonUrl || "https://smartlms.com/cursos",
+              actionText: emailButtonText || "Acessar Plataforma",
+              nome: "Aluno(a)",
+            },
+          }),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          toast.success(
+            data.simulated
+              ? "Notificação criada e e-mail simulado no Resend (Sandbox)!"
+              : "Notificação e e-mail disparados via Resend com sucesso!"
+          );
+        } else {
+          toast.warning(data.error || "Notificação salva, mas houve aviso no envio de e-mail.");
+        }
+      } else {
+        toast.success("Notificação enviada com sucesso!");
+      }
+
+      // Reset form
+      setTitle("");
+      setMessage("");
+      setTargetId("");
+      setEmailSubject("");
+      setEmailPreviewText("");
+      setEmailTitle("");
+      setEmailBody("");
+      setChannels(["platform"]);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error("Erro ao enviar: " + msg);
+    } finally {
+      setIsSending(false);
+    }
   };
+
+  // Preview generation for Modal
+  const currentTemplateObj =
+    availableTemplates[emailTemplate] ||
+    getDefaultTemplateDefinitions().find((t) => t.type === emailTemplate) ||
+    getDefaultTemplateDefinitions()[0];
+
+  const generatedPreviewHtml = currentTemplateObj
+    ? interpolateVariables(currentTemplateObj.html, {
+        nome: "Mariana Souza",
+        email: "mariana@exemplo.com",
+        nome_plataforma: "Smart LMS",
+        titulo_notificacao: emailTitle || title || "Novo Comunicado da Plataforma",
+        mensagem_notificacao:
+          emailBody ||
+          message ||
+          "Publicamos novas aulas práticas e recursos exclusivos para acelerar seus estudos.",
+        link_acao: emailButtonUrl || "https://smartlms.com/cursos",
+        texto_acao: emailButtonText || "Acessar Plataforma",
+        nome_curso: "Desenvolvimento Fullstack & IA",
+        dias_inativo: 7,
+      })
+    : "";
+
+  const generatedPreviewSubject = interpolateVariables(
+    emailSubject || `🔔 ${title || "Comunicado Importante"}`,
+    {
+      nome: "Mariana Souza",
+      nome_plataforma: "Smart LMS",
+      titulo_notificacao: emailTitle || title || "Comunicado",
+    }
+  );
 
   return (
     <div className="space-y-7">
-      <PageHeader eyebrow="Comunicação" title="Notificações" description="Envie avisos manuais ou crie automações poderosas baseadas no comportamento dos alunos." />
+      <PageHeader
+        eyebrow="Comunicação"
+        title="Notificações & E-mails"
+        description="Envie comunicados manuais na plataforma e disparos de e-mail via Resend, ou crie réguas de automação inteligentes."
+      />
 
       <div className="flex border-b border-border mb-6">
         <button
+          type="button"
           onClick={() => setActiveTab("manual")}
           className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${
-            activeTab === "manual" ? "border-primary text-primary" : "border-transparent text-text-mute hover:text-text"
+            activeTab === "manual"
+              ? "border-primary text-primary"
+              : "border-transparent text-text-mute hover:text-text"
           }`}
         >
           Envio Avulso
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab("automations")}
           className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${
-            activeTab === "automations" ? "border-primary text-primary" : "border-transparent text-text-mute hover:text-text"
+            activeTab === "automations"
+              ? "border-primary text-primary"
+              : "border-transparent text-text-mute hover:text-text"
           }`}
         >
           Automações
@@ -84,185 +288,519 @@ export default function AdminNotificacoes() {
       {activeTab === "automations" ? (
         <AutomationsTab />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-2">
-        {/* Form */}
-        <div className="editorial-card p-5 sm:p-6">
-          <h2 className="mb-6 text-xl font-extrabold text-ink">Nova notificação</h2>
-          <form onSubmit={handleSend} className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-text mb-1">Título</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ex: Novo módulo liberado!"
-                className="min-h-11 w-full rounded-[11px] border border-border bg-canvas-soft px-4 text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-text mb-1">Mensagem</label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Detalhes da notificação..."
-                rows={4}
-                className="w-full resize-none rounded-[11px] border border-border bg-canvas-soft px-4 py-3 text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-text mb-1">Público Alvo</label>
-              <select
-                value={targetAudience}
-                onChange={(e) => setTargetAudience(e.target.value as any)}
-                className="min-h-11 w-full rounded-[11px] border border-border bg-canvas-soft px-4 text-text focus:border-primary focus:bg-surface focus:outline-none"
-              >
-                <optgroup label="Geral">
-                  <option value="all">Todos os alunos</option>
-                  <option value="user">Usuário específico</option>
-                </optgroup>
-                <optgroup label="Cursos">
-                  <option value="course">Alunos de um curso específico</option>
-                  <option value="course_completed">Concluíram o curso (Upsell)</option>
-                  <option value="course_abandoned">Abandonaram o curso (Reengajamento)</option>
-                </optgroup>
-                <optgroup label="Comportamento (Growth)">
-                  <option value="new_users">Novos alunos (Onboarding)</option>
-                  <option value="inactive_7d">Ausentes há 7 dias (Reativação)</option>
-                  <option value="inactive_30d">Ausentes há 30+ dias (Risco de Churn)</option>
-                </optgroup>
-              </select>
-            </div>
-
-            {["course", "user", "course_completed", "course_abandoned"].includes(targetAudience) && (
-              <div>
-                <label className="block text-sm font-semibold text-text mb-1">
-                  {targetAudience === "user" ? "Email do Usuário / ID" : "ID do Curso"}
-                </label>
-                <input
-                  type="text"
-                  value={targetId}
-                  onChange={(e) => setTargetId(e.target.value)}
-                  placeholder={targetAudience === "user" ? "Ex: aluno@email.com" : "Ex: course_123"}
-                  className="min-h-11 w-full rounded-[11px] border border-border bg-canvas-soft px-4 text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
-                  required
-                />
+        <div className="grid gap-6 lg:grid-cols-12">
+          {/* Left / Main Form Column */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="editorial-card p-6 space-y-5">
+              <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                <h2 className="text-lg font-extrabold text-ink">Nova Notificação & Disparo</h2>
+                <span className="text-[11px] font-bold text-text-mute uppercase tracking-wider">
+                  Envio Manual
+                </span>
               </div>
-            )}
 
-            <div>
-              <label className="block text-sm font-semibold text-text mb-2">Canais de Envio</label>
-              <div className="flex flex-wrap gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={channels.includes("platform")}
-                    onChange={() => toggleChannel("platform")}
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm text-text">Plataforma</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={channels.includes("push")}
-                    onChange={() => toggleChannel("push")}
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm text-text">Push Notification</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={channels.includes("email")}
-                    onChange={() => toggleChannel("email")}
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
-                  />
-                  <span className="text-sm text-text">Email</span>
-                </label>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-[12px] bg-primary px-4 font-bold text-primary-foreground hover:bg-primary-active"
-            >
-              <Send className="w-5 h-5" /> Enviar Notificação
-            </button>
-          </form>
-        </div>
-
-        {/* History */}
-        <div className="editorial-card flex flex-col p-5 sm:p-6">
-          <h2 className="mb-6 text-xl font-extrabold text-ink">Histórico de envios</h2>
-          
-          <div className="flex-1 overflow-y-auto max-h-[500px] pr-2 space-y-4">
-            {notifications.length === 0 ? (
-              <p className="text-text-mute text-center mt-10">Nenhuma notificação enviada ainda.</p>
-            ) : (
-              notifications.map((notification) => (
-                <div key={notification.id} className="group relative rounded-[12px] border border-border bg-canvas-soft p-4">
-                  <h4 className="font-bold text-text">{notification.title}</h4>
-                  <p className="text-sm text-text-mute mt-1 line-clamp-2">{notification.message}</p>
-                  
-                  {notification.channels && notification.channels.length > 0 && (
-                    <div className="flex gap-2 mt-3 flex-wrap">
-                      {notification.channels.map(channel => (
-                        <span key={channel} className="text-[10px] font-bold uppercase tracking-wider bg-canvas-alt text-text-mute px-2 py-0.5 rounded-full">
-                          {channel === 'platform' ? 'Plataforma' : channel}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex gap-2 mt-3 text-xs">
-                    <StatusBadge tone="primary">
-                      {notification.targetAudience === 'all' && 'Todos'}
-                      {notification.targetAudience === 'course' && 'Curso'}
-                      {notification.targetAudience === 'user' && 'Usuário'}
-                      {notification.targetAudience === 'inactive_7d' && 'Ausentes 7d'}
-                      {notification.targetAudience === 'inactive_30d' && 'Ausentes 30d'}
-                      {notification.targetAudience === 'new_users' && 'Novos Alunos'}
-                      {notification.targetAudience === 'course_completed' && 'Concluiu Curso'}
-                      {notification.targetAudience === 'course_abandoned' && 'Abandonou Curso'}
-                      {notification.targetId ? ` (${notification.targetId})` : ''}
-                    </StatusBadge>
-                    <StatusBadge>Lida por {notification.read ? "1" : "0"} alunos</StatusBadge>
+              <form onSubmit={handleSend} className="space-y-5">
+                {/* Basic Title & Message */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                      Título da Notificação
+                    </label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => {
+                        setTitle(e.target.value);
+                        if (!emailTitle) setEmailTitle(e.target.value);
+                        if (!emailSubject) setEmailSubject(`🔔 ${e.target.value}`);
+                      }}
+                      placeholder="Ex: Novo módulo liberado no seu curso!"
+                      className="min-h-11 w-full rounded-xl border border-border bg-canvas-soft px-4 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                      required
+                    />
                   </div>
-                  
-                  {notification.stats && (
-                    <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border/50 text-xs text-text-mute">
-                      <div className="flex items-center gap-1.5" title="Visualizações">
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>{notification.stats.views}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5" title="Aberturas">
-                        <MailOpen className="w-3.5 h-3.5" />
-                        <span>{notification.stats.opens}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5" title="Cliques">
-                        <MousePointerClick className="w-3.5 h-3.5" />
-                        <span>{notification.stats.clicks}</span>
-                      </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                      Mensagem / Conteúdo
+                    </label>
+                    <textarea
+                      value={message}
+                      onChange={(e) => {
+                        setMessage(e.target.value);
+                        if (!emailBody) setEmailBody(e.target.value);
+                      }}
+                      placeholder="Escreva os detalhes do aviso ou comunicado..."
+                      rows={3}
+                      className="w-full resize-none rounded-xl border border-border bg-canvas-soft px-4 py-3 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                      Público Alvo
+                    </label>
+                    <select
+                      value={targetAudience}
+                      onChange={(e) => setTargetAudience(e.target.value as typeof targetAudience)}
+                      className="min-h-11 w-full rounded-xl border border-border bg-canvas-soft px-4 text-sm text-text focus:border-primary focus:bg-surface focus:outline-none"
+                    >
+                      <optgroup label="Geral">
+                        <option value="all">Todos os alunos</option>
+                        <option value="user">Usuário específico (E-mail / ID)</option>
+                      </optgroup>
+                      <optgroup label="Cursos">
+                        <option value="course">Alunos de um curso específico</option>
+                        <option value="course_completed">Concluíram o curso (Upsell)</option>
+                        <option value="course_abandoned">Abandonaram o curso (Reengajamento)</option>
+                      </optgroup>
+                      <optgroup label="Comportamento (Growth)">
+                        <option value="new_users">Novos alunos (Onboarding)</option>
+                        <option value="inactive_7d">Ausentes há 7 dias (Reativação)</option>
+                        <option value="inactive_30d">Ausentes há 30+ dias (Risco de Churn)</option>
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  {["course", "user", "course_completed", "course_abandoned"].includes(targetAudience) && (
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                        {targetAudience === "user" ? "E-mail do Usuário" : "ID do Curso"}
+                      </label>
+                      <input
+                        type="text"
+                        value={targetId}
+                        onChange={(e) => setTargetId(e.target.value)}
+                        placeholder={
+                          targetAudience === "user" ? "Ex: aluno@email.com" : "Ex: course_123"
+                        }
+                        className="min-h-11 w-full rounded-xl border border-border bg-canvas-soft px-4 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                        required
+                      />
                     </div>
                   )}
 
-                  <button
-                    onClick={() => deleteNotification(notification.id)}
-                    aria-label={`Excluir ${notification.title}`}
-                    className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-[9px] text-text-mute opacity-100 hover:bg-negative/10 hover:text-negative md:opacity-0 md:group-hover:opacity-100"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  {/* Channels Selection */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-2">
+                      Canais de Disparo
+                    </label>
+                    <div className="flex flex-wrap gap-3">
+                      <label className="flex items-center gap-2 p-3 rounded-xl border border-border bg-canvas-soft hover:bg-surface cursor-pointer text-xs font-semibold">
+                        <input
+                          type="checkbox"
+                          checked={channels.includes("platform")}
+                          onChange={() => toggleChannel("platform")}
+                          className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                        />
+                        <span className="text-text">Plataforma (Sininho)</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 p-3 rounded-xl border border-border bg-canvas-soft hover:bg-surface cursor-pointer text-xs font-semibold">
+                        <input
+                          type="checkbox"
+                          checked={channels.includes("push")}
+                          onChange={() => toggleChannel("push")}
+                          className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                        />
+                        <span className="text-text">Push Notification</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 p-3 rounded-xl border-2 border-accent/40 bg-accent/5 hover:bg-accent/10 cursor-pointer text-xs font-bold transition-all">
+                        <input
+                          type="checkbox"
+                          checked={channels.includes("email")}
+                          onChange={() => toggleChannel("email")}
+                          className="w-4 h-4 rounded border-border text-accent focus:ring-accent"
+                        />
+                        <span className="text-ink flex items-center gap-1.5">
+                          <Mail className="size-4 text-accent" /> E-mail (Resend)
+                        </span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
-              ))
-            )}
+
+                {/* Email Customization Card (Unfolds when email is active) */}
+                {channels.includes("email") && (
+                  <div className="p-5 rounded-2xl border-2 border-primary/20 bg-primary/5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center justify-between border-b border-primary/15 pb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="size-7 rounded-lg bg-primary-soft text-primary grid place-items-center">
+                          <Mail className="size-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-bold text-ink uppercase tracking-wider">
+                            Campos Personalizados do E-mail (Resend)
+                          </h3>
+                          <p className="text-[11px] text-text-mute">
+                            Personalize o modelo, assunto, pré-texto e botão com link.
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsPreviewOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-surface text-xs font-bold text-primary hover:bg-primary-soft transition-colors"
+                      >
+                        <Eye className="size-3.5" /> Prévia do E-mail
+                      </button>
+                    </div>
+
+                    {/* Template Selector */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-bold text-text">Modelo de E-mail (HTML)</label>
+                        <Link
+                          href={`/admin/integracoes/resend/modelos/${emailTemplate}`}
+                          target="_blank"
+                          className="text-[11px] text-primary hover:underline font-semibold flex items-center gap-1"
+                        >
+                          Customizar layout no Studio <ExternalLink className="size-3" />
+                        </Link>
+                      </div>
+                      <select
+                        value={emailTemplate}
+                        onChange={(e) => setEmailTemplate(e.target.value as EmailTemplateType)}
+                        className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs text-text focus:border-primary focus:outline-none font-medium"
+                      >
+                        <option value="notification">📢 Comunicado & Notificação Geral (Recomendado)</option>
+                        <option value="welcome">🚀 Boas-vindas à Plataforma</option>
+                        <option value="course_enrollment">🎓 Matrícula em Curso</option>
+                        <option value="inactivity">⏱️ Reengajamento por Inatividade</option>
+                        <option value="subscription">⭐ Assinatura Confirmada</option>
+                        <option value="certificate">🏆 Certificado de Conclusão</option>
+                        <option value="password_reset">🔒 Redefinição de Senha</option>
+                      </select>
+                    </div>
+
+                    {/* Email Subject & Preheader */}
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-bold text-text mb-1">
+                          Assunto do E-mail (Subject)
+                        </label>
+                        <input
+                          type="text"
+                          name="emailSubject"
+                          ref={(el) => {
+                            if (el) el.onfocus = () => (activeInputRef.current = el);
+                          }}
+                          value={emailSubject}
+                          onChange={(e) => setEmailSubject(e.target.value)}
+                          placeholder="Ex: 🔔 {{titulo_notificacao}}"
+                          className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs font-mono text-text placeholder:text-text-mute focus:border-primary focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-text mb-1">
+                          Pré-texto (Preheader / Snippet)
+                        </label>
+                        <input
+                          type="text"
+                          name="emailPreviewText"
+                          ref={(el) => {
+                            if (el) el.onfocus = () => (activeInputRef.current = el);
+                          }}
+                          value={emailPreviewText}
+                          onChange={(e) => setEmailPreviewText(e.target.value)}
+                          placeholder="Texto exibido na caixa de entrada..."
+                          className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs font-mono text-text placeholder:text-text-mute focus:border-primary focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email Heading & Body */}
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-bold text-text mb-1">
+                          Título Interno do E-mail
+                        </label>
+                        <input
+                          type="text"
+                          name="emailTitle"
+                          ref={(el) => {
+                            if (el) el.onfocus = () => (activeInputRef.current = el);
+                          }}
+                          value={emailTitle}
+                          onChange={(e) => setEmailTitle(e.target.value)}
+                          placeholder="Título em destaque dentro do e-mail..."
+                          className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs text-text placeholder:text-text-mute focus:border-primary focus:outline-none font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-text mb-1">
+                          Texto / Mensagem do E-mail
+                        </label>
+                        <textarea
+                          name="emailBody"
+                          ref={(el) => {
+                            if (el) el.onfocus = () => (activeInputRef.current = el);
+                          }}
+                          value={emailBody}
+                          onChange={(e) => setEmailBody(e.target.value)}
+                          placeholder="Escreva a mensagem do e-mail (suporta quebras de linha e tags)..."
+                          rows={3}
+                          className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-xs text-text placeholder:text-text-mute focus:border-primary focus:outline-none leading-relaxed"
+                        />
+                      </div>
+                    </div>
+
+                    {/* CTA Button Label & Link */}
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-bold text-text mb-1">
+                          Texto do Botão (CTA)
+                        </label>
+                        <input
+                          type="text"
+                          value={emailButtonText}
+                          onChange={(e) => setEmailButtonText(e.target.value)}
+                          placeholder="Ex: Acessar Agora"
+                          className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-text focus:border-primary focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-text mb-1">
+                          Link do Botão (URL de Ação)
+                        </label>
+                        <input
+                          type="text"
+                          value={emailButtonUrl}
+                          onChange={(e) => setEmailButtonUrl(e.target.value)}
+                          placeholder="Ex: https://smartlms.com/cursos"
+                          className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs font-mono text-text focus:border-primary focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Variable Chips Toolbar */}
+                    <div className="pt-2 border-t border-primary/15 space-y-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-text-mute flex items-center gap-1">
+                        <Tag className="size-3" /> Inserir Tag Dinâmica (Clique para Copiar / Inserir)
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {[
+                          { tag: "{{nome}}", label: "Nome" },
+                          { tag: "{{email}}", label: "E-mail" },
+                          { tag: "{{nome_plataforma}}", label: "Plataforma" },
+                          { tag: "{{link_acao}}", label: "Link do Botão" },
+                          { tag: "{{texto_acao}}", label: "Texto do Botão" },
+                          { tag: "{{data_atual}}", label: "Data" },
+                        ].map((v) => (
+                          <button
+                            key={v.tag}
+                            type="button"
+                            onClick={() => handleInsertTag(v.tag)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-border bg-surface hover:border-primary text-[11px] font-mono text-text transition-all"
+                          >
+                            <span className="text-primary font-bold">{v.tag}</span>
+                            <span className="text-[10px] text-text-mute font-sans">{v.label}</span>
+                            {copiedTag === v.tag ? (
+                              <Check className="size-2.5 text-success" />
+                            ) : (
+                              <Copy className="size-2.5 text-text-mute opacity-40" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSending}
+                  className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 font-bold text-primary-foreground hover:bg-primary-active transition-all disabled:opacity-50 shadow-sm"
+                >
+                  {isSending ? (
+                    <RefreshCw className="size-5 animate-spin" />
+                  ) : (
+                    <Send className="size-5" />
+                  )}
+                  {channels.includes("email")
+                    ? "Disparar Notificação & E-mail (Resend)"
+                    : "Enviar Notificação"}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* Right Column: History */}
+          <div className="lg:col-span-5 space-y-6">
+            <div className="editorial-card flex flex-col p-6 h-full">
+              <div className="flex items-center justify-between border-b border-border/60 pb-3 mb-4">
+                <h2 className="text-base font-extrabold text-ink">Histórico de Disparos</h2>
+                <span className="text-xs text-text-mute font-bold">
+                  {notifications.length} registros
+                </span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto max-h-[600px] pr-1 space-y-3.5">
+                {notifications.length === 0 ? (
+                  <div className="py-16 text-center text-text-mute space-y-2">
+                    <MailOpen className="size-8 mx-auto opacity-30" />
+                    <p className="font-semibold text-xs">Nenhuma notificação enviada ainda.</p>
+                  </div>
+                ) : (
+                  notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className="group relative rounded-xl border border-border/70 bg-canvas-soft p-4 space-y-2 hover:border-primary/40 transition-all"
+                    >
+                      <h4 className="font-bold text-sm text-text pr-6">{notification.title}</h4>
+                      <p className="text-xs text-text-mute line-clamp-2 leading-relaxed">
+                        {notification.message}
+                      </p>
+
+                      {notification.channels && notification.channels.length > 0 && (
+                        <div className="flex gap-1.5 flex-wrap pt-1">
+                          {notification.channels.map((channel) => (
+                            <span
+                              key={channel}
+                              className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                channel === "email"
+                                  ? "bg-accent-soft text-accent"
+                                  : "bg-canvas-alt text-text-mute"
+                              }`}
+                            >
+                              {channel === "platform" ? "Plataforma" : channel === "email" ? "E-mail (Resend)" : channel}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 text-[10px] pt-1">
+                        <StatusBadge tone="primary">
+                          {notification.targetAudience === "all" && "Todos"}
+                          {notification.targetAudience === "course" && "Curso"}
+                          {notification.targetAudience === "user" && "Usuário"}
+                          {notification.targetAudience === "inactive_7d" && "Ausentes 7d"}
+                          {notification.targetAudience === "inactive_30d" && "Ausentes 30d"}
+                          {notification.targetAudience === "new_users" && "Novos Alunos"}
+                          {notification.targetAudience === "course_completed" && "Concluiu"}
+                          {notification.targetAudience === "course_abandoned" && "Abandonou"}
+                          {notification.targetId ? ` (${notification.targetId})` : ""}
+                        </StatusBadge>
+                      </div>
+
+                      {notification.stats && (
+                        <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-border/50 text-[11px] text-text-mute">
+                          <div className="flex items-center gap-1" title="Visualizações">
+                            <Eye className="size-3" />
+                            <span>{notification.stats.views}</span>
+                          </div>
+                          <div className="flex items-center gap-1" title="Aberturas">
+                            <MailOpen className="size-3" />
+                            <span>{notification.stats.opens}</span>
+                          </div>
+                          <div className="flex items-center gap-1" title="Cliques">
+                            <MousePointerClick className="size-3" />
+                            <span>{notification.stats.clicks}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => deleteNotification(notification.id)}
+                        aria-label={`Excluir ${notification.title}`}
+                        className="absolute right-2.5 top-2.5 grid size-7 place-items-center rounded-lg text-text-mute opacity-0 group-hover:opacity-100 hover:bg-negative/10 hover:text-negative transition-all"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Live Email Preview Modal */}
+      {isPreviewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-3xl rounded-2xl border border-border bg-surface p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="size-8 rounded-lg bg-primary-soft text-primary grid place-items-center">
+                  <Mail className="size-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-ink">Prévia do E-mail Renderizado</h3>
+                  <p className="text-[11px] text-text-mute">
+                    Assunto: <span className="font-mono text-text font-semibold">{generatedPreviewSubject}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 bg-canvas-soft p-1 rounded-lg border border-border">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDevice("desktop")}
+                    className={`p-1.5 rounded text-xs ${
+                      previewDevice === "desktop" ? "bg-surface shadow text-primary font-bold" : "text-text-mute"
+                    }`}
+                  >
+                    <Laptop className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDevice("mobile")}
+                    className={`p-1.5 rounded text-xs ${
+                      previewDevice === "mobile" ? "bg-surface shadow text-primary font-bold" : "text-text-mute"
+                    }`}
+                  >
+                    <Smartphone className="size-3.5" />
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewOpen(false)}
+                  className="p-1.5 text-text-mute hover:text-text rounded-lg"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto bg-slate-100 p-3 rounded-xl border border-border">
+              <div
+                className={`mx-auto rounded-xl bg-white shadow-md overflow-hidden transition-all ${
+                  previewDevice === "mobile" ? "max-w-[360px]" : "max-w-[580px]"
+                }`}
+              >
+                <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                  <span>Smart LMS &lt;onboarding@resend.dev&gt;</span>
+                  <span>mariana@exemplo.com</span>
+                </div>
+                <iframe
+                  title="Prévia do E-mail da Notificação"
+                  srcDoc={generatedPreviewHtml}
+                  className="w-full h-[480px] border-0"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setIsPreviewOpen(false)}
+                className="rounded-xl bg-primary px-5 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-active transition-colors"
+              >
+                Fechar Prévia
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

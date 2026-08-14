@@ -33,6 +33,12 @@ export interface AgentScriptedReply {
   text: string;
 }
 
+export interface AgentFile {
+  id: string;
+  name: string;
+  url: string;
+}
+
 export interface Agent {
   id: string;
   /** Segmento da URL em /agentes/[slug]. */
@@ -58,7 +64,21 @@ export interface Agent {
   fallbacks: string[];
   /** Só preenchido quando o agente está fora do ar. */
   unavailableNote?: string;
+  /** Instruções do sistema (Prompt) para a IA (Generativa) */
+  systemPrompt?: string;
+  /** Modelo de IA escolhido (ex: gpt-4o, claude-3-5-sonnet) */
+  aiModel?: string;
+  /** Contexto adicional para a IA (Ementa, regras, histórico) */
+  context?: string;
+  /** Arquivos para a IA consultar */
+  files?: AgentFile[];
 }
+
+/**
+ * O que o admin escreve no formulário. As métricas de uso ficam de fora: quem
+ * as move é a conversa do aluno, nunca o formulário. Sem `id`, é uma criação.
+ */
+export type AgentFormPayload = Omit<Agent, 'id' | 'conversationsCount' | 'rating'> & { id?: string };
 
 export type AgentMessageAuthor = 'student' | 'agent';
 
@@ -67,6 +87,9 @@ export interface AgentMessage {
   author: AgentMessageAuthor;
   text: string;
 }
+
+export type ConversationStatus = 'resolvida' | 'em_andamento' | 'atencao' | 'duvida_pedagogica';
+export type ConversationSentiment = 'positivo' | 'neutro' | 'critico';
 
 /** Uma thread com um agente. O aluno pode ter várias com o mesmo agente. */
 export interface AgentConversation {
@@ -77,4 +100,16 @@ export interface AgentConversation {
   messages: AgentMessage[];
   createdAt: string;
   updatedAt: string;
+  /** Metadados de telemetria e suporte para alto volume */
+  studentName?: string;
+  studentEmail?: string;
+  studentAvatar?: string;
+  rating?: number;
+  status?: ConversationStatus;
+  sentiment?: ConversationSentiment;
+  durationSeconds?: number;
+  tokensUsed?: number;
+  courseTitle?: string;
+  lessonContext?: string;
+  aiSummary?: string;
 }

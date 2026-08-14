@@ -36,8 +36,13 @@ export default function HeroBackdrop({ src }: HeroBackdropProps) {
           fill
           /* Acima da dobra: carrega junto com a página, mas sem disputar prioridade com a capa da aula. */
           loading="eager"
-          /* Vira borrão: pedir mais que isso é pagar banda por pixel que o blur apaga. */
-          sizes="640px"
+          /*
+           * Bem abaixo do tamanho real do elemento, de propósito: um blur de
+           * 72px apaga qualquer detalhe menor que ele, então subir a resolução
+           * só gastaria banda. O navegador ainda dobra este valor em telas
+           * 2x — é daí que sai o arquivo realmente baixado.
+           */
+          sizes="384px"
           /*
            * No escuro a mesma foto clara viraria um facho atrás do menu. O
            * brilho cai antes do véu para a mancha continuar sendo cor, e não luz.
@@ -50,10 +55,10 @@ export default function HeroBackdrop({ src }: HeroBackdropProps) {
        * Véu vertical do tema. Segura o contraste de leitura no topo e dissolve
        * a mancha no fundo da página — ela termina sem linha de corte.
        */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background/18 via-background/55 to-background" />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/72 to-background" />
 
       {/* O lado do texto fica mais calmo que o resto do quadro. */}
-      <div className="absolute inset-0 bg-gradient-to-r from-background/45 via-background/5 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-background/55 via-background/12 to-transparent" />
     </div>
   );
 }

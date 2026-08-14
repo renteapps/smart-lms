@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Edit3, List, Settings } from "lucide-react";
+import { ArrowLeft, ArrowRight, Edit3, List, Settings, ShoppingBag } from "lucide-react";
 import { Card } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
 
@@ -31,6 +31,13 @@ export default function AdminCursoDashboard() {
       icon: Settings,
       href: `/admin/cursos/${id}/configuracoes`,
       tone: "bg-warning-soft text-warning-soft-foreground",
+    },
+    {
+      title: "Vendas",
+      description: "Integrações, oferta e tempo de acesso",
+      icon: ShoppingBag,
+      href: `/admin/cursos/${id}/vendas`,
+      tone: "bg-info-soft text-info-soft-foreground",
     },
   ];
 

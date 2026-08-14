@@ -50,9 +50,16 @@ export default function NavBar() {
      */
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50 border-b border-transparent transition-[background-color,padding-top,backdrop-filter] duration-[var(--duration-md)] ease-[var(--ease-precise)]",
+        "fixed inset-x-0 top-0 z-50 border-b border-transparent transition-[background-color,padding-top] duration-[var(--duration-md)] ease-[var(--ease-precise)]",
         isScrolled
-          ? "bg-transparent pt-2 backdrop-blur-[0px] sm:pt-3"
+          ? /*
+             * Rolado, o header não pode ter *nenhum* backdrop-filter — nem
+             * `blur(0)`. Qualquer valor diferente de `none` cria um backdrop
+             * root e a pílula filha passa a enxergar só o header vazio atrás
+             * dela: o vidro vira uma folha transparente e o texto da página
+             * atravessa o menu.
+             */
+            "bg-transparent pt-2 sm:pt-3"
           : "bg-background/60 pt-0 backdrop-blur-md",
       )}
     >

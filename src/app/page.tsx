@@ -168,10 +168,10 @@ export default function Home() {
            * acompanhando o cursor. Fica reservado a este cartão porque é ele
            * que precisa ser encontrado primeiro.
            */}
-          <Reveal edge className="icon-draw rounded-2xl">
+          <Reveal edge className="icon-draw rounded-lg">
             <Link
               href={`/courses/c1/lessons/${featuredLesson.id}`}
-              className="group block rounded-2xl"
+              className="group block rounded-lg"
             >
               <Card className="gap-0 overflow-hidden p-0">
                 <div className="grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1fr)]">
@@ -253,6 +253,8 @@ export default function Home() {
 
       <TodayTrailSection />
 
+      <HomeBlogSection articles={articles} />
+
       {/* ---------------------------------------------------------------
        * Recomendado
        * ------------------------------------------------------------- */}
@@ -285,7 +287,6 @@ export default function Home() {
       </section>
 
       <CtaBand />
-      <HomeBlogSection articles={articles} />
     </div>
   );
 }

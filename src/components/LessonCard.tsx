@@ -97,7 +97,7 @@ export default function LessonCard({
       <Card
         aria-disabled="true"
         className={cn(
-          "group flex min-w-0 cursor-not-allowed flex-row gap-0 overflow-hidden border-hairline p-0 opacity-75",
+          "group flex min-w-0 cursor-not-allowed flex-row gap-0 overflow-hidden p-0 opacity-75",
           className || "w-80",
         )}
       >
@@ -107,9 +107,11 @@ export default function LessonCard({
   }
 
   return (
-    <Link href={linkUrl} className={cn("group block min-w-0 rounded-2xl", className || "w-80")}>
-      <Reveal className="h-full rounded-2xl">
-        <Card className="lift flex h-full flex-row gap-0 overflow-hidden border-hairline p-0">{content}</Card>
+    <Link href={linkUrl} className={cn("group block min-w-0 rounded-lg", className || "w-80")}>
+      <Reveal className="h-full rounded-lg">
+        <Card className="lift flex h-full flex-row gap-0 overflow-hidden p-0">
+          {content}
+        </Card>
       </Reveal>
     </Link>
   );

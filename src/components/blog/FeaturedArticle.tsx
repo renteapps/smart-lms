@@ -12,40 +12,40 @@ interface FeaturedArticleProps {
 
 export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
   return (
-    <div className={cn("group relative overflow-hidden rounded-[14px] bg-ink shadow-[0_24px_70px_rgb(23,32,51,0.17)]", className)}>
+    <div className={cn("group relative overflow-hidden rounded-2xl bg-foreground shadow-elev-4", className)}>
       <div className="absolute inset-0">
-        <Image 
-          src={article.cover} 
+        <Image
+          src={article.cover}
           alt={article.title}
           fill
           sizes="(max-width: 1280px) 100vw, 1280px"
           className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.025]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/80 to-transparent opacity-90" />
-        <div className="absolute inset-0 bg-gradient-to-r from-ink/80 via-ink/20 to-transparent opacity-80" />
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/80 to-transparent opacity-90" />
+        <div className="absolute inset-0 bg-gradient-to-r from-foreground/80 via-foreground/20 to-transparent opacity-80" />
       </div>
 
       <div className="relative flex min-h-[480px] flex-col justify-end p-7 sm:p-10 md:min-h-[560px] lg:p-14">
         <div className="max-w-3xl">
           <div className="flex items-center gap-3 mb-6">
-            <span className="text-sm font-bold text-primary tracking-wider uppercase bg-primary-pale px-3 py-1 rounded-full">
+            <span className="text-sm font-bold text-accent-soft-foreground tracking-wider uppercase bg-accent-soft px-3 py-1 rounded-full">
               {article.category}
             </span>
-            
+
             {article.format === 'text' && article.readingTime && (
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-card/20 backdrop-blur-md text-sm font-medium text-white border border-white/10">
+              <div className="material-thick flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium text-foreground">
                 <Clock className="w-4 h-4" />
                 <span>{article.readingTime} min</span>
               </div>
             )}
             {article.format === 'audio' && article.audio && (
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary text-sm font-medium text-primary-foreground shadow-sm">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent text-sm font-medium text-accent-foreground shadow-sm">
                 <Headphones className="w-4 h-4" />
                 <span>{Math.round(article.audio.duration / 60)} min</span>
               </div>
             )}
             {article.format === 'both' && (
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary text-sm font-medium text-primary-foreground shadow-sm">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent text-sm font-medium text-accent-foreground shadow-sm">
                 <BookOpen className="w-4 h-4" />
                 <span>Ouvir ou Ler</span>
               </div>
@@ -70,7 +70,7 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
             </Link>
             
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-card/20 border border-white/20 flex items-center justify-center font-medium text-white backdrop-blur-sm">
+              <div className="material-thick w-10 h-10 rounded-full flex items-center justify-center font-medium text-foreground">
                 {article.author.charAt(0)}
               </div>
               <div>

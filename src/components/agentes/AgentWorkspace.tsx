@@ -58,12 +58,16 @@ export function AgentWorkspace({ agent }: { agent: Agent }) {
   };
 
   return (
-    <div className="mt-[76px] flex h-[calc(100dvh-76px)] flex-col lg:grid lg:grid-cols-[288px_1fr]">
-      <aside className="hidden min-h-0 border-r border-hairline bg-background-secondary lg:block">
+    /*
+     * Altura travada na viewport com o header pago em padding — margem aqui
+     * colapsaria para fora do `main` e sobraria uma faixa rolável de 76px.
+     */
+    <div className="flex h-[100dvh] flex-col pt-[76px] lg:flex-row">
+      <aside className="hidden w-72 shrink-0 overflow-hidden border-r border-hairline bg-background-secondary lg:block">
         <AgentConversationList {...listProps} />
       </aside>
 
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="flex shrink-0 items-center gap-3 border-b border-hairline px-4 py-3 sm:px-6">
           <Drawer.Root isOpen={isNavOpen} onOpenChange={setIsNavOpen}>
             <Drawer.Trigger

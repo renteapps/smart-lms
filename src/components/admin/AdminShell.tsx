@@ -4,8 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
+  BarChart3,
   Bell,
   BookOpen,
+  Bot,
   ClipboardCheck,
   Home,
   LayoutDashboard,
@@ -16,8 +18,11 @@ import {
   PanelLeftOpen,
   Palette,
   Route,
+  Settings,
   User,
   Users,
+  CreditCard,
+  FileText,
 } from "lucide-react";
 import {
   Badge,
@@ -33,7 +38,13 @@ import { BrandMark } from "@/components/BrandMark";
 import { cn } from "@/lib/utils";
 
 const navGroups = [
-  { label: "Visão", links: [{ href: "/admin", icon: LayoutDashboard, label: "Dashboard" }] },
+  {
+    label: "Visão",
+    links: [
+      { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
+      { href: "/admin/analises", icon: BarChart3, label: "Análises" },
+    ],
+  },
   {
     label: "Aprendizagem",
     links: [
@@ -41,6 +52,7 @@ const navGroups = [
       { href: "/admin/cursos", icon: BookOpen, label: "Cursos" },
       { href: "/admin/testes-perfil", icon: ClipboardCheck, label: "Testes de Perfil" },
       { href: "/admin/pilulas", icon: Lightbulb, label: "Pílulas" },
+      { href: "/admin/agentes", icon: Bot, label: "Agentes de IA" },
     ],
   },
   {
@@ -54,14 +66,25 @@ const navGroups = [
   {
     label: "Plataforma",
     links: [
-      { href: "/admin/home", icon: Home, label: "Home Page" },
-      { href: "/admin/aparencia", icon: Palette, label: "Aparência" },
+      { href: "/admin/ajustes", icon: Settings, label: "Ajustes" },
+    ],
+  },
+  {
+    label: "Vendas",
+    links: [
+      { href: "/admin/planos", icon: CreditCard, label: "Planos" },
+      { href: "/admin/planos/assinaturas", icon: FileText, label: "Assinaturas" },
     ],
   },
 ];
 
 const segmentLabels: Record<string, string> = {
   admin: "Admin",
+  analises: "Análises",
+  curso: "Análise de Cursos",
+  vendas: "Análise de Vendas",
+  agentes: "Agentes de IA",
+  alunos: "Análise de Alunos",
   onboarding: "Onboarding & Trilhas",
   cursos: "Cursos",
   users: "Usuários",
@@ -71,10 +94,29 @@ const segmentLabels: Record<string, string> = {
   home: "Home Page",
   aparencia: "Aparência",
   "testes-perfil": "Testes de Perfil",
+  ajustes: "Ajustes",
+  menu: "Menu",
   editar: "Editar",
   modulos: "Módulos",
   configuracoes: "Configurações",
   aulas: "Aulas",
+  planos: "Planos de Assinatura",
+  integracoes: "Integrações",
+  eduzz: "Eduzz",
+  hotmart: "Hotmart",
+  resend: "Resend",
+  modelos: "Modelos de E-mail",
+  logs: "Histórico de Envios",
+  welcome: "Boas-vindas",
+  password_reset: "Redefinição de Senha",
+  course_enrollment: "Matrícula",
+  certificate: "Certificado",
+  subscription: "Assinatura",
+  inactivity: "Reengajamento",
+  notification: "Comunicado",
+  emails: "Modelos de E-mail",
+  assinaturas: "Assinaturas (Alunos)",
+  historico: "Histórico de Conversas",
 };
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -83,7 +125,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const isActive = (href: string) => (href === "/admin" ? pathname === href : pathname.startsWith(href));
+  const activeLink = navGroups
+    .flatMap((g) => g.links.map((l) => l.href))
+    .filter((href) => pathname === href || pathname.startsWith(href + "/"))
+    .reduce((best, href) => (href.length > best.length ? href : best), "");
+
+  const isActive = (href: string) => href === activeLink;
   const segments = pathname.split("/").filter(Boolean).slice(1);
 
   const labelFor = (segment: string) =>

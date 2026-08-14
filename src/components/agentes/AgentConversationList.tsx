@@ -7,7 +7,7 @@ import { ptBR } from "date-fns/locale";
 import { ArrowLeft, ChevronsUpDown, SquarePen, Trash2 } from "lucide-react";
 import { Button, Dropdown, Separator, Skeleton } from "@heroui/react";
 import { AgentAvatar } from "@/components/agentes/AgentAvatar";
-import { AGENTS } from "@/lib/mocks/agenteMocks";
+import { useAgentCatalog } from "@/contexts/AgentCatalogContext";
 import type { Agent, AgentConversation } from "@/types/agente";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +31,8 @@ export function AgentConversationList({
   onDelete,
 }: AgentConversationListProps) {
   const router = useRouter();
-  const otherAgents = AGENTS.filter((item) => item.id !== agent.id && item.status !== "Em manutenção");
+  const { agents } = useAgentCatalog();
+  const otherAgents = agents.filter((item) => item.id !== agent.id && item.status !== "Em manutenção");
 
   return (
     <div className="flex h-full min-h-0 flex-col">

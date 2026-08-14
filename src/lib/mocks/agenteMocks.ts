@@ -487,8 +487,8 @@ export const AGENTS: Agent[] = [
   },
 ];
 
-export const AGENT_CATEGORIES = ['Todos', ...Array.from(new Set(AGENTS.map((agent) => agent.category)))];
-
-export function getAgentBySlug(slug: string): Agent | undefined {
-  return AGENTS.find((agent) => agent.slug === slug);
-}
+/*
+ * Catálogo semente. Quem resolve agente por slug e deriva as categorias é o
+ * `AgentCatalogContext`, que enxerga também o que foi publicado no admin —
+ * helpers daqui só veriam estes oito e sumiriam com o resto em silêncio.
+ */

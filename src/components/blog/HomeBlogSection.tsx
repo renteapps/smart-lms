@@ -1,65 +1,111 @@
-import Link from 'next/link';
-import { Article } from '@/types/blog';
-import { FeaturedArticle } from './FeaturedArticle';
-import { ArticleCard } from './ArticleCard';
-import { ArrowRight } from 'lucide-react';
-import { buttonVariants } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import Link from "next/link";
+import { buttonVariants } from "@heroui/styles";
+import { ArrowIcon } from "@/components/ui/AnimatedIcon";
+import { Rise } from "@/components/ui/Rise";
+import ArticleSpotlight from "./ArticleSpotlight";
+import { articleMeta, shortDate } from "./articleMeta";
+import type { Article } from "@/types/blog";
+import { cn } from "@/lib/utils";
 
 interface HomeBlogSectionProps {
   articles: Article[];
 }
 
+/**
+ * Índice de leitura da home.
+ *
+ * Só o destaque leva imagem; os demais artigos entram como índice tipográfico.
+ * É deliberado: a seção fica entre a trilha do dia (destaque + linhas com
+ * miniatura) e o catálogo recomendado (grade de capas), e uma terceira grade de
+ * imagens seguida faria as três parecerem a mesma seção.
+ */
 export function HomeBlogSection({ articles }: HomeBlogSectionProps) {
   if (articles.length === 0) return null;
 
-  const featured = articles[0];
-  const recents = articles.slice(1, 4);
+  const [spotlight, ...others] = articles;
+  const index = others.slice(0, 3);
 
   return (
-    <section className="relative py-16 sm:py-24">
-      <div className="editorial-container">
-        <div className="mb-10 flex items-end justify-between">
-          <div>
-            <p className="eyebrow">Para continuar pensando</p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-[-0.04em] text-ink md:text-4xl">
-              Ideias para levar com você
-            </h2>
-            <p className="mt-3 max-w-2xl text-lg text-text-soft">
-              Artigos, áudios e reflexões para você acelerar seu crescimento profissional.
-            </p>
-          </div>
-          
-          <Link 
-            href="/blog"
-            className={cn(buttonVariants({ variant: "link" }), "hidden md:flex items-center gap-2 text-primary font-medium px-0")}
-          >
-            Ver todo o blog
-            <ArrowRight className="w-4 h-4 ml-1" />
-          </Link>
+    <section className="editorial-container section-rhythm">
+      <Rise className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="eyebrow">Para continuar pensando</p>
+          <h2 className="display-2 mt-3 text-foreground">Ideias para levar com você</h2>
+          <p className="lede mt-4">
+            Artigos, áudios e reflexões para você acelerar seu crescimento profissional.
+          </p>
         </div>
+        <Link
+          href="/blog"
+          className={cn(buttonVariants({ variant: "tertiary" }), "icon-draw shrink-0")}
+        >
+          Ver todos os artigos
+          <ArrowIcon size={16} />
+        </Link>
+      </Rise>
 
-        <div className="grid grid-cols-1 gap-7 lg:grid-cols-12">
-          <div className="lg:col-span-8">
-            <FeaturedArticle article={featured} className="h-full" />
-          </div>
-          
-          <div className="flex flex-col gap-7 lg:col-span-4">
-            {recents.map((article) => (
-              <ArticleCard key={article.slug} article={article} />
-            ))}
-          </div>
-        </div>
+      <div
+        className={cn(
+          "mt-10 grid gap-6",
+          index.length > 0 && "lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]",
+        )}
+      >
+        <Rise className="h-full">
+          <ArticleSpotlight article={spotlight} />
+        </Rise>
 
-        <div className="mt-8 flex md:hidden justify-center">
-          <Link 
-            href="/blog"
-            className={cn(buttonVariants({ variant: "secondary" }), "inline-flex items-center gap-2 rounded-full px-6 py-6 font-medium")}
-          >
-            Ver todo o blog
-            <ArrowRight className="w-4 h-4 ml-1" />
-          </Link>
-        </div>
+        {index.length > 0 && (
+          <Rise delay={80} className="h-full">
+            {/*
+             * `flex-1` reparte a altura do destaque entre as linhas: sem isso a
+             * coluna termina antes e sobra um vão branco ao lado da imagem.
+             */}
+            <ul className="flex h-full flex-col">
+              {index.map((article) => {
+                const meta = articleMeta(article);
+
+                return (
+                  <li key={article.slug} className="flex-1 border-b border-hairline first:border-t">
+                    <Link
+                      href={`/blog/${article.slug}`}
+                      className="icon-draw group flex h-full flex-col justify-center gap-2 py-6"
+                    >
+                      <p className="eyebrow">
+                        <span className="text-accent">{article.category}</span>
+                        {meta && (
+                          <>
+                            <span aria-hidden="true"> · </span>
+                            <span data-numeric>{meta.label}</span>
+                          </>
+                        )}
+                      </p>
+
+                      <h3 className="font-display text-xl font-extrabold leading-snug tracking-[-0.025em] text-foreground transition-colors duration-[var(--duration-sm)] group-hover:text-accent">
+                        {article.title}
+                      </h3>
+
+                      <p className="line-clamp-2 text-sm leading-6 text-muted">{article.excerpt}</p>
+
+                      <span className="mt-1 flex items-center gap-2 text-xs text-muted">
+                        {article.author}
+                        <span aria-hidden="true">·</span>
+                        <time dateTime={new Date(article.publishedAt).toISOString()}>
+                          {shortDate(article.publishedAt)}
+                        </time>
+                        <span
+                          aria-hidden="true"
+                          className="ml-auto text-accent transition-transform duration-[var(--duration-md)] group-hover:translate-x-0.5"
+                        >
+                          <ArrowIcon size={16} />
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </Rise>
+        )}
       </div>
     </section>
   );

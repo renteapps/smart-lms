@@ -10,10 +10,11 @@ import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
  * Player persistente do áudio dos artigos.
  *
  * É o único elemento que acompanha a pessoa por todo o produto, sempre por cima
- * de conteúdo real — por isso é acrílico (`.material`) e não uma barra opaca: a
+ * de conteúdo real — por isso é vidro (`.liquid-glass`) e não uma barra opaca: a
  * página continua legível atrás dele e o player se lê como uma camada, não como
  * um rodapé que roubou espaço. Flutua com margem em vez de colar na borda para
- * não competir com o fim da página.
+ * não competir com o fim da página — é a mesma peça de vidro do menu, na outra
+ * ponta da tela.
  */
 export function GlobalMiniPlayer() {
   const pathname = usePathname();
@@ -45,7 +46,7 @@ export function GlobalMiniPlayer() {
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-3 sm:px-5 sm:pb-5">
-      <div className="editorial-container pointer-events-auto material overflow-hidden rounded-2xl">
+      <div className="editorial-container pointer-events-auto liquid-glass overflow-hidden rounded-2xl">
         <div className="relative z-10 flex items-center gap-3 px-3 pt-3 sm:gap-5 sm:px-5 sm:pt-4">
           <div className="min-w-0 flex-1 sm:max-w-sm">
             <p className="truncate text-sm font-bold text-foreground">{article.title}</p>

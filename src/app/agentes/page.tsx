@@ -13,29 +13,39 @@ import {
 } from "@heroui/react";
 import AgentCard from "@/components/agentes/AgentCard";
 import { Rise } from "@/components/ui/Rise";
+import { useAgentCatalog } from "@/contexts/AgentCatalogContext";
 import { useAgentChat } from "@/contexts/AgentChatContext";
-import { AGENT_CATEGORIES, AGENTS } from "@/lib/mocks/agenteMocks";
 import { normalizeText } from "@/lib/agentChat";
-
-const availableCount = AGENTS.filter((agent) => agent.status !== "Em manutenção").length;
 
 export default function AgentesPage() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Todos");
+  const { agents, categories } = useAgentCatalog();
   const { conversationsForAgent } = useAgentChat();
+
+  const availableCount = useMemo(
+    () => agents.filter((agent) => agent.status !== "Em manutenção").length,
+    [agents],
+  );
+
+  /*
+   * O admin pode excluir o último agente de uma categoria enquanto ela está
+   * selecionada; sem isso, o filtro sobreviveria apontando para o vazio.
+   */
+  const activeCategory = categories.includes(category) ? category : "Todos";
 
   const filteredAgents = useMemo(() => {
     const normalized = normalizeText(query.trim());
-    return AGENTS.filter((agent) => {
-      const matchesCategory = category === "Todos" || agent.category === category;
+    return agents.filter((agent) => {
+      const matchesCategory = activeCategory === "Todos" || agent.category === activeCategory;
       const haystack = normalizeText(
         `${agent.name} ${agent.role} ${agent.description} ${agent.category} ${agent.courseTitle} ${agent.skills.join(" ")}`,
       );
       return matchesCategory && (!normalized || haystack.includes(normalized));
     });
-  }, [category, query]);
+  }, [agents, activeCategory, query]);
 
-  const isFiltered = query.trim().length > 0 || category !== "Todos";
+  const isFiltered = query.trim().length > 0 || activeCategory !== "Todos";
 
   const clearFilters = () => {
     setQuery("");
@@ -116,13 +126,13 @@ export default function AgentesPage() {
               selectionMode="single"
               disallowEmptySelection
               isDetached
-              selectedKeys={[category]}
+              selectedKeys={[activeCategory]}
               onSelectionChange={(keys) => {
                 const [next] = Array.from(keys);
                 if (next !== undefined) setCategory(String(next));
               }}
             >
-              {AGENT_CATEGORIES.map((item) => (
+              {categories.map((item) => (
                 <ToggleButton key={item} id={item} className="shrink-0">
                   {item}
                 </ToggleButton>
@@ -135,7 +145,7 @@ export default function AgentesPage() {
           <p className="text-sm text-muted" aria-live="polite" data-numeric>
             <strong className="font-bold text-foreground">{filteredAgents.length}</strong>{" "}
             {filteredAgents.length === 1 ? "agente encontrado" : "agentes encontrados"}
-            {category !== "Todos" && <span className="text-muted"> · {category}</span>}
+            {activeCategory !== "Todos" && <span className="text-muted"> · {activeCategory}</span>}
           </p>
           <div className="flex items-center gap-3">
             <p className="hidden text-xs font-semibold text-muted sm:block">

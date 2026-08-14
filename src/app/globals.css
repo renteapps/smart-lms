@@ -333,6 +333,18 @@
     box-shadow: var(--elev-2);
   }
 
+  /*
+   * O `.card` do HeroUI chega com `min(32px, --radius-3xl)` e sem borda: raio
+   * fora da escala do produto (quina de bolha) e nenhuma aresta separando o
+   * cartão do fundo, já que a elevação daqui é curta de propósito. Alinhamos os
+   * dois à linguagem — todo raio deriva de `--radius`, e a hairline é o que
+   * desenha o limite da superfície.
+   */
+  .card {
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-lg);
+  }
+
   .editorial-card-interactive:hover {
     border-color: var(--hairline-strong);
     box-shadow: var(--elev-3);
@@ -355,6 +367,25 @@
     -webkit-backdrop-filter: blur(var(--material-blur)) saturate(var(--material-saturate));
     border: 1px solid var(--hairline);
     box-shadow: var(--elev-3), inset 0 1px 0 var(--material-edge);
+  }
+
+  /*
+   * O grão (`::after`) precisa de um contexto de posicionamento, mas o material
+   * quase sempre é uma etiqueta sobreposta a uma capa. Em `:where()` a regra tem
+   * especificidade zero: garante o contexto quando ninguém pediu nada e sai da
+   * frente de `absolute`/`fixed`/`sticky` — que, morando na mesma camada e vindo
+   * antes no arquivo, perdiam para um `position: relative` normal e faziam a
+   * etiqueta voltar ao fluxo.
+   */
+  :where(
+    .material,
+    .material-thin,
+    .material-thick,
+    .liquid-glass,
+    .glass,
+    .glass-faint,
+    .glass-strong
+  ) {
     position: relative;
   }
 

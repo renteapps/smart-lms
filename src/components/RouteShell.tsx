@@ -5,6 +5,7 @@ import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 import ChatSticker from "@/components/ChatSticker";
 import { ProfileBanner } from "@/components/profile/ProfileBanner";
+import { cn } from "@/lib/utils";
 
 export function RouteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -30,7 +31,8 @@ export function RouteShell({ children }: { children: React.ReactNode }) {
     <div className="ambient-canvas">
       <NavBar />
       <ProfileBanner />
-      <main className="min-h-screen w-full">{children}</main>
+      {/* A conversa já trava a própria altura; `min-h-screen` sobraria como rolagem morta. */}
+      <main className={cn("w-full", !isAgentWorkspace && "min-h-screen")}>{children}</main>
       {hasFloatingChrome && <Footer />}
       {hasFloatingChrome && <ChatSticker />}
     </div>

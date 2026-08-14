@@ -1,3 +1,5 @@
+import { NotificationEmailDetails } from "./notification";
+
 export interface AutomationRule {
   id: string;
   name: string;
@@ -10,6 +12,7 @@ export interface AutomationRule {
     title: string;
     message: string;
     channels: ('platform' | 'push' | 'email')[];
+    emailDetails?: NotificationEmailDetails;
   };
   status: 'active' | 'paused';
   stats: {

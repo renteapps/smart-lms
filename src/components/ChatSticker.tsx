@@ -60,7 +60,12 @@ export default function ChatSticker() {
       <Popover.Root isOpen={isOpen} onOpenChange={setIsOpen}>
         <Popover.Trigger
           aria-label={isOpen ? "Fechar assistente" : "Abrir assistente de IA"}
-          className="press grid size-14 place-items-center rounded-2xl bg-accent text-accent-foreground shadow-elev-4 transition-[background-color,transform] duration-[var(--duration-md)] hover:bg-accent-hover"
+          /*
+           * Fica sólido de propósito: é a ação primária flutuante e vidro aqui
+           * sumiria sobre o fundo claro. O que ele herda da linguagem é a
+           * forma — cápsula, como a pílula do menu e o player.
+           */
+          className="press grid size-14 place-items-center rounded-full bg-accent text-accent-foreground shadow-elev-4 transition-[background-color,transform] duration-[var(--duration-md)] hover:bg-accent-hover"
         >
           {isOpen ? (
             <X className="size-6" aria-hidden="true" />
@@ -71,7 +76,7 @@ export default function ChatSticker() {
 
         <Popover.Content
           placement="top end"
-          className="material-thick h-[min(32rem,calc(100vh-9rem))] w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl p-0"
+          className="liquid-glass h-[min(32rem,calc(100vh-9rem))] w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl p-0"
         >
           <Popover.Dialog aria-label="Assistente de IA" className="flex h-full flex-col p-0">
             <header className="flex items-center gap-3 px-5 py-4">
@@ -107,7 +112,7 @@ export default function ChatSticker() {
                   )}
 
                   {/*
-                   * As bolhas são opacas de propósito: o painel é acrílico e
+                   * As bolhas são opacas de propósito: o painel é vidro e
                    * texto longo sobre material perde contraste.
                    */}
                   <p

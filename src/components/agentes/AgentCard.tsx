@@ -83,14 +83,19 @@ export default function AgentCard({ agent, conversationCount, featured = false }
 
           <div className="mt-auto flex items-end justify-between gap-4 pt-5">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-muted" data-numeric>
-              <span className="flex items-center gap-1.5">
-                <Star className="size-3.5" aria-hidden="true" />
-                {ratingFormatter.format(agent.rating)}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <MessageCircle className="size-3.5" aria-hidden="true" />
-                {countFormatter.format(agent.conversationsCount)}
-              </span>
+              {/* Agente recém-publicado ainda não tem nota: "0,0" leria como péssimo. */}
+              {agent.conversationsCount > 0 && (
+                <>
+                  <span className="flex items-center gap-1.5">
+                    <Star className="size-3.5" aria-hidden="true" />
+                    {ratingFormatter.format(agent.rating)}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <MessageCircle className="size-3.5" aria-hidden="true" />
+                    {countFormatter.format(agent.conversationsCount)}
+                  </span>
+                </>
+              )}
               <span className="flex items-center gap-1.5">
                 <Clock3 className="size-3.5" aria-hidden="true" />~{agent.avgMinutes} min
               </span>
