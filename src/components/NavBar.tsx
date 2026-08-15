@@ -62,13 +62,21 @@ export default function NavBar() {
       <div
         className={cn(
           "editorial-container flex items-center justify-between gap-5",
-          "transition-[height,max-width,border-radius,padding,background,box-shadow] duration-[var(--duration-md)] ease-[var(--spring)]",
+          "transition-[height,max-width,border-radius,padding,background-color,box-shadow,border-color] duration-[var(--duration-md)] ease-[var(--spring)]",
           isScrolled
             ? /* 30px = metade da altura: pílula exata e, ao contrário de
                  `rounded-full` (infinito), um raio que dá para interpolar. */
               "pointer-events-auto liquid-glass h-[60px] max-w-[72rem] rounded-[30px] pl-4 pr-2 sm:pr-3"
             : "pointer-events-auto h-[76px] max-w-[80rem] rounded-none px-0",
         )}
+        style={
+          isScrolled
+            ? {
+                WebkitBackdropFilter: "blur(24px) saturate(180%)",
+                backdropFilter: "blur(24px) saturate(180%)",
+              }
+            : undefined
+        }
       >
         <div className="flex min-w-0 items-center gap-9">
           <BrandMark />

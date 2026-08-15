@@ -405,11 +405,10 @@
     background: var(--material-thick);
   }
 
-  /* O grão só entra no material — em superfície opaca vira ruído literal. */
+  /* O grão sutil sem mix-blend-mode para não quebrar o backdrop-filter dos navegadores */
   .material::after,
   .material-thin::after,
   .material-thick::after,
-  .liquid-glass::after,
   .glass::after,
   .glass-faint::after,
   .glass-strong::after {
@@ -417,56 +416,24 @@
     border-radius: inherit;
     content: "";
     inset: 0;
-    mix-blend-mode: overlay;
-    opacity: 0.5;
+    opacity: 0.12;
     pointer-events: none;
     position: absolute;
   }
 
   /*
-   * Liquid glass: o material com a quina viva.
-   * O que vende o efeito não é o blur — é o anel especular do `::before`
-   * (borda de gradiente recortada por máscara) somado ao reflexo de topo, que
-   * fica no *background* de propósito: como camada de fundo ele passa por trás
-   * do conteúdo, sem lavar o texto do menu.
+   * Liquid glass: superfície refinada com desfoque e contraste consistentes.
    */
   .liquid-glass {
-    background:
-      radial-gradient(130% 120% at 50% -34%, var(--glass-sheen), transparent 58%),
-      var(--material-regular);
-    backdrop-filter: blur(var(--material-blur)) saturate(var(--material-saturate))
-      brightness(1.03);
-    -webkit-backdrop-filter: blur(var(--material-blur)) saturate(var(--material-saturate))
-      brightness(1.03);
+    background-color: var(--material-regular);
+    background-image: radial-gradient(130% 120% at 50% -34%, var(--glass-sheen), transparent 58%);
+    backdrop-filter: blur(var(--material-blur)) saturate(var(--material-saturate)) brightness(1.02);
+    -webkit-backdrop-filter: blur(var(--material-blur)) saturate(var(--material-saturate)) brightness(1.02);
     border: 1px solid var(--hairline);
     box-shadow:
       var(--elev-4),
       inset 0 1px 0 var(--material-edge),
       inset 0 -12px 26px -16px var(--glass-shade);
-  }
-
-  .liquid-glass::before {
-    background: linear-gradient(
-      150deg,
-      var(--glass-rim),
-      var(--glass-rim-dim) 26%,
-      var(--glass-rim-dim) 64%,
-      var(--glass-rim)
-    );
-    border-radius: inherit;
-    content: "";
-    inset: 0;
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    padding: 1px;
-    pointer-events: none;
-    position: absolute;
   }
 
   /*
