@@ -8,6 +8,7 @@ import {
   Bell,
   BookOpen,
   Bot,
+  Building2,
   ClipboardCheck,
   Home,
   LayoutDashboard,
@@ -70,8 +71,9 @@ const navGroups = [
     ],
   },
   {
-    label: "Vendas",
+    label: "Vendas & Corporativo",
     links: [
+      { href: "/admin/business", icon: Building2, label: "Empresas (B2B)" },
       { href: "/admin/planos", icon: CreditCard, label: "Planos" },
       { href: "/admin/planos/assinaturas", icon: FileText, label: "Assinaturas" },
     ],
@@ -80,6 +82,9 @@ const navGroups = [
 
 const segmentLabels: Record<string, string> = {
   admin: "Admin",
+  business: "Empresas & B2B",
+  empresa: "Empresa",
+  gestao: "Gestão Corporativa",
   analises: "Análises",
   curso: "Análise de Cursos",
   vendas: "Análise de Vendas",

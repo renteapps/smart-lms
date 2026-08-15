@@ -1,11 +1,28 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { buttonVariants } from "@heroui/styles";
 import { Separator } from "@heroui/react/separator";
 import { BrandMark } from "./BrandMark";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { useEffect, useState } from "react";
+import { useCompanyManager } from "@/hooks/useCompanyManager";
 
-const footerGroups = [
+interface FooterLink {
+  label: string;
+  href: string;
+  adminOnly?: boolean;
+  managerOnly?: boolean;
+}
+
+interface FooterGroup {
+  title: string;
+  links: FooterLink[];
+}
+
+const footerGroups: FooterGroup[] = [
   {
     title: "Aprender",
     links: [
@@ -19,12 +36,43 @@ const footerGroups = [
     links: [
       { label: "Insights", href: "/blog" },
       { label: "Refazer onboarding", href: "/onboarding" },
-      { label: "Painel administrativo", href: "/admin" },
+      { label: "Gestão Corporativa", href: "/empresa/gestao", managerOnly: true },
+      { label: "Painel administrativo", href: "/admin", adminOnly: true },
     ],
   },
 ];
 
 export default function Footer() {
+  const [isAdmin, setIsAdmin] = useState(false);
+  const { isManager } = useCompanyManager();
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        if (data?.role === "admin") {
+          setIsAdmin(true);
+        }
+      }
+    };
+    checkAdmin();
+  }, []);
+
+  const visibleGroups = footerGroups.map((group) => ({
+    ...group,
+    links: group.links.filter((link) => {
+      if (link.adminOnly && !isAdmin) return false;
+      if (link.managerOnly && !isManager && !isAdmin) return false;
+      return true;
+    }),
+  }));
+
   return (
     <footer className="mt-24 border-t border-hairline bg-surface">
       <div className="editorial-container grid gap-14 py-16 md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] md:gap-20 md:py-20">
@@ -51,7 +99,7 @@ export default function Footer() {
         </div>
 
         <div className="grid grid-cols-2 gap-8 sm:gap-12">
-          {footerGroups.map((group) => (
+          {visibleGroups.map((group) => (
             <nav key={group.title} aria-label={group.title}>
               <h2 className="eyebrow">{group.title}</h2>
               <ul className="mt-5 flex flex-col">

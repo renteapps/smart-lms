@@ -51,9 +51,20 @@ describe("Resend Integration Service", () => {
     const invalidResult = await validateResendApiKey("sk_test_12345");
     expect(invalidResult.valid).toBe(false);
 
-    // Key starting with re_
-    const validFormatResult = await validateResendApiKey("re_123456789_abcdefg");
-    expect(validFormatResult.valid).toBe(true);
+    // Key starting with re_ with successful fetch mock
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () =>
+      new Response(JSON.stringify({ data: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+
+    try {
+      const validFormatResult = await validateResendApiKey("re_123456789_abcdefg");
+      expect(validFormatResult.valid).toBe(true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   it("should interpolate dynamic tags in templates", () => {

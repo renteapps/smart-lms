@@ -17,8 +17,13 @@ export function RouteShell({ children }: { children: React.ReactNode }) {
    * mensagem: rodapé e bolha flutuante da IA só brigariam com ela.
    */
   const isAgentWorkspace = /^\/agentes\/[^/]+/.test(pathname);
+  const isAuthPage =
+    pathname.startsWith("/acessar") ||
+    pathname.startsWith("/criar-conta") ||
+    pathname.startsWith("/resetar-senha") ||
+    pathname.startsWith("/confirmar");
   const hasStudentChrome = !isAdmin && !isClassroom;
-  const hasFloatingChrome = !isFocusedOnboarding && !isAgentWorkspace;
+  const hasFloatingChrome = !isFocusedOnboarding && !isAgentWorkspace && !isAuthPage;
 
   if (!hasStudentChrome) return <>{children}</>;
 
@@ -29,8 +34,8 @@ export function RouteShell({ children }: { children: React.ReactNode }) {
      * refratar — sem ele o efeito some sobre fundo chapado.
      */
     <div className="ambient-canvas">
-      <NavBar />
-      <ProfileBanner />
+      {!isAuthPage && <NavBar />}
+      {!isAuthPage && <ProfileBanner />}
       {/* A conversa já trava a própria altura; `min-h-screen` sobraria como rolagem morta. */}
       <main className={cn("w-full", !isAgentWorkspace && "min-h-screen")}>{children}</main>
       {hasFloatingChrome && <Footer />}

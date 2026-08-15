@@ -5,6 +5,8 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Button, Card, Chip, ProgressBar, Radio, RadioGroup, Separator } from "@heroui/react";
 import { ArrowRight, Award, BarChart3, Brain, Play, RotateCcw, SkipForward } from "lucide-react";
 import { ProfileTest, ProfileCategory } from "@/types/profileTest";
+import { buildProfileTestResult, saveProfileTestResult } from "@/lib/profileTestStorage";
+import { notifyTrailChanged } from "@/lib/useTrailStore";
 
 interface ProfileTestRunnerProps {
   test: ProfileTest;
@@ -88,9 +90,20 @@ export default function ProfileTestRunner({ test, config, onComplete }: ProfileT
       .sort((a, b) => b.score - a.score);
 
     const winningCat = sortedCategories[0]?.category || test.categories[0];
+    const percentages = sortedCategories.map((item) => ({ category: item.category, percentage: item.percentage }));
 
     setResultCategory(winningCat);
-    setCategoryPercentages(sortedCategories.map((item) => ({ category: item.category, percentage: item.percentage })));
+    setCategoryPercentages(percentages);
+
+    /*
+     * O resultado precisa sobreviver à tela. Antes ele só existia neste estado
+     * local: a categoria vencedora era calculada, exibida e perdida no unmount —
+     * o sinal de personalização mais forte da plataforma indo para o lixo.
+     */
+    if (winningCat) {
+      saveProfileTestResult(buildProfileTestResult(test, winningCat, percentages));
+      notifyTrailChanged();
+    }
 
     // Trigger completion callback
     onComplete();

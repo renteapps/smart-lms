@@ -15,9 +15,10 @@ type AgentThreadProps = {
   conversation: AgentConversation | null;
   isTyping: boolean;
   onSend: (text: string) => void;
+  credits: number | null;
 };
 
-export function AgentThread({ agent, conversation, isTyping, onSend }: AgentThreadProps) {
+export function AgentThread({ agent, conversation, isTyping, onSend, credits }: AgentThreadProps) {
   const [draft, setDraft] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
@@ -31,7 +32,7 @@ export function AgentThread({ agent, conversation, isTyping, onSend }: AgentThre
   }, [conversation?.id, messages.length, isTyping, reduceMotion]);
 
   const send = (text: string) => {
-    if (isUnavailable || !text.trim()) return;
+    if (isUnavailable || !text.trim() || (credits !== null && credits <= 0)) return;
     onSend(text);
     setDraft("");
   };
@@ -154,11 +155,11 @@ export function AgentThread({ agent, conversation, isTyping, onSend }: AgentThre
       <div className="border-t border-hairline bg-background/85 backdrop-blur">
         <div className="mx-auto w-full max-w-3xl px-4 py-4 sm:px-6">
           <div className="flex items-end gap-2">
-            <TextField value={draft} onChange={setDraft} isDisabled={isUnavailable} fullWidth className="flex-1">
+            <TextField value={draft} onChange={setDraft} isDisabled={isUnavailable || (credits !== null && credits <= 0)} fullWidth className="flex-1">
               <Label className="sr-only">Mensagem para {agent.name}</Label>
               <TextArea
                 rows={2}
-                placeholder={isUnavailable ? "Agente em manutenção" : `Escreva para ${agent.name}…`}
+                placeholder={isUnavailable ? "Agente em manutenção" : (credits !== null && credits <= 0) ? "Sem créditos de IA suficientes" : `Escreva para ${agent.name}…`}
                 onKeyDown={handleKeyDown}
               />
             </TextField>
@@ -166,7 +167,7 @@ export function AgentThread({ agent, conversation, isTyping, onSend }: AgentThre
               isIconOnly
               aria-label="Enviar mensagem"
               onClick={() => send(draft)}
-              isDisabled={isUnavailable || !draft.trim()}
+              isDisabled={isUnavailable || !draft.trim() || (credits !== null && credits <= 0)}
               className="size-11 shrink-0"
             >
               <Send className="size-4" aria-hidden="true" />
@@ -178,7 +179,14 @@ export function AgentThread({ agent, conversation, isTyping, onSend }: AgentThre
               <CornerDownLeft className="size-3" aria-hidden="true" />
               Enter envia · Shift+Enter quebra linha
             </span>
-            <span>Respostas seguem o roteiro do curso. Confira o que for decisivo.</span>
+            <div className="flex items-center gap-3">
+              {credits !== null && (
+                <span className={cn("font-semibold", credits > 0 ? "text-accent" : "text-danger")}>
+                  {credits} {credits === 1 ? "crédito" : "créditos"} de IA
+                </span>
+              )}
+              <span>Respostas seguem o roteiro do curso.</span>
+            </div>
           </div>
         </div>
       </div>

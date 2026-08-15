@@ -6,11 +6,13 @@ import { usePathname } from "next/navigation";
 import { AlertCircle, ChevronRight, X } from "lucide-react";
 import { Alert, Button, buttonVariants } from "@heroui/react";
 import { defaultProfile, PROFILE_SAVED_EVENT, PROFILE_STORAGE_KEY, type ProfilePreferences } from "@/components/profile/ProfileEditor";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function ProfileBanner() {
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const pathname = usePathname();
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     // Only run on client
@@ -45,8 +47,8 @@ export function ProfileBanner() {
     };
   }, []);
 
-  // Don't show on the profile page itself or if dismissed
-  if (!isVisible || isDismissed || pathname === "/perfil") {
+  // Don't show on the profile page itself or if dismissed or if not authenticated
+  if (!isAuthenticated || !isVisible || isDismissed || pathname === "/perfil") {
     return null;
   }
 

@@ -10,12 +10,36 @@ import {
   Fieldset,
   Input,
   Label,
+  ListBox,
+  ListBoxItem,
+  Select,
   Switch,
   TextArea,
   TextField,
+  toast,
   ToggleButton,
   ToggleButtonGroup,
 } from "@heroui/react";
+import { createClient } from "@/lib/supabase/client";
+
+export const CAREER_ROLES = [
+  "Estudante",
+  "Estagiário / Trainee",
+  "Júnior / Assistente (Início de carreira)",
+  "Pleno / Analista",
+  "Sênior / Especialista",
+  "Liderança (Coordenador, Gerente, Diretor, C-Level)",
+  "Empreendedor / Autônomo",
+  "Em transição de carreira",
+] as const;
+
+export const GENDER_OPTIONS = [
+  "Feminino",
+  "Masculino",
+  "Não-binário",
+  "Prefiro não informar",
+  "Outro",
+] as const;
 
 export type ProfilePreferences = {
   name: string;
@@ -41,7 +65,7 @@ export const PROFILE_SAVED_EVENT = "smartlms:profile-saved";
 export const defaultProfile: ProfilePreferences = {
   name: "Mariana Costa",
   email: "mariana.costa@acme.com",
-  role: "Head de Pessoas",
+  role: "Liderança (Coordenador, Gerente, Diretor, C-Level)",
   company: "Acme Brasil",
   phone: "(11) 98765-4321",
   birthDate: "1990-05-15",
@@ -93,7 +117,7 @@ function ProfileField({
   onChange,
 }: ProfileFieldProps) {
   return (
-    <TextField id={id} name={id} type={type} value={value} onChange={onChange} isRequired={isRequired}>
+    <TextField id={id} name={id} type={type} value={value} onChange={onChange} isRequired={isRequired} fullWidth>
       <Label>{label}</Label>
       <Input placeholder={placeholder} autoComplete={autoComplete} />
       {description && <Description>{description}</Description>}
@@ -132,21 +156,57 @@ export function ProfileEditor() {
   const [saveState, setSaveState] = useState<"idle" | "saved">("idle");
 
   useEffect(() => {
-    const frame = requestAnimationFrame(() => {
+    let isMounted = true;
+    const loadData = async () => {
+      // 1. Carrega dados do localStorage inicial
       const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
-      if (!stored) return;
-
-      try {
-        const parsed = JSON.parse(stored) as Partial<ProfilePreferences>;
-        const restored = { ...defaultProfile, ...parsed };
-        setProfile(restored);
-        setSavedProfile(restored);
-      } catch {
-        // Mantém os dados de demonstração quando o conteúdo local é inválido.
+      let currentData: ProfilePreferences = defaultProfile;
+      if (stored) {
+        try {
+          currentData = { ...defaultProfile, ...JSON.parse(stored) };
+        } catch {
+          // ignore
+        }
       }
-    });
 
-    return () => cancelAnimationFrame(frame);
+      // 2. Se houver usuário autenticado no Supabase, mescla os dados da nuvem
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && isMounted) {
+          const { data: dbProfile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          const merged: ProfilePreferences = {
+            ...currentData,
+            name: dbProfile?.full_name || user.user_metadata?.full_name || currentData.name,
+            email: user.email || currentData.email,
+            phone: dbProfile?.phone || currentData.phone,
+            birthDate: dbProfile?.birth_date || user.user_metadata?.birth_date || currentData.birthDate,
+            gender: dbProfile?.gender || user.user_metadata?.gender || currentData.gender,
+            role: dbProfile?.career_role || user.user_metadata?.role || currentData.role,
+            bio: dbProfile?.bio || currentData.bio,
+          };
+          currentData = merged;
+          localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(merged));
+        }
+      } catch {
+        // Modo offline / sem rede
+      }
+
+      if (isMounted) {
+        setProfile(currentData);
+        setSavedProfile(currentData);
+      }
+    };
+
+    loadData();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const hasChanges = JSON.stringify(profile) !== JSON.stringify(savedProfile);
@@ -156,12 +216,44 @@ export function ProfileEditor() {
     setSaveState("idle");
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
     setSavedProfile(profile);
     setSaveState("saved");
     window.dispatchEvent(new CustomEvent<ProfilePreferences>(PROFILE_SAVED_EVENT, { detail: profile }));
+
+    // Sincroniza com Supabase se usuário estiver autenticado
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from("profiles")
+          .update({
+            full_name: profile.name,
+            phone: profile.phone,
+            birth_date: profile.birthDate || null,
+            gender: profile.gender || null,
+            career_role: profile.role || null,
+            bio: profile.bio,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", user.id);
+
+        await supabase.auth.updateUser({
+          data: {
+            full_name: profile.name,
+            birth_date: profile.birthDate,
+            gender: profile.gender,
+            role: profile.role,
+          },
+        });
+        toast.success("Perfil salvo e sincronizado com a nuvem!");
+      }
+    } catch {
+      // Offline fallback
+    }
   };
 
   return (
@@ -209,22 +301,52 @@ export function ProfileEditor() {
               type="date"
               value={profile.birthDate}
               autoComplete="bday"
+              isRequired
               onChange={(value) => updateProfile("birthDate", value)}
             />
-            <ProfileField
-              id="gender"
-              label="Gênero"
-              value={profile.gender}
-              placeholder="Feminino, Masculino, Outro…"
-              onChange={(value) => updateProfile("gender", value)}
-            />
-            <ProfileField
-              id="role"
-              label="Cargo"
-              value={profile.role}
-              autoComplete="organization-title"
-              onChange={(value) => updateProfile("role", value)}
-            />
+
+            <Select
+              selectedKey={profile.gender || "Feminino"}
+              onSelectionChange={(key) => updateProfile("gender", String(key))}
+              className="w-full space-y-1.5"
+            >
+              <Label>Gênero</Label>
+              <Select.Trigger className="w-full">
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  {GENDER_OPTIONS.map((g) => (
+                    <ListBoxItem key={g} id={g}>
+                      {g}
+                    </ListBoxItem>
+                  ))}
+                </ListBox>
+              </Select.Popover>
+            </Select>
+
+            <Select
+              selectedKey={profile.role || CAREER_ROLES[0]}
+              onSelectionChange={(key) => updateProfile("role", String(key))}
+              className="w-full space-y-1.5"
+            >
+              <Label>Cargo atual</Label>
+              <Select.Trigger className="w-full">
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  {CAREER_ROLES.map((r) => (
+                    <ListBoxItem key={r} id={r}>
+                      {r}
+                    </ListBoxItem>
+                  ))}
+                </ListBox>
+              </Select.Popover>
+            </Select>
+
             <ProfileField
               id="company"
               label="Empresa"

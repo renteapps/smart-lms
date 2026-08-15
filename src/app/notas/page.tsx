@@ -2,182 +2,1209 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Trash2 } from "lucide-react";
-import { Button, buttonVariants, Card, EmptyState, Label, SearchField, Skeleton } from "@heroui/react";
+import {
+  ArrowUpRight,
+  BookOpen,
+  Bot,
+  Calendar,
+  Check,
+  Copy,
+  Download,
+  Edit3,
+  FileText,
+  Plus,
+  Search,
+  Sparkles,
+  Star,
+  Tag,
+  Trash2,
+  X,
+} from "lucide-react";
+import {
+  Button,
+  buttonVariants,
+  Card,
+  Chip,
+  Modal,
+  SearchField,
+  Skeleton,
+  toast,
+} from "@heroui/react";
 import { NoteIcon } from "@/components/ui/AnimatedIcon";
 import { Reveal } from "@/components/ui/Reveal";
 import { Rise } from "@/components/ui/Rise";
-import { isAgentNote } from "@/lib/agentNotes";
+import {
+  deleteNote,
+  exportNotesAsMarkdown,
+  getSampleNotes,
+  isAgentNote,
+  isLessonNote,
+  isPersonalNote,
+  readNotes,
+  savePersonalNote,
+  StoredNote,
+  togglePinNote,
+  updateNote,
+  writeNotes,
+} from "@/lib/agentNotes";
 
-interface Note {
-  lessonId: string;
-  lessonTitle: string;
-  content: string;
-  updatedAt: string;
+const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
+
+const timeFormatter = new Intl.DateTimeFormat("pt-BR", {
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+function formatRelativeDate(isoDate: string): string {
+  try {
+    const date = new Date(isoDate);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffHours < 1) {
+      const minutes = Math.max(1, Math.floor(diffMs / (1000 * 60)));
+      return `Há ${minutes} min`;
+    }
+    if (diffHours < 24) {
+      return `Hoje às ${timeFormatter.format(date)}`;
+    }
+    if (diffDays === 1) {
+      return `Ontem às ${timeFormatter.format(date)}`;
+    }
+    if (diffDays < 7) {
+      return `Há ${diffDays} dias`;
+    }
+    return dateFormatter.format(date);
+  } catch {
+    return isoDate;
+  }
 }
 
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+type CategoryFilter = "todas" | "aulas" | "agentes" | "pessoal" | "fixadas";
+type SortOption = "recent" | "oldest" | "title";
 
 export default function NotasPage() {
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [notes, setNotes] = useState<StoredNote[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>("todas");
+  const [sortBy, setSortBy] = useState<SortOption>("recent");
   const [isLoaded, setIsLoaded] = useState(false);
 
-  /*
-   * Sem requestAnimationFrame: rAF não dispara em aba oculta, e a página
-   * ficaria presa no esqueleto até receber foco. Ler o localStorage é barato
-   * o bastante para acontecer no próprio efeito.
-   */
+  // Modais
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [deleteConfirmNote, setDeleteConfirmNote] = useState<StoredNote | null>(null);
+
+  // Estados dos formulários
+  const [editingNote, setEditingNote] = useState<StoredNote | null>(null);
+  const [viewingNote, setViewingNote] = useState<StoredNote | null>(null);
+  const [formTitle, setFormTitle] = useState("");
+  const [formContent, setFormContent] = useState("");
+  const [formTags, setFormTags] = useState("");
+  const [formPinned, setFormPinned] = useState(false);
+
+  // Feedback de cópia
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Carregar anotações
+  const refreshNotes = () => {
+    const loaded = readNotes();
+    setNotes(loaded);
+  };
+
   useEffect(() => {
-    const savedNotes = localStorage.getItem("smartlms_all_notes");
-    if (savedNotes) {
-      try {
-        const parsed: unknown = JSON.parse(savedNotes);
-        if (Array.isArray(parsed)) setNotes(parsed as Note[]);
-      } catch {
-        // Ignora dados locais corrompidos sem bloquear a página.
-      }
-    }
+    refreshNotes();
     setIsLoaded(true);
   }, []);
 
-  const handleDelete = (lessonId: string) => {
-    const newNotes = notes.filter((note) => note.lessonId !== lessonId);
-    setNotes(newNotes);
-    localStorage.setItem("smartlms_all_notes", JSON.stringify(newNotes));
-    localStorage.removeItem(`smartlms_note_${lessonId}`);
+  // Exclusão
+  const handleDeleteConfirm = () => {
+    if (!deleteConfirmNote) return;
+    deleteNote(deleteConfirmNote.lessonId);
+    refreshNotes();
+    setDeleteConfirmNote(null);
+    toast.success("Anotação excluída com sucesso.");
   };
 
+  // Fixar / Desafixar
+  const handleTogglePin = (noteId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    togglePinNote(noteId);
+    refreshNotes();
+    toast.info("Status de fixação atualizado.");
+  };
+
+  // Copiar conteúdo para a área de transferência
+  const handleCopyContent = async (note: StoredNote, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(`${note.lessonTitle}\n\n${note.content}`);
+      setCopiedId(note.lessonId);
+      toast.success("Anotação copiada para a área de transferência!");
+      setTimeout(() => setCopiedId(null), 2500);
+    } catch {
+      toast.danger("Não foi possível copiar o texto.");
+    }
+  };
+
+  // Abrir modal de criação
+  const handleOpenCreateModal = () => {
+    setFormTitle("");
+    setFormContent("");
+    setFormTags("");
+    setFormPinned(false);
+    setIsCreateModalOpen(true);
+  };
+
+  // Salvar nova anotação
+  const handleSaveNewNote = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formContent.trim()) {
+      toast.danger("O conteúdo da anotação não pode ficar vazio.");
+      return;
+    }
+
+    const tags = formTags
+      .split(",")
+      .map((t) => t.trim().replace(/^#/, ""))
+      .filter(Boolean);
+
+    const saved = savePersonalNote(
+      formTitle.trim() || "Anotação rápida",
+      formContent.trim(),
+      tags
+    );
+
+    if (saved && formPinned) {
+      togglePinNote(saved.lessonId);
+    }
+
+    refreshNotes();
+    setIsCreateModalOpen(false);
+    toast.success("Anotação criada com sucesso!");
+  };
+
+  // Abrir modal de edição
+  const handleOpenEditModal = (note: StoredNote, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setEditingNote(note);
+    setFormTitle(note.lessonTitle);
+    setFormContent(note.content);
+    setFormTags(note.tags ? note.tags.join(", ") : "");
+    setFormPinned(!!note.pinned);
+    setIsEditModalOpen(true);
+  };
+
+  // Salvar edição
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingNote) return;
+    if (!formContent.trim()) {
+      toast.danger("O conteúdo da anotação não pode ficar vazio.");
+      return;
+    }
+
+    const tags = formTags
+      .split(",")
+      .map((t) => t.trim().replace(/^#/, ""))
+      .filter(Boolean);
+
+    updateNote(editingNote.lessonId, {
+      lessonTitle: formTitle.trim() || "Anotação sem título",
+      content: formContent.trim(),
+      tags,
+      pinned: formPinned,
+    });
+
+    refreshNotes();
+    setIsEditModalOpen(false);
+    setEditingNote(null);
+    toast.success("Anotação atualizada com sucesso!");
+  };
+
+  // Abrir modal de visualização completa
+  const handleOpenViewModal = (note: StoredNote) => {
+    setViewingNote(note);
+    setIsViewModalOpen(true);
+  };
+
+  // Carregar exemplos demonstrativos
+  const handleLoadSampleNotes = () => {
+    const samples = getSampleNotes();
+    writeNotes(samples);
+    refreshNotes();
+    toast.success("3 anotações de exemplo foram adicionadas!");
+  };
+
+  // Exportar todas as anotações como Markdown
+  const handleExportMarkdown = () => {
+    if (notes.length === 0) {
+      toast.danger("Nenhuma anotação disponível para exportar.");
+      return;
+    }
+
+    const markdown = exportNotesAsMarkdown(notes);
+    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `smart-lms-anotacoes-${new Date().toISOString().slice(0, 10)}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("Arquivo Markdown baixado com sucesso!");
+  };
+
+  // Contagens por categoria
+  const counts = useMemo(() => {
+    return {
+      todas: notes.length,
+      aulas: notes.filter((n) => isLessonNote(n.lessonId)).length,
+      agentes: notes.filter((n) => isAgentNote(n.lessonId)).length,
+      pessoal: notes.filter((n) => isPersonalNote(n.lessonId)).length,
+      fixadas: notes.filter((n) => n.pinned).length,
+    };
+  }, [notes]);
+
+  // Filtragem e ordenação
   const filteredNotes = useMemo(() => {
-    const normalized = searchQuery.toLocaleLowerCase("pt-BR");
-    return notes.filter((note) => note.content.toLocaleLowerCase("pt-BR").includes(normalized) || note.lessonTitle.toLocaleLowerCase("pt-BR").includes(normalized));
-  }, [notes, searchQuery]);
+    const query = searchQuery.trim().toLocaleLowerCase("pt-BR");
+
+    let result = notes.filter((note) => {
+      // Filtro por categoria
+      if (selectedCategory === "aulas" && !isLessonNote(note.lessonId)) return false;
+      if (selectedCategory === "agentes" && !isAgentNote(note.lessonId)) return false;
+      if (selectedCategory === "pessoal" && !isPersonalNote(note.lessonId)) return false;
+      if (selectedCategory === "fixadas" && !note.pinned) return false;
+
+      // Filtro por busca
+      if (!query) return true;
+
+      const titleMatch = note.lessonTitle.toLocaleLowerCase("pt-BR").includes(query);
+      const contentMatch = note.content.toLocaleLowerCase("pt-BR").includes(query);
+      const tagsMatch = note.tags?.some((t) => t.toLocaleLowerCase("pt-BR").includes(query));
+
+      return titleMatch || contentMatch || tagsMatch;
+    });
+
+    // Ordenação (Fixadas sempre vêm primeiro)
+    result = [...result].sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+
+      if (sortBy === "recent") {
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      }
+      if (sortBy === "oldest") {
+        return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+      }
+      if (sortBy === "title") {
+        return a.lessonTitle.localeCompare(b.lessonTitle, "pt-BR");
+      }
+      return 0;
+    });
+
+    return result;
+  }, [notes, searchQuery, selectedCategory, sortBy]);
 
   return (
-    <div className="pt-[76px]">
-      <section className="border-b border-hairline">
-        <div className="editorial-container grid gap-10 py-14 sm:py-20 lg:grid-cols-[1fr_auto] lg:items-end">
+    <div className="pt-24 pb-20 sm:pt-28 md:pt-32">
+      {/* =====================================================================
+          CABEÇALHO EDITORIAL
+      ====================================================================== */}
+      <section className="border-b border-hairline/80 pb-10 sm:pb-14">
+        <div className="editorial-container">
           <Rise>
-            <p className="eyebrow">Caderno pessoal</p>
-            <h1 className="display-1 mt-3 max-w-3xl text-foreground">Ideias que merecem continuar com você.</h1>
-            <p className="lede mt-6">
-              Releia seus insights e transforme anotações em pequenas ações para a rotina.
-            </p>
-          </Rise>
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-3xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-surface/70 px-3.5 py-1 text-xs font-semibold text-muted backdrop-blur-md">
+                  <span className="flex size-2 rounded-full bg-accent animate-pulse" />
+                  <span>Caderno Pessoal & Insights</span>
+                </div>
 
-          {isLoaded && notes.length > 0 && (
-            <SearchField value={searchQuery} onChange={setSearchQuery} className="w-full lg:w-80">
-              <Label className="sr-only">Buscar nas anotações</Label>
-              <SearchField.Group>
-                <SearchField.SearchIcon />
-                <SearchField.Input placeholder="Buscar nas anotações" />
-                <SearchField.ClearButton />
-              </SearchField.Group>
-            </SearchField>
-          )}
+                <h1 className="display-1 mt-4 text-foreground tracking-tight">
+                  Ideias que merecem continuar com você.
+                </h1>
+                <p className="lede mt-3 text-muted">
+                  Releia seus insights, filtre por aulas ou agentes de IA e transforme anotações em ações práticas para o seu dia a dia.
+                </p>
+
+                {isLoaded && notes.length > 0 && (
+                  <div className="mt-5 flex flex-wrap items-center gap-3 text-xs text-muted">
+                    <span className="font-semibold text-foreground">
+                      {notes.length} {notes.length === 1 ? "anotação salva" : "anotações salvas"}
+                    </span>
+                    <span>•</span>
+                    <span>
+                      {counts.fixadas > 0 && `${counts.fixadas} fixadas • `}
+                      {counts.aulas} de aulas • {counts.agentes} de agentes • {counts.pessoal} pessoais
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Botões de Ação Principal */}
+              <div className="flex flex-wrap items-center gap-3">
+                {isLoaded && notes.length > 0 && (
+                  <Button
+                    variant="secondary"
+                    onClick={handleExportMarkdown}
+                    className="h-11 gap-2 rounded-xl px-4 font-semibold shadow-surface cursor-pointer"
+                  >
+                    <Download className="size-4" aria-hidden="true" />
+                    <span>Exportar (.md)</span>
+                  </Button>
+                )}
+
+                <Button
+                  variant="primary"
+                  onClick={handleOpenCreateModal}
+                  className="h-11 gap-2 rounded-xl px-5 font-semibold shadow-md cursor-pointer"
+                >
+                  <Plus className="size-4" aria-hidden="true" />
+                  <span>Nova anotação</span>
+                </Button>
+              </div>
+            </div>
+          </Rise>
         </div>
       </section>
 
-      <section className="editorial-container py-10 sm:py-14">
+      {/* =====================================================================
+          CONTEÚDO PRINCIPAL
+      ====================================================================== */}
+      <section className="editorial-container py-8 sm:py-12">
         {!isLoaded ? (
+          /* Estado Carregando */
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" aria-label="Carregando suas anotações" aria-busy="true">
             {[1, 2, 3].map((item) => (
-              <Card key={item} className="gap-4">
-                <Card.Content className="gap-4">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-24 w-full" />
-                  <Skeleton className="h-11 w-full" />
-                </Card.Content>
+              <Card key={item} className="p-6 gap-4 border-hairline bg-surface/50">
+                <Skeleton className="h-4 w-28 rounded-full" />
+                <Skeleton className="h-6 w-3/4 rounded-lg" />
+                <Skeleton className="h-24 w-full rounded-xl" />
+                <Skeleton className="h-10 w-full rounded-xl" />
               </Card>
             ))}
           </div>
         ) : notes.length === 0 ? (
-          <EmptyState className="gap-5 py-24">
-            <span className="icon-draw grid size-14 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground">
-              <NoteIcon size={28} />
-            </span>
-            <div className="max-w-md text-center">
-              <p className="display-3 text-foreground">Seu caderno ainda está em branco</p>
-              <p className="mt-3 text-sm leading-6 text-muted">
-                Durante uma aula, abra a aba “Anotações” para registrar ideias, perguntas e decisões.
+          /* =================================================================
+             ESTADO VAZIO (EMPTY STATE) REFINADO & CENTRALIZADO
+          ================================================================== */
+          <Rise>
+            <div className="mx-auto max-w-3xl rounded-3xl border border-border/70 bg-surface/60 p-8 sm:p-12 shadow-surface backdrop-blur-xl text-center">
+              {/* Ícone Principal Centralizado com Margem de Respiro */}
+              <div className="mx-auto grid size-20 place-items-center rounded-3xl bg-accent-soft text-accent-soft-foreground shadow-sm mb-2">
+                <span className="icon-draw">
+                  <NoteIcon size={38} />
+                </span>
+              </div>
+
+              <h2 className="display-3 mt-5 text-foreground font-bold">
+                Seu caderno está pronto para as suas ideias
+              </h2>
+              <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
+                Suas anotações feitas durante as aulas, conversas com os agentes de IA ou registradas por você ficam organizadas aqui com busca rápida e filtros inteligentes.
               </p>
+
+              {/* Grade de Atalhos com Ícones, Textos e Botões Centralizados */}
+              <div className="mt-10 grid gap-4 text-center sm:grid-cols-3">
+                {/* Card 1: Anotação Rápida */}
+                <button
+                  type="button"
+                  onClick={handleOpenCreateModal}
+                  className="group flex flex-col items-center justify-between rounded-2xl border border-border/80 bg-surface p-6 transition-all duration-200 hover:-translate-y-1 hover:border-accent/40 hover:bg-accent-soft/10 hover:shadow-md cursor-pointer"
+                >
+                  <div className="flex flex-col items-center text-center">
+                    <div className="grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground transition-all duration-200 group-hover:scale-110 group-hover:bg-accent group-hover:text-white shadow-xs">
+                      <Plus className="size-5" />
+                    </div>
+                    <h3 className="mt-4 font-bold text-base text-foreground">Anotação Rápida</h3>
+                    <p className="mt-2 text-xs leading-relaxed text-muted max-w-[200px]">
+                      Escreva um insight, lembrete ou meta pessoal agora mesmo.
+                    </p>
+                  </div>
+                  <div className="mt-6 flex w-full justify-center">
+                    <span className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-accent/20 bg-accent-soft/40 py-2.5 px-3 text-xs font-bold text-accent transition-all group-hover:bg-accent group-hover:text-white">
+                      Criar agora <ArrowUpRight className="size-3.5" />
+                    </span>
+                  </div>
+                </button>
+
+                {/* Card 2: Anotar em Aula */}
+                <Link
+                  href="/cursos"
+                  className="group flex flex-col items-center justify-between rounded-2xl border border-border/80 bg-surface p-6 transition-all duration-200 hover:-translate-y-1 hover:border-accent/40 hover:bg-accent-soft/10 hover:shadow-md"
+                >
+                  <div className="flex flex-col items-center text-center">
+                    <div className="grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground transition-all duration-200 group-hover:scale-110 group-hover:bg-accent group-hover:text-white shadow-xs">
+                      <BookOpen className="size-5" />
+                    </div>
+                    <h3 className="mt-4 font-bold text-base text-foreground">Anotar em Aula</h3>
+                    <p className="mt-2 text-xs leading-relaxed text-muted max-w-[200px]">
+                      Abra a aba “Anotações” no player para registrar pontos-chave.
+                    </p>
+                  </div>
+                  <div className="mt-6 flex w-full justify-center">
+                    <span className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-accent/20 bg-accent-soft/40 py-2.5 px-3 text-xs font-bold text-accent transition-all group-hover:bg-accent group-hover:text-white">
+                      Explorar Cursos <ArrowUpRight className="size-3.5" />
+                    </span>
+                  </div>
+                </Link>
+
+                {/* Card 3: Resumos com IA */}
+                <Link
+                  href="/agentes"
+                  className="group flex flex-col items-center justify-between rounded-2xl border border-border/80 bg-surface p-6 transition-all duration-200 hover:-translate-y-1 hover:border-accent/40 hover:bg-accent-soft/10 hover:shadow-md"
+                >
+                  <div className="flex flex-col items-center text-center">
+                    <div className="grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground transition-all duration-200 group-hover:scale-110 group-hover:bg-accent group-hover:text-white shadow-xs">
+                      <Bot className="size-5" />
+                    </div>
+                    <h3 className="mt-4 font-bold text-base text-foreground">Resumos com IA</h3>
+                    <p className="mt-2 text-xs leading-relaxed text-muted max-w-[200px]">
+                      Peça sínteses e planos de carreira para os mentores virtuais.
+                    </p>
+                  </div>
+                  <div className="mt-6 flex w-full justify-center">
+                    <span className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-accent/20 bg-accent-soft/40 py-2.5 px-3 text-xs font-bold text-accent transition-all group-hover:bg-accent group-hover:text-white">
+                      Ver Agentes <ArrowUpRight className="size-3.5" />
+                    </span>
+                  </div>
+                </Link>
+              </div>
+
+              {/* Botão de Exemplo Demonstrativo */}
+              <div className="mt-8 pt-6 border-t border-border/60 flex flex-wrap items-center justify-center gap-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLoadSampleNotes}
+                  className="text-xs text-muted hover:text-foreground gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="size-3.5 text-accent" />
+                  Carregar 3 anotações demonstrativas para testar
+                </Button>
+              </div>
             </div>
-            <Link href="/cursos" className={buttonVariants({ variant: "primary" })}>
-              Escolher uma aula <ArrowUpRight className="size-4" aria-hidden="true" />
-            </Link>
-          </EmptyState>
-        ) : filteredNotes.length === 0 ? (
-          <EmptyState className="gap-5 py-24">
-            <span className="icon-draw grid size-14 place-items-center rounded-2xl bg-default text-default-foreground">
-              <NoteIcon size={28} />
-            </span>
-            <div className="max-w-md text-center">
-              <p className="display-3 text-foreground">Nada encontrado</p>
-              <p className="mt-3 text-sm leading-6 text-muted">
-                Nenhuma anotação corresponde a “{searchQuery}”. Tente buscar por outro termo.
-              </p>
-            </div>
-            <Button variant="secondary" onClick={() => setSearchQuery("")}>
-              Limpar busca
-            </Button>
-          </EmptyState>
+          </Rise>
         ) : (
+          /* =================================================================
+             ESTADO COM ANOTAÇÕES: BARRA DE FILTROS & BUSCA
+          ================================================================== */
           <>
-            <p className="mb-7 text-sm text-muted" aria-live="polite" data-numeric>
-              <strong className="font-bold text-foreground">{filteredNotes.length}</strong>{" "}
-              {filteredNotes.length === 1 ? "anotação" : "anotações"}
-            </p>
+            <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              {/* Abas de Categorias */}
+              <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory("todas")}
+                  className={`flex h-10 items-center gap-2 rounded-xl px-3.5 text-xs font-bold transition-colors cursor-pointer ${
+                    selectedCategory === "todas"
+                      ? "bg-foreground text-background shadow-xs"
+                      : "border border-border bg-surface text-muted hover:bg-surface-hover hover:text-foreground"
+                  }`}
+                >
+                  <span>Todas</span>
+                  <span className="rounded-full bg-surface-hover/80 px-1.5 py-0.5 text-[10px] text-inherit">
+                    {counts.todas}
+                  </span>
+                </button>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredNotes.map((note, index) => (
-                <Rise key={note.lessonId} className="min-w-0" delay={Math.min(index, 5) * 60}>
-                  <Reveal className="h-full rounded-2xl">
-                    <Card className="group h-full min-h-72 border-hairline">
-                      <Card.Header className="flex-row items-start justify-between gap-3">
-                        <time
-                          dateTime={note.updatedAt}
-                          className="eyebrow pt-1.5 normal-case tracking-[0.06em]"
-                        >
-                          {dateFormatter.format(new Date(note.updatedAt))}
-                        </time>
-                        <Button
-                          isIconOnly
-                          size="sm"
-                          variant="ghost"
-                          aria-label={`Excluir anotação de ${note.lessonTitle}`}
-                          onClick={() => handleDelete(note.lessonId)}
-                          className="shrink-0 text-muted opacity-100 transition-opacity hover:text-danger md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
-                        >
-                          <Trash2 className="size-4" aria-hidden="true" />
-                        </Button>
-                      </Card.Header>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory("aulas")}
+                  className={`flex h-10 items-center gap-2 rounded-xl px-3.5 text-xs font-bold transition-colors cursor-pointer ${
+                    selectedCategory === "aulas"
+                      ? "bg-accent text-white shadow-xs"
+                      : "border border-border bg-surface text-muted hover:bg-surface-hover hover:text-foreground"
+                  }`}
+                >
+                  <BookOpen className="size-3.5" />
+                  <span>Aulas</span>
+                  <span className="rounded-full bg-surface-hover/80 px-1.5 py-0.5 text-[10px] text-inherit">
+                    {counts.aulas}
+                  </span>
+                </button>
 
-                      <Card.Content className="gap-3">
-                        <h2 className="font-display text-lg font-extrabold leading-snug tracking-[-0.02em] text-foreground">
-                          {note.lessonTitle}
-                        </h2>
-                        <p className="line-clamp-6 whitespace-pre-wrap text-sm leading-6 text-muted">{note.content}</p>
-                      </Card.Content>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory("agentes")}
+                  className={`flex h-10 items-center gap-2 rounded-xl px-3.5 text-xs font-bold transition-colors cursor-pointer ${
+                    selectedCategory === "agentes"
+                      ? "bg-accent text-white shadow-xs"
+                      : "border border-border bg-surface text-muted hover:bg-surface-hover hover:text-foreground"
+                  }`}
+                >
+                  <Bot className="size-3.5" />
+                  <span>Agentes IA</span>
+                  <span className="rounded-full bg-surface-hover/80 px-1.5 py-0.5 text-[10px] text-inherit">
+                    {counts.agentes}
+                  </span>
+                </button>
 
-                      <Card.Footer className="mt-auto">
-                        {/* Anotação vinda de uma conversa não tem aula para reabrir. */}
-                        <Link
-                          href={isAgentNote(note.lessonId) ? "/agentes" : `/courses/c1/lessons/${note.lessonId}`}
-                          className={buttonVariants({ variant: "secondary", fullWidth: true })}
-                        >
-                          {isAgentNote(note.lessonId) ? "Voltar aos agentes" : "Reabrir aula"}{" "}
-                          <ArrowUpRight className="size-4" aria-hidden="true" />
-                        </Link>
-                      </Card.Footer>
-                    </Card>
-                  </Reveal>
-                </Rise>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory("pessoal")}
+                  className={`flex h-10 items-center gap-2 rounded-xl px-3.5 text-xs font-bold transition-colors cursor-pointer ${
+                    selectedCategory === "pessoal"
+                      ? "bg-accent text-white shadow-xs"
+                      : "border border-border bg-surface text-muted hover:bg-surface-hover hover:text-foreground"
+                  }`}
+                >
+                  <FileText className="size-3.5" />
+                  <span>Pessoais</span>
+                  <span className="rounded-full bg-surface-hover/80 px-1.5 py-0.5 text-[10px] text-inherit">
+                    {counts.pessoal}
+                  </span>
+                </button>
+
+                {counts.fixadas > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategory("fixadas")}
+                    className={`flex h-10 items-center gap-2 rounded-xl px-3.5 text-xs font-bold transition-colors cursor-pointer ${
+                      selectedCategory === "fixadas"
+                        ? "bg-warning text-warning-foreground shadow-xs"
+                        : "border border-border bg-surface text-muted hover:bg-surface-hover hover:text-foreground"
+                    }`}
+                  >
+                    <Star className="size-3.5 fill-warning text-warning" />
+                    <span>Fixadas</span>
+                    <span className="rounded-full bg-surface-hover/80 px-1.5 py-0.5 text-[10px] text-inherit">
+                      {counts.fixadas}
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              {/* Campo de Busca & Ordenação */}
+              <div className="flex flex-wrap items-center gap-3">
+                <SearchField
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  className="w-full sm:w-72"
+                >
+                  <SearchField.Group className="h-10 rounded-xl bg-surface border-border">
+                    <SearchField.SearchIcon />
+                    <SearchField.Input placeholder="Buscar em anotações..." />
+                    <SearchField.ClearButton />
+                  </SearchField.Group>
+                </SearchField>
+
+                <select
+                  aria-label="Ordenar anotações"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  className="h-10 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-surface-hover cursor-pointer"
+                >
+                  <option value="recent">Mais recentes</option>
+                  <option value="oldest">Mais antigas</option>
+                  <option value="title">Título (A-Z)</option>
+                </select>
+              </div>
             </div>
+
+            {/* Resultado vazio da busca */}
+            {filteredNotes.length === 0 ? (
+              <div className="rounded-3xl border border-border/80 bg-surface/50 p-12 text-center">
+                <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-default text-muted">
+                  <Search className="size-6" />
+                </div>
+                <h3 className="mt-4 font-display text-lg font-bold text-foreground">
+                  Nenhuma anotação encontrada
+                </h3>
+                <p className="mt-1.5 text-sm text-muted">
+                  Não encontramos nada correspondente ao termo “{searchQuery}” ou filtro selecionado.
+                </p>
+                <div className="mt-6 flex justify-center gap-3">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSelectedCategory("todas");
+                    }}
+                    className="cursor-pointer"
+                  >
+                    Limpar busca e filtros
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              /* =============================================================
+                 GRID DE ANOTAÇÕES
+              ============================================================== */
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {filteredNotes.map((note, index) => {
+                  const isAgent = isAgentNote(note.lessonId);
+                  const isPersonal = isPersonalNote(note.lessonId);
+                  const isLesson = !isAgent && !isPersonal;
+
+                  return (
+                    <Rise key={note.lessonId} className="min-w-0" delay={Math.min(index, 6) * 50}>
+                      <Reveal className="h-full rounded-2xl">
+                        <Card
+                          onClick={() => handleOpenViewModal(note)}
+                          className={`group relative flex flex-col justify-between h-full min-h-[300px] border p-5 transition-all duration-200 cursor-pointer hover:-translate-y-1 hover:shadow-elev-3 ${
+                            note.pinned
+                              ? "border-warning/40 bg-gradient-to-b from-warning/5 via-surface to-surface shadow-xs"
+                              : "border-hairline bg-surface hover:border-hairline-strong"
+                          }`}
+                        >
+                          {/* Cabeçalho do Card */}
+                          <div>
+                            <div className="flex items-center justify-between gap-2">
+                              {/* Badge de Origem */}
+                              {isAgent ? (
+                                <Chip size="sm" variant="soft" color="accent" className="font-semibold text-[11px] gap-1">
+                                  <Bot className="size-3" />
+                                  <span>Agente IA</span>
+                                </Chip>
+                              ) : isPersonal ? (
+                                <Chip size="sm" variant="soft" color="default" className="font-semibold text-[11px] gap-1">
+                                  <FileText className="size-3" />
+                                  <span>Pessoal</span>
+                                </Chip>
+                              ) : (
+                                <Chip size="sm" variant="soft" color="success" className="font-semibold text-[11px] gap-1">
+                                  <BookOpen className="size-3" />
+                                  <span>Aula</span>
+                                </Chip>
+                              )}
+
+                              {/* Ações Rápidas do Card */}
+                              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  title={note.pinned ? "Desafixar do topo" : "Fixar no topo"}
+                                  onClick={(e) => handleTogglePin(note.lessonId, e)}
+                                  className={`grid size-8 place-items-center rounded-lg transition-colors cursor-pointer ${
+                                    note.pinned
+                                      ? "text-warning hover:bg-warning/10"
+                                      : "text-muted opacity-80 hover:bg-surface-hover hover:text-foreground"
+                                  }`}
+                                >
+                                  <Star className={`size-4 ${note.pinned ? "fill-warning" : ""}`} />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  title="Copiar anotação"
+                                  onClick={(e) => handleCopyContent(note, e)}
+                                  className="grid size-8 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground cursor-pointer"
+                                >
+                                  {copiedId === note.lessonId ? (
+                                    <Check className="size-4 text-success" />
+                                  ) : (
+                                    <Copy className="size-4" />
+                                  )}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  title="Editar anotação"
+                                  onClick={(e) => handleOpenEditModal(note, e)}
+                                  className="grid size-8 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground cursor-pointer"
+                                >
+                                  <Edit3 className="size-4" />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  title="Excluir anotação"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteConfirmNote(note);
+                                  }}
+                                  className="grid size-8 place-items-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
+                                >
+                                  <Trash2 className="size-4" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Data de Modificação */}
+                            <div className="mt-3 flex items-center gap-1.5 text-[11px] font-medium text-muted">
+                              <Calendar className="size-3" />
+                              <time dateTime={note.updatedAt}>{formatRelativeDate(note.updatedAt)}</time>
+                            </div>
+
+                            {/* Título da Anotação */}
+                            <h2 className="font-display mt-2.5 text-base font-bold leading-snug tracking-tight text-foreground line-clamp-2">
+                              {note.lessonTitle}
+                            </h2>
+
+                            {/* Trecho do Conteúdo */}
+                            <p className="mt-3 text-xs leading-relaxed text-muted line-clamp-5 whitespace-pre-wrap">
+                              {note.content}
+                            </p>
+
+                            {/* Tags */}
+                            {note.tags && note.tags.length > 0 && (
+                              <div className="mt-4 flex flex-wrap gap-1.5">
+                                {note.tags.map((tag) => (
+                                  <span
+                                    key={tag}
+                                    className="rounded-md bg-surface-hover px-2 py-0.5 text-[10px] font-medium text-muted"
+                                  >
+                                    #{tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Rodapé do Card com Link Contextual */}
+                          <div className="mt-6 pt-4 border-t border-hairline/80 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                            {isAgent ? (
+                              <Link
+                                href="/agentes"
+                                className={buttonVariants({ variant: "secondary", size: "sm" }) + " w-full justify-between rounded-xl"}
+                              >
+                                <span>Voltar aos agentes</span>
+                                <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                              </Link>
+                            ) : isLesson ? (
+                              <Link
+                                href={`/courses/c1/lessons/${note.lessonId}`}
+                                className={buttonVariants({ variant: "secondary", size: "sm" }) + " w-full justify-between rounded-xl"}
+                              >
+                                <span>Reabrir aula</span>
+                                <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                              </Link>
+                            ) : (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                fullWidth
+                                onClick={() => handleOpenViewModal(note)}
+                                className="justify-between rounded-xl cursor-pointer"
+                              >
+                                <span>Ver completa</span>
+                                <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                              </Button>
+                            )}
+                          </div>
+                        </Card>
+                      </Reveal>
+                    </Rise>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
       </section>
+
+      {/* =====================================================================
+          MODAL: CRIAR NOVA ANOTAÇÃO (UX FECHAR NO CANTO SUPERIOR DIREITO)
+      ====================================================================== */}
+      <Modal.Root isOpen={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <Modal.Backdrop>
+          <Modal.Container size="md" scroll="inside">
+            <Modal.Dialog className="relative max-w-lg rounded-3xl border border-border bg-background p-6 sm:p-7 shadow-2xl overflow-hidden">
+              {/* Botão Fechar no Canto Superior Direito (Padrão UX) */}
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(false)}
+                aria-label="Fechar modal"
+                className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 grid size-8 sm:size-9 place-items-center rounded-full bg-surface-hover/80 text-muted transition-all hover:bg-surface-hover hover:text-foreground hover:scale-105 cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+
+              <form onSubmit={handleSaveNewNote}>
+                <Modal.Header className="flex items-center gap-3.5 pb-4 border-b border-border/80 pr-12">
+                  <div className="grid size-11 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground shadow-xs shrink-0">
+                    <Plus className="size-5" />
+                  </div>
+                  <div>
+                    <Modal.Heading className="font-display text-lg font-bold text-foreground">
+                      Nova Anotação
+                    </Modal.Heading>
+                    <p className="text-xs text-muted">Caderno de estudos e insights pessoais</p>
+                  </div>
+                </Modal.Header>
+
+                <Modal.Body className="space-y-4 py-5">
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1.5 block">
+                      Título ou Tema
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Ideias para projeto, Resumo de estudo..."
+                      value={formTitle}
+                      onChange={(e) => setFormTitle(e.target.value)}
+                      className="w-full h-11 rounded-xl border border-border bg-surface px-3.5 text-sm text-foreground placeholder:text-muted outline-none transition-colors focus:border-accent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1.5 block">
+                      Conteúdo da Anotação <span className="text-danger">*</span>
+                    </label>
+                    <textarea
+                      rows={6}
+                      placeholder="Escreva suas ideias, pontos-chave, dúvidas ou planos de ação..."
+                      value={formContent}
+                      onChange={(e) => setFormContent(e.target.value)}
+                      required
+                      className="w-full rounded-xl border border-border bg-surface p-3.5 text-sm leading-relaxed text-foreground placeholder:text-muted outline-none transition-colors focus:border-accent resize-y"
+                    />
+                    <p className="mt-1 text-right text-[11px] text-muted">
+                      {formContent.length} caracteres • {formContent.trim().split(/\s+/).filter(Boolean).length} palavras
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1.5 block">
+                      Tags (separadas por vírgula)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: React, Arquitetura, Carreira, Meta"
+                      value={formTags}
+                      onChange={(e) => setFormTags(e.target.value)}
+                      className="w-full h-10 rounded-xl border border-border bg-surface px-3.5 text-xs text-foreground placeholder:text-muted outline-none transition-colors focus:border-accent"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex items-center gap-2">
+                    <label className="flex items-center gap-2 text-xs font-medium text-muted cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={formPinned}
+                        onChange={(e) => setFormPinned(e.target.checked)}
+                        className="size-4 rounded border-border text-accent focus:ring-accent"
+                      />
+                      <span>Fixar esta anotação no topo do caderno</span>
+                    </label>
+                  </div>
+                </Modal.Body>
+
+                <Modal.Footer className="flex items-center justify-end gap-3 pt-4 border-t border-border/80">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsCreateModalOpen(false)}
+                    className="rounded-xl cursor-pointer"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    className="rounded-xl px-5 font-semibold cursor-pointer"
+                  >
+                    Salvar Anotação
+                  </Button>
+                </Modal.Footer>
+              </form>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal.Root>
+
+      {/* =====================================================================
+          MODAL: EDITAR ANOTAÇÃO (UX FECHAR NO CANTO SUPERIOR DIREITO)
+      ====================================================================== */}
+      <Modal.Root isOpen={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <Modal.Backdrop>
+          <Modal.Container size="md" scroll="inside">
+            <Modal.Dialog className="relative max-w-lg rounded-3xl border border-border bg-background p-6 sm:p-7 shadow-2xl overflow-hidden">
+              {/* Botão Fechar no Canto Superior Direito */}
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                aria-label="Fechar modal"
+                className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 grid size-8 sm:size-9 place-items-center rounded-full bg-surface-hover/80 text-muted transition-all hover:bg-surface-hover hover:text-foreground hover:scale-105 cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+
+              <form onSubmit={handleSaveEdit}>
+                <Modal.Header className="flex items-center gap-3.5 pb-4 border-b border-border/80 pr-12">
+                  <div className="grid size-11 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground shadow-xs shrink-0">
+                    <Edit3 className="size-5" />
+                  </div>
+                  <div>
+                    <Modal.Heading className="font-display text-lg font-bold text-foreground">
+                      Editar Anotação
+                    </Modal.Heading>
+                    <p className="text-xs text-muted">Atualize o título, tags ou texto</p>
+                  </div>
+                </Modal.Header>
+
+                <Modal.Body className="space-y-4 py-5">
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1.5 block">
+                      Título
+                    </label>
+                    <input
+                      type="text"
+                      value={formTitle}
+                      onChange={(e) => setFormTitle(e.target.value)}
+                      className="w-full h-11 rounded-xl border border-border bg-surface px-3.5 text-sm text-foreground outline-none transition-colors focus:border-accent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1.5 block">
+                      Conteúdo <span className="text-danger">*</span>
+                    </label>
+                    <textarea
+                      rows={7}
+                      value={formContent}
+                      onChange={(e) => setFormContent(e.target.value)}
+                      required
+                      className="w-full rounded-xl border border-border bg-surface p-3.5 text-sm leading-relaxed text-foreground outline-none transition-colors focus:border-accent resize-y"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1.5 block">
+                      Tags (separadas por vírgula)
+                    </label>
+                    <input
+                      type="text"
+                      value={formTags}
+                      onChange={(e) => setFormTags(e.target.value)}
+                      className="w-full h-10 rounded-xl border border-border bg-surface px-3.5 text-xs text-foreground outline-none transition-colors focus:border-accent"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex items-center gap-2">
+                    <label className="flex items-center gap-2 text-xs font-medium text-muted cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={formPinned}
+                        onChange={(e) => setFormPinned(e.target.checked)}
+                        className="size-4 rounded border-border text-accent focus:ring-accent"
+                      />
+                      <span>Fixar esta anotação no topo do caderno</span>
+                    </label>
+                  </div>
+                </Modal.Body>
+
+                <Modal.Footer className="flex items-center justify-end gap-3 pt-4 border-t border-border/80">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="rounded-xl cursor-pointer"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    className="rounded-xl px-5 font-semibold cursor-pointer"
+                  >
+                    Salvar Alterações
+                  </Button>
+                </Modal.Footer>
+              </form>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal.Root>
+
+      {/* =====================================================================
+          MODAL: VISUALIZAR ANOTAÇÃO COMPLETA (LEITURA DETALHADA)
+      ====================================================================== */}
+      <Modal.Root isOpen={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <Modal.Backdrop>
+          <Modal.Container size="lg" scroll="inside">
+            <Modal.Dialog className="relative max-w-2xl rounded-3xl border border-border bg-background p-6 sm:p-8 shadow-2xl overflow-hidden">
+              {/* Botão Fechar no Canto Superior Direito */}
+              <button
+                type="button"
+                onClick={() => setIsViewModalOpen(false)}
+                aria-label="Fechar visualização"
+                className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 grid size-8 sm:size-9 place-items-center rounded-full bg-surface-hover/80 text-muted transition-all hover:bg-surface-hover hover:text-foreground hover:scale-105 cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+
+              {viewingNote && (
+                <>
+                  <Modal.Header className="flex flex-col gap-2 pb-5 border-b border-border/80 pr-12">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {isAgentNote(viewingNote.lessonId) ? (
+                        <Chip size="sm" variant="soft" color="accent" className="font-semibold text-[11px] gap-1">
+                          <Bot className="size-3" />
+                          <span>Agente IA</span>
+                        </Chip>
+                      ) : isPersonalNote(viewingNote.lessonId) ? (
+                        <Chip size="sm" variant="soft" color="default" className="font-semibold text-[11px] gap-1">
+                          <FileText className="size-3" />
+                          <span>Anotação Pessoal</span>
+                        </Chip>
+                      ) : (
+                        <Chip size="sm" variant="soft" color="success" className="font-semibold text-[11px] gap-1">
+                          <BookOpen className="size-3" />
+                          <span>Aula / Curso</span>
+                        </Chip>
+                      )}
+
+                      <span className="text-xs text-muted">
+                        Atualizado em {new Date(viewingNote.updatedAt).toLocaleDateString("pt-BR")} às {new Date(viewingNote.updatedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+
+                    <Modal.Heading className="font-display text-xl font-bold leading-snug text-foreground">
+                      {viewingNote.lessonTitle}
+                    </Modal.Heading>
+                  </Modal.Header>
+
+                  <Modal.Body className="py-6">
+                    <div className="rounded-2xl border border-border/60 bg-surface/50 p-5 sm:p-6">
+                      <p className="whitespace-pre-wrap text-sm sm:text-base leading-relaxed text-foreground">
+                        {viewingNote.content}
+                      </p>
+                    </div>
+
+                    {viewingNote.tags && viewingNote.tags.length > 0 && (
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <Tag className="size-3.5 text-muted" />
+                        {viewingNote.tags.map((tag) => (
+                          <Chip key={tag} size="sm" variant="soft">
+                            #{tag}
+                          </Chip>
+                        ))}
+                      </div>
+                    )}
+                  </Modal.Body>
+
+                  <Modal.Footer className="flex flex-wrap items-center justify-between gap-3 pt-5 border-t border-border/80">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleCopyContent(viewingNote)}
+                        className="gap-1.5 rounded-xl cursor-pointer"
+                      >
+                        <Copy className="size-3.5" />
+                        Copiar
+                      </Button>
+
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setIsViewModalOpen(false);
+                          handleOpenEditModal(viewingNote);
+                        }}
+                        className="gap-1.5 rounded-xl cursor-pointer"
+                      >
+                        <Edit3 className="size-3.5" />
+                        Editar
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {isAgentNote(viewingNote.lessonId) && (
+                        <Link
+                          href="/agentes"
+                          className={buttonVariants({ variant: "primary", size: "sm" }) + " rounded-xl gap-1"}
+                        >
+                          Ir para Agentes <ArrowUpRight className="size-3.5" />
+                        </Link>
+                      )}
+
+                      {isLessonNote(viewingNote.lessonId) && (
+                        <Link
+                          href={`/courses/c1/lessons/${viewingNote.lessonId}`}
+                          className={buttonVariants({ variant: "primary", size: "sm" }) + " rounded-xl gap-1"}
+                        >
+                          Reabrir Aula <ArrowUpRight className="size-3.5" />
+                        </Link>
+                      )}
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsViewModalOpen(false)}
+                        className="rounded-xl cursor-pointer"
+                      >
+                        Fechar
+                      </Button>
+                    </div>
+                  </Modal.Footer>
+                </>
+              )}
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal.Root>
+
+      {/* =====================================================================
+          MODAL: CONFIRMAR EXCLUSÃO
+      ====================================================================== */}
+      <Modal.Root isOpen={!!deleteConfirmNote} onOpenChange={(open) => !open && setDeleteConfirmNote(null)}>
+        <Modal.Backdrop>
+          <Modal.Container size="sm">
+            <Modal.Dialog className="relative max-w-sm rounded-3xl border border-border bg-background p-6 shadow-2xl overflow-hidden">
+              {/* Botão Fechar no Canto Superior Direito */}
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmNote(null)}
+                aria-label="Fechar modal"
+                className="absolute top-4 right-4 z-20 grid size-8 place-items-center rounded-full bg-surface-hover/80 text-muted transition-all hover:bg-surface-hover hover:text-foreground hover:scale-105 cursor-pointer"
+              >
+                <X className="size-4" />
+              </button>
+
+              <Modal.Header className="flex items-center gap-3 pr-10">
+                <div className="grid size-10 place-items-center rounded-xl bg-danger/10 text-danger shrink-0">
+                  <Trash2 className="size-5" />
+                </div>
+                <div>
+                  <Modal.Heading className="font-display text-base font-bold text-foreground">
+                    Excluir anotação?
+                  </Modal.Heading>
+                  <p className="text-xs text-muted">Esta ação não pode ser desfeita.</p>
+                </div>
+              </Modal.Header>
+
+              <Modal.Body className="py-4">
+                <p className="text-xs text-muted">
+                  Você está prestes a excluir permanentemente a anotação{" "}
+                  <strong className="text-foreground font-semibold">“{deleteConfirmNote?.lessonTitle}”</strong>.
+                </p>
+              </Modal.Body>
+
+              <Modal.Footer className="flex items-center justify-end gap-2 pt-3 border-t border-border/80">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDeleteConfirmNote(null)}
+                  className="rounded-xl cursor-pointer"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={handleDeleteConfirm}
+                  className="rounded-xl font-semibold cursor-pointer"
+                >
+                  Sim, excluir
+                </Button>
+              </Modal.Footer>
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal.Root>
     </div>
   );
 }

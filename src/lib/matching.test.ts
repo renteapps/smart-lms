@@ -14,7 +14,9 @@ describe('adaptive learning trail', () => {
 
     expect(trail.items.map((item) => item.id)).toEqual(['l1', 'l2', 'l-profile-1', 'l3', 'l4', 'a2']);
     expect(new Set(trail.items.map((item) => item.id)).size).toBe(trail.items.length);
-    expect(trail.items.find((item) => item.id === 'l3')?.score).toBe(4);
+    // 4 pelos mapeamentos explícitos + 0,4 de afinidade (duas tags `pratica`).
+    // A fração desempata sem alterar a ordem decidida pelo peso do admin.
+    expect(trail.items.find((item) => item.id === 'l3')?.score).toBeCloseTo(4.4);
     expect(trail.items.find((item) => item.id === 'l3')?.reason).toContain('Conecta');
     expect(trail.items.findIndex((item) => item.id === 'l3')).toBeLessThan(trail.items.findIndex((item) => item.id === 'l4'));
   });
@@ -57,6 +59,74 @@ describe('adaptive learning trail', () => {
 
     expect(updated.items.find((item) => item.id === initial.items[0].id)?.status).toBe('completed');
     expect(updated.items.filter((item) => item.status === 'pending').every((item) => ['2026-08-11', '2026-08-13', '2026-08-18'].includes(item.scheduledDate))).toBe(true);
+  });
+
+  /*
+   * Afinidade isolada: um questionário cujas opções carregam tags mas **nenhum**
+   * `contentMappings`. Assim o único caminho para um conteúdo entrar na trilha é
+   * o metadado autorado na curadoria — que é justamente o que a Fase E liga.
+   */
+  const tagsOnlyQuestionnaire = (label: string, tags: string[]): Questionnaire => ({
+    version: 1,
+    status: 'published',
+    questions: [
+      { id: 'q_tags', type: 'multiple', role: 'interesse', text: 'Interesses', options: [{ label, tags }] },
+      { id: 'q_disp', type: 'availability', role: 'disponibilidade', text: 'Quando?', options: [] },
+    ],
+  });
+
+  it('lets unmapped content in as extra when the authored metadata matches', () => {
+    // `l1` tem topics ['fundamentos'] e nenhum pré-requisito.
+    const trail = generateLearningTrail('u1', { q_tags: ['Fundamentos'] },
+      tagsOnlyQuestionnaire('Fundamentos', ['fundamentos']),
+      { weekdays: [1, 3], minutesPerSession: 60 }, undefined, new Date(2026, 7, 10));
+
+    const l1 = trail.items.find((item) => item.id === 'l1');
+    expect(l1).toBeDefined();
+    expect(l1?.learningRole).toBe('extra');
+    expect(l1?.reason).toBe('Recomendado por: seu interesse em Fundamentos');
+  });
+
+  it('does not pull an unmapped item whose prerequisites are missing', () => {
+    // `l4` casa com a tag `aprofundamento`, mas depende de `l3` — que ninguém
+    // mapeou. Entrar sozinho arrastaria a cadeia l3 → l2 → l1 como "essencial".
+    const trail = generateLearningTrail('u1', { q_tags: ['Aprofundar'] },
+      tagsOnlyQuestionnaire('Aprofundar', ['aprofundamento']),
+      { weekdays: [1, 3], minutesPerSession: 60 }, undefined, new Date(2026, 7, 10));
+
+    expect(trail.items).toEqual([]);
+  });
+
+  it('keeps affinity from outranking an explicitly mapped essential', () => {
+    const trail = generateLearningTrail('u1', {
+      q_problema: ['Insegurança'],
+      q_habilidades: ['Fundamentos'],
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 60 }, undefined, new Date(2026, 7, 10));
+
+    const roles = trail.items.map((item) => item.learningRole);
+    const firstExtra = roles.indexOf('extra');
+    if (firstExtra !== -1) expect(firstExtra).toBeGreaterThan(roles.lastIndexOf('essential'));
+  });
+
+  it('keeps completed content that the new answers no longer recommend', () => {
+    const initial = generateLearningTrail('u1', {
+      q_formato: ['Prática Rápida (Mão na massa)'], q_habilidades: ['Prática'],
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10));
+
+    const doneId = initial.items[0].id;
+    initial.items[0] = { ...initial.items[0], status: 'completed', completedAt: '2026-08-10T12:00:00.000Z' };
+
+    // Respostas completamente diferentes: o conteúdo concluído sai da curadoria.
+    const updated = generateLearningTrail('u1', {
+      q_problema: ['Falta de Tempo'],
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, initial, new Date(2026, 7, 10));
+
+    const retained = updated.items.find((item) => item.id === doneId);
+    expect(retained?.status).toBe('completed');
+    expect(retained?.completedAt).toBe('2026-08-10T12:00:00.000Z');
+    // O histórico vem antes do que ainda está por fazer.
+    expect(updated.items.findIndex((item) => item.id === doneId)).toBe(0);
+    expect(updated.items.map((item) => item.order)).toEqual(updated.items.map((_, index) => index + 1));
   });
 
   it('replans overdue pending items without moving completed history', () => {

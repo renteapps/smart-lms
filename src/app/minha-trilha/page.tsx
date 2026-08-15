@@ -13,6 +13,7 @@ import {
 import { LearningRole, LearningTrail, LearningTrailItem, SessionLoadRating, StudyAvailability, Weekday } from '@/types/trilha';
 import { readLearningTrail, saveLearningTrail } from '@/lib/trailStorage';
 import { applySessionFeedback, postponeTrailSession, removeTrailItem, replanLearningTrail, restoreTrailItem, toLocalDateKey, updateTrailAvailability } from '@/lib/matching';
+import { contentHref } from '@/lib/studentHome';
 import { createDemoLearningTrail } from '@/lib/mocks/trilhaDemo';
 import { recordTrailEvent, TrailAnalyticsEvent, TrailAnalyticsEventType } from '@/lib/trailAnalytics';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -34,12 +35,6 @@ const feedbackLabels: Array<{ value: SessionLoadRating; label: string; detail: s
   { value: 'right', label: 'Na medida', detail: 'mantém o ritmo' },
   { value: 'heavy', label: 'Foi pesado', detail: '-10 min nas próximas' },
 ];
-
-function contentHref(item: LearningTrailItem): string {
-  if (item.type === 'lesson') return `/courses/${item.courseId || 'c1'}/lessons/${item.id}`;
-  if (item.type === 'article') return item.slug ? `/blog/${item.slug}` : '/blog';
-  return item.url || '#';
-}
 
 function statusLabel(item: LearningTrailItem, today: string): string {
   if (item.status === 'completed') return 'Concluído';
@@ -500,39 +495,42 @@ export default function MinhaTrilhaPage() {
         )}
 
         {todayPending.length > 0 ? (
-          /* O único gesto expressivo da tela: o realce de borda fica só aqui. */
-          <Reveal edge className="mb-12 rounded-2xl">
-            <Card className="gap-0 overflow-hidden border-hairline p-0">
-              <div className="grid gap-8 bg-accent-soft/45 p-6 sm:p-8 lg:grid-cols-[0.75fr_1.25fr] lg:items-center">
-                <div>
-                  <p className="eyebrow">Sua sessão de hoje</p>
-                  <h2 className="display-3 mt-3 text-foreground">Um passo possível agora.</h2>
-                  <p className="mt-3 text-sm leading-6 text-muted" data-numeric>
-                    O plano reservou {trail.adaptiveMinutesPerSession || trail.availability.minutesPerSession} minutos.
-                    Os conteúdos pendentes somam {todayPending.reduce((sum, item) => sum + item.durationMin, 0)} minutos.
-                  </p>
-                  <p className="mt-5 flex items-center gap-2 text-sm font-bold text-foreground" data-numeric>
-                    <Clock3 className="size-4" aria-hidden="true" /> {todayPending.length}{' '}
-                    {todayPending.length === 1 ? 'conteúdo' : 'conteúdos'} nesta sessão
-                  </p>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {todayPending.slice(0, 2).map((item) => (
-                    <TrailContentCard key={item.id} item={item} today={today} subdued />
-                  ))}
-                </div>
+          /*
+           * Banner, não card de destaque: "o que eu faço agora" é a pergunta da
+           * home. Repetir aqui a mesma sessão em tamanho grande fazia as duas
+           * telas competirem — esta é o plano completo, e é só isso.
+           */
+          <Card className="mb-12 gap-0 overflow-hidden border-hairline p-0">
+            <div className="flex flex-col gap-5 bg-accent-soft/45 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+              <div className="min-w-0">
+                <p className="eyebrow">Hoje</p>
+                <p
+                  className="mt-2 flex items-center gap-2 font-display text-lg font-extrabold tracking-[-0.02em] text-foreground"
+                  data-numeric
+                >
+                  <Clock3 className="size-4 shrink-0" aria-hidden="true" />
+                  {todayPending.length} {todayPending.length === 1 ? 'conteúdo' : 'conteúdos'} ·{' '}
+                  {todayPending.reduce((sum, item) => sum + item.durationMin, 0)} min pendentes
+                </p>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-muted" data-numeric>
+                  O plano reservou {trail.adaptiveMinutesPerSession || trail.availability.minutesPerSession} minutos
+                  para esta sessão. Seu próximo passo fica no painel.
+                </p>
               </div>
+              <Link href="/" className={cn(buttonVariants({ variant: 'primary' }), 'shrink-0')}>
+                Ir para o painel <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+            </div>
 
-              <div className="border-t border-hairline px-6 py-5 sm:px-8">
-                <SessionFeedback
-                  title="Como essa carga pareceu?"
-                  hint="Sua resposta ajusta apenas as próximas sessões."
-                  selected={todayFeedback?.rating}
-                  onSelect={handleFeedback}
-                />
-              </div>
-            </Card>
-          </Reveal>
+            <div className="border-t border-hairline px-6 py-5 sm:px-8">
+              <SessionFeedback
+                title="Como essa carga pareceu?"
+                hint="Sua resposta ajusta apenas as próximas sessões."
+                selected={todayFeedback?.rating}
+                onSelect={handleFeedback}
+              />
+            </div>
+          </Card>
         ) : (
           <Card className="mb-12 gap-0 overflow-hidden border-hairline p-0">
             <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">

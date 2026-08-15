@@ -1,5 +1,6 @@
 import {
   ContentMapping,
+  EligibleLesson,
   LearningRole,
   LearningTrail,
   LearningTrailItem,
@@ -10,6 +11,7 @@ import {
   Weekday,
 } from '@/types/trilha';
 import { MOCK_CONTENT_ITEMS, resolveContentMapping } from '@/lib/mocks/onboardingMocks';
+import { mockEligibleLessons } from '@/lib/mocks/trilhaMocks';
 
 type UserAnswers = Record<string, string[]>;
 type ContentResolver = (mapping: ContentMapping) => ResolvedContent[];
@@ -94,7 +96,124 @@ export function validateQuestionnaire(questionnaire: Questionnaire): string[] {
   return [...new Set(errors)];
 }
 
-function collectCandidates(answers: UserAnswers, questionnaire: Questionnaire, resolver: ContentResolver): Candidate[] {
+/**
+ * Fração somada ao score por acerto de afinidade.
+ *
+ * Deliberadamente pequena: afinidade **desempata**, nunca decide. Como a
+ * ordenação olha `rolePriority` antes do score, ela também não consegue
+ * promover um `extra` acima de um `essential` mapeado pelo admin.
+ */
+const AFFINITY_WEIGHT = 0.1;
+/** Mínimo para um conteúdo não mapeado entrar sozinho: um acerto de tópico ou problema. */
+const AFFINITY_ENTRY_THRESHOLD = 2;
+
+type AffinitySignal = { tag: string; label: string };
+
+function normalizeTag(value: string): string {
+  return value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+/** As tags que o admin já autorou nas opções que a pessoa marcou. */
+function collectAffinitySignals(answers: UserAnswers, questionnaire: Questionnaire): AffinitySignal[] {
+  const signals: AffinitySignal[] = [];
+
+  questionnaire.questions.forEach((question) => {
+    if (question.type === 'availability') return;
+    const selected = answers[question.id] || [];
+    question.options.forEach((option) => {
+      if (!selected.includes(option.label)) return;
+      (option.tags || []).forEach((tag) => signals.push({ tag: normalizeTag(tag), label: option.label }));
+    });
+  });
+
+  return signals;
+}
+
+function scoreAffinity(lesson: EligibleLesson, signals: AffinitySignal[]): { score: number; label: string | null } {
+  const topics = new Set((lesson.topics || []).map(normalizeTag));
+  const problems = new Set((lesson.problemasQueResolve || []).map(normalizeTag));
+  const level = normalizeTag(lesson.nivel);
+
+  let score = 0;
+  let label: string | null = null;
+
+  signals.forEach((signal) => {
+    if (topics.has(signal.tag) || problems.has(signal.tag)) {
+      score += 2;
+      label = label ?? signal.label;
+    } else if (level === signal.tag) {
+      score += 1;
+      label = label ?? signal.label;
+    }
+  });
+
+  return { score, label };
+}
+
+/**
+ * Aplica a afinidade sobre os candidatos já coletados.
+ *
+ * O motor original só enxergava conteúdo **explicitamente mapeado** por um admin
+ * numa opção de resposta: `tags`, `topics`, `nivel` e `problemasQueResolve` eram
+ * preenchidos na tela de curadoria e nunca lidos. Na prática, um curso novo só
+ * entrava na trilha de alguém se alguém o mapeasse à mão — o oposto de
+ * automático, e insustentável com muitos cursos.
+ *
+ * Aqui esses metadados finalmente pesam: reforçam o score de quem já é candidato
+ * e deixam conteúdo não mapeado entrar como `extra`. Só entra sozinho quem já tem
+ * os pré-requisitos cobertos — puxar uma cadeia inteira de dependências por causa
+ * de um "extra" inflaria a trilha sem que ninguém tenha pedido.
+ */
+function applyAffinity(
+  candidates: Map<string, Candidate>,
+  signals: AffinitySignal[],
+  catalog: EligibleLesson[],
+  resolver: ContentResolver,
+  seenOrder: number,
+): void {
+  if (signals.length === 0) return;
+  let order = seenOrder;
+
+  catalog.forEach((lesson) => {
+    const { score, label } = scoreAffinity(lesson, signals);
+    if (score === 0 || !label) return;
+
+    const existing = candidates.get(lesson.lessonId);
+    if (existing) {
+      existing.score += score * AFFINITY_WEIGHT;
+      return;
+    }
+
+    if (score < AFFINITY_ENTRY_THRESHOLD) return;
+    const prerequisitesReady = (lesson.prerequisitos || []).every((id) => candidates.has(id));
+    if (!prerequisitesReady) return;
+
+    const [content] = resolver({
+      id: lesson.lessonId,
+      type: 'lesson',
+      title: lesson.title,
+      learningRole: 'extra',
+    });
+    if (!content) return;
+
+    candidates.set(lesson.lessonId, {
+      ...content,
+      score: score * AFFINITY_WEIGHT,
+      learningRole: 'extra',
+      firstSeen: order,
+      reasons: new Set([`seu interesse em ${label}`]),
+      warnings: [],
+    });
+    order += 1;
+  });
+}
+
+function collectCandidates(
+  answers: UserAnswers,
+  questionnaire: Questionnaire,
+  resolver: ContentResolver,
+  catalog: EligibleLesson[] = mockEligibleLessons,
+): Candidate[] {
   const candidates = new Map<string, Candidate>();
   let seenOrder = 0;
 
@@ -130,6 +249,10 @@ function collectCandidates(answers: UserAnswers, questionnaire: Questionnaire, r
       });
     });
   });
+
+  // Antes da varredura de pré-requisitos: o que a afinidade trouxer também
+  // precisa ter suas dependências resolvidas e entrar na ordenação topológica.
+  applyAffinity(candidates, collectAffinitySignals(answers, questionnaire), catalog, resolver, seenOrder);
 
   const ensurePrerequisite = (id: string, inheritedScore: number, path: string[]): void => {
     if (path.includes(id)) {
@@ -271,7 +394,24 @@ export function generateLearningTrail(
     };
   });
 
-  const items = schedulePendingItems(draftItems, availability, startDate);
+  /*
+   * Conteúdo concluído que deixou de ser recomendado continua na trilha.
+   *
+   * O mapa acima só preservava o que voltasse a ser candidato: mudar uma resposta
+   * apagava do histórico tudo que a nova combinação não mapeia. Como as pesquisas
+   * de recalibração regeneram a trilha com frequência, isso derrubaria sequência,
+   * minutos estudados e percentual concluído a cada ajuste — a pessoa perderia
+   * trabalho que realmente fez. Recalibrar muda o que vem pela frente, nunca o
+   * que já passou.
+   */
+  const candidateIds = new Set(draftItems.map((item) => item.id));
+  const retainedCompleted = [...existingCompleted.values()].filter((item) => !candidateIds.has(item.id));
+  const orderedItems = [...retainedCompleted, ...draftItems].map((item, index) => ({
+    ...item,
+    order: index + 1,
+  }));
+
+  const items = schedulePendingItems(orderedItems, availability, startDate);
   return {
     formatVersion: 3,
     userId,

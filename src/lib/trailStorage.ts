@@ -12,9 +12,14 @@ export type StorageReadResult<T> = {
   migrated?: boolean;
 };
 
-export function loadQuestionnaire(): Questionnaire {
-  if (typeof window === 'undefined') return mockQuestionnaire;
-  const raw = window.localStorage.getItem(QUESTIONNAIRE_STORAGE_KEY);
+/**
+ * @param rawInput conteúdo já lido do storage. Passar explicitamente permite que
+ * quem observa a chave (ver `useTrailStore`) reaproveite o próprio snapshot como
+ * chave de cache, em vez de reler o storage a cada render.
+ */
+export function loadQuestionnaire(rawInput?: string | null): Questionnaire {
+  if (rawInput === undefined && typeof window === 'undefined') return mockQuestionnaire;
+  const raw = rawInput === undefined ? window.localStorage.getItem(QUESTIONNAIRE_STORAGE_KEY) : rawInput;
   if (!raw) return mockQuestionnaire;
   try {
     const parsed = JSON.parse(raw) as Questionnaire;
@@ -61,9 +66,10 @@ function migrateLegacyTrail(parsed: { userId?: string; items?: Array<{ lessonId?
   };
 }
 
-export function readLearningTrail(): StorageReadResult<LearningTrail> {
-  if (typeof window === 'undefined') return { data: null };
-  const raw = window.localStorage.getItem(TRAIL_STORAGE_KEY);
+/** @param rawInput ver `loadQuestionnaire` — mesma razão. */
+export function readLearningTrail(rawInput?: string | null): StorageReadResult<LearningTrail> {
+  if (rawInput === undefined && typeof window === 'undefined') return { data: null };
+  const raw = rawInput === undefined ? window.localStorage.getItem(TRAIL_STORAGE_KEY) : rawInput;
   if (!raw) return { data: null };
   try {
     const parsed = JSON.parse(raw) as LearningTrail & { items?: unknown[] };

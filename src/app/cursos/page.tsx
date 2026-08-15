@@ -7,21 +7,31 @@ import CourseCard from "@/components/CourseCard";
 import { CourseIcon } from "@/components/ui/AnimatedIcon";
 import { Rise } from "@/components/ui/Rise";
 import { CATALOG_COURSES } from "@/lib/catalog";
+import { rankCatalogByAffinity } from "@/lib/studentHome";
+import { useTrailStore } from "@/lib/useTrailStore";
 
 const categories = ["Todos", ...Array.from(new Set(CATALOG_COURSES.map((course) => course.category)))];
 
 export default function CoursesPage() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Todos");
+  // A página prometia "ordenados pela sua afinidade" sobre uma lista na ordem
+  // original do arquivo. Agora a promessa e a ordem são a mesma coisa.
+  const { trail, questionnaire } = useTrailStore();
+
+  const rankedCourses = useMemo(
+    () => rankCatalogByAffinity(CATALOG_COURSES, trail, questionnaire),
+    [trail, questionnaire],
+  );
 
   const filteredCourses = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("pt-BR");
-    return CATALOG_COURSES.filter((course) => {
+    return rankedCourses.filter((course) => {
       const matchesCategory = category === "Todos" || course.category === category;
       const matchesQuery = !normalized || `${course.title} ${course.description} ${course.category}`.toLocaleLowerCase("pt-BR").includes(normalized);
       return matchesCategory && matchesQuery;
     });
-  }, [category, query]);
+  }, [category, query, rankedCourses]);
 
   const isFiltered = query.trim().length > 0 || category !== "Todos";
 
@@ -86,7 +96,9 @@ export default function CoursesPage() {
             {category !== "Todos" && <span className="text-muted"> · {category}</span>}
           </p>
           <div className="flex items-center gap-3">
-            <p className="hidden text-xs font-semibold text-muted sm:block">Ordenados pela sua afinidade</p>
+            <p className="hidden text-xs font-semibold text-muted sm:block">
+              {trail ? "Ordenados pela sua afinidade" : "Ordenados pelo catálogo"}
+            </p>
             {isFiltered && (
               <>
                 <Separator orientation="vertical" className="hidden h-4 sm:block" />

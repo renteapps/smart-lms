@@ -3,13 +3,13 @@
 import { ArrowLeft, Save, Upload } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { MOCK_COURSE, Lesson, ContentBlock } from "@/lib/mockData";
 import dynamic from 'next/dynamic';
 
 const BlockEditor = dynamic(() => import("@/components/admin/editor/BlockEditor").then((mod) => mod.default), { ssr: false });
 
-export default function AulaAdminFormPage() {
+function AulaAdminFormContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -255,5 +255,13 @@ export default function AulaAdminFormPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function AulaAdminFormPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted">Carregando aula...</div>}>
+      <AulaAdminFormContent />
+    </Suspense>
   );
 }
