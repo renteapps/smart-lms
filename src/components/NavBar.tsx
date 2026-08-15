@@ -26,7 +26,10 @@ export default function NavBar() {
   const reduceMotion = useReducedMotion();
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 8);
+    const handleScroll = () => {
+      const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      setIsScrolled(scrollY > 12);
+    };
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
@@ -42,26 +45,19 @@ export default function NavBar() {
 
   return (
     /*
-     * No topo o header é uma faixa full-bleed; ao rolar ele se recolhe numa
-     * pílula flutuante de liquid glass. Só transitam medidas explícitas
-     * (altura, max-width, raio, padding) — `max-width` em vez de `width` para
-     * que em telas estreitas a pílula continue acompanhando o container e a
-     * animação não tenha nada a interpolar.
+     * No topo o header é uma faixa full-bleed com blur e opacidade reforçados;
+     * ao rolar ele se recolhe numa pílula flutuante de liquid glass.
      */
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50 border-b border-transparent transition-[background-color,padding-top] duration-[var(--duration-md)] ease-[var(--ease-precise)]",
+        "fixed inset-x-0 top-0 z-50 transition-[background-color,padding-top,border-color,box-shadow] duration-[var(--duration-md)] ease-[var(--ease-precise)]",
         isScrolled
-          ? /*
-             * Rolado, o header não pode ter *nenhum* backdrop-filter — nem
-             * `blur(0)`. Qualquer valor diferente de `none` cria um backdrop
-             * root e a pílula filha passa a enxergar só o header vazio atrás
-             * dela: o vidro vira uma folha transparente e o texto da página
-             * atravessa o menu.
-             */
-            "bg-transparent pt-2 sm:pt-3"
-          : "bg-background/60 pt-0 backdrop-blur-md",
+          ? "pointer-events-none border-b border-transparent bg-transparent pt-2 sm:pt-3"
+          : "border-b border-border/40 bg-background/85 pt-0 backdrop-blur-xl shadow-xs",
       )}
+      style={{
+        WebkitBackdropFilter: isScrolled ? undefined : "blur(20px)",
+      }}
     >
       <div
         className={cn(
@@ -70,8 +66,8 @@ export default function NavBar() {
           isScrolled
             ? /* 30px = metade da altura: pílula exata e, ao contrário de
                  `rounded-full` (infinito), um raio que dá para interpolar. */
-              "liquid-glass h-[60px] max-w-[72rem] rounded-[30px] pl-4 pr-2 sm:pr-3"
-            : "h-[76px] max-w-[80rem] rounded-none px-0",
+              "pointer-events-auto liquid-glass h-[60px] max-w-[72rem] rounded-[30px] pl-4 pr-2 sm:pr-3"
+            : "pointer-events-auto h-[76px] max-w-[80rem] rounded-none px-0",
         )}
       >
         <div className="flex min-w-0 items-center gap-9">

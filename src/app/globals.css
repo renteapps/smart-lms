@@ -88,9 +88,9 @@
   /* ---- Materiais (acrílico) ---- */
   --material-blur: 24px;
   --material-saturate: 180%;
-  --material-thin: color-mix(in oklab, var(--surface) 44%, transparent);
-  --material-regular: color-mix(in oklab, var(--surface) 68%, transparent);
-  --material-thick: color-mix(in oklab, var(--surface) 86%, transparent);
+  --material-thin: color-mix(in oklab, var(--surface) 65%, transparent);
+  --material-regular: color-mix(in oklab, var(--surface) 85%, transparent);
+  --material-thick: color-mix(in oklab, var(--surface) 92%, transparent);
   --material-edge: color-mix(in oklab, white 72%, transparent);
 
   /*
@@ -128,9 +128,9 @@
   --hairline: color-mix(in oklab, white 10%, transparent);
   --hairline-strong: color-mix(in oklab, white 18%, transparent);
 
-  --material-thin: color-mix(in oklab, var(--surface) 40%, transparent);
-  --material-regular: color-mix(in oklab, var(--surface) 64%, transparent);
-  --material-thick: color-mix(in oklab, var(--surface) 84%, transparent);
+  --material-thin: color-mix(in oklab, var(--surface) 65%, transparent);
+  --material-regular: color-mix(in oklab, var(--surface) 85%, transparent);
+  --material-thick: color-mix(in oklab, var(--surface) 92%, transparent);
   --material-edge: color-mix(in oklab, white 14%, transparent);
 
   --glass-rim: color-mix(in oklab, white 36%, transparent);
@@ -438,7 +438,7 @@
       brightness(1.03);
     -webkit-backdrop-filter: blur(var(--material-blur)) saturate(var(--material-saturate))
       brightness(1.03);
-    border: 0;
+    border: 1px solid var(--hairline);
     box-shadow:
       var(--elev-4),
       inset 0 1px 0 var(--material-edge),

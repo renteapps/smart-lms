@@ -76,7 +76,7 @@ export default function ChatSticker() {
 
         <Popover.Content
           placement="top end"
-          className="liquid-glass h-[min(32rem,calc(100vh-9rem))] w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl p-0"
+          className="h-[min(32rem,calc(100vh-9rem))] w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-surface p-0 shadow-elev-4"
         >
           <Popover.Dialog aria-label="Assistente de IA" className="flex h-full flex-col p-0">
             <header className="flex items-center gap-3 px-5 py-4">
