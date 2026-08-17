@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { AlertDialog, Button, Card, Input, TextField } from '@heroui/react';
-import { ContentBlock } from '@/lib/mockData';
+import { ContentBlock } from '@/types/course';
 import { Trash2, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Plus } from 'lucide-react';
 
 interface TableBlockEditorProps {

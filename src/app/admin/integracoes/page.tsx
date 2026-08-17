@@ -6,6 +6,14 @@ import { PageHeader } from "@/components/ui/editorial";
 
 const integrations = [
   {
+    name: "OpenRouter (IAs)",
+    slug: "openrouter",
+    description: "Conecte os modelos de IA mais avançados (Claude 3.5, GPT-4o, Gemini 2.0, DeepSeek R1) com uma única chave de API para seus Agentes e Tutores.",
+    logo: "https://openrouter.ai/favicon.ico",
+    status: "active",
+    badge: "Inteligência Artificial",
+  },
+  {
     name: "Resend",
     slug: "resend",
     description: "Disparos de e-mails transacionais (boas-vindas, matrícula, certificados) e notificações em tempo real.",
@@ -36,7 +44,7 @@ export default function IntegracoesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Integrações"
-        description="Conecte sua plataforma a serviços externos de pagamentos e marketing."
+        description="Conecte sua plataforma a serviços externos de inteligência artificial, pagamentos e e-mails."
       />
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

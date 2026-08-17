@@ -188,4 +188,28 @@ describe('readAgentCatalog', () => {
     localStorage.setItem(AGENT_CATALOG_STORAGE_KEY, JSON.stringify({ overrides: 'nada' }));
     expect(readAgentCatalog()).toEqual({ overrides: [], deletedSeedIds: [] });
   });
+
+  it('preserva vínculos de múltiplos cursos e planos ao salvar e ler', () => {
+    const agenteComVinculos = makeAgent({
+      id: 'ag-vinculos',
+      slug: 'vinculos',
+      name: 'Agente Vinculado',
+      courseIds: ['c1', 'c2'],
+      courseTitles: ['Curso 1', 'Curso 2'],
+      planIds: ['2', '3'],
+      planNames: ['Plano Pro', 'Plano Vitalício'],
+    });
+
+    localStorage.setItem(
+      AGENT_CATALOG_STORAGE_KEY,
+      JSON.stringify({ overrides: [agenteComVinculos], deletedSeedIds: [] }),
+    );
+
+    const snapshot = readAgentCatalog();
+    expect(snapshot.overrides).toHaveLength(1);
+    expect(snapshot.overrides[0].courseIds).toEqual(['c1', 'c2']);
+    expect(snapshot.overrides[0].planIds).toEqual(['2', '3']);
+    expect(snapshot.overrides[0].courseTitles).toEqual(['Curso 1', 'Curso 2']);
+    expect(snapshot.overrides[0].planNames).toEqual(['Plano Pro', 'Plano Vitalício']);
+  });
 });

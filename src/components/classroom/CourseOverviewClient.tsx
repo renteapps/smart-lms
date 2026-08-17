@@ -8,7 +8,8 @@ import { Card, Chip, Disclosure, EmptyState, ProgressBar, Separator, buttonVaria
 import { CourseIcon } from "@/components/ui/AnimatedIcon";
 import { Reveal } from "@/components/ui/Reveal";
 import { Rise } from "@/components/ui/Rise";
-import type { Course, Lesson } from "@/lib/mockData";
+import { useCardTransition } from "@/contexts/CardTransitionContext";
+import type { Course, Lesson } from "@/types/course";
 import { cn } from "@/lib/utils";
 
 type CourseOverviewClientProps = {
@@ -42,9 +43,77 @@ function lessonIcon(lesson: Lesson) {
  * pessoa volta a procurar enquanto navega pelo plano.
  */
 export default function CourseOverviewClient({ course, totalLessons, completedLessons, progressPercentage, nextLesson }: CourseOverviewClientProps) {
+  const { triggerTransition } = useCardTransition();
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>(() => Object.fromEntries(course.modules.map((courseModule) => [courseModule.id, true])));
   const totalMinutes = course.modules.reduce((total, courseModule) => total + courseModule.lessons.reduce((moduleTotal, lesson) => moduleTotal + lesson.durationInMinutes, 0), 0);
   const durationLabel = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}min`;
+
+  const handleNextLessonClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!nextLesson) return;
+    if (
+      e.defaultPrevented ||
+      e.button !== 0 ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.altKey ||
+      e.shiftKey
+    ) {
+      return;
+    }
+
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    triggerTransition({
+      sourceRect: {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        borderRadius: 16,
+      },
+      metadata: {
+        title: nextLesson.title,
+        cover: "https://images.unsplash.com/photo-1552664730-d307ca884978?q=90&w=1800&auto=format&fit=crop",
+        category: LESSON_KIND[nextLesson.type] ?? "Aula",
+        duration: `${nextLesson.durationInMinutes} min`,
+        type: "lesson",
+      },
+      href: `/courses/${course.id}/lessons/${nextLesson.id}`,
+    });
+  };
+
+  const handleLessonRowClick = (lesson: Lesson, e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (
+      e.defaultPrevented ||
+      e.button !== 0 ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.altKey ||
+      e.shiftKey
+    ) {
+      return;
+    }
+
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    triggerTransition({
+      sourceRect: {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        borderRadius: 12,
+      },
+      metadata: {
+        title: lesson.title,
+        cover: "https://images.unsplash.com/photo-1552664730-d307ca884978?q=90&w=1800&auto=format&fit=crop",
+        category: LESSON_KIND[lesson.type] ?? "Aula",
+        duration: `${lesson.durationInMinutes} min`,
+        type: "lesson",
+      },
+      href: `/courses/${course.id}/lessons/${lesson.id}`,
+    });
+  };
 
   return (
     <div className="min-h-screen pt-19">
@@ -86,6 +155,7 @@ export default function CourseOverviewClient({ course, totalLessons, completedLe
             {nextLesson && (
               <Link
                 href={`/courses/${course.id}/lessons/${nextLesson.id}`}
+                onClick={handleNextLessonClick}
                 className={buttonVariants({ variant: "primary", size: "lg", className: "press mt-9 gap-2" })}
               >
                 <Play className="size-4 fill-current" aria-hidden="true" />
@@ -144,6 +214,7 @@ export default function CourseOverviewClient({ course, totalLessons, completedLe
                             <li key={lesson.id} className="border-b border-separator last:border-b-0">
                               <Link
                                 href={`/courses/${course.id}/lessons/${lesson.id}`}
+                                onClick={(e) => handleLessonRowClick(lesson, e)}
                                 className="group flex min-h-18 items-center gap-4 px-5 py-4 transition-colors duration-[var(--duration-md)] hover:bg-accent-soft/40 sm:px-6"
                               >
                                 <span
@@ -229,6 +300,7 @@ export default function CourseOverviewClient({ course, totalLessons, completedLe
                 {nextLesson && (
                   <Link
                     href={`/courses/${course.id}/lessons/${nextLesson.id}`}
+                    onClick={handleNextLessonClick}
                     className={buttonVariants({ variant: "primary", fullWidth: true, className: "mt-7 gap-2" })}
                   >
                     <Play className="size-4 fill-current" aria-hidden="true" />

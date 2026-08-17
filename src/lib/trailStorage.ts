@@ -1,6 +1,6 @@
 import { LearningTrail, LearningTrailItem, Questionnaire } from '@/types/trilha';
 import { DEFAULT_AVAILABILITY, schedulePendingItems, toLocalDateKey } from '@/lib/matching';
-import { mockEligibleLessons, mockQuestionnaire } from '@/lib/mocks/trilhaMocks';
+import { mockEligibleLessons, mockQuestionnaire } from '@/lib/seed/questionnaire';
 import { recordTrailEvent } from '@/lib/trailAnalytics';
 
 export const QUESTIONNAIRE_STORAGE_KEY = '@smartlms:questionnaire:v3';

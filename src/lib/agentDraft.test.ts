@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { collectScriptWarnings } from './agentDraft';
-import { AGENTS } from './mocks/agenteMocks';
+import { AGENTS } from './seed/agents';
 import { Agent } from '@/types/agente';
 
 const base: Agent = {

@@ -52,6 +52,15 @@ export interface Agent {
   /** Quem publicou o agente e de qual curso ele nasceu. */
   createdBy: string;
   courseTitle: string;
+  courseId?: string;
+  /** IDs dos cursos vinculados ao agente. */
+  courseIds?: string[];
+  /** Nomes dos cursos vinculados ao agente. */
+  courseTitles?: string[];
+  /** IDs dos planos de assinatura vinculados ao agente. */
+  planIds?: string[];
+  /** Nomes dos planos de assinatura vinculados ao agente. */
+  planNames?: string[];
   skills: string[];
   conversationsCount: number;
   rating: number;

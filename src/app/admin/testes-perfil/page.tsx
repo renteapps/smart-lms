@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { MOCK_PROFILE_TESTS } from '@/lib/mocks/profileTests';
+import { MOCK_PROFILE_TESTS } from '@/lib/seed/profileTests';
 import { ProfileTest } from '@/types/profileTest';
 import { TestCard } from '@/components/admin/profile-tests/TestCard';
 import { TestPreview } from '@/components/admin/profile-tests/TestPreview';

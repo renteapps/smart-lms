@@ -17,6 +17,7 @@ import { contentHref } from '@/lib/studentHome';
 import { createDemoLearningTrail } from '@/lib/mocks/trilhaDemo';
 import { recordTrailEvent, TrailAnalyticsEvent, TrailAnalyticsEventType } from '@/lib/trailAnalytics';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { useCardTransition } from '@/contexts/CardTransitionContext';
 import { StatCard } from '@/components/ui/editorial';
 import { TrailIcon } from '@/components/ui/AnimatedIcon';
 import { Reveal } from '@/components/ui/Reveal';
@@ -59,10 +60,48 @@ type TrailContentCardProps = {
 };
 
 function TrailContentCard({ item, today, subdued = false }: TrailContentCardProps) {
+  const { triggerTransition } = useCardTransition();
   const href = contentHref(item);
   const external = item.type === 'external_link';
   const completed = item.status === 'completed';
   const status = statusVisual(item, today);
+
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (
+      external ||
+      e.defaultPrevented ||
+      e.button !== 0 ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.altKey ||
+      e.shiftKey ||
+      !href ||
+      href === '#' ||
+      href.startsWith('http')
+    ) {
+      return;
+    }
+
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    triggerTransition({
+      sourceRect: {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        borderRadius: 16,
+      },
+      metadata: {
+        title: item.title,
+        cover: item.cover || 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?q=85&w=1000&auto=format&fit=crop',
+        category: item.moduleName || roleLabels[item.learningRole],
+        duration: `${item.durationMin} min`,
+        type: 'lesson',
+      },
+      href,
+    });
+  };
 
   const card = (
     <Card className="lift h-full gap-0 border-hairline p-5">
@@ -120,7 +159,7 @@ function TrailContentCard({ item, today, subdued = false }: TrailContentCardProp
   return external ? (
     <a href={href} target="_blank" rel="noreferrer" className={classes}>{body}</a>
   ) : (
-    <Link href={href} className={classes}>{body}</Link>
+    <Link href={href} onClick={handleClick} className={classes}>{body}</Link>
   );
 }
 

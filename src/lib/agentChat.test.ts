@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getAgentReply, matchScriptedReply, normalizeText } from './agentChat';
 import { deriveConversationTitle } from './agentChatStorage';
-import { AGENTS } from './mocks/agenteMocks';
+import { AGENTS } from './seed/agents';
 import { Agent } from '@/types/agente';
 
 const agent: Agent = {

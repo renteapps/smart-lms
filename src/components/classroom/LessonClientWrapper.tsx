@@ -1,21 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState, useTransition } from "react";
 import { ArrowLeft, ArrowRight, Brain, Check, Maximize, Minimize, Star } from "lucide-react";
 import { Button, Chip, Separator, Tooltip, buttonVariants } from "@heroui/react";
 import VideoPlayer from "./VideoPlayer";
 import LessonTabs from "./LessonTabs";
 import ProfileTestRunner from "./ProfileTestRunner";
-import { Lesson, MOCK_COURSE } from "@/lib/mockData";
-import { MOCK_PROFILE_TESTS } from "@/lib/mocks/profileTests";
+import type { Course, Lesson } from "@/types/course";
+import type { ProfileTest } from "@/types/profileTest";
+import type { StudentNote } from "@/lib/data/notes";
 import { useZenMode } from "@/contexts/ZenModeContext";
-import { readLearningTrail, setTrailItemCompletion } from "@/lib/trailStorage";
+import { rateLesson, setLessonCompletion } from "@/app/actions/progress";
+import { setTrailItemCompletion } from "@/app/actions/trail";
 import { cn } from "@/lib/utils";
 
 interface LessonClientWrapperProps {
   lesson: Lesson;
+  course: Course;
   courseId: string;
+  profileTests: ProfileTest[];
+  initialNote: StudentNote | null;
 }
 
 /**
@@ -26,33 +31,35 @@ interface LessonClientWrapperProps {
  * (concluir, avaliar, foco) ficam numa linha só, à esquerda; a navegação entre
  * etapas fica à direita, onde a mão procura o "próximo".
  */
-export default function LessonClientWrapper({ lesson, courseId }: LessonClientWrapperProps) {
-  // Using local state to simulate DB completion
+export default function LessonClientWrapper({
+  lesson,
+  course,
+  courseId,
+  profileTests,
+  initialNote,
+}: LessonClientWrapperProps) {
+  /*
+   * O estado local é otimista: a marcação aparece na hora e a Server Action
+   * grava em seguida. O valor que chega do servidor é a origem da verdade a
+   * cada navegação, então não há espaço para os dois divergirem por muito tempo.
+   */
   const [isCompleted, setIsCompleted] = useState(lesson.isCompleted || false);
   const [rating, setRating] = useState(lesson.userRating || 0);
   const [hoveredStar, setHoveredStar] = useState(0);
+  const [, startTransition] = useTransition();
   const { isZenMode, toggleZenMode } = useZenMode();
 
   const isProfileTest = lesson.type === 'profile_test';
 
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      const trailItem = readLearningTrail().data?.items.find((item) => item.id === lesson.id);
-      if (trailItem) setIsCompleted(trailItem.status === 'completed');
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [lesson.id]);
-
-  // Find profile test if applicable
   const targetProfileTest = isProfileTest
-    ? MOCK_PROFILE_TESTS.find((t) => t.id === lesson.profileTestId) || MOCK_PROFILE_TESTS[0]
+    ? profileTests.find((test) => test.id === lesson.profileTestId) ?? profileTests[0] ?? null
     : null;
 
   // Find previous and next lessons for navigation
   let prevLessonId: string | null = null;
   let nextLessonId: string | null = null;
 
-  const allLessons = MOCK_COURSE.modules.flatMap(m => m.lessons);
+  const allLessons = course.modules.flatMap((mod) => mod.lessons);
   const currentIndex = allLessons.findIndex(l => l.id === lesson.id);
 
   if (currentIndex > 0) {
@@ -62,10 +69,17 @@ export default function LessonClientWrapper({ lesson, courseId }: LessonClientWr
     nextLessonId = allLessons[currentIndex + 1].id;
   }
 
+  const persistCompletion = (completed: boolean) => {
+    startTransition(async () => {
+      await setLessonCompletion(lesson.id, completed, courseId);
+      // A aula também pode estar agendada na trilha; manter os dois em sincronia.
+      await setTrailItemCompletion(lesson.id, completed);
+    });
+  };
+
   const handleMarkComplete = (e?: React.MouseEvent<Element>) => {
-    const newStatus = true;
-    setIsCompleted(newStatus);
-    setTrailItemCompletion(lesson.id, true);
+    setIsCompleted(true);
+    persistCompletion(true);
 
     // Trigger confetti if marking as completed
     const rect = e?.currentTarget?.getBoundingClientRect();
@@ -91,19 +105,22 @@ export default function LessonClientWrapper({ lesson, courseId }: LessonClientWr
       handleMarkComplete(e);
     } else {
       setIsCompleted(false);
-      setTrailItemCompletion(lesson.id, false);
+      persistCompletion(false);
     }
   };
 
   const handleVideoEnded = () => {
     if (!isCompleted) {
       setIsCompleted(true);
-      setTrailItemCompletion(lesson.id, true);
+      persistCompletion(true);
     }
   };
 
   const handleRate = (value: number) => {
     setRating(value);
+    startTransition(async () => {
+      await rateLesson(lesson.id, value);
+    });
   };
 
   return (
@@ -240,7 +257,7 @@ export default function LessonClientWrapper({ lesson, courseId }: LessonClientWr
       )}
 
       {/* Tabs */}
-      <LessonTabs lesson={lesson} />
+      <LessonTabs lesson={lesson} initialNote={initialNote} />
     </div>
   );
 }

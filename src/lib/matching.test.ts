@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applySessionFeedback, generateLearningTrail, postponeTrailSession, removeTrailItem, replanLearningTrail, restoreTrailItem, schedulePendingItems, updateTrailAvailability, validateQuestionnaire } from './matching';
-import { mockQuestionnaire } from './mocks/trilhaMocks';
+import { mockQuestionnaire } from './seed/questionnaire';
 import { ContentMapping, LearningTrailItem, Questionnaire } from '@/types/trilha';
 
 describe('adaptive learning trail', () => {

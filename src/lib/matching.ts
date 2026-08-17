@@ -1,5 +1,4 @@
 import {
-  ContentMapping,
   EligibleLesson,
   LearningRole,
   LearningTrail,
@@ -10,11 +9,10 @@ import {
   StudyAvailability,
   Weekday,
 } from '@/types/trilha';
-import { MOCK_CONTENT_ITEMS, resolveContentMapping } from '@/lib/mocks/onboardingMocks';
-import { mockEligibleLessons } from '@/lib/mocks/trilhaMocks';
+import { createContentIndex, EMPTY_CONTENT_INDEX, type ContentIndex, type ContentResolver } from '@/lib/contentCatalog';
+import { mockEligibleLessons, TRAIL_CONTENT_INDEX } from '@/lib/seed/questionnaire';
 
 type UserAnswers = Record<string, string[]>;
-type ContentResolver = (mapping: ContentMapping) => ResolvedContent[];
 type Candidate = ResolvedContent & {
   score: number;
   learningRole: LearningRole;
@@ -58,21 +56,21 @@ function nextPreferredDate(from: Date, weekdays: Weekday[], includeFrom = true):
   return cursor;
 }
 
-function mappingForContentId(id: string): ContentMapping | null {
-  const source = MOCK_CONTENT_ITEMS.find((item) => item.id === id);
-  if (!source) return null;
-  return {
-    id: source.id,
-    type: source.type,
-    title: source.title,
-    slug: source.slug,
-    url: source.url,
-    estimatedDurationMin: source.estimatedDurationMin,
-    learningRole: 'essential',
-  };
+function normalizeIndex(indexOrResolver?: ContentIndex | ContentResolver): ContentIndex {
+  if (!indexOrResolver) return TRAIL_CONTENT_INDEX;
+  if (typeof indexOrResolver === 'function') {
+    return { ...createContentIndex([], mockEligibleLessons), resolve: indexOrResolver };
+  }
+  return indexOrResolver;
 }
 
-export function validateQuestionnaire(questionnaire: Questionnaire): string[] {
+
+
+export function validateQuestionnaire(
+  questionnaire: Questionnaire,
+  indexOrResolver?: ContentIndex | ContentResolver,
+): string[] {
+  const index = normalizeIndex(indexOrResolver);
   const errors: string[] = [];
   const availabilityQuestions = questionnaire.questions.filter((question) => question.type === 'availability');
 
@@ -84,7 +82,7 @@ export function validateQuestionnaire(questionnaire: Questionnaire): string[] {
     if (question.options.length === 0) errors.push(`A pergunta “${question.text}” precisa ter ao menos uma opção.`);
     question.options.forEach((option) => {
       option.contentMappings?.forEach((mapping) => {
-        const resolved = resolveContentMapping(mapping);
+        const resolved = index.resolve(mapping);
         if (resolved.length === 0) errors.push(`“${mapping.title}” não pôde ser encontrado ou expandido.`);
         if ((mapping.type === 'article' || mapping.type === 'external_link') && !mapping.estimatedDurationMin) {
           errors.push(`Informe a duração estimada de “${mapping.title}”.`);
@@ -211,9 +209,10 @@ function applyAffinity(
 function collectCandidates(
   answers: UserAnswers,
   questionnaire: Questionnaire,
-  resolver: ContentResolver,
-  catalog: EligibleLesson[] = mockEligibleLessons,
+  index: ContentIndex,
 ): Candidate[] {
+  const resolver: ContentResolver = index.resolve;
+  const catalog: EligibleLesson[] = index.eligibleLessons;
   const candidates = new Map<string, Candidate>();
   let seenOrder = 0;
 
@@ -263,8 +262,8 @@ function collectCandidates(
 
     let candidate = candidates.get(id);
     if (!candidate) {
-      const mapping = mappingForContentId(id);
-      const content = mapping ? resolveContentMapping(mapping)[0] : undefined;
+      const mapping = index.mappingFor(id);
+      const content = mapping ? resolver(mapping)[0] : undefined;
       if (!content) {
         const dependent = candidates.get(path.at(-1) || '');
         dependent?.warnings.push(`Pré-requisito ${id} não encontrado.`);
@@ -358,13 +357,14 @@ export function generateLearningTrail(
   availability: StudyAvailability,
   existingTrail?: LearningTrail | null,
   startDate = new Date(),
-  resolver: ContentResolver = resolveContentMapping,
+  indexOrResolver?: ContentIndex | ContentResolver,
 ): LearningTrail {
+  const index = normalizeIndex(indexOrResolver);
   const existingCompleted = new Map(
     (existingTrail?.items || []).filter((item) => item.status === 'completed').map((item) => [item.id, item]),
   );
 
-  const candidates = collectCandidates(answers, questionnaire, resolver);
+  const candidates = collectCandidates(answers, questionnaire, index);
   const excludedIds = new Set((existingTrail?.excludedItems || []).map((item) => item.id));
   const draftItems: LearningTrailItem[] = candidates.filter((candidate) => !excludedIds.has(candidate.id)).map((candidate, index) => {
     const completed = existingCompleted.get(candidate.id);

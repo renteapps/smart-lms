@@ -73,13 +73,27 @@ export default function AgentCard({ agent, conversationCount, featured = false }
             )}
           </div>
 
-          <p className="mt-4 border-t border-hairline pt-4 text-xs leading-5 text-muted">
-            Publicado por <span className="font-semibold text-foreground">{agent.createdBy}</span>
-            <span className="mx-1.5" aria-hidden="true">
-              ·
-            </span>
-            {agent.courseTitle}
-          </p>
+          <div className="mt-4 border-t border-hairline pt-4 text-xs leading-5 text-muted">
+            <p>
+              Publicado por <span className="font-semibold text-foreground">{agent.createdBy}</span>
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              <span className="text-accent font-medium">
+                {agent.courseTitles && agent.courseTitles.length > 0
+                  ? agent.courseTitles.length === 1
+                    ? agent.courseTitles[0]
+                    : `${agent.courseTitles[0]} (+${agent.courseTitles.length - 1} cursos)`
+                  : agent.courseTitle || "Acesso Geral"}
+              </span>
+              {agent.planNames && agent.planNames.length > 0 && (
+                <Chip size="sm" variant="soft" color="accent" className="text-[10px] py-0 px-1.5">
+                  {agent.planNames.length === 1
+                    ? agent.planNames[0]
+                    : `${agent.planNames[0]} (+${agent.planNames.length - 1})`}
+                </Chip>
+              )}
+            </div>
+          </div>
 
           <div className="mt-auto flex items-end justify-between gap-4 pt-5">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-muted" data-numeric>

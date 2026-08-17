@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { mockQuestionnaire } from '@/lib/mocks/trilhaMocks';
+import { mockQuestionnaire } from '@/lib/seed/questionnaire';
 
 export async function POST(request: Request) {
   try {

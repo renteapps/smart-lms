@@ -3,8 +3,11 @@
 import { ArrowLeft, Save, Upload } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, Suspense } from "react";
-import { MOCK_COURSE, Lesson, ContentBlock } from "@/lib/mockData";
+import { useState, useEffect, useTransition, Suspense } from "react";
+import type { Lesson, ContentBlock } from "@/types/course";
+import { createClient } from "@/lib/supabase/client";
+import { getCourse } from "@/lib/data/courses";
+import { saveLesson } from "@/app/actions/admin/catalog";
 import dynamic from 'next/dynamic';
 
 const BlockEditor = dynamic(() => import("@/components/admin/editor/BlockEditor").then((mod) => mod.default), { ssr: false });
@@ -19,6 +22,8 @@ function AulaAdminFormContent() {
   const moduleId = searchParams.get("module");
   
   const isNew = aulaId === "nova";
+  const [isSaving, startSaving] = useTransition();
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<Partial<Lesson>>({
     title: "",
@@ -33,21 +38,21 @@ function AulaAdminFormContent() {
   });
 
   useEffect(() => {
-    if (!isNew) {
-      // Find the lesson in MOCK_COURSE
-      let foundLesson = null;
-      for (const module of MOCK_COURSE.modules) {
-        const lesson = module.lessons.find(l => l.id === aulaId);
-        if (lesson) {
-          foundLesson = lesson;
-          break;
-        }
-      }
-      if (foundLesson) {
-        setFormData(foundLesson);
-      }
-    }
-  }, [aulaId, isNew]);
+    if (isNew) return;
+    let active = true;
+
+    (async () => {
+      const course = await getCourse(createClient(), courseId);
+      const found = course?.modules
+        .flatMap((mod) => mod.lessons)
+        .find((lesson) => lesson.id === aulaId);
+      if (active && found) setFormData(found);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [aulaId, courseId, isNew]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -56,10 +61,29 @@ function AulaAdminFormContent() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate save
-    console.log("Saving lesson:", formData, "to module:", moduleId);
-    // Redirect back to modules list
-    router.push(`/admin/cursos/${courseId}/modulos`);
+    setSaveError(null);
+
+    // Numa aula existente o módulo vem do próprio registro; ao criar, da URL.
+    const targetModuleId = formData.moduleId || moduleId;
+    if (!targetModuleId) {
+      setSaveError("Não foi possível identificar o módulo desta aula.");
+      return;
+    }
+
+    startSaving(async () => {
+      const result = await saveLesson(targetModuleId, {
+        ...formData,
+        id: isNew ? undefined : aulaId,
+        durationInMinutes: Number(formData.durationInMinutes) || 0,
+      });
+
+      if (result.success) {
+        router.push(`/admin/cursos/${courseId}/modulos`);
+        router.refresh();
+      } else {
+        setSaveError(result.message ?? "Não foi possível salvar a aula.");
+      }
+    });
   };
 
   return (
@@ -237,6 +261,12 @@ function AulaAdminFormContent() {
           </div>
         </div>
 
+        {saveError && (
+          <p role="alert" className="text-sm text-danger">
+            {saveError}
+          </p>
+        )}
+
         {/* Botões de Ação */}
         <div className="pt-6 border-t border-border flex items-center justify-end gap-3">
           <Link
@@ -247,10 +277,11 @@ function AulaAdminFormContent() {
           </Link>
           <button
             type="submit"
-            className="px-5 py-2.5 rounded-lg bg-primary text-white font-medium text-sm hover:bg-primary-hover transition-colors shadow-sm flex items-center gap-2"
+            disabled={isSaving}
+            className="px-5 py-2.5 rounded-lg bg-primary text-white font-medium text-sm hover:bg-primary-hover transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60"
           >
             <Save className="w-4 h-4" />
-            Salvar Aula
+            {isSaving ? "Salvando..." : "Salvar Aula"}
           </button>
         </div>
       </form>

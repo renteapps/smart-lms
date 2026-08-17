@@ -122,6 +122,7 @@ const segmentLabels: Record<string, string> = {
   emails: "Modelos de E-mail",
   assinaturas: "Assinaturas (Alunos)",
   historico: "Histórico de Conversas",
+  new: "Nova Empresa",
 };
 
 export function AdminShell({ children }: { children: React.ReactNode }) {

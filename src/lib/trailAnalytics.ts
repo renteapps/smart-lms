@@ -1,7 +1,5 @@
 import { LearningTrail, LearningTrailItem, SessionLoadRating } from '@/types/trilha';
 
-export const ANALYTICS_STORAGE_KEY = '@smartlms:trail-analytics:v1';
-
 export type TrailAnalyticsEventType =
   | 'onboarding_started'
   | 'onboarding_step_viewed'
@@ -41,35 +39,8 @@ export type TrailAnalyticsSummary = {
   feedbackCounts: Record<SessionLoadRating, number>;
 };
 
-function emptyAnalytics(): TrailAnalyticsData {
+export function emptyTrailAnalytics(): TrailAnalyticsData {
   return { formatVersion: 1, events: [] };
-}
-
-export function readTrailAnalytics(): TrailAnalyticsData {
-  if (typeof window === 'undefined') return emptyAnalytics();
-  const raw = window.localStorage.getItem(ANALYTICS_STORAGE_KEY);
-  if (!raw) return emptyAnalytics();
-  try {
-    const parsed = JSON.parse(raw) as TrailAnalyticsData;
-    return parsed.formatVersion === 1 && Array.isArray(parsed.events) ? parsed : emptyAnalytics();
-  } catch {
-    return emptyAnalytics();
-  }
-}
-
-export function recordTrailEvent(type: TrailAnalyticsEventType, payload?: TrailAnalyticsEvent['payload']): void {
-  if (typeof window === 'undefined') return;
-  const analytics = readTrailAnalytics();
-  const event: TrailAnalyticsEvent = {
-    id: `${Date.now()}-${analytics.events.length}`,
-    type,
-    occurredAt: new Date().toISOString(),
-    payload,
-  };
-  window.localStorage.setItem(ANALYTICS_STORAGE_KEY, JSON.stringify({
-    formatVersion: 1,
-    events: [...analytics.events, event].slice(-500),
-  } satisfies TrailAnalyticsData));
 }
 
 export function summarizeTrailAnalytics(data: TrailAnalyticsData, trail: LearningTrail | null): TrailAnalyticsSummary {
@@ -122,4 +93,38 @@ export function summarizeTrailAnalytics(data: TrailAnalyticsData, trail: Learnin
     ignoredContents: [...ignoredMap.values()].sort((a, b) => b.count - a.count),
     feedbackCounts,
   };
+}
+
+export const TRAIL_ANALYTICS_STORAGE_KEY = 'smartlms_trail_analytics';
+
+export function readTrailAnalytics(): TrailAnalyticsData {
+  if (typeof window === 'undefined') return emptyTrailAnalytics();
+  try {
+    const raw = window.localStorage.getItem(TRAIL_ANALYTICS_STORAGE_KEY);
+    if (!raw) return emptyTrailAnalytics();
+    const parsed = JSON.parse(raw);
+    return parsed && Array.isArray(parsed.events) ? parsed : emptyTrailAnalytics();
+  } catch {
+    return emptyTrailAnalytics();
+  }
+}
+
+export function recordTrailEvent(
+  type: TrailAnalyticsEventType,
+  payload?: Record<string, string | number | boolean>,
+): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = readTrailAnalytics();
+    const event: TrailAnalyticsEvent = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      type,
+      occurredAt: new Date().toISOString(),
+      payload,
+    };
+    current.events.push(event);
+    window.localStorage.setItem(TRAIL_ANALYTICS_STORAGE_KEY, JSON.stringify(current));
+  } catch (err) {
+    console.error('Erro ao registrar evento de analytics da trilha:', err);
+  }
 }

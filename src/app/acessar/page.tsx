@@ -29,12 +29,6 @@ function AcessarContent() {
   const urlMessage = searchParams.get("message");
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
-  useEffect(() => {
-    if (!isAuthLoading && isAuthenticated) {
-      router.replace("/");
-    }
-  }, [isAuthLoading, isAuthenticated, router]);
-
   const [authMode, setAuthMode] = useState<string>("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -69,6 +63,14 @@ function AcessarContent() {
           let message = error.message;
           if (error.message.includes("Invalid login credentials")) {
             message = "E-mail ou senha incorretos. Verifique suas credenciais.";
+          } else if (
+            error.message.includes("Invalid path") ||
+            error.message.includes("Failed to fetch") ||
+            error.message.includes("NetworkError")
+          ) {
+            message = "Falha ao conectar aos serviços de autenticação. Verifique sua conexão ou as configurações do Supabase.";
+          } else if (error.message.includes("Email not confirmed")) {
+            message = "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada e spam.";
           }
           setErrorMessage(message);
           return;
@@ -113,6 +115,12 @@ function AcessarContent() {
             error.message.toLowerCase().includes("rate limit")
           ) {
             message = "Muitas solicitações de e-mail foram feitas recentemente. Aguarde alguns minutos antes de tentar novamente.";
+          } else if (
+            error.message.includes("Invalid path") ||
+            error.message.includes("Failed to fetch") ||
+            error.message.includes("NetworkError")
+          ) {
+            message = "Falha ao conectar aos serviços de autenticação. Verifique as configurações do Supabase.";
           }
           setErrorMessage(message);
           return;

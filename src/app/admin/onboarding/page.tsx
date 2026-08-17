@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Route, Save, PlayCircle, BarChart3, ListChecks, Plus, TriangleAlert, Activity, CheckCircle2, Clock3, RefreshCw } from 'lucide-react';
 import { Questionnaire, Question, ContentMapping } from '@/types/trilha';
-import { mockQuestionnaire } from '@/lib/mocks/trilhaMocks';
+import { mockQuestionnaire } from '@/lib/seed/questionnaire';
 import { QuestionEditor } from '@/components/admin/onboarding/QuestionEditor';
 import { ContentPickerModal } from '@/components/admin/onboarding/ContentPickerModal';
 import { TrailPreview } from '@/components/admin/onboarding/TrailPreview';

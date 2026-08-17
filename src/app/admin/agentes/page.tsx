@@ -10,7 +10,6 @@ import {
   ExternalLink,
   MessageSquare,
   Plus,
-  RotateCcw,
   Star,
   Timer,
   Trash2,
@@ -83,11 +82,9 @@ export default function AdminAgentesPage() {
   const {
     agents,
     isLoaded,
-    hasLocalChanges,
     saveAgent,
     duplicateAgent,
     deleteAgent,
-    resetCatalog,
   } = useAgentCatalog();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<AgentStatus | "all">("all");
@@ -107,7 +104,7 @@ export default function AdminAgentesPage() {
       const matchesStatus = statusFilter === "all" || agent.status === statusFilter;
       const matchesCategory = categoryFilter === "all" || agent.category === categoryFilter;
       const haystack = normalizeText(
-        `${agent.name} ${agent.role} ${agent.description} ${agent.courseTitle} ${agent.createdBy} ${agent.skills.join(" ")}`,
+        `${agent.name} ${agent.role} ${agent.description} ${agent.courseTitle} ${(agent.courseTitles || []).join(" ")} ${(agent.planNames || []).join(" ")} ${agent.createdBy} ${agent.skills.join(" ")}`,
       );
       return matchesStatus && matchesCategory && (!term || haystack.includes(term));
     });
@@ -167,13 +164,6 @@ export default function AdminAgentesPage() {
         description="Assistentes publicados pelos admins de curso. Cada agente responde pelo roteiro escrito aqui — saudação, sugestões de partida, respostas por palavra-chave e as saídas de fallback."
         actions={
           <>
-            {/* Sem banco, restaurar as sementes é o único desfazer que existe. */}
-            {hasLocalChanges && (
-              <Button variant="tertiary" onClick={resetCatalog}>
-                <RotateCcw className="size-4" aria-hidden="true" />
-                Restaurar catálogo original
-              </Button>
-            )}
             <Button variant="outline" onClick={() => window.open("/agentes", "_blank")}>
               <ExternalLink className="size-4" aria-hidden="true" />
               Ver página pública
@@ -350,11 +340,24 @@ export default function AdminAgentesPage() {
                             </Table.Cell>
 
                             <Table.Cell>
-                              <p className="max-w-[190px] truncate text-sm font-medium text-accent">
-                                {agent.courseTitle}
+                              <p className="max-w-[210px] truncate text-sm font-medium text-accent">
+                                {agent.courseTitles && agent.courseTitles.length > 0
+                                  ? agent.courseTitles.length === 1
+                                    ? agent.courseTitles[0]
+                                    : `${agent.courseTitles[0]} (+${agent.courseTitles.length - 1})`
+                                  : agent.courseTitle || "Acesso Geral"}
                               </p>
+                              {agent.planNames && agent.planNames.length > 0 && (
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  <Chip color="accent" variant="soft" size="sm" className="text-[10px] py-0 px-1.5">
+                                    {agent.planNames.length === 1
+                                      ? agent.planNames[0]
+                                      : `${agent.planNames[0]} (+${agent.planNames.length - 1})`}
+                                  </Chip>
+                                </div>
+                              )}
                               <p className="mt-1 text-xs text-muted">por {agent.createdBy}</p>
-                              <p className="mt-1 font-mono text-xs text-muted">/agentes/{agent.slug}</p>
+                              <p className="mt-0.5 font-mono text-[11px] text-muted">/agentes/{agent.slug}</p>
                             </Table.Cell>
 
                             <Table.Cell>
@@ -493,6 +496,18 @@ export default function AdminAgentesPage() {
                           </Chip>
                         </div>
                         <p className="mt-2 text-sm leading-relaxed text-muted">{agent.description}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                          <span className="text-accent font-medium">
+                            {agent.courseTitles && agent.courseTitles.length > 0
+                              ? agent.courseTitles.join(", ")
+                              : agent.courseTitle || "Acesso Geral"}
+                          </span>
+                          {agent.planNames && agent.planNames.length > 0 && (
+                            <Chip color="accent" variant="soft" size="sm" className="text-[10px] py-0 px-1.5">
+                              {agent.planNames.join(", ")}
+                            </Chip>
+                          )}
+                        </div>
                       </div>
                     </div>
 

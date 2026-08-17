@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertCircle, ArrowRight, Briefcase, Calendar, Mail, User } from "lucide-react";
+import { AlertCircle, ArrowRight, Calendar, Mail, User } from "lucide-react";
 import {
   Alert,
   Button,
@@ -21,9 +21,11 @@ import {
 import { AuthLayoutShell } from "@/components/auth/AuthLayoutShell";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
+import { PhoneInputField } from "@/components/ui/PhoneInputField";
 import { CAREER_ROLES, GENDER_OPTIONS } from "@/components/profile/ProfileEditor";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { composeFullPhone } from "@/lib/phoneUtils";
 
 function CriarContaContent() {
   const router = useRouter();
@@ -31,14 +33,10 @@ function CriarContaContent() {
   const next = searchParams.get("redirect") || searchParams.get("next") || "/onboarding";
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
-  useEffect(() => {
-    if (!isAuthLoading && isAuthenticated) {
-      router.replace("/");
-    }
-  }, [isAuthLoading, isAuthenticated, router]);
-
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneDdi, setPhoneDdi] = useState("+55");
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState<string>("Feminino");
   const [role, setRole] = useState<string>(CAREER_ROLES[0]);
@@ -77,6 +75,8 @@ function CriarContaContent() {
       return;
     }
 
+    const fullFormattedPhone = phone.trim() ? composeFullPhone(phoneDdi, phone) : null;
+
     startTransition(async () => {
       try {
         const supabase = createClient();
@@ -89,6 +89,7 @@ function CriarContaContent() {
           options: {
             data: {
               full_name: fullName.trim(),
+              phone: fullFormattedPhone,
               birth_date: birthDate || null,
               gender: gender || null,
               role: role || null,
@@ -106,9 +107,33 @@ function CriarContaContent() {
             error.message.toLowerCase().includes("rate limit")
           ) {
             message = "Muitas mensagens de e-mail foram solicitadas recentemente. Por favor, verifique sua caixa de entrada e spam ou aguarde alguns minutos.";
+          } else if (
+            error.message.includes("Invalid path") ||
+            error.message.includes("Failed to fetch") ||
+            error.message.includes("NetworkError")
+          ) {
+            message = "Falha ao conectar aos serviços de autenticação. Verifique as configurações do Supabase.";
           }
           setErrorMessage(message);
           return;
+        }
+
+        // Atualiza a tabela profiles se o usuário foi criado
+        if (data.user) {
+          try {
+            await supabase
+              .from("profiles")
+              .update({
+                full_name: fullName.trim(),
+                phone: fullFormattedPhone,
+                birth_date: birthDate || null,
+                gender: gender || null,
+                career_role: role || null,
+              })
+              .eq("id", data.user.id);
+          } catch {
+            // ignore
+          }
         }
 
         // Se a confirmação de e-mail estiver desativada no Supabase, a sessão já é retornada ativa!
@@ -203,6 +228,19 @@ function CriarContaContent() {
           </InputGroup>
           <FieldError />
         </TextField>
+
+        {/* Phone / WhatsApp com seletor de DDI */}
+        <PhoneInputField
+          id="phone"
+          name="phone"
+          label="Telefone / WhatsApp"
+          value={phone}
+          ddi={phoneDdi}
+          onDdiChange={setPhoneDdi}
+          onChange={setPhone}
+          placeholder="(00) 00000-0000"
+          description="Informe com DDD. O código do país padrão é Brasil (+55)."
+        />
 
         {/* Birth Date & Gender (2 cols) */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

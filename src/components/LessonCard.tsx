@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Clock3, Lock, Play } from "lucide-react";
 import { Card, Chip, Label, ProgressBar } from "@heroui/react";
 import { Reveal } from "@/components/ui/Reveal";
+import { useCardTransition } from "@/contexts/CardTransitionContext";
 import { cn } from "@/lib/utils";
 
 type LessonCardProps = {
@@ -32,7 +33,44 @@ export default function LessonCard({
   href,
   className,
 }: LessonCardProps) {
+  const { triggerTransition } = useCardTransition();
   const linkUrl = href || (id ? `/courses/c1/lessons/${id}` : "#");
+
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (
+      e.defaultPrevented ||
+      e.button !== 0 ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.altKey ||
+      e.shiftKey ||
+      !linkUrl ||
+      linkUrl === "#" ||
+      linkUrl.startsWith("http")
+    ) {
+      return;
+    }
+
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    triggerTransition({
+      sourceRect: {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        borderRadius: 16,
+      },
+      metadata: {
+        title,
+        cover,
+        category: moduleName,
+        duration,
+        type: "lesson",
+      },
+      href: linkUrl,
+    });
+  };
 
   const content = (
     <>
@@ -107,7 +145,11 @@ export default function LessonCard({
   }
 
   return (
-    <Link href={linkUrl} className={cn("group block min-w-0 rounded-lg", className || "w-80")}>
+    <Link
+      href={linkUrl}
+      onClick={handleClick}
+      className={cn("group block min-w-0 rounded-lg", className || "w-80")}
+    >
       <Reveal className="h-full rounded-lg">
         <Card className="lift flex h-full flex-row gap-0 overflow-hidden p-0">
           {content}

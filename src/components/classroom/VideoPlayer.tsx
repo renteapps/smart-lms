@@ -1,9 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { motion } from "framer-motion";
 import { Card, Skeleton, Typography } from "@heroui/react";
 import { NoteIcon } from "@/components/ui/AnimatedIcon";
-import type { Lesson } from "@/lib/mockData";
+import type { Lesson } from "@/types/course";
 
 const ReactPlayer = dynamic(() => import("react-player").then((module) => module.default), {
   ssr: false,
@@ -18,24 +19,35 @@ interface VideoPlayerProps {
 export default function VideoPlayer({ lesson, onEnded }: VideoPlayerProps) {
   if (lesson.type !== "video") {
     return (
-      <Card className="overflow-hidden p-0">
-        <Card.Content className="flex min-h-[22rem] flex-col items-center justify-center px-6 py-14 text-center">
-          <span className="icon-draw grid size-14 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground">
-            <NoteIcon size={26} />
-          </span>
-          <h2 className="display-3 mt-6 text-foreground">{lesson.title}</h2>
-          <Typography.Prose className="mt-4 max-w-[52ch] text-muted">
-            <p>{lesson.content}</p>
-          </Typography.Prose>
-        </Card.Content>
-      </Card>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <Card className="overflow-hidden p-0">
+          <Card.Content className="flex min-h-[22rem] flex-col items-center justify-center px-6 py-14 text-center">
+            <span className="icon-draw grid size-14 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground">
+              <NoteIcon size={26} />
+            </span>
+            <h2 className="display-3 mt-6 text-foreground">{lesson.title}</h2>
+            <Typography.Prose className="mt-4 max-w-[52ch] text-muted">
+              <p>{lesson.content}</p>
+            </Typography.Prose>
+          </Card.Content>
+        </Card>
+      </motion.div>
     );
   }
 
   // Fundo escuro é intencional e permitido em mídia: a moldura some e o vídeo fica.
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-elev-4">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.98, y: 8 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-elev-4"
+    >
       <ReactPlayer src={lesson.videoUrl} width="100%" height="100%" controls onEnded={onEnded} />
-    </div>
+    </motion.div>
   );
 }

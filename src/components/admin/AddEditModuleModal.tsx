@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Button, Chip, Input, Label, Modal, TextArea, TextField } from "@heroui/react";
 import { Layers, Image as ImageIcon, Sparkles, Check } from "lucide-react";
-import { Module } from "@/lib/mockData";
+import { Module } from "@/types/course";
 
 interface AddEditModuleModalProps {
   isOpen: boolean;

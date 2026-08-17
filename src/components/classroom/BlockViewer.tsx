@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Button, Card, Chip, Table, Typography } from "@heroui/react";
 import { Check, HelpCircle, Lightbulb, X } from "lucide-react";
-import { ContentBlock } from "@/lib/mockData";
+import { ContentBlock } from "@/types/course";
 import { cn } from "@/lib/utils";
 
 function QuizViewerBlock({ block }: { block: ContentBlock }) {

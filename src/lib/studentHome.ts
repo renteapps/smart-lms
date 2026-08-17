@@ -1,4 +1,4 @@
-import type { CatalogCourse } from '@/lib/catalog';
+import type { CatalogCourse } from '@/types/course';
 import { fromLocalDateKey, toLocalDateKey } from '@/lib/matching';
 import type {
   LearningRole,
@@ -417,16 +417,18 @@ const LEVEL_BY_TAG: Record<string, CatalogCourse['level']> = {
  * Ordena o catálogo pela afinidade com o perfil. Ordenação estável: empates
  * mantêm a ordem original, para a lista não dançar entre renderizações.
  */
-export function rankCatalogByAffinity(
-  courses: CatalogCourse[],
+export function rankCatalogByAffinity<
+  T extends { category: string; title: string; description: string; level: string; progress?: number },
+>(
+  courses: T[],
   trail: LearningTrail | null,
   questionnaire?: Questionnaire | null,
-): CatalogCourse[] {
+): T[] {
   if (!trail) return [...courses];
 
   const { tags, tokens } = collectProfileSignals(trail, questionnaire);
   const preferredLevels = new Set(
-    [...tags].map((tag) => LEVEL_BY_TAG[tag]).filter(Boolean) as CatalogCourse['level'][],
+    [...tags].map((tag) => LEVEL_BY_TAG[tag]).filter(Boolean) as string[],
   );
 
   const scored = courses.map((course, index) => {

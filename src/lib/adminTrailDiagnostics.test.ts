@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeQuestionnaire } from './adminTrailDiagnostics';
 import { Questionnaire } from '@/types/trilha';
-import { mockQuestionnaire } from './mocks/trilhaMocks';
+import { mockQuestionnaire } from './seed/questionnaire';
 
 describe('admin trail diagnostics', () => {
   it('detects answers without content and content shared by exclusive answers', () => {

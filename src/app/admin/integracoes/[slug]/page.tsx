@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/editorial";
 import { toast } from "sonner";
 import { Check, Copy, Plug, AlertCircle } from "lucide-react";
 import { ResendIntegrationContent } from "../ResendIntegrationContent";
+import { OpenRouterIntegrationContent } from "../OpenRouterIntegrationContent";
 
 function EduzzIntegrationContent() {
   const searchParams = useSearchParams();
@@ -266,13 +267,15 @@ export default function IntegracaoDetalhePage() {
   const params = useParams();
   const slug = params.slug as string;
 
-  if (slug !== "eduzz" && slug !== "hotmart" && slug !== "resend") {
+  if (slug !== "eduzz" && slug !== "hotmart" && slug !== "resend" && slug !== "openrouter") {
     notFound();
   }
 
   return (
     <Suspense fallback={<div className="p-8 text-center text-muted">Carregando integrações...</div>}>
-      {slug === "resend" ? (
+      {slug === "openrouter" ? (
+        <OpenRouterIntegrationContent />
+      ) : slug === "resend" ? (
         <ResendIntegrationContent />
       ) : slug === "eduzz" ? (
         <EduzzIntegrationContent />

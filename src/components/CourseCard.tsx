@@ -6,10 +6,12 @@ import { Clock3, Layers3 } from "lucide-react";
 import { Card, Chip, Label, ProgressBar } from "@heroui/react";
 import { ArrowIcon } from "@/components/ui/AnimatedIcon";
 import { Reveal } from "@/components/ui/Reveal";
+import { useCardTransition } from "@/contexts/CardTransitionContext";
 import { cn } from "@/lib/utils";
 
 type CourseCardProps = {
   id?: string;
+  slug?: string;
   title: string;
   category: string;
   cover: string;
@@ -18,7 +20,7 @@ type CourseCardProps = {
   description?: string;
   duration?: string;
   lessonCount?: number;
-  level?: "Essencial" | "Intermediário" | "Avançado";
+  level?: "Essencial" | "Intermediário" | "Avançado" | string;
   className?: string;
   eager?: boolean;
   /** Realce de borda seguindo o cursor. Reservado ao card de destaque da tela. */
@@ -40,11 +42,52 @@ export default function CourseCard({
   eager = false,
   featured = false,
 }: CourseCardProps) {
+  const { triggerTransition } = useCardTransition();
   const linkUrl = href || (id ? `/courses/${id}` : "#");
   const hasMeta = Boolean(duration) || lessonCount !== undefined || Boolean(level);
 
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (
+      e.defaultPrevented ||
+      e.button !== 0 ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.altKey ||
+      e.shiftKey ||
+      !linkUrl ||
+      linkUrl === "#" ||
+      linkUrl.startsWith("http")
+    ) {
+      return;
+    }
+
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    triggerTransition({
+      sourceRect: {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        borderRadius: 16,
+      },
+      metadata: {
+        title,
+        cover,
+        category,
+        duration,
+        type: "course",
+      },
+      href: linkUrl,
+    });
+  };
+
   return (
-    <Link href={linkUrl} className={cn("icon-draw group block h-full min-w-0 rounded-lg", className)}>
+    <Link
+      href={linkUrl}
+      onClick={handleClick}
+      className={cn("icon-draw group block h-full min-w-0 rounded-lg", className)}
+    >
       {/*
        * Um gesto por card: o foco de luz do Reveal somado ao `.lift`.
        * `edge` fica só no card em destaque — se todos brilham, nenhum destaca.

@@ -1,6 +1,6 @@
 import { LearningTrail, LearningTrailItem, Weekday } from '@/types/trilha';
 import { toLocalDateKey } from '@/lib/matching';
-import { mockQuestionnaire } from '@/lib/mocks/trilhaMocks';
+import { mockQuestionnaire } from '@/lib/seed/questionnaire';
 
 /**
  * Conteúdo de exemplo de /minha-trilha, usado quando o dispositivo ainda não

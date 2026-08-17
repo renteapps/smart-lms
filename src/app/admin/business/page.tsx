@@ -26,7 +26,6 @@ import {
 import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
 import { Company } from "@/types/business";
 import { deleteCompany, getCompanies } from "@/lib/businessStorage";
-import { CompanyModal } from "@/components/admin/business/CompanyModal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -43,8 +42,6 @@ export default function AdminBusinessPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
 
   const loadCompanies = () => {
     setCompanies(getCompanies());
@@ -96,16 +93,12 @@ export default function AdminBusinessPage() {
         title="Empresas & Gestão B2B"
         description="Gerencie os contratos corporativos, limite de licenças/vagas e pacotes de acesso para empresas parceiras."
         actions={
-          <Button
-            variant="primary"
-            className="gap-2"
-            onPress={() => {
-              setEditingCompany(null);
-              setIsModalOpen(true);
-            }}
+          <Link
+            href="/admin/business/new"
+            className={cn(buttonVariants({ variant: "primary" }), "gap-2 font-semibold")}
           >
             <Plus className="size-4" aria-hidden="true" /> Nova Empresa
-          </Button>
+          </Link>
         }
       />
 
@@ -185,16 +178,12 @@ export default function AdminBusinessPage() {
                   ? "Tente ajustar os critérios de busca."
                   : "Cadastre a primeira empresa corporativa para começar."}
               </p>
-              <Button
-                variant="primary"
-                size="sm"
-                onPress={() => {
-                  setEditingCompany(null);
-                  setIsModalOpen(true);
-                }}
+              <Link
+                href="/admin/business/new"
+                className={cn(buttonVariants({ variant: "primary", size: "sm" }), "gap-1 font-semibold")}
               >
                 <Plus className="size-4 mr-1" /> Cadastrar Empresa
-              </Button>
+              </Link>
             </EmptyState>
           ) : (
             <>
@@ -320,18 +309,16 @@ export default function AdminBusinessPage() {
                                     <ExternalLink className="size-3.5" /> Portal
                                   </Link>
 
-                                  <Button
-                                    isIconOnly
-                                    variant="ghost"
-                                    size="sm"
-                                    aria-label="Editar"
-                                    onPress={() => {
-                                      setEditingCompany(company);
-                                      setIsModalOpen(true);
-                                    }}
+                                  <Link
+                                    href={`/admin/business/${company.id}/editar`}
+                                    className={cn(
+                                      buttonVariants({ variant: "ghost", size: "sm" }),
+                                      "size-8 p-0 grid place-items-center rounded-lg hover:bg-surface-secondary text-muted hover:text-foreground"
+                                    )}
+                                    title="Editar informações da empresa"
                                   >
-                                    <Pencil className="size-3.5 text-muted" />
-                                  </Button>
+                                    <Pencil className="size-3.5" />
+                                  </Link>
 
                                   <Button
                                     isIconOnly
@@ -392,17 +379,12 @@ export default function AdminBusinessPage() {
                       >
                         <ExternalLink className="size-3" /> Acessar Portal
                       </Link>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs"
-                        onPress={() => {
-                          setEditingCompany(company);
-                          setIsModalOpen(true);
-                        }}
+                      <Link
+                        href={`/admin/business/${company.id}/editar`}
+                        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "text-xs")}
                       >
                         Editar
-                      </Button>
+                      </Link>
                     </div>
                   </li>
                 ))}
@@ -412,13 +394,6 @@ export default function AdminBusinessPage() {
         </Card.Content>
       </Card>
 
-      {/* MODAL DE CRIAÇÃO / EDIÇÃO */}
-      <CompanyModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        initialCompany={editingCompany}
-        onSuccess={loadCompanies}
-      />
     </div>
   );
 }

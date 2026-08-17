@@ -117,7 +117,11 @@ export function AgentWorkspace({ agent }: { agent: Agent }) {
               {activeConversation?.title ?? "Nova conversa"}
             </h1>
             <p className="truncate text-xs font-semibold text-muted">
-              {agent.name} · {agent.courseTitle}
+              {agent.name} ·{" "}
+              {agent.courseTitles && agent.courseTitles.length > 0
+                ? agent.courseTitles.join(", ")
+                : agent.courseTitle || "Acesso Geral"}
+              {agent.planNames && agent.planNames.length > 0 && ` · ${agent.planNames.join(", ")}`}
             </p>
           </div>
 

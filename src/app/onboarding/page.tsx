@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
 import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock3, LoaderCircle, Sparkles } from 'lucide-react';
-import { mockQuestionnaire } from '@/lib/mocks/trilhaMocks';
+import { mockQuestionnaire } from '@/lib/seed/questionnaire';
 import { generateLearningTrail } from '@/lib/matching';
 import { cn } from '@/lib/utils';
 import { LearningTrail, Questionnaire, StudyAvailability, Weekday } from '@/types/trilha';

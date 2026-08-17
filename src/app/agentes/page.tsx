@@ -39,7 +39,7 @@ export default function AgentesPage() {
     return agents.filter((agent) => {
       const matchesCategory = activeCategory === "Todos" || agent.category === activeCategory;
       const haystack = normalizeText(
-        `${agent.name} ${agent.role} ${agent.description} ${agent.category} ${agent.courseTitle} ${agent.skills.join(" ")}`,
+        `${agent.name} ${agent.role} ${agent.description} ${agent.category} ${agent.courseTitle} ${(agent.courseTitles || []).join(" ")} ${(agent.planNames || []).join(" ")} ${agent.skills.join(" ")}`,
       );
       return matchesCategory && (!normalized || haystack.includes(normalized));
     });

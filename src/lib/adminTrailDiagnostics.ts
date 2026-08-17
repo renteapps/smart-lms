@@ -1,6 +1,8 @@
-import { Questionnaire } from '@/types/trilha';
+import { Questionnaire, ResolvedContent } from '@/types/trilha';
 import { DEFAULT_AVAILABILITY, generateLearningTrail } from '@/lib/matching';
-import { MOCK_CONTENT_ITEMS, resolveContentMapping } from '@/lib/mocks/onboardingMocks';
+import { createContentIndex, EMPTY_CONTENT_INDEX, type ContentIndex, type ContentResolver } from '@/lib/contentCatalog';
+import { MOCK_CONTENT_ITEMS } from '@/lib/mocks/onboardingMocks';
+import { mockEligibleLessons } from '@/lib/seed/questionnaire';
 
 export type AdminTrailDiagnostic = {
   id: string;
@@ -9,10 +11,28 @@ export type AdminTrailDiagnostic = {
   detail: string;
 };
 
-export function analyzeQuestionnaire(questionnaire: Questionnaire): AdminTrailDiagnostic[] {
+function normalizeIndex(indexOrResolver?: ContentIndex | ContentResolver): ContentIndex {
+  if (!indexOrResolver) {
+    return createContentIndex(MOCK_CONTENT_ITEMS as any, mockEligibleLessons);
+  }
+  if (typeof indexOrResolver === 'function') {
+    const base = createContentIndex(MOCK_CONTENT_ITEMS as any, mockEligibleLessons);
+    return {
+      ...base,
+      resolve: indexOrResolver,
+    };
+  }
+  return indexOrResolver;
+}
+
+export function analyzeQuestionnaire(
+  questionnaire: Questionnaire,
+  indexOrResolver?: ContentIndex | ContentResolver,
+): AdminTrailDiagnostic[] {
+  const index = normalizeIndex(indexOrResolver);
   const diagnostics: AdminTrailDiagnostic[] = [];
-  const knownContentIds = new Set(MOCK_CONTENT_ITEMS.map((item) => item.id));
-  const allResolved = new Map<string, ReturnType<typeof resolveContentMapping>[number]>();
+  const knownContentIds = new Set(index.items.map((item) => item.id));
+  const allResolved = new Map<string, ResolvedContent>();
 
   questionnaire.questions.filter((question) => question.type !== 'availability').forEach((question) => {
     question.options.forEach((option, optionIndex) => {
@@ -22,13 +42,13 @@ export function analyzeQuestionnaire(questionnaire: Questionnaire): AdminTrailDi
         title: 'Resposta sem conteúdo associado',
         detail: `“${option.label}”, em “${question.text}”, não influencia a trilha final.`,
       });
-      option.contentMappings?.forEach((mapping) => resolveContentMapping(mapping).forEach((item) => allResolved.set(item.id, item)));
+      option.contentMappings?.forEach((mapping) => index.resolve(mapping).forEach((item) => allResolved.set(item.id, item)));
     });
 
     if (question.type === 'single') {
       const owners = new Map<string, string[]>();
       question.options.forEach((option) => option.contentMappings?.forEach((mapping) => {
-        resolveContentMapping(mapping).forEach((item) => owners.set(item.id, [...(owners.get(item.id) || []), option.label]));
+        index.resolve(mapping).forEach((item) => owners.set(item.id, [...(owners.get(item.id) || []), option.label]));
       }));
       owners.forEach((labels, contentId) => {
         if (new Set(labels).size > 1) diagnostics.push({
@@ -60,7 +80,7 @@ export function analyzeQuestionnaire(questionnaire: Questionnaire): AdminTrailDi
   const defaultAnswers = Object.fromEntries(questionnaire.questions
     .filter((question) => question.type !== 'availability')
     .map((question) => [question.id, question.options[0] ? [question.options[0].label] : []]));
-  const preview = generateLearningTrail('diagnostic', defaultAnswers, questionnaire, DEFAULT_AVAILABILITY);
+  const preview = generateLearningTrail('diagnostic', defaultAnswers, questionnaire, DEFAULT_AVAILABILITY, undefined, new Date(), index);
   const sessionLoads = Object.values(preview.items.reduce<Record<string, number>>((groups, item) => {
     groups[item.sessionId] = (groups[item.sessionId] || 0) + item.durationMin;
     return groups;

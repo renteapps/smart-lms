@@ -7,6 +7,7 @@ import { ProgressBar } from "@heroui/react/progress-bar";
 import { Label } from "@heroui/react/label";
 import { ArrowIcon } from "@/components/ui/AnimatedIcon";
 import { Rise } from "@/components/ui/Rise";
+import { useCardTransition } from "@/contexts/CardTransitionContext";
 import { contentHref, type HomeSession } from "@/lib/studentHome";
 import type { LearningTrailItem } from "@/types/trilha";
 
@@ -26,6 +27,47 @@ type RowProps = {
  * hierarquia que esta seção existe para criar.
  */
 function ContentRow({ item, locked, completed }: RowProps) {
+  const { triggerTransition } = useCardTransition();
+  const targetHref = contentHref(item);
+
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (
+      locked ||
+      completed ||
+      e.defaultPrevented ||
+      e.button !== 0 ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.altKey ||
+      e.shiftKey ||
+      !targetHref ||
+      targetHref === "#" ||
+      targetHref.startsWith("http")
+    ) {
+      return;
+    }
+
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    triggerTransition({
+      sourceRect: {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        borderRadius: 12,
+      },
+      metadata: {
+        title: item.title,
+        cover: item.cover || DEFAULT_COVER,
+        category: item.moduleName || "Sessão de Estudos",
+        duration: `${item.durationMin} min`,
+        type: "lesson",
+      },
+      href: targetHref,
+    });
+  };
+
   const body = (
     <>
       <span className="relative size-14 shrink-0 overflow-hidden rounded-lg bg-background-secondary">
@@ -62,7 +104,8 @@ function ContentRow({ item, locked, completed }: RowProps) {
 
   return (
     <Link
-      href={contentHref(item)}
+      href={targetHref}
+      onClick={handleClick}
       className={`${shell} icon-spring shadow-elev-1 transition-[box-shadow,border-color,transform] duration-[var(--duration-md)] hover:-translate-y-0.5 hover:border-hairline-strong hover:shadow-elev-2`}
     >
       {body}

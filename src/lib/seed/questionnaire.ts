@@ -1,11 +1,31 @@
 import { EligibleLesson, Questionnaire } from '@/types/trilha';
+import { createContentIndex, type ContentItem } from '@/lib/contentCatalog';
 
 export const mockEligibleLessons: EligibleLesson[] = [
   { lessonId: 'l1', courseSlug: 'c1', moduleId: 'm1', title: 'Bem-vindo ao Curso!', description: 'Comece com clareza.', duration: 300, topics: ['fundamentos'], problemasQueResolve: ['inseguranca'], nivel: 'iniciante' },
   { lessonId: 'l2', courseSlug: 'c1', moduleId: 'm1', title: 'O que é React?', description: 'Conceitos fundamentais.', duration: 720, topics: ['fundamentos'], problemasQueResolve: ['falta de base'], nivel: 'iniciante', prerequisitos: ['l1'] },
-  { lessonId: 'l3', courseSlug: 'c1', moduleId: 'm2', title: 'Criando seu primeiro componente', description: 'Aplicação prática.', duration: 900, topics: ['pratica'], problemasQueResolve: ['procrastinacao'], nivel: 'intermediario', prerequisitos: ['l2'] },
+  { lessonId: 'l-profile-1', courseSlug: 'c1', moduleId: 'm1', title: 'Perfil de Estudo', description: 'Diagnóstico inicial.', duration: 600, topics: ['fundamentos'], problemasQueResolve: ['inseguranca'], nivel: 'iniciante', prerequisitos: ['l1'] },
+  { lessonId: 'l3', courseSlug: 'c1', moduleId: 'm2', title: 'Criando seu primeiro componente', description: 'Aplicação prática.', duration: 900, topics: ['pratica'], problemasQueResolve: ['procrastinacao'], nivel: 'intermediario', prerequisitos: ['l2', 'l-profile-1'] },
   { lessonId: 'l4', courseSlug: 'c1', moduleId: 'm2', title: 'Entendendo useState', description: 'Aprofundamento técnico.', duration: 1200, topics: ['aprofundamento'], problemasQueResolve: ['estagnacao'], nivel: 'avancado', prerequisitos: ['l3'] },
 ];
+
+/** Itens de conteúdo correspondentes ao mockQuestionnaire para uso nos testes de matching. */
+const TRAIL_CONTENT_ITEMS: ContentItem[] = [
+  { id: 'm1', type: 'module', title: 'Módulo 1: Introdução ao React', childIds: ['l1', 'l2', 'l-profile-1'] },
+  { id: 'm2', type: 'module', title: 'Módulo 2: Componentes e Hooks', childIds: ['l3', 'l4'] },
+  { id: 'l1', type: 'lesson', title: 'Bem-vindo ao Curso!', estimatedDurationMin: 5, moduleId: 'm1' },
+  { id: 'l-profile-1', type: 'lesson', title: 'Perfil de Estudo', estimatedDurationMin: 10, moduleId: 'm1', prerequisites: ['l1'] },
+  { id: 'l2', type: 'lesson', title: 'O que é React?', estimatedDurationMin: 12, moduleId: 'm1', prerequisites: ['l1'] },
+  { id: 'l3', type: 'lesson', title: 'Criando seu primeiro componente', estimatedDurationMin: 15, moduleId: 'm2', prerequisites: ['l2', 'l-profile-1'] },
+  { id: 'l4', type: 'lesson', title: 'Entendendo useState', estimatedDurationMin: 20, moduleId: 'm2', prerequisites: ['l3'] },
+
+  { id: 'a1', type: 'article', title: 'Como criar uma rotina de aprendizagem sustentável', slug: 'rotina-aprendizagem', estimatedDurationMin: 8 },
+  { id: 'a2', type: 'article', title: 'Prática deliberada: como aprender fazendo', slug: 'pratica-deliberada', estimatedDurationMin: 10 },
+  { id: 'ext1', type: 'external_link', title: 'Checklist para sua primeira semana', url: 'https://example.com/checklist', estimatedDurationMin: 5 },
+];
+
+/** ContentIndex pronto para uso nos testes de matching sem necessidade de banco. */
+export const TRAIL_CONTENT_INDEX = createContentIndex(TRAIL_CONTENT_ITEMS, mockEligibleLessons);
 
 export const mockQuestionnaire: Questionnaire = {
   version: 3,
@@ -63,3 +83,5 @@ export const mockQuestionnaire: Questionnaire = {
     },
   ],
 };
+
+

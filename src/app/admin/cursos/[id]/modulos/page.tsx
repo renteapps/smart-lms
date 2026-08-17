@@ -1,10 +1,16 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import ModuleList from "@/components/admin/ModuleList";
-import { MOCK_COURSE } from "@/lib/mockData";
+import { requireAdmin } from "@/lib/supabase/auth";
+import { getCourse } from "@/lib/data/courses";
 
 export default async function ModulosAdminPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
+  const { supabase } = await requireAdmin();
+  const course = await getCourse(supabase, resolvedParams.id);
+
+  if (!course) notFound();
   
   return (
     <div className="max-w-4xl mx-auto pb-12">
@@ -22,7 +28,7 @@ export default async function ModulosAdminPage({ params }: { params: Promise<{ i
         </p>
       </div>
 
-      <ModuleList courseId={resolvedParams.id} initialCourse={MOCK_COURSE} />
+      <ModuleList courseId={resolvedParams.id} initialCourse={course} />
     </div>
   );
 }

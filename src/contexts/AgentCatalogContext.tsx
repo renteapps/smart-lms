@@ -1,202 +1,169 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "@heroui/react";
-import {
-  AGENT_CATALOG_STORAGE_KEY,
-  type AgentCatalogSnapshot,
-  clearAgentCatalog,
-  deriveAgentCategories,
-  EMPTY_AGENT_CATALOG,
-  ensureUniqueSlug,
-  mergeAgentCatalog,
-  readAgentCatalog,
-  saveAgentCatalog,
-} from "@/lib/agentStorage";
-import { AGENTS } from "@/lib/mocks/agenteMocks";
+import { deriveAgentCategories, ensureUniqueSlug } from "@/lib/data/agents";
+import { deleteAgent as deleteAgentAction, saveAgent as saveAgentAction } from "@/app/actions/admin/content";
 import type { Agent, AgentFormPayload } from "@/types/agente";
 
 interface AgentCatalogContextData {
-  /** Falso até o catálogo local ser lido. O admin espera; a vitrine não. */
+  /** Falso enquanto uma mutação está em voo — o admin espera; a vitrine não. */
   isLoaded: boolean;
   agents: Agent[];
   /** Categorias em uso, com 'Todos' na frente. */
   categories: string[];
   getAgentBySlug: (slug: string) => Agent | undefined;
-  /** Há diff sobre as sementes — habilita o "restaurar catálogo original". */
-  hasLocalChanges: boolean;
   /** Cria ou atualiza pelo id do payload. */
   saveAgent: (payload: AgentFormPayload) => void;
   duplicateAgent: (id: string) => void;
   deleteAgent: (id: string) => void;
-  resetCatalog: () => void;
 }
 
 const AgentCatalogContext = createContext<AgentCatalogContextData>({} as AgentCatalogContextData);
 
-/** Ids das sementes: o que não está aqui nasceu no admin. */
-const SEED_IDS = new Set(AGENTS.map((agent) => agent.id));
-
-export function AgentCatalogProvider({ children }: { children: React.ReactNode }) {
-  /*
-   * Começa no diff vazio — ou seja, exatamente nas sementes. O servidor produz
-   * o mesmo HTML, então não há descasamento de hidratação; o localStorage só é
-   * lido no efeito abaixo, nunca durante o render.
-   */
-  const [snapshot, setSnapshot] = useState<AgentCatalogSnapshot>(EMPTY_AGENT_CATALOG);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    setSnapshot(readAgentCatalog());
-    setIsLoaded(true);
-  }, []);
-
-  // Só grava depois da leitura inicial: senão o diff vazio apagaria o catálogo.
-  useEffect(() => {
-    if (!isLoaded) return;
-    if (!saveAgentCatalog(snapshot)) {
-      toast.danger("Não foi possível salvar o catálogo neste navegador.");
-    }
-  }, [snapshot, isLoaded]);
+/**
+ * Catálogo de agentes.
+ *
+ * Antes o catálogo era um diff em localStorage aplicado sobre sementes no
+ * código — o que significava que um agente publicado pelo admin existia apenas
+ * no navegador dele, e o servidor nunca o enxergava (nem para gerar o `<title>`
+ * da página do agente). Agora a lista vem do Supabase pelo layout, e as
+ * mutações são Server Actions.
+ */
+export function AgentCatalogProvider({
+  children,
+  initialAgents = [],
+}: {
+  children: React.ReactNode;
+  initialAgents?: Agent[];
+}) {
+  const [agents, setAgents] = useState<Agent[]>(initialAgents);
+  const [syncedFrom, setSyncedFrom] = useState<Agent[]>(initialAgents);
+  const [isPending, startMutation] = useTransition();
+  const router = useRouter();
 
   /*
-   * Publicar numa aba precisa aparecer na outra: é o cenário real do admin
-   * revisando o site com as duas abertas lado a lado.
+   * Ajuste durante o render, não em efeito: quando o servidor manda um catálogo
+   * novo (depois de `router.refresh()`), ele substitui o estado otimista sem
+   * provocar um segundo render em cascata.
    */
-  useEffect(() => {
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key !== AGENT_CATALOG_STORAGE_KEY) return;
-      setSnapshot(readAgentCatalog());
-    };
+  if (syncedFrom !== initialAgents) {
+    setSyncedFrom(initialAgents);
+    setAgents(initialAgents);
+  }
 
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
-
-  const agents = useMemo(() => mergeAgentCatalog(AGENTS, snapshot), [snapshot]);
   const categories = useMemo(() => deriveAgentCategories(agents), [agents]);
-
-  const hasLocalChanges = snapshot.overrides.length > 0 || snapshot.deletedSeedIds.length > 0;
 
   const getAgentBySlug = useCallback(
     (slug: string) => agents.find((agent) => agent.slug === slug),
     [agents],
   );
 
-  const saveAgent = useCallback((payload: AgentFormPayload) => {
-    setSnapshot((current) => {
-      const currentAgents = mergeAgentCatalog(AGENTS, current);
+  const saveAgent = useCallback(
+    (payload: AgentFormPayload) => {
+      startMutation(async () => {
+        const result = await saveAgentAction(payload);
 
-      if (payload.id) {
-        const existing = currentAgents.find((agent) => agent.id === payload.id);
-        // Métricas de uso sobrevivem à edição: o formulário não as escreve.
-        const updated: Agent = {
-          ...payload,
-          id: payload.id,
-          conversationsCount: existing?.conversationsCount ?? 0,
-          rating: existing?.rating ?? 0,
-        };
+        if (!result.success) {
+          toast.danger(result.message ?? "Não foi possível salvar o agente.");
+          return;
+        }
 
-        const overrides = current.overrides.some((agent) => agent.id === payload.id)
-          ? current.overrides.map((agent) => (agent.id === payload.id ? updated : agent))
-          : [...current.overrides, updated];
+        if (payload.id) {
+          toast.success(`${payload.name} atualizado.`);
+        } else {
+          toast.success(
+            payload.status === "Disponível"
+              ? `${payload.name} publicado em /agentes.`
+              : `${payload.name} criado como ${payload.status.toLocaleLowerCase("pt-BR")}.`,
+          );
+        }
 
-        return { ...current, overrides };
-      }
+        router.refresh();
+      });
+    },
+    [router],
+  );
 
-      const created: Agent = {
-        ...payload,
-        id: `ag-${Date.now()}`,
-        conversationsCount: 0,
-        rating: 0,
+  const duplicateAgent = useCallback(
+    (id: string) => {
+      const original = agents.find((agent) => agent.id === id);
+      if (!original) return;
+
+      const rest: AgentFormPayload = {
+        slug: original.slug,
+        name: original.name,
+        role: original.role,
+        description: original.description,
+        category: original.category,
+        status: original.status,
+        avatar: original.avatar,
+        createdBy: original.createdBy,
+        courseTitle: original.courseTitle,
+        skills: original.skills,
+        avgMinutes: original.avgMinutes,
+        greeting: original.greeting,
+        starters: original.starters,
+        replies: original.replies,
+        fallbacks: original.fallbacks,
+        files: original.files,
+        systemPrompt: original.systemPrompt,
+        aiModel: original.aiModel,
+        context: original.context,
       };
 
-      return { ...current, overrides: [...current.overrides, created] };
-    });
+      startMutation(async () => {
+        const result = await saveAgentAction({
+          ...rest,
+          slug: ensureUniqueSlug(
+            `${original.slug}-copia`,
+            agents.map((agent) => agent.slug),
+          ),
+          name: `${original.name} (Cópia)`,
+          // A cópia entra fora do ar: roteiro clonado precisa de revisão.
+          status: "Em manutenção",
+          unavailableNote: "Cópia em preparação. Revise o roteiro antes de publicar.",
+        });
 
-    if (payload.id) {
-      toast.success(`${payload.name} atualizado.`);
-      return;
-    }
-    toast.success(
-      payload.status === "Disponível"
-        ? `${payload.name} publicado em /agentes/${payload.slug}.`
-        : `${payload.name} criado como ${payload.status.toLocaleLowerCase("pt-BR")}.`,
-    );
-  }, []);
+        if (result.success) {
+          toast.success("Agente duplicado em manutenção. Revise o roteiro antes de publicar.");
+          router.refresh();
+        } else {
+          toast.danger(result.message ?? "Não foi possível duplicar o agente.");
+        }
+      });
+    },
+    [agents, router],
+  );
 
-  const duplicateAgent = useCallback((id: string) => {
-    setSnapshot((current) => {
-      const currentAgents = mergeAgentCatalog(AGENTS, current);
-      const original = currentAgents.find((agent) => agent.id === id);
-      if (!original) return current;
+  const deleteAgent = useCallback(
+    (id: string) => {
+      // Some da lista na hora; o servidor confirma em seguida.
+      setAgents((current) => current.filter((agent) => agent.id !== id));
 
-      const duplicated: Agent = {
-        ...original,
-        id: `ag-${Date.now()}`,
-        slug: ensureUniqueSlug(
-          `${original.slug}-copia`,
-          currentAgents.map((agent) => agent.slug),
-        ),
-        name: `${original.name} (Cópia)`,
-        // A cópia entra fora do ar: roteiro clonado precisa de revisão.
-        status: "Em manutenção",
-        unavailableNote: "Cópia em preparação. Revise o roteiro antes de publicar.",
-        conversationsCount: 0,
-        rating: 0,
-      };
-
-      return { ...current, overrides: [...current.overrides, duplicated] };
-    });
-
-    toast.success("Agente duplicado em manutenção. Revise o roteiro antes de publicar.");
-  }, []);
-
-  const deleteAgent = useCallback((id: string) => {
-    setSnapshot((current) => {
-      // Semente não sai do código-fonte: some por tombstone. O override é
-      // descartado junto para a edição não ressuscitar depois.
-      const overrides = current.overrides.filter((agent) => agent.id !== id);
-      if (!SEED_IDS.has(id)) return { ...current, overrides };
-
-      return {
-        overrides,
-        deletedSeedIds: current.deletedSeedIds.includes(id)
-          ? current.deletedSeedIds
-          : [...current.deletedSeedIds, id],
-      };
-    });
-  }, []);
-
-  const resetCatalog = useCallback(() => {
-    clearAgentCatalog();
-    setSnapshot(EMPTY_AGENT_CATALOG);
-    toast.success("Catálogo original restaurado.");
-  }, []);
+      startMutation(async () => {
+        const result = await deleteAgentAction(id);
+        if (!result.success) {
+          toast.danger(result.message ?? "Não foi possível excluir o agente.");
+        }
+        router.refresh();
+      });
+    },
+    [router],
+  );
 
   const value = useMemo(
     () => ({
-      isLoaded,
+      isLoaded: !isPending,
       agents,
       categories,
       getAgentBySlug,
-      hasLocalChanges,
       saveAgent,
       duplicateAgent,
       deleteAgent,
-      resetCatalog,
     }),
-    [
-      isLoaded,
-      agents,
-      categories,
-      getAgentBySlug,
-      hasLocalChanges,
-      saveAgent,
-      duplicateAgent,
-      deleteAgent,
-      resetCatalog,
-    ],
+    [isPending, agents, categories, getAgentBySlug, saveAgent, duplicateAgent, deleteAgent],
   );
 
   return <AgentCatalogContext.Provider value={value}>{children}</AgentCatalogContext.Provider>;

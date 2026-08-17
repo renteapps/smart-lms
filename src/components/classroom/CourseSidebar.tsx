@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Brain, CheckCircle2, FileText, Menu, PlayCircle } from "lucide-react";
 import { Button, Disclosure, Drawer, ProgressBar, buttonVariants } from "@heroui/react";
-import { MOCK_COURSE, type Lesson } from "@/lib/mockData";
+import type { Course, Lesson } from "@/types/course";
 import { useZenMode } from "@/contexts/ZenModeContext";
 import { BrandMark } from "@/components/BrandMark";
 import { cn } from "@/lib/utils";
@@ -17,11 +17,10 @@ import { cn } from "@/lib/utils";
  * a mesma ordem de prioridade. O cabeçalho móvel é acrílico porque a aula rola
  * por baixo dele; a coluna do desktop é superfície opaca, já que nada passa atrás.
  */
-export default function CourseSidebar() {
+export default function CourseSidebar({ course }: { course: Course }) {
   const params = useParams();
   const courseId = params.id as string;
   const currentLessonId = params.lessonId as string;
-  const course = MOCK_COURSE;
   const { isZenMode } = useZenMode();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>(() => Object.fromEntries(course.modules.map((courseModule) => [courseModule.id, true])));

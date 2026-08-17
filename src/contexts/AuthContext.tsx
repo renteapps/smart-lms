@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [router, supabase]);
 
-  const syncUserProfile = (currentUser: User) => {
+  const syncUserProfile = async (currentUser: User) => {
     try {
       const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
       let profile: ProfilePreferences = defaultProfile;
@@ -98,19 +98,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      const fullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || profile.name;
+      // Tenta buscar dados mais recentes da tabela profiles
+      let dbProfile: Record<string, unknown> | null = null;
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", currentUser.id)
+          .maybeSingle();
+        dbProfile = (data as Record<string, unknown>) || null;
+      } catch {
+        // ignore
+      }
+
+      const fullName = (dbProfile?.full_name as string) || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || profile.name;
+      const username = (dbProfile?.username as string) || currentUser.user_metadata?.username || profile.username;
+      const avatarUrl = (dbProfile?.avatar_url as string) || currentUser.user_metadata?.avatar_url || profile.avatarUrl;
       const email = currentUser.email || profile.email;
-      const birthDate = currentUser.user_metadata?.birth_date || profile.birthDate;
-      const gender = currentUser.user_metadata?.gender || profile.gender;
-      const role = currentUser.user_metadata?.role || profile.role;
+      const phone = (dbProfile?.phone as string) || profile.phone;
+      const birthDate = (dbProfile?.birth_date as string) || currentUser.user_metadata?.birth_date || profile.birthDate;
+      const gender = (dbProfile?.gender as string) || currentUser.user_metadata?.gender || profile.gender;
+      const role = (dbProfile?.career_role as string) || currentUser.user_metadata?.role || profile.role;
+      const company = (dbProfile?.company as string) || profile.company;
+      const country = (dbProfile?.country as string) || profile.country;
+      const state = (dbProfile?.state as string) || profile.state;
+      const city = (dbProfile?.city as string) || profile.city;
+      const bio = (dbProfile?.bio as string) || profile.bio;
+      const weeklyGoal = typeof dbProfile?.weekly_goal === "number" ? dbProfile.weekly_goal : profile.weeklyGoal;
+      const lessonReminders = typeof dbProfile?.lesson_reminders === "boolean" ? dbProfile.lesson_reminders : profile.lessonReminders;
+      const emailDigest = typeof dbProfile?.email_digest === "boolean" ? dbProfile.email_digest : profile.emailDigest;
+      const achievementAlerts = typeof dbProfile?.achievement_alerts === "boolean" ? dbProfile.achievement_alerts : profile.achievementAlerts;
 
       const updatedProfile: ProfilePreferences = {
         ...profile,
         name: fullName || profile.name,
+        username: username || profile.username,
+        avatarUrl: avatarUrl || profile.avatarUrl,
         email: email || profile.email,
+        phone: phone || profile.phone,
         birthDate: birthDate || profile.birthDate,
         gender: gender || profile.gender,
         role: role || profile.role,
+        company: company || profile.company,
+        country: country || profile.country,
+        state: state || profile.state,
+        city: city || profile.city,
+        bio: bio || profile.bio,
+        weeklyGoal,
+        lessonReminders,
+        emailDigest,
+        achievementAlerts,
       };
 
       localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updatedProfile));
@@ -125,6 +162,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: { session: refreshedSession } } = await supabase.auth.getSession();
       setSession(refreshedSession);
       setUser(refreshedSession?.user ?? null);
+      if (refreshedSession?.user) {
+        syncUserProfile(refreshedSession.user);
+      }
     } catch (err) {
       console.error("Erro ao atualizar sessão:", err);
     }

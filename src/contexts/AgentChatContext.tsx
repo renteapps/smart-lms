@@ -2,7 +2,13 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { getAgentReply, typingDelay } from "@/lib/agentChat";
-import { deriveConversationTitle, readAgentConversations, saveAgentConversations } from "@/lib/agentChatStorage";
+import { deriveConversationTitle } from "@/lib/data/agents";
+import {
+  appendAgentMessage,
+  deleteConversation as deleteConversationAction,
+  listMyConversations,
+  startConversation,
+} from "@/app/actions/agentChat";
 import type { Agent, AgentConversation } from "@/types/agente";
 
 interface AgentChatContextData {
@@ -29,16 +35,26 @@ export function AgentChatProvider({ children }: { children: React.ReactNode }) {
   const [typingConversationId, setTypingConversationId] = useState<string | null>(null);
   const timers = useRef(new Map<string, Set<number>>());
 
+  /*
+   * O histórico vive no Supabase, então é lido uma vez ao montar. Cada mensagem
+   * é gravada assim que existe — não há um "salvar tudo" no fim, que era o que
+   * fazia a versão em localStorage perder a conversa quando a aba fechava no
+   * meio de uma resposta.
+   */
   useEffect(() => {
-    setConversations(readAgentConversations());
-    setIsLoaded(true);
-  }, []);
+    let active = true;
 
-  // Só grava depois da leitura inicial: senão o estado vazio apagaria o histórico.
-  useEffect(() => {
-    if (!isLoaded) return;
-    saveAgentConversations(conversations);
-  }, [conversations, isLoaded]);
+    (async () => {
+      const loaded = await listMyConversations();
+      if (!active) return;
+      setConversations(loaded);
+      setIsLoaded(true);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     const pending = timers.current;
@@ -58,7 +74,10 @@ export function AgentChatProvider({ children }: { children: React.ReactNode }) {
     (agent: Agent, conversationId: string | null, text: string) => {
       const message = text.trim();
       const now = new Date().toISOString();
-      const targetId = conversationId ?? crypto.randomUUID();
+      // Id provisório enquanto o servidor não devolve o definitivo: a bolha da
+      // pergunta aparece na hora, sem esperar a ida ao banco.
+      const targetId = conversationId ?? `draft-${crypto.randomUUID()}`;
+      let currentThreadHistory: { id: string; author: "student" | "agent"; text: string }[] = [];
 
       setConversations((current) => {
         const existing = current.find((item) => item.id === targetId);
@@ -73,40 +92,126 @@ export function AgentChatProvider({ children }: { children: React.ReactNode }) {
             createdAt: now,
             updatedAt: now,
           };
+          currentThreadHistory = [studentMessage];
           return [created, ...current];
         }
 
+        currentThreadHistory = [...existing.messages, studentMessage];
         return current.map((item) =>
           item.id === targetId
-            ? { ...item, messages: [...item.messages, studentMessage], updatedAt: now }
+            ? { ...item, messages: currentThreadHistory, updatedAt: now }
             : item,
         );
       });
 
       setTypingConversationId(targetId);
 
-      const timer = window.setTimeout(() => {
-        timers.current.get(targetId)?.delete(timer);
+      /** Id real da thread no banco, resolvido antes de qualquer gravação. */
+      const ensurePersistedId = async (): Promise<string | null> => {
+        if (conversationId) {
+          await appendAgentMessage(conversationId, "student", message);
+          return conversationId;
+        }
 
+        const created = await startConversation(agent.id, message);
+        if (!created.success || !created.conversationId) return null;
+
+        await appendAgentMessage(created.conversationId, "student", message);
+
+        // Troca o id provisório pelo definitivo, preservando as mensagens.
         setConversations((current) =>
-          current.map((item) => {
-            if (item.id !== targetId) return item;
-            // O turno alterna os fallbacks para o agente não repetir a mesma saída.
-            const turn = item.messages.filter((entry) => entry.author === "agent").length;
-            return {
-              ...item,
-              messages: [
-                ...item.messages,
-                { id: crypto.randomUUID(), author: "agent" as const, text: getAgentReply(agent, message, turn) },
-              ],
-              updatedAt: new Date().toISOString(),
-            };
-          }),
+          current.map((item) =>
+            item.id === targetId ? { ...item, id: created.conversationId! } : item,
+          ),
         );
-        setTypingConversationId((current) => (current === targetId ? null : current));
-      }, typingDelay(message));
+        setTypingConversationId((current) =>
+          current === targetId ? created.conversationId! : current,
+        );
+        return created.conversationId;
+      };
 
-      trackTimer(targetId, timer);
+      const fetchAiOrFallback = async () => {
+        const persistedId = await ensurePersistedId();
+        const liveId = persistedId ?? targetId;
+
+        const commitReply = (replyText: string) => {
+          setConversations((current) =>
+            current.map((item) => {
+              if (item.id !== liveId) return item;
+              return {
+                ...item,
+                messages: [
+                  ...item.messages,
+                  { id: crypto.randomUUID(), author: "agent" as const, text: replyText },
+                ],
+                updatedAt: new Date().toISOString(),
+              };
+            }),
+          );
+          setTypingConversationId((current) => (current === liveId ? null : current));
+          if (persistedId) void appendAgentMessage(persistedId, "agent", replyText);
+        };
+
+        try {
+          const formattedMessages = currentThreadHistory.map((m) => ({
+            role: m.author === "student" ? "user" : "assistant",
+            content: m.text,
+          }));
+
+          const res = await fetch("/api/ai/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              agentId: agent.id,
+              agentName: agent.name,
+              systemPrompt: agent.systemPrompt,
+              context: agent.context,
+              model: agent.aiModel,
+              messages: formattedMessages,
+            }),
+          });
+
+          const data = await res.json();
+          if (res.ok && data.success && data.text && !data.simulated) {
+            commitReply(data.text);
+            return;
+          }
+        } catch (e) {
+          console.warn("Fallback para roteiro após erro de IA:", e);
+        }
+
+        // Fallback para o roteiro escrito pelo admin.
+        const timer = window.setTimeout(() => {
+          timers.current.get(liveId)?.delete(timer);
+
+          setConversations((current) => {
+            const thread = current.find((item) => item.id === liveId);
+            const turn = thread?.messages.filter((entry) => entry.author === "agent").length ?? 0;
+            const replyText = getAgentReply(agent, message, turn);
+
+            if (persistedId) void appendAgentMessage(persistedId, "agent", replyText);
+
+            return current.map((item) =>
+              item.id === liveId
+                ? {
+                    ...item,
+                    messages: [
+                      ...item.messages,
+                      { id: crypto.randomUUID(), author: "agent" as const, text: replyText },
+                    ],
+                    updatedAt: new Date().toISOString(),
+                  }
+                : item,
+            );
+          });
+
+          setTypingConversationId((current) => (current === liveId ? null : current));
+        }, typingDelay(message));
+
+        trackTimer(liveId, timer);
+      };
+
+      fetchAiOrFallback();
       return targetId;
     },
     [trackTimer],
@@ -119,6 +224,10 @@ export function AgentChatProvider({ children }: { children: React.ReactNode }) {
 
     setConversations((current) => current.filter((item) => item.id !== conversationId));
     setTypingConversationId((current) => (current === conversationId ? null : current));
+
+    if (!conversationId.startsWith("draft-")) {
+      void deleteConversationAction(conversationId);
+    }
   }, []);
 
   const conversationsForAgent = useCallback(

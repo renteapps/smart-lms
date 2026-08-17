@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Bot, Save, FileJson } from 'lucide-react';
 import { Questionnaire } from '@/types/trilha';
-import { mockQuestionnaire } from '@/lib/mocks/trilhaMocks';
+import { mockQuestionnaire } from '@/lib/seed/questionnaire';
 import { PageHeader, StatusBadge } from '@/components/ui/editorial';
 
 export default function QuestionarioPage() {

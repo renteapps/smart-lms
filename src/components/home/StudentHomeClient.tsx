@@ -20,7 +20,7 @@ import {
   recordSurveyAnswer,
   REFINEMENT_STORAGE_KEY,
 } from "@/lib/refinementSurveys";
-import { MOCK_PROFILE_TESTS } from "@/lib/mocks/profileTests";
+import { MOCK_PROFILE_TESTS } from "@/lib/seed/profileTests";
 import RecalibrationSlot from "@/components/home/RecalibrationSlot";
 import type { SessionLoadRating } from "@/types/trilha";
 import { CATALOG_COURSES } from "@/lib/catalog";
@@ -29,11 +29,13 @@ import DailyPill from "@/components/DailyPill";
 import DayCompleteHero from "@/components/home/DayCompleteHero";
 import DiscoverySection from "@/components/home/DiscoverySection";
 import HomeEmptyState from "@/components/home/HomeEmptyState";
+import HomeNoCourses from "@/components/home/HomeNoCourses";
 import NextStepHero from "@/components/home/NextStepHero";
 import SessionRest from "@/components/home/SessionRest";
 import StudyLedger from "@/components/home/StudyLedger";
 import WhyThisTrail from "@/components/home/WhyThisTrail";
 import { Rise } from "@/components/ui/Rise";
+import { useUserAccess } from "@/hooks/useUserAccess";
 
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   weekday: "long",
@@ -104,6 +106,13 @@ export default function StudentHomeClient() {
   const [outcome, setOutcome] = useState<string | null>(null);
 
   /*
+   * Verifica acesso ao conteúdo somente quando não há trilha — evita chamadas
+   * desnecessárias ao Supabase para quem já está estudando.
+   */
+  const state = useMemo(() => selectHomeState(trail), [trail]);
+  const accessState = useUserAccess(hydrated && state.kind === "sem-trilha");
+
+  /*
    * Sinal implícito: o que ficou para trás volta para a agenda sozinho. É uma
    * escrita num sistema externo, não um `setState` — a releitura vem do store.
    */
@@ -116,7 +125,7 @@ export default function StudentHomeClient() {
     notifyTrailChanged();
   }, [trail, migrated]);
 
-  const state = useMemo(() => selectHomeState(trail), [trail]);
+  // `state` já foi derivado acima junto com `accessState` para evitar duplicação.
   const stats = useMemo(() => (trail ? computeStudyStats(trail) : null), [trail]);
   const profileChips = useMemo(
     () => (trail ? deriveProfileSummary(trail, questionnaire) : []),
@@ -222,6 +231,30 @@ export default function StudentHomeClient() {
   }
 
   if (state.kind === "sem-trilha") {
+    /*
+     * Se ainda estamos verificando o acesso, mantém o skeleton para não
+     * piscar entre estados.
+     */
+    if (accessState.status === "loading") {
+      return (
+        <div className="pt-[76px]">
+          <HomeSkeleton />
+        </div>
+      );
+    }
+
+    /*
+     * Sem matrícula nem plano ativo → exibe vitrine de compra.
+     * Com acesso mas sem trilha → exibe convite ao onboarding.
+     */
+    if (accessState.status === "no-access") {
+      return (
+        <div className="pt-[76px]">
+          <HomeNoCourses courses={accessState.courses} />
+        </div>
+      );
+    }
+
     return (
       <div className="pt-[76px]">
         <HomeEmptyState questionnaire={questionnaire} />

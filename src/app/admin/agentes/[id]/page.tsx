@@ -6,17 +6,21 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowLeft,
+  BookOpen,
   Bot,
   Brain,
   Check,
+  CheckCircle2,
   Clock,
   Compass,
   Copy,
   Cpu,
+  CreditCard,
   FileText,
   GraduationCap,
   History,
   Layers,
+  Lock,
   MessageSquare,
   MessageSquarePlus,
   MessagesSquare,
@@ -24,12 +28,15 @@ import {
   Play,
   Plus,
   Radio,
+  Search,
   Share2,
+  Shield,
   Sparkles,
   Star,
   Tag,
   Timer,
   Trash2,
+  Unlock,
   UploadCloud,
   User,
   Wand2,
@@ -60,6 +67,13 @@ import { AgentAvatar } from "@/components/agentes/AgentAvatar";
 import { AgentScriptTester } from "@/components/admin/agentes/AgentScriptTester";
 import { useAgentCatalog } from "@/contexts/AgentCatalogContext";
 import { collectScriptWarnings } from "@/lib/agentDraft";
+import {
+  getAvailableCourses,
+  getAvailablePlans,
+  formatAgentAccessSummary,
+  type OptionItem,
+} from "@/lib/data/agentAccess";
+import { createClient } from "@/lib/supabase/client";
 import type {
   Agent,
   AgentAvatarKey,
@@ -92,9 +106,43 @@ const AVATAR_OPTIONS: { value: AgentAvatarKey; label: string; description: strin
 
 const AI_MODELS = [
   {
-    id: "gpt-4o-mini",
+    id: "google/gemini-2.0-flash-001",
+    aliases: ["gemini-2-flash", "gemini-2.0-flash"],
+    name: "Gemini 2.0 Flash",
+    provider: "Google (OpenRouter)",
+    badge: "Mais Rápido & Econômico",
+    badgeTone: "success" as const,
+    description: "Multimodal de altíssima velocidade com janela massiva de 1M de tokens. Ideal para alto volume e respostas instantâneas.",
+    speed: "Muito alta",
+    reasoning: "Excelente",
+  },
+  {
+    id: "anthropic/claude-3.5-sonnet",
+    aliases: ["claude-3-5-sonnet", "claude-3.5-sonnet"],
+    name: "Claude 3.5 Sonnet",
+    provider: "Anthropic (OpenRouter)",
+    badge: "Melhor Didática & Escrita",
+    badgeTone: "accent" as const,
+    description: "Referência absoluta em escrita humanizada, empatia pedagógica e estruturação de conhecimento socrático.",
+    speed: "Alta",
+    reasoning: "Excepcional",
+  },
+  {
+    id: "openai/gpt-4o",
+    aliases: ["gpt-4o"],
+    name: "GPT-4o",
+    provider: "OpenAI (OpenRouter)",
+    badge: "Alta Precisão",
+    badgeTone: "accent" as const,
+    description: "Modelo multimodal insignia da OpenAI. Excelente para análises críticas, feedbacks profundos e lógica refinada.",
+    speed: "Alta",
+    reasoning: "Excelente",
+  },
+  {
+    id: "openai/gpt-4o-mini",
+    aliases: ["gpt-4o-mini"],
     name: "GPT-4o Mini",
-    provider: "OpenAI",
+    provider: "OpenAI (OpenRouter)",
     badge: "Ultra Rápido",
     badgeTone: "success" as const,
     description: "Excelente para respostas rápidas, diálogos leves e alto volume de alunos com baixo custo.",
@@ -102,24 +150,26 @@ const AI_MODELS = [
     reasoning: "Boa",
   },
   {
-    id: "gpt-4o",
-    name: "GPT-4o",
-    provider: "OpenAI",
-    badge: "Alta Precisão",
-    badgeTone: "accent" as const,
-    description: "Modelo multimodal topo de linha. Ideal para análises críticas, feedbacks profundos e lógica refinada.",
-    speed: "Alta",
-    reasoning: "Excelente",
+    id: "deepseek/deepseek-r1",
+    aliases: ["deepseek-r1"],
+    name: "DeepSeek R1",
+    provider: "DeepSeek (OpenRouter)",
+    badge: "Raciocínio & Lógica",
+    badgeTone: "warning" as const,
+    description: "Raciocínio profundo de ponta com cadeia de pensamento detalhada para matemática, programação e raciocínio analítico.",
+    speed: "Média",
+    reasoning: "Excepcional",
   },
   {
-    id: "claude-3-5-sonnet",
-    name: "Claude 3.5 Sonnet",
-    provider: "Anthropic",
-    badge: "Melhor Escrita & Didática",
-    badgeTone: "accent" as const,
-    description: "Referência absoluta em escrita humanizada, empatia pedagógica e estruturação de conhecimento.",
+    id: "meta-llama/llama-3.3-70b-instruct",
+    aliases: ["llama-3.3-70b", "llama-3-70b"],
+    name: "Llama 3.3 70B",
+    provider: "Meta (OpenRouter)",
+    badge: "Open Source Elite",
+    badgeTone: "default" as const,
+    description: "Modelo insignia open-source da Meta com excelente adesão a instruções e tom conversacional natural.",
     speed: "Alta",
-    reasoning: "Excepcional",
+    reasoning: "Excelente",
   },
 ];
 
@@ -317,6 +367,14 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
   const [avgMinutes, setAvgMinutes] = useState(7);
   const [skills, setSkills] = useState<string[]>([]);
 
+  // Vínculos & Regras de Acesso
+  const [availableCourses, setAvailableCourses] = useState<OptionItem[]>([]);
+  const [availablePlans, setAvailablePlans] = useState<OptionItem[]>([]);
+  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
+  const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
+  const [courseSearchQuery, setCourseSearchQuery] = useState("");
+  const [planSearchQuery, setPlanSearchQuery] = useState("");
+
   // Inteligência & IA
   const [systemPrompt, setSystemPrompt] = useState("");
   const [aiModel, setAiModel] = useState("gpt-4o-mini");
@@ -332,6 +390,29 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
   // Histórico
   const [selectedConversation, setSelectedConversation] = useState<AgentConversation | null>(null);
   const [copiedTranscript, setCopiedTranscript] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    async function loadOptions() {
+      try {
+        const supabase = createClient();
+        const [courses, plans] = await Promise.all([
+          getAvailableCourses(supabase),
+          getAvailablePlans(supabase),
+        ]);
+        if (active) {
+          setAvailableCourses(courses);
+          setAvailablePlans(plans);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar opções de cursos e planos:", err);
+      }
+    }
+    loadOptions();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -351,6 +432,15 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
       setAvgMinutes(agentToEdit.avgMinutes);
       setSkills(agentToEdit.skills);
 
+      const initialCourseIds =
+        agentToEdit.courseIds && agentToEdit.courseIds.length > 0
+          ? agentToEdit.courseIds
+          : agentToEdit.courseId
+            ? [agentToEdit.courseId]
+            : [];
+      setSelectedCourseIds(initialCourseIds);
+      setSelectedPlanIds(agentToEdit.planIds || []);
+
       setSystemPrompt(agentToEdit.systemPrompt ?? "");
       setAiModel(agentToEdit.aiModel ?? "gpt-4o-mini");
       setContext(agentToEdit.context ?? "");
@@ -366,6 +456,24 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
 
   const effectiveSlug = slugTouched ? slugify(slug) : slugify(name);
 
+  const mappedCourseTitles = useMemo(() => {
+    return selectedCourseIds.map((cId) => {
+      const found = availableCourses.find((c) => c.id === cId);
+      return found?.name || cId;
+    });
+  }, [selectedCourseIds, availableCourses]);
+
+  const mappedPlanNames = useMemo(() => {
+    return selectedPlanIds.map((pId) => {
+      const found = availablePlans.find((p) => p.id === pId);
+      return found?.name || pId;
+    });
+  }, [selectedPlanIds, availablePlans]);
+
+  const primaryCourseTitle = mappedCourseTitles.length > 0
+    ? mappedCourseTitles[0]
+    : courseTitle.trim() || "Acesso Geral";
+
   const draftAgent: Agent = useMemo(
     () => ({
       id: agentToEdit?.id ?? "rascunho",
@@ -377,7 +485,12 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
       status,
       avatar,
       createdBy: createdBy.trim() || "Equipe Pedagógica",
-      courseTitle: courseTitle.trim() || "Curso Geral",
+      courseTitle: primaryCourseTitle,
+      courseId: selectedCourseIds[0] || undefined,
+      courseIds: selectedCourseIds,
+      courseTitles: mappedCourseTitles,
+      planIds: selectedPlanIds,
+      planNames: mappedPlanNames,
       skills,
       conversationsCount: agentToEdit?.conversationsCount ?? 14,
       rating: agentToEdit?.rating ?? 4.9,
@@ -404,7 +517,11 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
       status,
       avatar,
       createdBy,
-      courseTitle,
+      primaryCourseTitle,
+      selectedCourseIds,
+      mappedCourseTitles,
+      selectedPlanIds,
+      mappedPlanNames,
       skills,
       avgMinutes,
       systemPrompt,
@@ -416,6 +533,28 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
       unavailableNote,
     ],
   );
+
+  const filteredCoursesList = useMemo(() => {
+    const q = courseSearchQuery.toLowerCase().trim();
+    if (!q) return availableCourses;
+    return availableCourses.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.category && c.category.toLowerCase().includes(q)) ||
+        (c.subtitle && c.subtitle.toLowerCase().includes(q)),
+    );
+  }, [availableCourses, courseSearchQuery]);
+
+  const filteredPlansList = useMemo(() => {
+    const q = planSearchQuery.toLowerCase().trim();
+    if (!q) return availablePlans;
+    return availablePlans.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.subtitle && p.subtitle.toLowerCase().includes(q)) ||
+        (p.badge && p.badge.toLowerCase().includes(q)),
+    );
+  }, [availablePlans, planSearchQuery]);
 
   const scriptWarnings = useMemo(() => collectScriptWarnings(draftAgent), [draftAgent]);
 
@@ -430,7 +569,6 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
     if (!role.trim()) return fail("identidade", "Descreva a função do agente (ex.: Mentora de Feedback).");
     if (!description.trim()) return fail("identidade", "Escreva a descrição pública do card.");
     if (!createdBy.trim()) return fail("identidade", "Informe o criador ou professor responsável.");
-    if (!courseTitle.trim()) return fail("identidade", "Informe o curso de origem do agente.");
     if (!effectiveSlug) return fail("identidade", "O endereço público (slug) não pode ficar vazio.");
     if (existingSlugs.some((item) => item.slug === effectiveSlug && item.id !== agentToEdit?.id)) {
       return fail("identidade", `Já existe um agente com o endereço /agentes/${effectiveSlug}.`);
@@ -697,74 +835,381 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
 
                     <Separator />
 
-                    {/* Vínculo Pedagógico */}
-                    <div>
-                      <h2 className="font-display text-lg font-bold text-foreground">Vínculo Pedagógico</h2>
-                      <p className="text-xs text-muted">Origem acadêmica e responsabilidade pelo agente.</p>
-                    </div>
+                    {/* Vínculo Pedagógico & Regras de Acesso */}
+                    <div className="space-y-5">
+                      <div>
+                        <h2 className="font-display text-lg font-bold text-foreground">
+                          Vínculo Pedagógico & Regras de Acesso
+                        </h2>
+                        <p className="text-xs text-muted">
+                          Defina o autor responsável e vincule o agente a um ou mais cursos e/ou planos de assinatura.
+                        </p>
+                      </div>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <TextField value={createdBy} onChange={setCreatedBy} isRequired fullWidth>
-                        <Label>Publicado por (Professor / Autor)</Label>
-                        <Input placeholder="Ex.: Camila Duarte" />
-                        <Description>Autor responsável pelas diretrizes da IA.</Description>
-                      </TextField>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <TextField value={createdBy} onChange={setCreatedBy} isRequired fullWidth>
+                          <Label>Publicado por (Professor / Autor)</Label>
+                          <Input placeholder="Ex.: Camila Duarte" />
+                          <Description>Autor responsável pelas diretrizes da IA.</Description>
+                        </TextField>
 
-                      <TextField value={courseTitle} onChange={setCourseTitle} isRequired fullWidth>
-                        <Label>
+                        <TextField
+                          value={String(avgMinutes)}
+                          onChange={(value) => setAvgMinutes(parseInt(value, 10) || 1)}
+                          fullWidth
+                        >
+                          <Label>Duração Típica da Conversa (minutos)</Label>
+                          <Input type="number" min={1} max={60} inputMode="numeric" />
+                          <Description>Média de tempo que o aluno investe.</Description>
+                        </TextField>
+                      </div>
+
+                      {/* Resumo de Acesso Dinâmico */}
+                      <div
+                        className={cn(
+                          "flex items-start gap-3.5 rounded-2xl border p-4 transition-colors",
+                          selectedCourseIds.length > 0 || selectedPlanIds.length > 0
+                            ? "border-accent/40 bg-accent-soft/30 text-foreground"
+                            : "border-border bg-background-secondary text-foreground",
+                        )}
+                      >
+                        <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground">
+                          {selectedCourseIds.length > 0 || selectedPlanIds.length > 0 ? (
+                            <Lock className="size-4.5" />
+                          ) : (
+                            <Unlock className="size-4.5" />
+                          )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 className="text-sm font-bold text-foreground">Regra de Disponibilidade & Acesso</h4>
+                            <Chip
+                              size="sm"
+                              variant="soft"
+                              color={selectedCourseIds.length > 0 || selectedPlanIds.length > 0 ? "accent" : "default"}
+                            >
+                              {selectedCourseIds.length > 0 || selectedPlanIds.length > 0
+                                ? "Acesso Condicional"
+                                : "Acesso Global"}
+                            </Chip>
+                          </div>
+                          <p className="mt-1 text-xs font-medium text-foreground">
+                            {formatAgentAccessSummary(draftAgent)}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-muted leading-relaxed">
+                            {selectedCourseIds.length === 0 && selectedPlanIds.length === 0
+                              ? "Como nenhum curso ou plano foi vinculado, este agente estará acessível a todos os alunos cadastrados."
+                              : "O aluno terá acesso se estiver matriculado em QUALQUER um dos cursos vinculados OU for assinante de QUALQUER um dos planos vinculados."}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Seleção de Cursos Vinculados */}
+                      <div className="rounded-2xl border border-border bg-surface p-5 space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <GraduationCap className="size-5 text-accent" />
+                            <div>
+                              <h3 className="text-sm font-bold text-foreground">
+                                Cursos Vinculados ({selectedCourseIds.length})
+                              </h3>
+                              <p className="text-xs text-muted">
+                                Vincule este assistente aos cursos onde ele faz parte da trilha pedagógica.
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onPress={() => {
+                                if (selectedCourseIds.length === availableCourses.length) {
+                                  setSelectedCourseIds([]);
+                                } else {
+                                  setSelectedCourseIds(availableCourses.map((c) => c.id));
+                                }
+                              }}
+                            >
+                              {selectedCourseIds.length === availableCourses.length
+                                ? "Desmarcar Todos"
+                                : "Selecionar Todos"}
+                            </Button>
+                            {selectedCourseIds.length > 0 && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-danger"
+                                onPress={() => setSelectedCourseIds([])}
+                              >
+                                Limpar
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Chips de cursos selecionados */}
+                        {selectedCourseIds.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-background-secondary border border-border/60">
+                            {selectedCourseIds.map((cId) => {
+                              const course = availableCourses.find((c) => c.id === cId);
+                              return (
+                                <span
+                                  key={cId}
+                                  className="inline-flex items-center gap-1.5 rounded-lg bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent-soft-foreground"
+                                >
+                                  <BookOpen className="size-3" />
+                                  <span className="truncate max-w-[220px]">{course?.name || cId}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedCourseIds((prev) => prev.filter((id) => id !== cId))}
+                                    className="hover:text-danger p-0.5 rounded transition-colors"
+                                    aria-label={`Remover curso ${course?.name || cId}`}
+                                  >
+                                    <X className="size-3" />
+                                  </button>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Busca rápida de cursos */}
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted" />
+                          <input
+                            type="text"
+                            placeholder="Buscar cursos por título ou categoria..."
+                            value={courseSearchQuery}
+                            onChange={(e) => setCourseSearchQuery(e.target.value)}
+                            className="w-full h-9 pl-9 pr-3 rounded-xl border border-border bg-background text-xs text-foreground placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-accent"
+                          />
+                        </div>
+
+                        {/* Lista de cursos selecionáveis */}
+                        <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                          {filteredCoursesList.length === 0 ? (
+                            <p className="text-xs text-muted py-3 text-center">Nenhum curso encontrado com esse termo.</p>
+                          ) : (
+                            filteredCoursesList.map((course) => {
+                              const isSelected = selectedCourseIds.includes(course.id);
+                              return (
+                                <div
+                                  key={course.id}
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={() => {
+                                    setSelectedCourseIds((prev) =>
+                                      isSelected ? prev.filter((id) => id !== course.id) : [...prev, course.id],
+                                    );
+                                  }}
+                                  className={cn(
+                                    "flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none",
+                                    isSelected
+                                      ? "border-accent bg-accent-soft/40"
+                                      : "border-border/60 bg-background/50 hover:bg-background-secondary hover:border-border",
+                                  )}
+                                >
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <span
+                                      className={cn(
+                                        "flex size-4.5 shrink-0 items-center justify-center rounded border transition-colors",
+                                        isSelected
+                                          ? "border-accent bg-accent text-accent-foreground"
+                                          : "border-border bg-background",
+                                      )}
+                                    >
+                                      {isSelected && <Check className="size-3" />}
+                                    </span>
+                                    <div className="min-w-0">
+                                      <p
+                                        className={cn(
+                                          "text-xs font-semibold truncate",
+                                          isSelected ? "text-foreground font-bold" : "text-foreground",
+                                        )}
+                                      >
+                                        {course.name}
+                                      </p>
+                                      {course.category && (
+                                        <p className="text-[10px] text-muted">
+                                          {course.category} {course.subtitle ? `· ${course.subtitle}` : ""}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {isSelected && (
+                                    <Chip size="sm" variant="soft" color="accent" className="text-[10px] shrink-0">
+                                      Vinculado
+                                    </Chip>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Seleção de Planos de Assinatura Vinculados */}
+                      <div className="rounded-2xl border border-border bg-surface p-5 space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="size-5 text-accent" />
+                            <div>
+                              <h3 className="text-sm font-bold text-foreground">
+                                Planos de Assinatura ({selectedPlanIds.length})
+                              </h3>
+                              <p className="text-xs text-muted">
+                                Vincule este agente a planos de assinatura que garantem acesso direto.
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onPress={() => {
+                                if (selectedPlanIds.length === availablePlans.length) {
+                                  setSelectedPlanIds([]);
+                                } else {
+                                  setSelectedPlanIds(availablePlans.map((p) => p.id));
+                                }
+                              }}
+                            >
+                              {selectedPlanIds.length === availablePlans.length
+                                ? "Desmarcar Todos"
+                                : "Selecionar Todos"}
+                            </Button>
+                            {selectedPlanIds.length > 0 && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-danger"
+                                onPress={() => setSelectedPlanIds([])}
+                              >
+                                Limpar
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Chips de planos selecionados */}
+                        {selectedPlanIds.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-background-secondary border border-border/60">
+                            {selectedPlanIds.map((pId) => {
+                              const plan = availablePlans.find((p) => p.id === pId);
+                              return (
+                                <span
+                                  key={pId}
+                                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary-soft-foreground"
+                                >
+                                  <CreditCard className="size-3" />
+                                  <span className="truncate">{plan?.name || pId}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedPlanIds((prev) => prev.filter((id) => id !== pId))}
+                                    className="hover:text-danger p-0.5 rounded transition-colors"
+                                    aria-label={`Remover plano ${plan?.name || pId}`}
+                                  >
+                                    <X className="size-3" />
+                                  </button>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Lista de planos com checkboxes */}
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {filteredPlansList.map((plan) => {
+                            const isSelected = selectedPlanIds.includes(plan.id);
+                            return (
+                              <div
+                                key={plan.id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => {
+                                  setSelectedPlanIds((prev) =>
+                                    isSelected ? prev.filter((id) => id !== plan.id) : [...prev, plan.id],
+                                  );
+                                }}
+                                className={cn(
+                                  "flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer select-none",
+                                  isSelected
+                                    ? "border-accent bg-accent-soft/40"
+                                    : "border-border/60 bg-background/50 hover:bg-background-secondary hover:border-border",
+                                )}
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <span
+                                    className={cn(
+                                      "flex size-4.5 shrink-0 items-center justify-center rounded border transition-colors",
+                                      isSelected
+                                        ? "border-accent bg-accent text-accent-foreground"
+                                        : "border-border bg-background",
+                                    )}
+                                  >
+                                    {isSelected && <Check className="size-3" />}
+                                  </span>
+                                  <div className="min-w-0">
+                                    <p
+                                      className={cn(
+                                        "text-xs font-bold truncate",
+                                        isSelected ? "text-accent-soft-foreground" : "text-foreground",
+                                      )}
+                                    >
+                                      {plan.name}
+                                    </p>
+                                    {plan.subtitle && (
+                                      <p className="text-[10px] text-muted">
+                                        {plan.subtitle} {plan.badge ? `(${plan.badge})` : ""}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                {isSelected && (
+                                  <Chip size="sm" variant="soft" color="accent" className="text-[10px] shrink-0">
+                                    Incluso
+                                  </Chip>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <TextField
+                          value={slugTouched ? slug : effectiveSlug}
+                          onChange={(value) => {
+                            setSlugTouched(true);
+                            setSlug(value);
+                          }}
+                          fullWidth
+                        >
+                          <Label>Slug / Endereço na Web</Label>
+                          <Input placeholder="mentora-feedback" />
+                          <Description className="truncate">
+                            /agentes/{effectiveSlug || "slug-do-agente"}
+                          </Description>
+                        </TextField>
+                      </div>
+
+                      <div>
+                        <Label className="mb-1 block font-semibold text-foreground">
                           <span className="inline-flex items-center gap-1.5">
-                            <GraduationCap className="size-4 text-muted" aria-hidden="true" />
-                            Curso Vinculado
+                            <Tag className="size-4 text-muted" aria-hidden="true" />
+                            Habilidades do Agente (Tags de Destaque)
                           </span>
                         </Label>
-                        <Input placeholder="Ex.: Comunicação Transformadora" />
-                        <Description>Curso onde este agente é sugerido.</Description>
-                      </TextField>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <TextField
-                        value={String(avgMinutes)}
-                        onChange={(value) => setAvgMinutes(parseInt(value, 10) || 1)}
-                        fullWidth
-                      >
-                        <Label>Duração Típica da Conversa (minutos)</Label>
-                        <Input type="number" min={1} max={60} inputMode="numeric" />
-                        <Description>Média de tempo que o aluno investe.</Description>
-                      </TextField>
-
-                      <TextField
-                        value={slugTouched ? slug : effectiveSlug}
-                        onChange={(value) => {
-                          setSlugTouched(true);
-                          setSlug(value);
-                        }}
-                        fullWidth
-                      >
-                        <Label>Slug / Endereço na Web</Label>
-                        <Input placeholder="mentora-feedback" />
-                        <Description className="truncate">
-                          /agentes/{effectiveSlug || "slug-do-agente"}
-                        </Description>
-                      </TextField>
-                    </div>
-
-                    <div>
-                      <Label className="mb-1 block font-semibold text-foreground">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Tag className="size-4 text-muted" aria-hidden="true" />
-                          Habilidades do Agente (Tags de Destaque)
-                        </span>
-                      </Label>
-                      <p className="mb-3 text-xs text-muted">
-                        3 a 5 ações concretas. Aparecem como chips no card do aluno.
-                      </p>
-                      <TagEditor
-                        values={skills}
-                        onChange={setSkills}
-                        placeholder="Ex.: Estruturar conversa difícil"
-                        emptyHint="Nenhuma habilidade adicionada ainda. Digite e pressione Enter."
-                      />
+                        <p className="mb-3 text-xs text-muted">
+                          3 a 5 ações concretas. Aparecem como chips no card do aluno.
+                        </p>
+                        <TagEditor
+                          values={skills}
+                          onChange={setSkills}
+                          placeholder="Ex.: Estruturar conversa difícil"
+                          emptyHint="Nenhuma habilidade adicionada ainda. Digite e pressione Enter."
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -871,11 +1316,25 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                               <dd data-numeric>{avgMinutes} min</dd>
                             </div>
                             <div className="flex items-center gap-1 truncate">
-                              <dt className="text-muted">Curso:</dt>
-                              <dd className="font-semibold text-accent truncate max-w-[120px]">
-                                {courseTitle.trim() || "Curso Geral"}
+                              <dt className="text-muted">Cursos:</dt>
+                              <dd className="font-semibold text-accent truncate max-w-[140px]">
+                                {selectedCourseIds.length > 0
+                                  ? selectedCourseIds.length === 1
+                                    ? mappedCourseTitles[0]
+                                    : `${mappedCourseTitles[0]} (+${selectedCourseIds.length - 1})`
+                                  : "Acesso Geral"}
                               </dd>
                             </div>
+                            {selectedPlanIds.length > 0 && (
+                              <div className="flex items-center gap-1 truncate">
+                                <dt className="text-muted">Planos:</dt>
+                                <dd className="font-semibold text-primary truncate max-w-[140px]">
+                                  {selectedPlanIds.length === 1
+                                    ? mappedPlanNames[0]
+                                    : `${mappedPlanNames[0]} (+${selectedPlanIds.length - 1})`}
+                                </dd>
+                              </div>
+                            )}
                           </dl>
                         </div>
                         <p className="text-center text-[11px] text-muted">
@@ -899,12 +1358,37 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                     </p>
                   </div>
 
+                  {/* Banner OpenRouter */}
+                  <div className="rounded-2xl border border-accent/20 bg-accent-soft/30 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="size-9 rounded-xl bg-accent text-accent-foreground flex items-center justify-center shrink-0">
+                        <Sparkles className="size-4.5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-foreground">Motor de IA Unificado via OpenRouter</h4>
+                        <p className="text-[11px] text-muted">
+                          Os agentes processam prompts e conversas em tempo real usando os modelos conectados.
+                        </p>
+                      </div>
+                    </div>
+
+                    <Link
+                      href="/admin/integracoes/openrouter"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-surface-hover transition shrink-0"
+                    >
+                      <Cpu className="size-3.5 text-accent" />
+                      Gerenciar Chaves & Modelos
+                    </Link>
+                  </div>
+
                   {/* Seletor Visual de Modelo */}
                   <div>
                     <Label className="mb-3 block font-semibold text-foreground">Modelo de Linguagem (LLM)</Label>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {AI_MODELS.map((model) => {
-                        const isSelected = aiModel === model.id;
+                        const isSelected =
+                          aiModel === model.id ||
+                          (Array.isArray(model.aliases) && model.aliases.includes(aiModel));
                         return (
                           <div
                             key={model.id}

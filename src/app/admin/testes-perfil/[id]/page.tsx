@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { MOCK_PROFILE_TESTS } from '@/lib/mocks/profileTests';
+import { MOCK_PROFILE_TESTS } from '@/lib/seed/profileTests';
 import { ProfileTest, ProfileCategory, ProfileQuestion, ProfileTestStatus } from '@/types/profileTest';
 import { StepWizard, WizardStep } from '@/components/admin/profile-tests/StepWizard';
 import { CategoryEditor } from '@/components/admin/profile-tests/CategoryEditor';

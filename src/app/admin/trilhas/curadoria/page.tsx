@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { mockEligibleLessons } from '@/lib/mocks/trilhaMocks';
+import { mockEligibleLessons } from '@/lib/seed/questionnaire';
 import { EligibleLesson } from '@/types/trilha';
 import { Bot, Save, CheckCircle2, ChevronRight, Folder } from 'lucide-react';
 import { PageHeader } from '@/components/ui/editorial';

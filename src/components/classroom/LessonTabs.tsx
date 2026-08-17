@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useTransition } from "react";
 import {
   Avatar,
   Button,
@@ -14,70 +14,38 @@ import {
   Typography,
 } from "@heroui/react";
 import { Check, Download, FileText, MessageSquare, Save, Send, StickyNote } from "lucide-react";
-import { Lesson } from "@/lib/mockData";
+import { Lesson } from "@/types/course";
+import type { StudentNote } from "@/lib/data/notes";
+import { saveLessonNote } from "@/app/actions/notes";
 import { NoteIcon } from "@/components/ui/AnimatedIcon";
 import BlockViewer from "./BlockViewer";
 
 interface LessonTabsProps {
   lesson: Lesson;
+  /** Anotação já gravada para esta aula, vinda do servidor. */
+  initialNote?: StudentNote | null;
 }
-
-type StoredNote = {
-  lessonId: string;
-  lessonTitle: string;
-  content: string;
-  updatedAt: string;
-};
 
 type TabKey = "overview" | "materials" | "comments" | "notes";
 
-export default function LessonTabs({ lesson }: LessonTabsProps) {
+export default function LessonTabs({ lesson, initialNote = null }: LessonTabsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
-  const [note, setNote] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+  const [note, setNote] = useState(initialNote?.content ?? "");
+  const [isSaving, startSaving] = useTransition();
   const [saveSuccess, setSaveSuccess] = useState(false);
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      setNote(localStorage.getItem(`smartlms_note_${lesson.id}`) || "");
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [lesson.id]);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleSaveNote = () => {
-    setIsSaving(true);
-    // Add generic lesson info so the notas page can display context
-    const noteData = {
-      lessonId: lesson.id,
-      lessonTitle: lesson.title,
-      content: note,
-      updatedAt: new Date().toISOString()
-    };
-    localStorage.setItem(`smartlms_note_${lesson.id}`, note); // old raw note
-
-    // Also update an array of all notes for the /notas page
-    try {
-      const allNotesStr = localStorage.getItem('smartlms_all_notes') || '[]';
-      const parsed: unknown = JSON.parse(allNotesStr);
-      const allNotes: StoredNote[] = Array.isArray(parsed) ? parsed as StoredNote[] : [];
-      const existingNoteIndex = allNotes.findIndex((storedNote) => storedNote.lessonId === lesson.id);
-
-      if (existingNoteIndex >= 0) {
-        allNotes[existingNoteIndex] = noteData;
+    setSaveError(null);
+    startSaving(async () => {
+      const result = await saveLessonNote(lesson.id, lesson.title, note);
+      if (result.success) {
+        setSaveSuccess(true);
+        window.setTimeout(() => setSaveSuccess(false), 3000);
       } else {
-        allNotes.push(noteData);
+        setSaveError(result.message ?? "Não foi possível salvar.");
       }
-
-      localStorage.setItem('smartlms_all_notes', JSON.stringify(allNotes));
-    } catch (e) {
-      console.error('Failed to save notes list', e);
-    }
-
-    setTimeout(() => {
-      setIsSaving(false);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    }, 500);
+    });
   };
 
   return (
@@ -205,7 +173,7 @@ export default function LessonTabs({ lesson }: LessonTabsProps) {
             <div>
               <h2 className="display-3 text-foreground">Suas anotações</h2>
               <p className="mt-2 text-sm text-muted">
-                Espaço minimalista para seus pensamentos. Suas anotações são salvas localmente.
+                Espaço minimalista para seus pensamentos. Suas anotações ficam na sua conta.
               </p>
             </div>
             <Button
@@ -233,6 +201,12 @@ export default function LessonTabs({ lesson }: LessonTabsProps) {
               className="min-h-72 resize-y leading-8"
             />
           </TextField>
+
+          {saveError && (
+            <p role="alert" className="mt-3 text-sm text-danger">
+              {saveError}
+            </p>
+          )}
         </Tabs.Panel>
       </Tabs.Root>
     </Card>

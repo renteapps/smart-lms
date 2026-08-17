@@ -14,7 +14,7 @@ import {
   TextField
 } from "@heroui/react";
 import { Brain, RotateCcw, SkipForward, Sparkles } from "lucide-react";
-import { MOCK_PROFILE_TESTS } from "@/lib/mocks/profileTests";
+import { MOCK_PROFILE_TESTS } from "@/lib/seed/profileTests";
 
 interface AddProfileTestModalProps {
   isOpen: boolean;

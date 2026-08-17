@@ -36,7 +36,7 @@ import {
 } from '@heroui/react';
 import { PageHeader, StatCard, StatusBadge } from '@/components/ui/editorial';
 import { Pilula, PilulaStatus } from '@/types/pilula';
-import { INITIAL_PILULAS } from '@/lib/mocks/pilulaMocks';
+import { INITIAL_PILULAS } from '@/lib/seed/pilulas';
 import { PilulaFormModal } from '@/components/admin/pilulas/PilulaFormModal';
 import { PilulaPreviewModal } from '@/components/admin/pilulas/PilulaPreviewModal';
 import { PilulaDeleteDialog } from '@/components/admin/pilulas/PilulaDeleteDialog';

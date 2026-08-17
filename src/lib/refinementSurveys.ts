@@ -1,7 +1,8 @@
 import type { LearningTrail, Question, Questionnaire } from '@/types/trilha';
 import type { ProfileTest } from '@/types/profileTest';
 import type { HomeState, ImplicitSignals } from '@/lib/studentHome';
-import { readProfileTestResults, type ProfileTestResults } from '@/lib/profileTestStorage';
+import type { ProfileTestResult } from '@/lib/data/profileTests';
+import { EMPTY_REFINEMENT, type RefinementState } from '@/lib/data/trail';
 
 /**
  * Recalibração: as "pesquisas seguintes".
@@ -16,50 +17,11 @@ import { readProfileTestResults, type ProfileTestResults } from '@/lib/profileTe
  * geraria uma resposta que o motor ignoraria, e a trilha não mudaria.
  */
 
-export const REFINEMENT_STORAGE_KEY = '@smartlms:refinement:v1';
-
 /** Conclusões necessárias antes de reabrir uma pergunta já respondida. */
 const COMPLETIONS_BETWEEN_SURVEYS = 3;
 /** Dias de silêncio depois de responder uma micro-pesquisa. */
 const COOLDOWN_DAYS = 7;
 const DAY_IN_MS = 86_400_000;
-
-export type RefinementState = {
-  formatVersion: 1;
-  /** questionId -> ISO da última vez que a pessoa revisitou a pergunta. */
-  answeredAt: Record<string, string>;
-  /** Conclusões registradas na última vez que perguntamos algo. */
-  completedAtLastSurvey: number;
-};
-
-function empty(): RefinementState {
-  return { formatVersion: 1, answeredAt: {}, completedAtLastSurvey: 0 };
-}
-
-export function readRefinementState(rawInput?: string | null): RefinementState {
-  if (rawInput === undefined && typeof window === 'undefined') return empty();
-  const raw = rawInput === undefined ? window.localStorage.getItem(REFINEMENT_STORAGE_KEY) : rawInput;
-  if (!raw) return empty();
-  try {
-    const parsed = JSON.parse(raw) as RefinementState;
-    return parsed.formatVersion === 1 && parsed.answeredAt ? parsed : empty();
-  } catch {
-    return empty();
-  }
-}
-
-export function recordSurveyAnswer(questionId: string, completedCount: number, now = new Date()): void {
-  if (typeof window === 'undefined') return;
-  const current = readRefinementState();
-  window.localStorage.setItem(
-    REFINEMENT_STORAGE_KEY,
-    JSON.stringify({
-      formatVersion: 1,
-      answeredAt: { ...current.answeredAt, [questionId]: now.toISOString() },
-      completedAtLastSurvey: completedCount,
-    } satisfies RefinementState),
-  );
-}
 
 // ---------------------------------------------------------------------------
 
@@ -83,9 +45,9 @@ export type PickRecalibrationOptions = {
   state: HomeState;
   questionnaire: Questionnaire | null;
   signals: ImplicitSignals;
-  refinement: RefinementState;
+  refinement?: RefinementState;
   profileTests?: ProfileTest[];
-  profileTestResults?: ProfileTestResults;
+  profileTestResults?: ProfileTestResult[];
   now?: Date;
 };
 
@@ -131,9 +93,9 @@ export function pickRecalibration({
   state,
   questionnaire,
   signals,
-  refinement,
+  refinement = EMPTY_REFINEMENT,
   profileTests = [],
-  profileTestResults,
+  profileTestResults = [],
   now = new Date(),
 }: PickRecalibrationOptions): Recalibration | null {
   if (state.kind === 'sem-trilha') return null;
@@ -177,11 +139,10 @@ export function pickRecalibration({
   }
 
   // 3. Teste de perfil ainda não respondido.
-  const results = profileTestResults ?? readProfileTestResults();
   const pending = profileTests.find(
     (test) => test.status === 'published'
       && test.questions.length > 0
-      && !results.results.some((entry) => entry.testId === test.id),
+      && !profileTestResults.some((entry) => entry.testId === test.id),
   );
 
   if (pending) {
@@ -193,4 +154,36 @@ export function pickRecalibration({
   }
 
   return null;
+}
+
+export const REFINEMENT_STORAGE_KEY = '@smartlms:refinement:v1';
+
+export function readRefinementState(raw?: string | null): RefinementState {
+  if (!raw) return EMPTY_REFINEMENT;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : EMPTY_REFINEMENT;
+  } catch {
+    return EMPTY_REFINEMENT;
+  }
+}
+
+export function recordSurveyAnswer(
+  questionId: string,
+  completedCount: number,
+  now: Date = new Date(),
+): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = window.localStorage.getItem(REFINEMENT_STORAGE_KEY);
+    const current = readRefinementState(raw);
+    const updated: RefinementState = {
+      formatVersion: 1,
+      answeredAt: { ...current.answeredAt, [questionId]: now.toISOString() },
+      completedAtLastSurvey: completedCount,
+    };
+    window.localStorage.setItem(REFINEMENT_STORAGE_KEY, JSON.stringify(updated));
+  } catch (err) {
+    console.error('Erro ao registrar resposta de pesquisa:', err);
+  }
 }

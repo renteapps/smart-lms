@@ -1,23 +1,23 @@
 import Link from "next/link";
 import { buttonVariants } from "@heroui/styles";
 import { EmptyState } from "@heroui/react/empty-state";
-import { MOCK_COURSE } from "@/lib/mockData";
 import LessonClientWrapper from "@/components/classroom/LessonClientWrapper";
+import { getSessionUser } from "@/lib/supabase/auth";
+import { getLessonWithCourse } from "@/lib/data/courses";
+import { getLessonNote } from "@/lib/data/notes";
+import { getProfileTests } from "@/lib/data/profileTests";
 
-export default async function AulaPage({ params }: { params: Promise<{ id: string; lessonId: string }> }) {
-  const resolvedParams = await params;
+export default async function AulaPage({
+  params,
+}: {
+  params: Promise<{ id: string; lessonId: string }>;
+}) {
+  const { id, lessonId } = await params;
+  const { supabase, user } = await getSessionUser();
 
-  // Encontrar aula atual
-  let currentLesson = null;
-  for (const courseModule of MOCK_COURSE.modules) {
-    const lesson = courseModule.lessons.find((l) => l.id === resolvedParams.lessonId);
-    if (lesson) {
-      currentLesson = lesson;
-      break;
-    }
-  }
+  const result = await getLessonWithCourse(supabase, id, lessonId, user?.id);
 
-  if (!currentLesson) {
+  if (!result) {
     return (
       <div className="flex min-h-full items-center justify-center px-4 py-24">
         <EmptyState>
@@ -26,10 +26,7 @@ export default async function AulaPage({ params }: { params: Promise<{ id: strin
           <p className="lede mx-auto mt-3">
             Esta etapa pode ter sido removida do curso ou o endereço está incorreto.
           </p>
-          <Link
-            href={`/courses/${resolvedParams.id}`}
-            className={buttonVariants({ variant: "primary", className: "mt-8" })}
-          >
+          <Link href={`/courses/${id}`} className={buttonVariants({ variant: "primary", className: "mt-8" })}>
             Voltar ao curso
           </Link>
         </EmptyState>
@@ -37,5 +34,20 @@ export default async function AulaPage({ params }: { params: Promise<{ id: strin
     );
   }
 
-  return <LessonClientWrapper lesson={currentLesson} courseId={resolvedParams.id} />;
+  const { course, lesson } = result;
+
+  // Só a aula de diagnóstico precisa do catálogo de testes.
+  const profileTests =
+    lesson.type === "profile_test" ? await getProfileTests(supabase, true) : [];
+  const note = user ? await getLessonNote(supabase, user.id, lesson.id) : null;
+
+  return (
+    <LessonClientWrapper
+      lesson={lesson}
+      course={course}
+      courseId={course.id}
+      profileTests={profileTests}
+      initialNote={note}
+    />
+  );
 }

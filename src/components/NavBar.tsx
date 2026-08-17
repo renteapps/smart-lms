@@ -10,10 +10,16 @@ import { NotificationBell } from "./NotificationBell";
 import { BrandMark } from "./BrandMark";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import {
+  PROFILE_SAVED_EVENT,
+  PROFILE_STORAGE_KEY,
+  type ProfilePreferences,
+} from "@/components/profile/ProfileEditor";
 
 export default function NavBar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
   const { user, isAuthenticated, isLoading, signOut } = useAuth();
@@ -36,6 +42,33 @@ export default function NavBar() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (user?.user_metadata?.avatar_url) {
+      setAvatarUrl(user.user_metadata.avatar_url);
+    }
+    const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.avatarUrl) {
+          setAvatarUrl(parsed.avatarUrl);
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    const handleProfileSaved = (event: Event) => {
+      const detail = (event as CustomEvent<ProfilePreferences>).detail;
+      if (detail) {
+        setAvatarUrl(detail.avatarUrl || null);
+      }
+    };
+
+    window.addEventListener(PROFILE_SAVED_EVENT, handleProfileSaved);
+    return () => window.removeEventListener(PROFILE_SAVED_EVENT, handleProfileSaved);
+  }, [user]);
 
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
@@ -126,7 +159,7 @@ export default function NavBar() {
 
         <div className="flex items-center gap-1 sm:gap-2">
           <Link
-            href="/cursos"
+            href="/busca"
             aria-label="Buscar conteúdos"
             className={cn(
               "icon-rotate press flex h-11 items-center gap-2 px-3 text-muted transition-colors hover:bg-surface-hover hover:text-foreground xl:min-w-44 xl:border",
@@ -160,11 +193,15 @@ export default function NavBar() {
             >
               <span
                 className={cn(
-                  "grid size-7 place-items-center bg-accent-soft text-accent-soft-foreground",
+                  "grid size-7 place-items-center bg-accent-soft text-accent-soft-foreground overflow-hidden shrink-0",
                   isScrolled ? "rounded-full" : "rounded-lg",
                 )}
               >
-                <User className="size-4" aria-hidden="true" />
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={userDisplayName} className="size-full object-cover" />
+                ) : (
+                  <User className="size-4" aria-hidden="true" />
+                )}
               </span>
               <span className="hidden xl:inline truncate max-w-[120px]">{userDisplayName}</span>
             </Link>
@@ -260,8 +297,12 @@ export default function NavBar() {
                           onClick={() => setMobileOpen(false)}
                           className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-border bg-surface px-4 text-left font-semibold text-foreground shadow-surface transition-colors hover:bg-surface-hover"
                         >
-                          <span className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground">
-                            <User className="size-4" aria-hidden="true" />
+                          <span className="grid size-8 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground overflow-hidden shrink-0">
+                            {avatarUrl ? (
+                              <img src={avatarUrl} alt={userDisplayName} className="size-full object-cover" />
+                            ) : (
+                              <User className="size-4" aria-hidden="true" />
+                            )}
                           </span>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-bold">{userDisplayName}</p>

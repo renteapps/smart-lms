@@ -164,4 +164,39 @@ describe("Business Storage & B2B Management Logic", () => {
 
     setSimulatedManagerStatus(null);
   });
+
+  it("creates and retrieves a new company with custom departments, domains and allowed courses", () => {
+    const created = saveCompany({
+      name: "Empresa Inovadora S.A.",
+      tradeName: "Inovadora",
+      cnpj: "11.222.333/0001-44",
+      domain: "inovadora.com.br",
+      autoDomainApproval: true,
+      managerName: "Gestor Teste",
+      managerEmail: "gestor@inovadora.com.br",
+      managerPhone: "(11) 91234-5678",
+      seatsTotal: 75,
+      planType: "anual",
+      status: "ativo",
+      contractValue: 5500,
+      contractStart: "2026-08-15",
+      contractEnd: "2027-08-15",
+      allowedCourseIds: ["c1", "c2"],
+      departments: ["Engenharia", "Design", "RH"],
+    });
+
+    expect(created.id).toBeDefined();
+    expect(created.tradeName).toBe("Inovadora");
+
+    const fetched = getCompanyById(created.id);
+    expect(fetched).toBeDefined();
+    expect(fetched?.cnpj).toBe("11.222.333/0001-44");
+    expect(fetched?.domain).toBe("inovadora.com.br");
+    expect(fetched?.autoDomainApproval).toBe(true);
+    expect(fetched?.seatsTotal).toBe(75);
+    expect(fetched?.contractValue).toBe(5500);
+    expect(fetched?.allowedCourseIds).toEqual(["c1", "c2"]);
+    expect(fetched?.departments).toEqual(["Engenharia", "Design", "RH"]);
+  });
 });
+

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import { Button, Card, Input, Label, Radio, RadioGroup, TextArea, TextField } from '@heroui/react';
-import { ContentBlock } from '@/lib/mockData';
+import { ContentBlock } from '@/types/course';
 import SlashMenu, { BlockType, MENU_ITEMS } from './SlashMenu';
 import RichTextEditor from './RichTextEditor';
 import TableBlockEditor from './TableBlockEditor';

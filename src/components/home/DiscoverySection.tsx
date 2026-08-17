@@ -5,7 +5,7 @@ import { BookOpen } from "lucide-react";
 import { buttonVariants } from "@heroui/styles";
 import CourseCard from "@/components/CourseCard";
 import { Rise } from "@/components/ui/Rise";
-import type { CatalogCourse } from "@/lib/catalog";
+import type { CatalogCourse } from "@/types/course";
 import { cn } from "@/lib/utils";
 
 type DiscoverySectionProps = {

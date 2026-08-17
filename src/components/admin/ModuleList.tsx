@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { GripVertical, Plus, Edit2, Trash2, ChevronDown, ChevronUp, PlayCircle, FileText, CheckCircle, Brain, SkipForward, RotateCcw, Image as ImageIcon } from "lucide-react";
-import { Course, Module, Lesson } from "@/lib/mockData";
+import { Course, Module, Lesson } from "@/types/course";
 import Link from "next/link";
 import AddProfileTestModal from "./AddProfileTestModal";
 import AddEditModuleModal from "./AddEditModuleModal";

@@ -82,6 +82,12 @@ function ResetarSenhaContent() {
             error.message.toLowerCase().includes("rate limit")
           ) {
             message = "Muitas mensagens de e-mail foram solicitadas recentemente. Aguarde alguns minutos antes de tentar novamente.";
+          } else if (
+            error.message.includes("Invalid path") ||
+            error.message.includes("Failed to fetch") ||
+            error.message.includes("NetworkError")
+          ) {
+            message = "Falha ao conectar aos serviços de autenticação. Verifique as configurações do Supabase.";
           }
           setErrorMessage(message);
           return;

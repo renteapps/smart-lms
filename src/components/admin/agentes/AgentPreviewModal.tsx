@@ -89,9 +89,19 @@ export function AgentPreviewModal({ agent, onClose }: AgentPreviewModalProps) {
                           <dd data-numeric>{agent.avgMinutes} min</dd>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <dt>Curso:</dt>
-                          <dd className="font-semibold text-accent">{agent.courseTitle}</dd>
+                          <dt>Cursos:</dt>
+                          <dd className="font-semibold text-accent">
+                            {agent.courseTitles && agent.courseTitles.length > 0
+                              ? agent.courseTitles.join(", ")
+                              : agent.courseTitle || "Acesso Geral"}
+                          </dd>
                         </div>
+                        {agent.planNames && agent.planNames.length > 0 && (
+                          <div className="flex items-center gap-1.5">
+                            <dt>Planos:</dt>
+                            <dd className="font-semibold text-primary">{agent.planNames.join(", ")}</dd>
+                          </div>
+                        )}
                       </dl>
                     </div>
                   </div>

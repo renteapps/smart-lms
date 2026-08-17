@@ -1,5 +1,9 @@
-import { MOCK_COURSE } from "@/lib/mockData";
+import Link from "next/link";
+import { buttonVariants } from "@heroui/styles";
+import { EmptyState } from "@heroui/react/empty-state";
 import CourseOverviewClient from "@/components/classroom/CourseOverviewClient";
+import { getSessionUser } from "@/lib/supabase/auth";
+import { getCourse } from "@/lib/data/courses";
 
 /**
  * Capa do curso. Todo o cálculo (progresso, próxima aula) acontece no servidor;
@@ -7,30 +11,34 @@ import CourseOverviewClient from "@/components/classroom/CourseOverviewClient";
  */
 export default async function CourseOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const { supabase, user } = await getSessionUser();
 
-  // No mundo real, buscaríamos o curso pelo resolvedParams.id
-  const course = { ...MOCK_COURSE, id };
+  const course = await getCourse(supabase, id, user?.id);
 
-  // Cálculos de progresso
-  const totalLessons = course.modules.reduce((acc, mod) => acc + mod.lessons.length, 0);
-  const completedLessons = course.modules.reduce((acc, mod) => {
-    return acc + mod.lessons.filter(l => l.isCompleted).length;
-  }, 0);
-  const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
-
-  // Pegar a primeira aula não concluída, ou a primeira do curso se for novo
-  let nextLesson = null;
-  for (const courseModule of course.modules) {
-    const uncompletedLesson = courseModule.lessons.find((l) => !l.isCompleted);
-    if (uncompletedLesson) {
-      nextLesson = uncompletedLesson;
-      break;
-    }
+  if (!course) {
+    return (
+      <div className="flex min-h-full items-center justify-center px-4 py-24">
+        <EmptyState>
+          <p className="eyebrow">Erro 404</p>
+          <h1 className="display-3 mt-3 text-foreground">Curso não encontrado</h1>
+          <p className="lede mx-auto mt-3">
+            Este curso pode ter sido despublicado ou o endereço está incorreto.
+          </p>
+          <Link href="/cursos" className={buttonVariants({ variant: "primary", className: "mt-8" })}>
+            Ver todos os cursos
+          </Link>
+        </EmptyState>
+      </div>
+    );
   }
-  // Se terminou tudo, sugere a primeira (ou apenas o link pro início)
-  if (!nextLesson && course.modules.length > 0 && course.modules[0].lessons.length > 0) {
-    nextLesson = course.modules[0].lessons[0];
-  }
+
+  const allLessons = course.modules.flatMap((mod) => mod.lessons);
+  const totalLessons = allLessons.length;
+  const completedLessons = allLessons.filter((lesson) => lesson.isCompleted).length;
+  const progressPercentage = totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0;
+
+  // Primeira aula não concluída; se terminou tudo, volta para a primeira.
+  const nextLesson = allLessons.find((lesson) => !lesson.isCompleted) ?? allLessons[0] ?? null;
 
   return (
     <CourseOverviewClient

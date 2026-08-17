@@ -7,7 +7,7 @@ import {
   selectHomeState,
 } from './studentHome';
 import { CATALOG_COURSES } from './catalog';
-import { mockQuestionnaire } from './mocks/trilhaMocks';
+import { mockQuestionnaire } from './seed/questionnaire';
 import type { LearningTrail, LearningTrailItem, StudyAvailability } from '@/types/trilha';
 
 // Segunda-feira. Toda a suíte trabalha em horário local, como o produto.

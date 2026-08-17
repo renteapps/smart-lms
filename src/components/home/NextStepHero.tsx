@@ -8,6 +8,7 @@ import { Chip } from "@heroui/react/chip";
 import HeroBackdrop from "@/components/HeroBackdrop";
 import { ArrowIcon, PlayIcon } from "@/components/ui/AnimatedIcon";
 import { Reveal } from "@/components/ui/Reveal";
+import { useCardTransition } from "@/contexts/CardTransitionContext";
 import { contentHref, ROLE_CHIP_LABELS, type HomeSession } from "@/lib/studentHome";
 import type { LearningTrailItem } from "@/types/trilha";
 import { cn } from "@/lib/utils";
@@ -46,10 +47,50 @@ type NextStepHeroProps = {
  * pílula do dia e trilha de hoje. Agora há um.
  */
 export default function NextStepHero({ session, nextStep, greeting }: NextStepHeroProps) {
+  const { triggerTransition } = useCardTransition();
   const cover = nextStep.cover || DEFAULT_COVER;
   const locked = Boolean(nextStep.prerequisites?.some((id) => (
     session.items.some((item) => item.id === id && item.status === "pending")
   )));
+
+  const targetHref = contentHref(nextStep);
+
+  const handleStartClick = (e: React.MouseEvent<HTMLElement>) => {
+    if (
+      locked ||
+      e.defaultPrevented ||
+      e.button !== 0 ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.altKey ||
+      e.shiftKey ||
+      !targetHref ||
+      targetHref === "#" ||
+      targetHref.startsWith("http")
+    ) {
+      return;
+    }
+
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    triggerTransition({
+      sourceRect: {
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+        borderRadius: 16,
+      },
+      metadata: {
+        title: nextStep.title,
+        cover,
+        category: nextStep.moduleName || "Sua Trilha",
+        duration: `${nextStep.durationMin} min`,
+        type: "lesson",
+      },
+      href: targetHref,
+    });
+  };
 
   return (
     <>
@@ -102,7 +143,8 @@ export default function NextStepHero({ session, nextStep, greeting }: NextStepHe
                 </p>
               ) : (
                 <Link
-                  href={contentHref(nextStep)}
+                  href={targetHref}
+                  onClick={handleStartClick}
                   className={cn(buttonVariants({ variant: "primary", size: "lg" }), "icon-draw")}
                 >
                   <PlayIcon size={20} />
@@ -125,7 +167,8 @@ export default function NextStepHero({ session, nextStep, greeting }: NextStepHe
            */}
           <Reveal edge className="hidden rounded-2xl lg:block">
             <Link
-              href={locked ? "/minha-trilha" : contentHref(nextStep)}
+              href={locked ? "/minha-trilha" : targetHref}
+              onClick={locked ? undefined : handleStartClick}
               className="lift group block overflow-hidden rounded-2xl border border-hairline bg-surface shadow-elev-2"
               tabIndex={-1}
               aria-hidden="true"
