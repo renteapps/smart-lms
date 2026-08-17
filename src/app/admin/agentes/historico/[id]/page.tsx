@@ -61,157 +61,10 @@ import type {
   ConversationStatus,
 } from "@/types/agente";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { getAgentConversations } from "@/lib/data/agents";
 
-// Dados realistas de telemetria e conversas simulando milhares de atendimentos
-const GENERATED_MOCK_CONVERSATIONS: AgentConversation[] = [
-  {
-    id: "conv-101",
-    agentId: "ag-feedback",
-    studentName: "João Silva",
-    studentEmail: "joao.silva@empresa.com",
-    studentAvatar: "JS",
-    title: "Como estruturar feedback sobre entregas fora do prazo",
-    createdAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(), // 12 min atrás
-    updatedAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
-    status: "resolvida",
-    sentiment: "positivo",
-    rating: 5,
-    durationSeconds: 340,
-    tokensUsed: 1240,
-    courseTitle: "Feedback que Transforma",
-    lessonContext: "Módulo 2: Fato vs. Julgamento",
-    aiSummary: "O aluno aprendeu a separar atrasos concretos de julgamentos de caráter. Estruturou 3 perguntas para a reunião.",
-    messages: [
-      { id: "m1", author: "agent", text: "Oi! Sou a Bea. Me conta o que aconteceu do seu jeito, sem filtro — e a gente transforma isso numa conversa que a outra pessoa consegue ouvir." },
-      { id: "m2", author: "student", text: "Preciso dar um feedback para um colega que sempre entrega os relatórios atrasados, mas tenho medo dele ficar na defensiva." },
-      { id: "m3", author: "agent", text: "Dar feedback para pares exige cuidado para não soar como cobrança de chefia, mas sim alinhamento de impacto. Me conta: qual foi o fato concreto da última entrega?" },
-      { id: "m4", author: "student", text: "O relatório financeiro era para sexta 18h e ele mandou terça de manhã sem avisar antes." },
-      { id: "m5", author: "agent", text: "Perfeito! Esse é o fato cru. Agora, qual foi o impacto concreto disso na sua rotina ou no cliente?" },
-      { id: "m6", author: "student", text: "Tive que cancelar minha folga de sábado para consolidar os dados antes da reunião de segunda com a diretoria." },
-      { id: "m7", author: "agent", text: "Excelente. Você tem a estrutura perfeita:\n\n1. O fato: 'Na sexta passada, a entrega combinada para as 18h chegou na terça de manhã sem aviso prévio.'\n2. O impacto: 'Com isso, precisei trabalhar no sábado para não atrasar a diretoria.'\n3. O pedido: 'Podemos combinar que, se houver imprevisto, você me avise até às 14h da data prevista?'\n\nComo você se sente lendo essa proposta?" },
-      { id: "m8", author: "student", text: "Ficou muito claro e sem nenhuma agressividade! Vou usar exatamente esse roteiro. Obrigado, Bea!" }
-    ],
-  },
-  {
-    id: "conv-102",
-    agentId: "ag-feedback",
-    studentName: "Mariana Souza",
-    studentEmail: "mariana.souza@techcorp.io",
-    studentAvatar: "MS",
-    title: "Gestor cortou minha fala na reunião com a diretoria",
-    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // 45 min atrás
-    updatedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    status: "resolvida",
-    sentiment: "positivo",
-    rating: 5,
-    durationSeconds: 420,
-    tokensUsed: 1580,
-    courseTitle: "Feedback que Transforma",
-    lessonContext: "Módulo 4: Conversas com Lideranças",
-    aiSummary: "Aluna ensaiou alinhamento 1:1 com o gestor focando no objetivo comum de alinhamento com a diretoria.",
-    messages: [
-      { id: "m1", author: "agent", text: "Oi! Sou a Bea. Me conta o que aconteceu do seu jeito, sem filtro — e a gente transforma isso numa conversa que a outra pessoa consegue ouvir." },
-      { id: "m2", author: "student", text: "Meu gestor me interrompeu grosseiramente na frente de todos os diretores hoje de manhã. Fiquei com muita raiva." },
-      { id: "m3", author: "agent", text: "Entendo profundamente a sua frustração. Passar por isso em público é desestabilizador. Antes de falar com ele, vamos esfriar a emoção e focar no combinado. O que você gostaria que tivesse acontecido?" },
-      { id: "m4", author: "student", text: "Gostaria que ele tivesse me deixado concluir a explicação dos dados e, se tivesse ressalvas, falasse depois." },
-      { id: "m5", author: "agent", text: "Muito legítimo. Em um 1:1 reservado, experimente abrir assim: 'Na reunião de hoje, quando fui interrompida no slide 4, fiquei com a sensação de que a mensagem aos diretores ficou incompleta. Como podemos alinhar as falas antes para que tenhamos uma postura unificada?' O que acha?" },
-      { id: "m6", author: "student", text: "Adorei a abordagem de trazer como 'postura unificada'. Tira o tom de ataque." }
-    ],
-  },
-  {
-    id: "conv-103",
-    agentId: "ag-feedback",
-    studentName: "Carlos Eduardo",
-    studentEmail: "carlos.edu@startup.com",
-    studentAvatar: "CE",
-    title: "Dúvida sobre aplicação em feedback de demissão",
-    createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(), // 3h atrás
-    updatedAt: new Date(Date.now() - 1000 * 60 * 165).toISOString(),
-    status: "duvida_pedagogica",
-    sentiment: "neutro",
-    rating: 4,
-    durationSeconds: 290,
-    tokensUsed: 980,
-    courseTitle: "Feedback que Transforma",
-    lessonContext: "Módulo 5: Encerramento de Ciclos",
-    aiSummary: "Esclarecimento de que a conversa de demissão não é momento de feedback longo, mas sim de comunicação respeitosa e direta.",
-    messages: [
-      { id: "m1", author: "agent", text: "Oi! Sou a Bea. Me conta o que aconteceu do seu jeito, sem filtro." },
-      { id: "m2", author: "student", text: "Posso usar a técnica de 3 perguntas na hora de demitir uma pessoa?" },
-      { id: "m3", author: "agent", text: "Cuidado! Na conversa de desligamento, a decisão já foi tomada. Não é momento de pedir planos de ação ou ensinar o processo. A comunicação deve ser direta, humana, objetiva e transparente, sem abrir espaço para falsas esperanças de reversão." }
-    ],
-  },
-  {
-    id: "conv-104",
-    agentId: "ag-feedback",
-    studentName: "Patrícia Lima",
-    studentEmail: "patricia.lima@logistica.com.br",
-    studentAvatar: "PL",
-    title: "A pessoa começou a chorar no meio do feedback",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(), // 6h atrás
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 5.8).toISOString(),
-    status: "resolvida",
-    sentiment: "positivo",
-    rating: 5,
-    durationSeconds: 510,
-    tokensUsed: 1840,
-    courseTitle: "Feedback que Transforma",
-    lessonContext: "Módulo 3: Reações Emocionais",
-    aiSummary: "Instruções práticas sobre como acolher o choro com silêncio empático sem voltar atrás no combinado.",
-    messages: [
-      { id: "m1", author: "agent", text: "Oi! Sou a Bea. Me conta o que aconteceu do seu jeito." },
-      { id: "m2", author: "student", text: "Fui dar um feedback e a liderada começou a chorar copiosamente. Fiquei sem saber o que fazer e quase pedi desculpas." },
-      { id: "m3", author: "agent", text: "Reação muito comum quando nos importamos com as pessoas. O choro é descarga emocional, não necessariamente manipulação ou motivo para você cancelar o feedback. O que você fez logo em seguida?" }
-    ],
-  },
-  {
-    id: "conv-105",
-    agentId: "ag-feedback",
-    studentName: "Roberto Ramos",
-    studentEmail: "roberto.r@financas.org",
-    studentAvatar: "RR",
-    title: "IA sugeriu mensagem muito formal para equipe jovem",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 dia atrás
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 23.8).toISOString(),
-    status: "atencao",
-    sentiment: "critico",
-    rating: 2,
-    durationSeconds: 180,
-    tokensUsed: 750,
-    courseTitle: "Feedback que Transforma",
-    lessonContext: "Módulo 1: Tom de Voz",
-    aiSummary: "Aluno achou o vocabulário muito corporativo para um time ágil de estagiários. Recomendado ajuste no prompt de tom de voz.",
-    messages: [
-      { id: "m1", author: "agent", text: "Oi! Sou a Bea. Me conta o que aconteceu do seu jeito." },
-      { id: "m2", author: "student", text: "Seu texto sugerido parece uma notificação jurídica. Meu time tem 22 anos e joga videogame comigo. Preciso de algo mais natural." },
-      { id: "m3", author: "agent", text: "Tem toda razão! Vamos calibrar para uma linguagem mais leve e direta de time ágil." }
-    ],
-  },
-  {
-    id: "conv-106",
-    agentId: "ag-feedback",
-    studentName: "Fernanda Albuquerque",
-    studentEmail: "fernanda.a@design.co",
-    studentAvatar: "FA",
-    title: "Revisão de mensagem de feedback via Slack",
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 28).toISOString(),
-    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 27.8).toISOString(),
-    status: "resolvida",
-    sentiment: "positivo",
-    rating: 5,
-    durationSeconds: 310,
-    tokensUsed: 1100,
-    courseTitle: "Feedback que Transforma",
-    lessonContext: "Módulo 4: Comunicação Assíncrona",
-    aiSummary: "Revisão de texto para Slack eliminando ambiguidades e evitando interpretação de passivo-agressividade.",
-    messages: [
-      { id: "m1", author: "agent", text: "Oi! Sou a Bea. Me conta o que aconteceu do seu jeito." },
-      { id: "m2", author: "student", text: "Posso mandar feedback importante pelo chat ou só por chamada de vídeo?" },
-      { id: "m3", author: "agent", text: "Se for corretivo ou delicado, sempre prefira voz ou vídeo para não perder tom e expressão. Use o chat apenas para registrar os combinados já conversados!" }
-    ],
-  },
-];
-
+// Tipos de Filtro
 type PeriodOption = "hoje" | "7dias" | "mes" | "tudo";
 type StatusFilter = "todos" | ConversationStatus;
 type SentimentFilter = "todos" | ConversationSentiment;
@@ -242,17 +95,41 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
   const [sentimentFilter, setSentimentFilter] = useState<SentimentFilter>("todos");
   const [ratingFilter, setRatingFilter] = useState<string>("todas");
 
+  const [conversations, setConversations] = useState<AgentConversation[]>([]);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+
   // Conversa selecionada
-  const [selectedId, setSelectedId] = useState<string>(GENERATED_MOCK_CONVERSATIONS[0]?.id ?? "");
+  const [selectedId, setSelectedId] = useState<string>("");
   const [copiedTranscript, setCopiedTranscript] = useState(false);
 
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
 
+  import("react").then(React => {
+    React.useEffect(() => {
+      async function loadConversations() {
+        if (!agent) return;
+        setIsLoadingConversations(true);
+        const supabase = createClient();
+        try {
+          const data = await getAgentConversations(supabase, agent.id);
+          setConversations(data);
+          if (data.length > 0 && !selectedId) {
+            setSelectedId(data[0].id);
+          }
+        } catch (e) {
+          console.error("Erro ao buscar conversas", e);
+        }
+        setIsLoadingConversations(false);
+      }
+      loadConversations();
+    }, [agent, selectedId]);
+  });
+
   // Filtragem
   const filteredConversations = useMemo(() => {
-    return GENERATED_MOCK_CONVERSATIONS.filter((conv) => {
+    return conversations.filter((conv) => {
       // Busca texto
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
@@ -293,8 +170,8 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
   }, [filteredConversations, currentPage]);
 
   const selectedConversation = useMemo(() => {
-    return GENERATED_MOCK_CONVERSATIONS.find((c) => c.id === selectedId) || filteredConversations[0] || null;
-  }, [selectedId, filteredConversations]);
+    return conversations.find((c) => c.id === selectedId) || filteredConversations[0] || null;
+  }, [selectedId, filteredConversations, conversations]);
 
   const handleCopyTranscript = () => {
     if (!selectedConversation) return;

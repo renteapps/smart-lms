@@ -1,17 +1,9 @@
-"use client";
-
 import Link from "next/link";
-import { Plus, UserRound } from "lucide-react";
-import { Avatar, Card, EmptyState, Label, SearchField, Table, buttonVariants } from "@heroui/react";
+import { Plus, UserRound, Search } from "lucide-react";
+import { Avatar, Card, EmptyState, Table, buttonVariants } from "@heroui/react";
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 import { cn } from "@/lib/utils";
-
-const users = [
-  { id: "1", name: "João Silva", email: "joao@email.com", role: "Aluno", status: "Ativo", progress: "72%", lastSeen: "Hoje, 10:24" },
-  { id: "2", name: "Maria Souza", email: "maria@email.com", role: "Aluno", status: "Ativo", progress: "48%", lastSeen: "Ontem, 18:10" },
-  { id: "3", name: "Pedro Costa", email: "pedro@email.com", role: "Aluno", status: "Inativo", progress: "12%", lastSeen: "20 jul, 09:02" },
-  { id: "4", name: "Ana Beatriz", email: "ana@email.com", role: "Instrutora", status: "Ativo", progress: "—", lastSeen: "Hoje, 08:41" },
-];
+import { createClient } from "@/lib/supabase/server";
 
 const initials = (name: string) =>
   name
@@ -20,7 +12,47 @@ const initials = (name: string) =>
     .slice(0, 2)
     .join("");
 
-export default function AdminUsers() {
+export default async function AdminUsers({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const params = await searchParams;
+  const q = params.q || "";
+
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("profiles")
+    .select("id, full_name, email, role, status, last_access_at, created_at");
+
+  if (q) {
+    query = query.or(`full_name.ilike.%${q}%,email.ilike.%${q}%`);
+  }
+
+  const { data: profiles, error } = await query.order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Erro ao buscar usuários", error);
+  }
+
+  const users = (profiles || []).map((user) => {
+    const roleDisplay = user.role === "admin" ? "Administrador" : user.role === "instructor" ? "Instrutor" : "Aluno";
+    const statusDisplay = user.status === "active" ? "Ativo" : "Inativo";
+    const lastSeenStr = user.last_access_at 
+      ? new Date(user.last_access_at).toLocaleDateString("pt-BR", { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+      : "Nunca";
+    
+    // Progresso mockado, ideal seria buscar do Supabase por aluno
+    const progress = user.role === "student" ? "Em andamento" : "—";
+
+    return {
+      id: user.id,
+      name: user.full_name || "Desconhecido",
+      email: user.email || "",
+      role: roleDisplay,
+      status: statusDisplay,
+      progress: progress,
+      lastSeen: lastSeenStr,
+    };
+  });
+
   const isEmpty = users.length === 0;
 
   return (
@@ -38,16 +70,19 @@ export default function AdminUsers() {
 
       <Card>
         <Card.Header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <SearchField className="w-full sm:max-w-md" aria-label="Buscar usuário">
-            <Label className="sr-only">Buscar usuário</Label>
-            <SearchField.Group>
-              <SearchField.SearchIcon />
-              <SearchField.Input placeholder="Buscar por nome ou e-mail" />
-              <SearchField.ClearButton />
-            </SearchField.Group>
-          </SearchField>
+          <form action="/admin/users" method="GET" className="w-full sm:max-w-md relative">
+            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+            <input 
+              type="text" 
+              name="q"
+              defaultValue={q}
+              placeholder="Buscar por nome ou e-mail" 
+              className="w-full px-10 py-2 rounded-lg border border-separator bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+              aria-label="Buscar usuário"
+            />
+          </form>
           <p className="text-xs text-muted">
-            <strong className="font-semibold text-foreground">1.248</strong> pessoas cadastradas
+            <strong className="font-semibold text-foreground">{profiles?.length || 0}</strong> pessoas cadastradas
           </p>
         </Card.Header>
 
@@ -57,8 +92,8 @@ export default function AdminUsers() {
               <span className="grid size-11 place-items-center rounded-xl bg-background-secondary">
                 <UserRound className="size-5 text-muted" aria-hidden="true" />
               </span>
-              <p className="font-semibold text-foreground">Nenhuma pessoa cadastrada</p>
-              <p className="text-sm text-muted">Convide alguém para começar a acompanhar o engajamento.</p>
+              <p className="font-semibold text-foreground">Nenhuma pessoa encontrada</p>
+              <p className="text-sm text-muted">Ajuste sua busca ou convide alguém para a plataforma.</p>
             </EmptyState>
           ) : (
             <>

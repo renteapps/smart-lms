@@ -1,20 +1,64 @@
-"use client";
-
-import { useParams } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Clock, LogIn, Monitor, FileEdit } from "lucide-react";
+import { ArrowLeft, Clock, LogIn, Monitor, FileEdit, Info } from "lucide-react";
 import { PageHeader } from "@/components/ui/editorial";
+import { createClient } from "@/lib/supabase/server";
 
-const mockHistorico = [
-  { id: "1", acao: "Login", detalhe: "Acesso via plataforma Web", data: "Hoje, 10:24", ip: "192.168.1.45", icon: LogIn, cor: "text-positive", bg: "bg-positive/10" },
-  { id: "2", acao: "Atualização de Perfil", detalhe: "Alterou a foto de perfil", data: "Ontem, 14:12", ip: "192.168.1.45", icon: FileEdit, cor: "text-primary", bg: "bg-primary-pale" },
-  { id: "3", acao: "Acesso a Curso", detalhe: "Iniciou: Inteligência Emocional no Trabalho", data: "20 jul, 09:05", ip: "200.155.10.2", icon: Monitor, cor: "text-accent-orange", bg: "bg-accent-orange/14" },
-  { id: "4", acao: "Login", detalhe: "Acesso via aplicativo Mobile", data: "18 jul, 18:30", ip: "177.12.34.5", icon: LogIn, cor: "text-positive", bg: "bg-positive/10" },
-];
+export default async function AdminUserHistoricoPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const supabase = await createClient();
 
-export default function AdminUserHistoricoPage() {
-  const params = useParams();
-  const id = params.id as string;
+  const { data: logs, error } = await supabase
+    .from("audit_logs")
+    .select("*")
+    .eq("actor_id", id)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    console.error("Erro ao carregar histórico:", error);
+    // Podemos exibir logs vazios ou tratar erro
+  }
+
+  // Mapear logs para a visualização
+  const historico = (logs ?? []).map((log) => {
+    let acao = log.action || "Ação genérica";
+    let detalhe = "Nenhum detalhe disponível";
+    let icon = Info;
+    let cor = "text-neutral";
+    let bg = "bg-neutral/10";
+
+    if (log.action === "login") {
+      acao = "Login";
+      detalhe = "Acesso à plataforma";
+      icon = LogIn;
+      cor = "text-positive";
+      bg = "bg-positive/10";
+    } else if (log.action === "update_profile") {
+      acao = "Atualização de Perfil";
+      detalhe = "Alterou dados do perfil";
+      icon = FileEdit;
+      cor = "text-primary";
+      bg = "bg-primary-pale";
+    } else if (log.action === "course_access") {
+      acao = "Acesso a Curso";
+      detalhe = log.metadata?.course_name ? `Acessou: ${log.metadata.course_name}` : "Acessou um curso";
+      icon = Monitor;
+      cor = "text-accent-orange";
+      bg = "bg-accent-orange/14";
+    }
+
+    return {
+      id: log.id,
+      acao,
+      detalhe,
+      data: new Date(log.created_at).toLocaleString("pt-BR", { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+      ip: log.ip_address || "Desconhecido",
+      icon,
+      cor,
+      bg,
+    };
+  });
 
   return (
     <div className="space-y-7 pb-16">
@@ -46,7 +90,7 @@ export default function AdminUserHistoricoPage() {
               </tr>
             </thead>
             <tbody>
-              {mockHistorico.map((log) => {
+              {historico.map((log) => {
                 const Icon = log.icon;
                 return (
                   <tr key={log.id} className="border-t border-border/70 hover:bg-primary-pale/20">
@@ -64,12 +108,19 @@ export default function AdminUserHistoricoPage() {
                   </tr>
                 );
               })}
+              {historico.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-5 py-8 text-center text-sm text-text-mute">
+                    Nenhuma atividade registrada para este usuário.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
         <div className="divide-y divide-border md:hidden">
-          {mockHistorico.map((log) => {
+          {historico.map((log) => {
             const Icon = log.icon;
             return (
               <article key={log.id} className="p-4">
@@ -89,6 +140,11 @@ export default function AdminUserHistoricoPage() {
               </article>
             );
           })}
+          {historico.length === 0 && (
+            <div className="p-8 text-center text-sm text-text-mute">
+              Nenhuma atividade registrada para este usuário.
+            </div>
+          )}
         </div>
       </section>
     </div>

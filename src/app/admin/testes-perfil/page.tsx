@@ -1,19 +1,36 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { MOCK_PROFILE_TESTS } from '@/lib/seed/profileTests';
 import { ProfileTest } from '@/types/profileTest';
+import { createClient } from '@/lib/supabase/client';
+import { getProfileTests } from '@/lib/data/profileTests';
 import { TestCard } from '@/components/admin/profile-tests/TestCard';
 import { TestPreview } from '@/components/admin/profile-tests/TestPreview';
 import { PlusCircle, Search, Sparkles, SlidersHorizontal, ClipboardCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ProfileTestsAdminPage() {
-  const [tests, setTests] = useState<ProfileTest[]>(MOCK_PROFILE_TESTS);
+  const [tests, setTests] = useState<ProfileTest[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [activePreviewTest, setActivePreviewTest] = useState<ProfileTest | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      const supabase = createClient();
+      try {
+        const data = await getProfileTests(supabase);
+        setTests(data);
+      } catch (e) {
+        console.error(e);
+      }
+      setLoading(false);
+    }
+    loadData();
+  }, []);
 
   const filteredTests = tests.filter((t) => {
     const matchesSearch =

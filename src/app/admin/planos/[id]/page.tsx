@@ -7,6 +7,9 @@ import { PageHeader } from "@/components/ui/editorial";
 import { toast } from "sonner";
 import { LinkIcon, Plug, CreditCard, ChevronLeft, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { getPlanById } from "@/lib/data/plans";
+import { listCoursesShallow } from "@/lib/data/courses";
 
 interface Plan {
   id: string;
@@ -27,26 +30,12 @@ interface Plan {
   checkoutUrl?: string;
 }
 
-// In a real app, this would be fetched from the database
-const mockPlans: Plan[] = [
-  { id: "1", name: "Plano Básico", price: 29.90, frequency: "mensal", status: "ativo", gateway: "Eduzz", productId: "12345", producerId: "37296411", features: ["cursos"] },
-  { id: "2", name: "Plano Pro", price: 59.90, frequency: "anual", status: "ativo", features: ["cursos", "anotacoes", "comentarios", "agentes"] },
-  { id: "3", name: "Plano Vitalício", price: 499.90, frequency: "vitalicio", status: "ativo", features: ["cursos", "anotacoes", "comentarios", "agentes", "pilulas", "comunidade"] },
-];
-
 const availableFeatures = [
   { id: "cursos", label: "Cursos e Aulas", description: "Acesso total à trilha de aprendizagem." },
   { id: "anotacoes", label: "Anotações", description: "Permite criar anotações pessoais durante as aulas." },
   { id: "comentarios", label: "Comentários", description: "Libera a leitura e interação na comunidade das aulas." },
   { id: "agentes", label: "Agentes de IA", description: "Acesso aos tutores virtuais da plataforma." },
   { id: "pilulas", label: "Pílulas de Conhecimento", description: "Acesso a conteúdos curtos e blog." },
-];
-
-const mockCourses = [
-  { id: "c1", title: "Inteligência Artificial para Negócios" },
-  { id: "c2", title: "Liderança e Gestão Ágil" },
-  { id: "c3", title: "Marketing Digital Avançado" },
-  { id: "c4", title: "Formação de Agentes AI" }
 ];
 
 function ToggleSwitch({
@@ -99,16 +88,54 @@ export default function EditPlanPage() {
 
   const [formData, setFormData] = useState<Partial<Plan>>({});
   const [loading, setLoading] = useState(true);
+  const [coursesList, setCoursesList] = useState<{id: string, title: string}[]>([]);
 
   useEffect(() => {
-    const plan = mockPlans.find(p => p.id === id);
-    if (plan) {
-      setFormData(plan);
-    } else if (id !== "novo") {
-      toast.error("Plano não encontrado.");
-      router.push("/admin/planos");
+    async function loadData() {
+      setLoading(true);
+      const supabase = createClient();
+      
+      // Load courses for the specific courses dropdown
+      try {
+        const courses = await listCoursesShallow(supabase, true);
+        setCoursesList(courses.map(c => ({ id: c.id, title: c.title })));
+      } catch (e) {
+        console.error("Erro ao carregar cursos", e);
+      }
+
+      if (id !== "novo") {
+        try {
+          const plan = await getPlanById(supabase, id);
+          if (plan) {
+            const frequencyMap: Record<string, Plan["frequency"]> = {
+              monthly: "mensal",
+              yearly: "anual",
+              lifetime: "vitalicio",
+              custom: "personalizado",
+            };
+            setFormData({
+              id: plan.id,
+              name: plan.name,
+              price: plan.price,
+              frequency: frequencyMap[plan.frequency] || "mensal",
+              features: plan.features,
+              status: plan.isActive ? "ativo" : "inativo",
+              gateway: "Eduzz", // Defaulting gateway mapping if any
+              productId: plan.gatewayProductId,
+            });
+          } else {
+            toast.error("Plano não encontrado.");
+            router.push("/admin/planos");
+          }
+        } catch (e) {
+          toast.error("Erro ao carregar plano.");
+          router.push("/admin/planos");
+        }
+      }
+      setLoading(false);
     }
-    setLoading(false);
+    
+    loadData();
   }, [id, router]);
 
   const handleSave = (e?: React.FormEvent) => {
@@ -289,17 +316,14 @@ export default function EditPlanPage() {
                         {formData.courseAccessType === "specific" && (
                           <div className="pt-2">
                             <p className="text-xs text-muted mb-3">Selecione os cursos que este plano irá desbloquear:</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {mockCourses.map(course => (
-                                <label key={course.id} className="flex items-center gap-3 p-3 rounded border border-border bg-background cursor-pointer hover:border-accent/50 transition-colors">
-                                  <input 
-                                    type="checkbox" 
-                                    className="accent-accent size-4 rounded"
-                                    checked={formData.specificCourses?.includes(course.id) || false}
-                                    onChange={() => toggleCourse(course.id)}
-                                  />
-                                  <span className="text-sm">{course.title}</span>
-                                </label>
+                            <div className="space-y-3">
+                              {coursesList.map(course => (
+                                <ToggleSwitch
+                                  key={course.id}
+                                  isSelected={formData.specificCourses?.includes(course.id) || false}
+                                  onChange={() => toggleCourse(course.id)}
+                                  label={course.title}
+                                />
                               ))}
                             </div>
                           </div>

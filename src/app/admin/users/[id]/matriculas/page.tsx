@@ -1,19 +1,64 @@
-"use client";
-
-import { useParams } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, BookOpen, MoreHorizontal, Plus } from "lucide-react";
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
+import { createClient } from "@/lib/supabase/server";
+import { getProgressByCourse } from "@/lib/data/courses";
 
-const mockMatriculas = [
-  { id: "1", courseName: "Inteligência Emocional no Trabalho", category: "Comportamental", progress: "72%", status: "Em andamento", enrolledAt: "10 mai, 2026" },
-  { id: "2", courseName: "Gestão de Tempo e Foco", category: "Produtividade", progress: "100%", status: "Concluído", enrolledAt: "15 abr, 2026" },
-  { id: "3", courseName: "Liderança por Influência", category: "Liderança", progress: "0%", status: "Não iniciado", enrolledAt: "Hoje, 09:12" },
-];
+export default async function AdminUserMatriculasPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const supabase = await createClient();
 
-export default function AdminUserMatriculasPage() {
-  const params = useParams();
-  const id = params.id as string;
+  const { data: enrollments, error } = await supabase
+    .from("enrollments")
+    .select(`
+      status,
+      created_at,
+      course_id,
+      course:courses (
+        id,
+        title,
+        category
+      )
+    `)
+    .eq("user_id", id);
+
+  if (error) {
+    console.error(error);
+    notFound();
+  }
+
+  const progressByCourse = await getProgressByCourse(supabase, id);
+
+  const matriculas = (enrollments ?? []).map((enrollment) => {
+    // Tratando array no relation
+    const c = Array.isArray(enrollment.course) ? enrollment.course[0] : enrollment.course;
+    const progress = progressByCourse.get(c?.id || "") ?? 0;
+    
+    // Status
+    let displayStatus = "Não iniciado";
+    let statusTone: "positive" | "primary" | "neutral" = "neutral";
+    if (progress === 100 || enrollment.status === "completed") {
+      displayStatus = "Concluído";
+      statusTone = "positive";
+    } else if (progress > 0 || enrollment.status === "active") {
+      displayStatus = "Em andamento";
+      statusTone = "primary";
+    }
+
+    return {
+      id: c?.id || enrollment.course_id,
+      courseName: c?.title || "Curso Removido",
+      category: c?.category || "N/A",
+      progress: `${progress}%`,
+      status: displayStatus,
+      statusTone,
+      enrolledAt: new Date(enrollment.created_at).toLocaleDateString("pt-BR", { day: '2-digit', month: 'short', year: 'numeric' }),
+    };
+  });
+
+  const concludedCount = matriculas.filter(m => m.status === "Concluído").length;
+  const activeCount = matriculas.filter(m => m.status === "Em andamento").length;
 
   return (
     <div className="space-y-7 pb-16">
@@ -34,8 +79,8 @@ export default function AdminUserMatriculasPage() {
         <div className="flex flex-col gap-4 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <h2 className="font-bold text-ink text-lg">Cursos do Aluno</h2>
           <div className="flex items-center gap-2 text-xs font-semibold text-text-mute">
-            <StatusBadge tone="positive">1 concluído</StatusBadge>
-            <StatusBadge tone="primary">1 em andamento</StatusBadge>
+            {concludedCount > 0 && <StatusBadge tone="positive">{concludedCount} concluído{concludedCount > 1 ? 's' : ''}</StatusBadge>}
+            {activeCount > 0 && <StatusBadge tone="primary">{activeCount} em andamento</StatusBadge>}
           </div>
         </div>
 
@@ -52,7 +97,7 @@ export default function AdminUserMatriculasPage() {
               </tr>
             </thead>
             <tbody>
-              {mockMatriculas.map((mat) => (
+              {matriculas.map((mat) => (
                 <tr key={mat.id} className="border-t border-border/70 hover:bg-primary-pale/20">
                   <td className="px-5 py-4">
                     <Link href={`/admin/cursos/${mat.id}`} className="flex items-center gap-3 font-bold text-ink hover:text-primary-active">
@@ -65,7 +110,7 @@ export default function AdminUserMatriculasPage() {
                   <td className="px-5 py-4 text-sm text-text-soft">{mat.category}</td>
                   <td className="px-5 py-4 text-sm font-bold text-ink">{mat.progress}</td>
                   <td className="px-5 py-4">
-                    <StatusBadge tone={mat.status === "Concluído" ? "positive" : mat.status === "Em andamento" ? "primary" : "neutral"}>
+                    <StatusBadge tone={mat.statusTone}>
                       {mat.status}
                     </StatusBadge>
                   </td>
@@ -77,12 +122,19 @@ export default function AdminUserMatriculasPage() {
                   </td>
                 </tr>
               ))}
+              {matriculas.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-5 py-8 text-center text-sm text-text-mute">
+                    Nenhuma matrícula encontrada.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
         <div className="divide-y divide-border md:hidden">
-          {mockMatriculas.map((mat) => (
+          {matriculas.map((mat) => (
             <article key={mat.id} className="p-4">
               <div className="flex items-start gap-3">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-primary-pale text-primary">
@@ -94,7 +146,7 @@ export default function AdminUserMatriculasPage() {
                   </Link>
                   <p className="mt-1 text-xs text-text-mute">{mat.category}</p>
                 </div>
-                <StatusBadge tone={mat.status === "Concluído" ? "positive" : mat.status === "Em andamento" ? "primary" : "neutral"}>
+                <StatusBadge tone={mat.statusTone}>
                   {mat.status}
                 </StatusBadge>
               </div>
@@ -104,6 +156,11 @@ export default function AdminUserMatriculasPage() {
               </div>
             </article>
           ))}
+          {matriculas.length === 0 && (
+            <div className="p-8 text-center text-sm text-text-mute">
+              Nenhuma matrícula encontrada.
+            </div>
+          )}
         </div>
       </section>
     </div>

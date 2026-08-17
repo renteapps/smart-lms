@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   BarChart3,
@@ -127,9 +127,17 @@ const segmentLabels: Record<string, string> = {
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
+
+  const handleSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (search.trim()) {
+      router.push(`/admin/busca?q=${encodeURIComponent(search.trim())}`);
+    }
+  };
 
   const activeLink = navGroups
     .flatMap((g) => g.links.map((l) => l.href))
@@ -269,13 +277,19 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <SearchField
               value={search}
               onChange={setSearch}
+              onSubmit={() => handleSearch()}
               className="hidden w-56 lg:block xl:w-72"
               aria-label="Buscar no painel"
             >
               <Label className="sr-only">Buscar no painel</Label>
               <SearchField.Group>
                 <SearchField.SearchIcon />
-                <SearchField.Input placeholder="Buscar no painel" />
+                <SearchField.Input 
+                  placeholder="Buscar no painel" 
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSearch();
+                  }}
+                />
                 <SearchField.ClearButton />
               </SearchField.Group>
             </SearchField>

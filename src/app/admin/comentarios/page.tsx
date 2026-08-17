@@ -18,8 +18,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+import { createClient } from "@/lib/supabase/client";
+import { useEffect } from "react";
+
 type CommentType = {
   id: string;
+  lessonId: string;
   studentName: string;
   studentEmail: string;
   courseName: string;
@@ -29,59 +33,113 @@ type CommentType = {
   status: "Aguardando" | "Respondido";
 };
 
-const mockComments: CommentType[] = [
-  {
-    id: "1",
-    studentName: "Carlos Mendes",
-    studentEmail: "carlos@email.com",
-    courseName: "Desenvolvimento Web Fullstack",
-    lessonName: "Módulo 1 • Introdução ao React",
-    content: "Estou com uma dúvida no uso do useEffect. Sempre que eu coloco o estado como dependência, ele entra em loop. Como posso resolver?",
-    timeAgo: "Há 2 horas",
-    status: "Aguardando"
-  },
-  {
-    id: "2",
-    studentName: "Ana Beatriz",
-    studentEmail: "ana.beatriz@email.com",
-    courseName: "Design System na Prática",
-    lessonName: "Módulo 3 • Tokens de Cor",
-    content: "Aula excelente! Consegui aplicar perfeitamente no meu projeto atual usando Tailwind.",
-    timeAgo: "Ontem às 14:30",
-    status: "Respondido"
-  },
-  {
-    id: "3",
-    studentName: "Lucas Oliveira",
-    studentEmail: "lucas.oliveira@email.com",
-    courseName: "Formação Node.js",
-    lessonName: "Módulo 2 • Arquitetura REST",
-    content: "Vocês vão disponibilizar o código fonte dessa aula? O link na descrição parece estar quebrado.",
-    timeAgo: "Ontem às 10:15",
-    status: "Aguardando"
-  }
-];
-
 export default function AdminComentarios() {
   const [selectedComment, setSelectedComment] = useState<CommentType | null>(null);
   const [replyText, setReplyText] = useState("");
   const [replyVisibility, setReplyVisibility] = useState<"public" | "private">("public");
   const { addNotification } = useNotifications();
 
-  const handleSendReply = () => {
+  const [comments, setComments] = useState<CommentType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadComments = async () => {
+    setIsLoading(true);
+    const supabase = createClient();
+    try {
+      // Buscar comentários raízes (parent_id is null)
+      const { data, error } = await supabase
+        .from("comments")
+        .select(`
+          id,
+          content,
+          created_at,
+          lesson_id,
+          profiles:user_id(full_name, email),
+          lessons:lesson_id(
+            title,
+            modules(
+              courses(title)
+            )
+          )
+        `)
+        .is("parent_id", null)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Buscar se há respostas (para definir status)
+      const { data: replies } = await supabase
+        .from("comments")
+        .select("parent_id")
+        .not("parent_id", "is", null);
+
+      const repliedIds = new Set(replies?.map(r => r.parent_id));
+
+      const formatted = (data ?? []).map((row: any) => {
+        const student = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+        const lesson = Array.isArray(row.lessons) ? row.lessons[0] : row.lessons;
+        const module = lesson?.modules && Array.isArray(lesson.modules) ? lesson.modules[0] : lesson?.modules;
+        const course = module?.courses && Array.isArray(module.courses) ? module.courses[0] : module?.courses;
+
+        return {
+          id: row.id,
+          lessonId: row.lesson_id,
+          studentName: student?.full_name || "Desconhecido",
+          studentEmail: student?.email || "N/A",
+          courseName: course?.title || "Curso Desconhecido",
+          lessonName: lesson?.title || "Aula Desconhecida",
+          content: row.content,
+          timeAgo: new Date(row.created_at).toLocaleDateString("pt-BR", { day: '2-digit', month: 'short' }),
+          status: repliedIds.has(row.id) ? "Respondido" : "Aguardando",
+        } as CommentType;
+      });
+
+      setComments(formatted);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao carregar comentários.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadComments();
+  }, []);
+
+  const handleSendReply = async () => {
     if (!replyText.trim() || !selectedComment) return;
 
-    addNotification({
-      title: "Sua dúvida foi respondida!",
-      message: `O professor respondeu seu comentário na aula: ${selectedComment.lessonName}.`,
-      targetAudience: "user",
-      targetId: selectedComment.studentEmail,
-      channels: ["platform"],
-    });
-    
-    toast.success("Resposta enviada e aluno notificado!");
-    setSelectedComment(null);
-    setReplyText("");
+    const supabase = createClient();
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Não autenticado");
+
+      const { error } = await supabase.from("comments").insert({
+        content: replyText,
+        parent_id: selectedComment.id,
+        lesson_id: selectedComment.lessonId,
+        user_id: userData.user.id
+      });
+
+      if (error) throw error;
+
+      addNotification({
+        title: "Sua dúvida foi respondida!",
+        message: `O professor respondeu seu comentário na aula: ${selectedComment.lessonName}.`,
+        targetAudience: "user",
+        targetId: selectedComment.studentEmail,
+        channels: ["platform"],
+      });
+      
+      toast.success("Resposta enviada e aluno notificado!");
+      setSelectedComment(null);
+      setReplyText("");
+      loadComments();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao enviar resposta.");
+    }
   };
 
   return (
@@ -132,7 +190,13 @@ export default function AdminComentarios() {
               </tr>
             </thead>
             <tbody>
-              {mockComments.map((comment) => (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="py-8 px-6 text-center text-sm text-text-mute">
+                    Carregando comentários...
+                  </td>
+                </tr>
+              ) : comments.map((comment) => (
                 <tr 
                   key={comment.id} 
                   className="border-b border-border/40 hover:bg-surface-hover transition-colors group cursor-pointer"
@@ -178,7 +242,11 @@ export default function AdminComentarios() {
           </table>
         </div>
         <div className="divide-y divide-border md:hidden">
-          {mockComments.map((comment) => (
+          {isLoading ? (
+            <div className="p-8 text-center text-sm text-text-mute">
+              Carregando comentários...
+            </div>
+          ) : comments.map((comment) => (
             <article key={comment.id} className="p-4" onClick={() => setSelectedComment(comment)}>
               <div className="flex items-start justify-between gap-3"><div><p className="font-bold text-ink">{comment.studentName}</p><p className="text-xs text-text-mute">{comment.studentEmail}</p></div><StatusBadge tone={comment.status === "Aguardando" ? "warning" : "positive"}>{comment.status}</StatusBadge></div>
               <p className="mt-3 text-xs font-bold text-primary-active">{comment.courseName}</p><p className="mt-1 text-xs text-text-mute">{comment.lessonName}</p>

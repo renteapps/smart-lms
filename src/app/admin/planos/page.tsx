@@ -1,42 +1,20 @@
-"use client";
-
-import { useState } from "react";
-import { Plus, Pencil, Trash2, Plug } from "lucide-react";
+import { Plus, Plug } from "lucide-react";
 import {
   Button,
+  buttonVariants,
   Card,
   Table,
 } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { getPlans } from "@/lib/data/plans";
 
-interface Plan {
-  id: string;
-  name: string;
-  price: number;
-  frequency: "mensal" | "anual" | "vitalicio" | "personalizado";
-  status: "ativo" | "inativo";
-  gateway?: "Eduzz" | "Hotmart";
-}
-
-const mockPlans: Plan[] = [
-  { id: "1", name: "Plano Básico", price: 29.90, frequency: "mensal", status: "ativo", gateway: "Eduzz" },
-  { id: "2", name: "Plano Pro", price: 59.90, frequency: "mensal", status: "ativo" },
-  { id: "3", name: "Plano Anual Premium", price: 499.90, frequency: "anual", status: "ativo" },
-];
-
-export default function PlanosPage() {
-  const router = useRouter();
-  const [plans, setPlans] = useState<Plan[]>(mockPlans);
+export default async function PlanosPage() {
+  const supabase = await createClient();
+  const plans = await getPlans(supabase);
   
-  const handleDelete = (id: string) => {
-    setPlans(plans.filter((p) => p.id !== id));
-    toast.success("Plano removido com sucesso");
-  };
-
   const isEmpty = plans.length === 0;
 
   return (
@@ -46,9 +24,9 @@ export default function PlanosPage() {
           title="Planos de Assinatura"
           description="Crie e gerencie os planos oferecidos na sua plataforma e mapeie para produtos da Eduzz."
         />
-        <Button variant="primary" onPress={() => router.push("/admin/planos/novo")}>
+        <Link href="/admin/planos/novo" className={cn(buttonVariants({ variant: "primary" }), "gap-2")}>
           <Plus className="size-4 mr-2" /> Novo Plano
-        </Button>
+        </Link>
       </div>
 
       <Card>
@@ -81,16 +59,20 @@ export default function PlanosPage() {
                           <Table.Cell>
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(plan.price)}
                           </Table.Cell>
-                          <Table.Cell className="capitalize">{plan.frequency}</Table.Cell>
+                          <Table.Cell className="capitalize">
+                            {plan.frequency === "monthly" ? "Mensal" :
+                             plan.frequency === "yearly" ? "Anual" :
+                             plan.frequency === "lifetime" ? "Vitalício" : "Personalizado"}
+                          </Table.Cell>
                           <Table.Cell>
-                            <span className={cn("inline-flex items-center px-2 py-1 rounded-md text-xs font-medium", plan.status === "ativo" ? "bg-success-soft text-success-soft-foreground" : "bg-default-100 text-default-600")}>
-                              {plan.status === "ativo" ? "Ativo" : "Inativo"}
+                            <span className={cn("inline-flex items-center px-2 py-1 rounded-md text-xs font-medium", plan.isActive ? "bg-success-soft text-success-soft-foreground" : "bg-default-100 text-default-600")}>
+                              {plan.isActive ? "Ativo" : "Inativo"}
                             </span>
                           </Table.Cell>
                           <Table.Cell>
-                            {plan.gateway ? (
+                            {plan.gatewayProductId ? (
                                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-soft text-primary-soft-foreground gap-1 w-fit">
-                                 <Plug className="size-3" /> {plan.gateway}
+                                 <Plug className="size-3" /> Integrado
                                </span>
                             ) : (
                               <span className="text-xs text-muted">Não configurada</span>
@@ -98,19 +80,12 @@ export default function PlanosPage() {
                           </Table.Cell>
                           <Table.Cell>
                             <div className="flex items-center gap-2">
-                              <Button isIconOnly variant="ghost" size="sm" aria-label="Editar" onPress={() => router.push(`/admin/planos/${plan.id}`)}>
-                                <Pencil className="size-4 text-muted" />
-                              </Button>
-                              <Button 
-                                isIconOnly 
-                                variant="ghost" 
-                                size="sm" 
-                                aria-label="Excluir"
-                                className="text-danger hover:text-danger hover:bg-danger/10"
-                                onPress={() => handleDelete(plan.id)}
+                              <Link
+                                href={`/admin/planos/${plan.id}`}
+                                className={buttonVariants({ variant: "outline", size: "sm" })}
                               >
-                                <Trash2 className="size-4" />
-                              </Button>
+                                Editar
+                              </Link>
                             </div>
                           </Table.Cell>
                         </Table.Row>
@@ -120,6 +95,38 @@ export default function PlanosPage() {
                 </Table.ScrollContainer>
               </Table.Root>
             </div>
+          )}
+
+          {/* Versão Mobile */}
+          {!isEmpty && (
+            <ul className="divide-y divide-separator md:hidden">
+              {plans.map((plan) => (
+                <li key={plan.id} className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <Link href={`/admin/planos/${plan.id}`} className="font-medium hover:text-accent">
+                        {plan.name}
+                      </Link>
+                      <p className="mt-1 text-sm text-muted">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(plan.price)} • {
+                          plan.frequency === "monthly" ? "Mensal" :
+                          plan.frequency === "yearly" ? "Anual" :
+                          plan.frequency === "lifetime" ? "Vitalício" : "Personalizado"
+                        }
+                      </p>
+                    </div>
+                    <span className={cn("inline-flex items-center px-2 py-1 rounded-md text-xs font-medium", plan.isActive ? "bg-success-soft text-success-soft-foreground" : "bg-default-100 text-default-600")}>
+                      {plan.isActive ? "Ativo" : "Inativo"}
+                    </span>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <Link href={`/admin/planos/${plan.id}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full text-center")}>
+                      Editar
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
         </Card.Content>
       </Card>

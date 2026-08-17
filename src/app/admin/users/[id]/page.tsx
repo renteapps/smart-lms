@@ -1,7 +1,5 @@
-"use client";
-
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -20,29 +18,27 @@ import {
 } from "lucide-react";
 import { Button, Card } from "@heroui/react";
 import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
+import { getProfile } from "@/lib/data/profiles";
+import { createClient } from "@/lib/supabase/server";
 
-const mockUsers = {
-  "1": { id: "1", name: "João Silva", email: "joao@email.com", role: "Aluno", status: "Ativo", progress: "72%", lastSeen: "Hoje, 10:24", enrollments: 4 },
-  "2": { id: "2", name: "Maria Souza", email: "maria@email.com", role: "Aluno", status: "Ativo", progress: "48%", lastSeen: "Ontem, 18:10", enrollments: 2 },
-  "3": { id: "3", name: "Pedro Costa", email: "pedro@email.com", role: "Aluno", status: "Inativo", progress: "12%", lastSeen: "20 jul, 09:02", enrollments: 1 },
-  "4": { id: "4", name: "Ana Beatriz", email: "ana@email.com", role: "Instrutora", status: "Ativo", progress: "—", lastSeen: "Hoje, 08:41", enrollments: 0 },
-};
+export default async function AdminUserDashboard({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const profile = await getProfile(supabase, id);
 
-export default function AdminUserDashboard() {
-  const params = useParams();
-  const id = params.id as string;
+  if (!profile) {
+    notFound();
+  }
 
-  // Use mock data or a fallback if not found
-  const user = mockUsers[id as keyof typeof mockUsers] || {
-    id,
-    name: "Usuário Desconhecido",
-    email: "desconhecido@email.com",
-    role: "Aluno",
-    status: "Inativo",
-    progress: "0%",
-    lastSeen: "Nunca",
-    enrollments: 0
-  };
+  // Busca matrículas do usuário
+  const { count: enrollments } = await supabase
+    .from("enrollments")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", id)
+    .eq("status", "active");
+
+  const progressDisplay = profile.role === "student" ? "Calculando..." : "—";
+  const statusToDisplay = profile.status === "active" ? "Ativo" : "Inativo";
 
   const cards = [
     {
@@ -75,6 +71,12 @@ export default function AdminUserDashboard() {
     }
   ];
 
+  const lastSeenDisplay = profile.lastAccessAt 
+    ? new Date(profile.lastAccessAt).toLocaleDateString("pt-BR", { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) 
+    : "Nunca";
+
+  const displayRole = profile.role === "admin" ? "Administrador" : profile.role === "instructor" ? "Instrutor" : "Aluno";
+
   return (
     <div className="space-y-7">
       <div>
@@ -87,28 +89,28 @@ export default function AdminUserDashboard() {
         </Link>
         <PageHeader
           eyebrow="Perfil"
-          title={user.name}
-          description={user.email}
-          actions={<StatusBadge tone={user.status === "Ativo" ? "positive" : "negative"}>{user.status}</StatusBadge>}
+          title={profile.fullName}
+          description={profile.email}
+          actions={<StatusBadge tone={statusToDisplay === "Ativo" ? "positive" : "negative"}>{statusToDisplay}</StatusBadge>}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Papel"
-          value={user.role}
-          icon={user.role === "Instrutora" || user.role === "Instrutor" ? ShieldCheck : GraduationCap}
+          value={displayRole}
+          icon={profile.role === "instructor" || profile.role === "admin" ? ShieldCheck : GraduationCap}
           tone="primary"
         />
-        <StatCard label="Progresso Geral" value={user.progress} icon={BookOpen} tone="sage" />
+        <StatCard label="Progresso Geral" value={progressDisplay} icon={BookOpen} tone="sage" />
         <StatCard
           label="Último Acesso"
-          value={user.lastSeen.split(",")[0]}
-          helper={user.lastSeen.includes(",") ? user.lastSeen.split(",")[1].trim() : ""}
+          value={lastSeenDisplay.split(",")[0] || lastSeenDisplay}
+          helper={lastSeenDisplay.includes(",") ? lastSeenDisplay.split(",")[1]?.trim() : ""}
           icon={Clock}
           tone="neutral"
         />
-        <StatCard label="Matrículas" value={user.enrollments.toString()} icon={List} tone="terracotta" />
+        <StatCard label="Matrículas" value={(enrollments ?? 0).toString()} icon={List} tone="terracotta" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 pt-2 lg:grid-cols-3">
@@ -124,7 +126,7 @@ export default function AdminUserDashboard() {
               </span>
               <div>
                 <p className="text-xs text-muted">Empresa / Departamento</p>
-                <p className="text-sm font-semibold text-foreground">Smart Corp · Tecnologia</p>
+                <p className="text-sm font-semibold text-foreground">{profile.careerRole || "Não informado"}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -133,7 +135,7 @@ export default function AdminUserDashboard() {
               </span>
               <div>
                 <p className="text-xs text-muted">Telefone</p>
-                <p className="text-sm font-semibold text-foreground">(11) 98765-4321</p>
+                <p className="text-sm font-semibold text-foreground">{profile.phone || "Não informado"}</p>
               </div>
             </div>
           </Card.Content>

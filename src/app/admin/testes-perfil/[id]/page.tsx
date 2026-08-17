@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { MOCK_PROFILE_TESTS } from '@/lib/seed/profileTests';
+import { createClient } from '@/lib/supabase/client';
+import { getProfileTestById } from '@/lib/data/profileTests';
 import { ProfileTest, ProfileCategory, ProfileQuestion, ProfileTestStatus } from '@/types/profileTest';
 import { StepWizard, WizardStep } from '@/components/admin/profile-tests/StepWizard';
 import { CategoryEditor } from '@/components/admin/profile-tests/CategoryEditor';
@@ -37,17 +38,31 @@ export default function EditProfileTestPage() {
   const [questions, setQuestions] = useState<ProfileQuestion[]>([]);
 
   useEffect(() => {
-    const existingTest = MOCK_PROFILE_TESTS.find((t) => t.id === testId) || MOCK_PROFILE_TESTS[0];
-    if (existingTest) {
-      setTitle(existingTest.title);
-      setDescription(existingTest.description);
-      setCoverUrl(existingTest.coverUrl || '');
-      setStatus(existingTest.status);
-      setResultType(existingTest.resultType || 'single');
-      setCategories(existingTest.categories || []);
-      setQuestions(existingTest.questions || []);
+    async function loadData() {
+      if (testId === "novo") return;
+      
+      const supabase = createClient();
+      try {
+        const existingTest = await getProfileTestById(supabase, testId);
+        if (existingTest) {
+          setTitle(existingTest.title);
+          setDescription(existingTest.description);
+          setCoverUrl(existingTest.coverUrl || '');
+          setStatus(existingTest.status);
+          setResultType(existingTest.resultType || 'single');
+          setCategories(existingTest.categories || []);
+          setQuestions(existingTest.questions || []);
+        } else {
+          toast.error("Teste não encontrado.");
+          router.push("/admin/testes-perfil");
+        }
+      } catch (e) {
+        console.error(e);
+        toast.error("Erro ao carregar teste.");
+      }
     }
-  }, [testId]);
+    loadData();
+  }, [testId, router]);
 
   const handleNextStep = () => {
     if (currentStep === 1 && !title.trim()) {

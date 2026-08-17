@@ -1,14 +1,21 @@
-"use client";
-
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Edit3, List, Settings, ShoppingBag } from "lucide-react";
 import { Card } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
+import { getCourseById } from "@/lib/data/courses";
+import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
 
-export default function AdminCursoDashboard() {
-  const params = useParams();
-  const id = params.id as string;
+export default async function AdminCursoDashboard({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+  const id = resolvedParams.id;
+  
+  const supabase = await createClient();
+  const course = await getCourseById(supabase, id);
+
+  if (!course) {
+    notFound();
+  }
 
   const cards = [
     {
@@ -53,7 +60,7 @@ export default function AdminCursoDashboard() {
         </Link>
         <PageHeader
           eyebrow="Conteúdo"
-          title={`Gerenciar curso #${id}`}
+          title={`Gerenciar: ${course.title}`}
           description="Selecione uma área abaixo para gerenciar este curso."
         />
       </div>

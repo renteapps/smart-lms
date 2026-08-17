@@ -6,40 +6,16 @@ import { Button, Card, Table } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
 import { toast } from "sonner";
 import { ChevronLeft, Ban, PlayCircle, RefreshCw } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { getSubscriptionById, type Subscription } from "@/lib/data/plans";
 
-interface SubscriptionDetail {
-  id: string;
-  studentName: string;
-  studentEmail: string;
-  planName: string;
-  status: "ativo" | "atrasado" | "cancelado";
-  gateway: string;
-  contractId: string;
-  createdAt: string;
-  nextDue: string;
-  history: {
+type SubscriptionDetail = Subscription & {
+  history?: {
     id: string;
     date: string;
     amount: number;
     status: "pago" | "pendente" | "falhou";
   }[];
-}
-
-const mockDetail: SubscriptionDetail = {
-  id: "sub_1",
-  studentName: "Ana Clara Silva",
-  studentEmail: "ana@email.com",
-  planName: "Plano Pro",
-  status: "ativo",
-  gateway: "Eduzz",
-  contractId: "CTR-987654321",
-  createdAt: "15/01/2026",
-  nextDue: "15/09/2026",
-  history: [
-    { id: "inv_3", date: "15/08/2026", amount: 59.90, status: "pago" },
-    { id: "inv_2", date: "15/07/2026", amount: 59.90, status: "pago" },
-    { id: "inv_1", date: "15/06/2026", amount: 59.90, status: "pago" },
-  ],
 };
 
 export default function AssinaturaDetalhePage() {
@@ -49,9 +25,25 @@ export default function AssinaturaDetalhePage() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    // Simulando fetch API
-    setSub(mockDetail);
-  }, [params.id]);
+    async function loadData() {
+      const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : "";
+      if (!id) return;
+
+      const supabase = createClient();
+      try {
+        const data = await getSubscriptionById(supabase, id);
+        if (data) {
+          setSub({ ...data, history: [] }); // History not mapped yet
+        } else {
+          toast.error("Assinatura não encontrada.");
+          router.push("/admin/planos/assinaturas");
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    loadData();
+  }, [params.id, router]);
 
   if (!sub) return null;
 
@@ -61,9 +53,9 @@ export default function AssinaturaDetalhePage() {
     if (!confirm("Tem certeza que deseja cancelar essa assinatura na Eduzz?")) return;
     
     setIsProcessing(true);
-    // TODO: fetch('/api/eduzz/cancel-contract', { method: 'POST', body: JSON.stringify({ contractId: sub.contractId }) })
+    // TODO: fetch('/api/eduzz/cancel-contract', { method: 'POST', body: JSON.stringify({ contractId: sub.id }) })
     setTimeout(() => {
-      setSub({ ...sub, status: "cancelado" });
+      setSub({ ...sub, status: "canceled" });
       setIsProcessing(false);
       toast.success("Contrato cancelado com sucesso na Eduzz!");
     }, 1000);
@@ -71,9 +63,9 @@ export default function AssinaturaDetalhePage() {
 
   const handleReactivateContract = async () => {
     setIsProcessing(true);
-    // TODO: fetch('/api/eduzz/reactivate-contract', { method: 'POST', body: JSON.stringify({ contractId: sub.contractId }) })
+    // TODO: fetch('/api/eduzz/reactivate-contract', { method: 'POST', body: JSON.stringify({ contractId: sub.id }) })
     setTimeout(() => {
-      setSub({ ...sub, status: "ativo" });
+      setSub({ ...sub, status: "active" });
       setIsProcessing(false);
       toast.success("Contrato reativado com sucesso na Eduzz!");
     }, 1000);
@@ -81,7 +73,7 @@ export default function AssinaturaDetalhePage() {
 
   const handleChangeCard = async () => {
     setIsProcessing(true);
-    // TODO: fetch('/api/eduzz/request-card-change', { method: 'POST', body: JSON.stringify({ contractId: sub.contractId }) })
+    // TODO: fetch('/api/eduzz/request-card-change', { method: 'POST', body: JSON.stringify({ contractId: sub.id }) })
     setTimeout(() => {
       setIsProcessing(false);
       toast.success("E-mail para alteração de cartão enviado ao aluno!");
@@ -90,7 +82,7 @@ export default function AssinaturaDetalhePage() {
 
   // =====================================================
 
-  const isCanceled = sub.status === "cancelado";
+  const isCanceled = sub.status === "cancelado" || sub.status === "canceled";
 
   return (
     <div className="space-y-6">
@@ -100,8 +92,8 @@ export default function AssinaturaDetalhePage() {
         </Button>
         <PageHeader
           eyebrow="Assinatura"
-          title={sub.studentName}
-          description={`Gerenciando contrato via ${sub.gateway}`}
+          title={sub.userName || "Assinatura"}
+          description={`Gerenciando contrato via ${sub.gateway || "Eduzz"}`}
         />
       </div>
 
@@ -112,16 +104,14 @@ export default function AssinaturaDetalhePage() {
             <h2 className="text-lg font-bold mb-4">Detalhes do Contrato</h2>
             <div className="grid grid-cols-2 gap-y-4 text-sm">
               <div>
-                <p className="text-muted mb-1">E-mail</p>
-                <p className="font-semibold">{sub.studentEmail}</p>
+                  <div className="text-xl font-bold text-foreground">{sub.userName || "Sem nome"}</div>
+                  <div className="text-sm text-muted">{sub.userEmail || "Sem e-mail"}</div>
               </div>
               <div>
                 <p className="text-muted mb-1">Plano Assinado</p>
-                <p className="font-semibold">{sub.planName}</p>
-              </div>
-              <div>
-                <p className="text-muted mb-1">ID do Contrato ({sub.gateway})</p>
-                <p className="font-mono text-xs">{sub.contractId}</p>
+                        <div className="font-semibold">{sub.planName || "-"}</div>
+                        <div className="text-muted text-sm">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(sub.amount || 0)} / {sub.gateway || "Manual"}</div>
+                <p className="font-mono text-xs">{sub.id}</p>
               </div>
               <div>
                 <p className="text-muted mb-1">Status Atual</p>
@@ -131,11 +121,11 @@ export default function AssinaturaDetalhePage() {
               </div>
               <div>
                 <p className="text-muted mb-1">Criado em</p>
-                <p className="font-semibold">{sub.createdAt}</p>
+                <div className="font-semibold">{sub.createdAt ? new Date(sub.createdAt).toLocaleDateString('pt-BR') : "-"}</div>
               </div>
               <div>
                 <p className="text-muted mb-1">Próximo Vencimento</p>
-                <p className="font-semibold">{isCanceled ? "-" : sub.nextDue}</p>
+                <p className="font-semibold">{isCanceled ? "-" : sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toLocaleDateString('pt-BR') : "-"}</p>
               </div>
             </div>
           </Card>
@@ -145,7 +135,12 @@ export default function AssinaturaDetalhePage() {
               <Card.Title>Histórico de Faturas</Card.Title>
             </Card.Header>
             <Card.Content className="px-0 pb-0">
-              <Table.Root>
+              {!sub.history || sub.history.length === 0 ? (
+                <div className="text-center py-6 text-sm text-muted">
+                  Nenhum histórico de faturas encontrado.
+                </div>
+              ) : (
+                <Table.Root>
                 <Table.Content>
                   <Table.Header>
                     <Table.Column>DATA</Table.Column>
@@ -166,7 +161,8 @@ export default function AssinaturaDetalhePage() {
                     ))}
                   </Table.Body>
                 </Table.Content>
-              </Table.Root>
+                </Table.Root>
+              )}
             </Card.Content>
           </Card>
         </div>

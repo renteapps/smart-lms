@@ -1,21 +1,57 @@
-"use client";
-
 import Link from "next/link";
 import { BookOpen, Plus } from "lucide-react";
 import { Card, EmptyState, Label, SearchField, Table, buttonVariants } from "@heroui/react";
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/server";
 
-const mockCourses = [
-  { id: "1", title: "Inteligência Emocional no Trabalho", category: "Comportamental", lessons: 15, status: "Publicado", updated: "Hoje, 09:42" },
-  { id: "2", title: "Gestão de Tempo e Foco", category: "Produtividade", lessons: 12, status: "Publicado", updated: "Ontem, 17:20" },
-  { id: "3", title: "Liderança por Influência", category: "Liderança", lessons: 20, status: "Rascunho", updated: "28 jul, 14:08" },
-  { id: "4", title: "Feedback que Transforma", category: "Comunicação", lessons: 8, status: "Publicado", updated: "26 jul, 11:35" },
-  { id: "5", title: "Negociação Ganha-Ganha", category: "Habilidades", lessons: 10, status: "Rascunho", updated: "24 jul, 16:02" },
-];
+// Using a server component here so we fetch directly
+export default async function AdminCursosList() {
+  const supabase = await createClient();
+  
+  // Fetch courses with lesson counts
+  const { data: coursesData, error } = await supabase
+    .from("courses")
+    .select(`
+      id,
+      title,
+      category,
+      is_published,
+      updated_at,
+      modules(
+        lessons(id)
+      )
+    `)
+    .order('updated_at', { ascending: false });
 
-export default function AdminCursosList() {
-  const isEmpty = mockCourses.length === 0;
+  const courses = (coursesData || []).map(course => {
+    let lessonsCount = 0;
+    if (course.modules) {
+      lessonsCount = course.modules.reduce((acc: number, mod: any) => acc + (mod.lessons?.length || 0), 0);
+    }
+    
+    // Format date (e.g. 28 jul, 14:08)
+    const date = course.updated_at ? new Date(course.updated_at) : new Date();
+    const updatedStr = new Intl.DateTimeFormat('pt-BR', { 
+      day: '2-digit', 
+      month: 'short', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }).format(date);
+
+    return {
+      id: course.id,
+      title: course.title,
+      category: course.category || "Geral",
+      lessons: lessonsCount,
+      status: course.is_published ? "Publicado" : "Rascunho",
+      updated: updatedStr
+    };
+  });
+
+  const isEmpty = courses.length === 0;
+  const publicadosCount = courses.filter(c => c.status === "Publicado").length;
+  const rascunhosCount = courses.length - publicadosCount;
 
   return (
     <div className="space-y-7">
@@ -32,17 +68,19 @@ export default function AdminCursosList() {
 
       <Card>
         <Card.Header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <SearchField className="w-full sm:max-w-md" aria-label="Buscar curso">
-            <Label className="sr-only">Buscar curso</Label>
-            <SearchField.Group>
-              <SearchField.SearchIcon />
-              <SearchField.Input placeholder="Buscar curso..." />
-              <SearchField.ClearButton />
-            </SearchField.Group>
-          </SearchField>
+          <div className="w-full sm:max-w-md" aria-label="Buscar curso">
+            {/* Minimal static search representation for SSR, would need client component for interactive search */}
+            <input 
+              type="text" 
+              placeholder="Buscar curso..." 
+              className="w-full px-3 py-2 rounded-md border border-separator bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+              disabled
+              title="A busca precisa ser implementada como client component"
+            />
+          </div>
           <div className="flex items-center gap-2">
-            <StatusBadge tone="positive">24 publicados</StatusBadge>
-            <StatusBadge tone="warning">3 rascunhos</StatusBadge>
+            <StatusBadge tone="positive">{publicadosCount} publicados</StatusBadge>
+            <StatusBadge tone="warning">{rascunhosCount} rascunhos</StatusBadge>
           </div>
         </Card.Header>
 
@@ -72,7 +110,7 @@ export default function AdminCursosList() {
                         <Table.Column>Atualização</Table.Column>
                       </Table.Header>
                       <Table.Body>
-                        {mockCourses.map((course) => (
+                        {courses.map((course) => (
                           <Table.Row key={course.id} id={course.id}>
                             <Table.Cell>
                               <Link
@@ -102,7 +140,7 @@ export default function AdminCursosList() {
               </div>
 
               <ul className="divide-y divide-separator md:hidden">
-                {mockCourses.map((course) => (
+                {courses.map((course) => (
                   <li key={course.id} className="p-4">
                     <div className="flex items-start gap-3">
                       <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground">

@@ -8,8 +8,9 @@ import { QuestionEditor } from '@/components/admin/onboarding/QuestionEditor';
 import { ContentPickerModal } from '@/components/admin/onboarding/ContentPickerModal';
 import { TrailPreview } from '@/components/admin/onboarding/TrailPreview';
 import { toast } from 'sonner';
-import { loadQuestionnaire, saveQuestionnaire } from '@/lib/trailStorage';
 import { validateQuestionnaire } from '@/lib/matching';
+import { createClient } from '@/lib/supabase/client';
+import { getEditableQuestionnaire } from '@/lib/data/trail';
 import { analyzeQuestionnaire } from '@/lib/adminTrailDiagnostics';
 import { readTrailAnalytics, summarizeTrailAnalytics, TrailAnalyticsSummary } from '@/lib/trailAnalytics';
 import { readLearningTrail } from '@/lib/trailStorage';
@@ -26,8 +27,18 @@ export default function AdminOnboardingPage() {
   const diagnostics = useMemo(() => analyzeQuestionnaire(questionnaire), [questionnaire]);
 
   useEffect(() => {
-    const frame = requestAnimationFrame(() => setQuestionnaire(loadQuestionnaire()));
-    return () => cancelAnimationFrame(frame);
+    async function loadData() {
+      const supabase = createClient();
+      try {
+        const data = await getEditableQuestionnaire(supabase);
+        if (data && data.questions.length > 0) {
+          setQuestionnaire(data);
+        }
+      } catch (e) {
+        console.error("Erro ao carregar questionário", e);
+      }
+    }
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -88,17 +99,29 @@ export default function AdminOnboardingPage() {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const errors = validateQuestionnaire(questionnaire);
     setValidationErrors(errors);
     if (errors.length > 0) {
       toast.error('Revise as pendências antes de salvar.');
       return;
     }
-    const saved = { ...questionnaire, version: questionnaire.version + 1, status: 'published' as const };
-    saveQuestionnaire(saved);
-    setQuestionnaire(saved);
-    toast.success('Questionário publicado e conectado ao onboarding.');
+    const saved: Questionnaire = { ...questionnaire, version: questionnaire.version + 1, status: 'published' as const };
+    
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from('trail_questionnaires').insert({
+        version: saved.version,
+        status: saved.status,
+        questions: saved.questions
+      });
+      if (error) throw error;
+      setQuestionnaire(saved);
+      toast.success('Questionário publicado com sucesso!');
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao salvar no banco.');
+    }
   };
 
   return (

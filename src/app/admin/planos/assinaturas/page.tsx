@@ -12,31 +12,35 @@ import {
 import { PageHeader } from "@/components/ui/editorial";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
-
-interface Subscription {
-  id: string;
-  studentName: string;
-  studentEmail: string;
-  planName: string;
-  status: "ativo" | "atrasado" | "cancelado";
-  gateway: "Eduzz" | "Hotmart" | "Pagar.me";
-  nextDue: string;
-}
-
-const mockSubscriptions: Subscription[] = [
-  { id: "sub_1", studentName: "Ana Clara Silva", studentEmail: "ana@email.com", planName: "Plano Pro", status: "ativo", gateway: "Eduzz", nextDue: "15/09/2026" },
-  { id: "sub_2", studentName: "Pedro Henrique", studentEmail: "pedro@email.com", planName: "Plano Básico", status: "atrasado", gateway: "Eduzz", nextDue: "10/08/2026" },
-  { id: "sub_3", studentName: "Juliana Costa", studentEmail: "ju@email.com", planName: "Plano Anual Premium", status: "cancelado", gateway: "Hotmart", nextDue: "-" },
-];
+import { createClient } from "@/lib/supabase/client";
+import { getSubscriptions, type Subscription as DbSubscription } from "@/lib/data/plans";
 
 export default function AssinaturasPage() {
   const router = useRouter();
-  const [subscriptions] = useState<Subscription[]>(mockSubscriptions);
+  const [subscriptions, setSubscriptions] = useState<DbSubscription[]>([]);
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  import("react").then(React => {
+    React.useEffect(() => {
+      async function loadData() {
+        setLoading(true);
+        const supabase = createClient();
+        try {
+          const subs = await getSubscriptions(supabase);
+          setSubscriptions(subs);
+        } catch (e) {
+          console.error(e);
+        }
+        setLoading(false);
+      }
+      loadData();
+    }, []);
+  });
 
   const filteredSubs = subscriptions.filter(sub => 
-    sub.studentName.toLowerCase().includes(search.toLowerCase()) || 
-    sub.studentEmail.toLowerCase().includes(search.toLowerCase())
+    (sub.userName?.toLowerCase().includes(search.toLowerCase()) || 
+    sub.userEmail?.toLowerCase().includes(search.toLowerCase()))
   );
 
   const getStatusBadge = (status: string) => {
@@ -94,19 +98,21 @@ export default function AssinaturasPage() {
                         <Table.Cell>
                           <Link href={`/admin/planos/assinaturas/${sub.id}`} className="group block">
                             <span className="block text-sm font-semibold text-foreground group-hover:text-accent">
-                              {sub.studentName}
+                              {sub.userName || "Sem nome"}
                             </span>
-                            <span className="block text-xs text-muted">{sub.studentEmail}</span>
+                            <span className="block text-xs text-muted">{sub.userEmail || "Sem e-mail"}</span>
                           </Link>
                         </Table.Cell>
-                        <Table.Cell className="font-medium">{sub.planName}</Table.Cell>
+                        <Table.Cell>{sub.planName || "-"}</Table.Cell>
                         <Table.Cell>
-                          <span className="text-xs font-semibold px-2 py-1 bg-background-secondary rounded-md border border-border">
-                            {sub.gateway}
+                          <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-soft text-primary-soft-foreground">
+                            {sub.gateway || "Manual"}
                           </span>
                         </Table.Cell>
                         <Table.Cell>{getStatusBadge(sub.status)}</Table.Cell>
-                        <Table.Cell className="text-muted">{sub.nextDue}</Table.Cell>
+                        <Table.Cell className="text-sm text-muted">
+                          {sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toLocaleDateString("pt-BR") : "-"}
+                        </Table.Cell>
                         <Table.Cell>
                           <Button 
                             isIconOnly 
