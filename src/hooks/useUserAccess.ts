@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { CATALOG_COURSES } from "@/lib/catalog";
 import { getCourseSalesConfig } from "@/lib/salesUrlHelper";
 
 export interface SaleCourse {
@@ -103,18 +102,6 @@ export function useUserAccess(enabled: boolean): UserAccessState {
             ...c,
             sales_url: c.sales_url || getCourseSalesConfig(c.id, c.title).salesUrl || null,
           }));
-        } else {
-          // Fallback para catálogo padrão se a tabela estiver sem registros
-          finalCourses = CATALOG_COURSES.map((c) => ({
-            id: c.id,
-            title: c.title,
-            category: c.category,
-            description: c.description,
-            cover_url: c.cover,
-            level: c.level,
-            duration: c.duration,
-            sales_url: getCourseSalesConfig(c.id, c.title).salesUrl || null,
-          }));
         }
 
         if (!cancelled) {
@@ -122,18 +109,7 @@ export function useUserAccess(enabled: boolean): UserAccessState {
         }
       } catch (err) {
         console.error("useUserAccess: erro inesperado", err);
-        // Em caso de erro, fallback para catálogo
-        const fallbackCourses: SaleCourse[] = CATALOG_COURSES.map((c) => ({
-          id: c.id,
-          title: c.title,
-          category: c.category,
-          description: c.description,
-          cover_url: c.cover,
-          level: c.level,
-          duration: c.duration,
-          sales_url: getCourseSalesConfig(c.id, c.title).salesUrl || null,
-        }));
-        if (!cancelled) setState({ status: "no-access", courses: fallbackCourses });
+        if (!cancelled) setState({ status: "no-access", courses: [] });
       }
     }
 

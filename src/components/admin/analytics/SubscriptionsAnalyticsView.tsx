@@ -26,15 +26,19 @@ import {
   SimpleAreaChart,
   type TimePeriod,
 } from "@/components/admin/analytics/AnalyticsComponents";
-import { MOCK_SUBSCRIPTIONS_ANALYTICS } from "@/lib/mocks/analyticsMocks";
+// Mock import removed
 import { toast } from "sonner";
 
-export function SubscriptionsAnalyticsView({ basePath = "/admin/analises" }: { basePath?: string }) {
+export interface SubscriptionsAnalyticsViewProps {
+  basePath?: string;
+  data: any;
+}
+
+export function SubscriptionsAnalyticsView({ basePath = "/admin/analises", data }: SubscriptionsAnalyticsViewProps) {
   const [period, setPeriod] = useState<TimePeriod>("30d");
   const [selectedTab, setSelectedTab] = useState("visao_geral");
 
-  const { kpis, mrrEvolution, plansDistribution, churnReasons, renewalsForecast } =
-    MOCK_SUBSCRIPTIONS_ANALYTICS;
+  const { kpis, mrrEvolution, plansDistribution, churnReasons, renewalsForecast } = data;
 
   const mrrChartData = mrrEvolution.map((m) => ({
     label: m.period,

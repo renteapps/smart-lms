@@ -2,6 +2,7 @@ import { LearningTrail, LearningTrailItem, Questionnaire } from '@/types/trilha'
 import { DEFAULT_AVAILABILITY, schedulePendingItems, toLocalDateKey } from '@/lib/matching';
 import { mockEligibleLessons, mockQuestionnaire } from '@/lib/seed/questionnaire';
 import { recordTrailEvent } from '@/lib/trailAnalytics';
+import { createClient } from '@/lib/supabase/client';
 
 export const QUESTIONNAIRE_STORAGE_KEY = '@smartlms:questionnaire:v3';
 export const TRAIL_STORAGE_KEY = 'minha_trilha';
@@ -83,6 +84,23 @@ export function readLearningTrail(rawInput?: string | null): StorageReadResult<L
 
 export function saveLearningTrail(trail: LearningTrail): void {
   window.localStorage.setItem(TRAIL_STORAGE_KEY, JSON.stringify(trail));
+  
+  // Sincronizar com Supabase em background
+  const supabase = createClient();
+  supabase.auth.getUser().then(({ data: { user } }) => {
+    if (user) {
+      supabase.from('student_trails').upsert(
+        { 
+          user_id: user.id, 
+          trail_data: trail,
+          updated_at: new Date().toISOString()
+        },
+        { onConflict: 'user_id' }
+      ).then(({ error }) => {
+        if (error) console.error("Erro ao sincronizar trilha com Supabase:", error);
+      });
+    }
+  });
 }
 
 export function setTrailItemCompletion(contentId: string, completed: boolean): LearningTrail | null {

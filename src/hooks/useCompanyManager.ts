@@ -3,11 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Company } from "@/types/business";
-import {
-  checkIsCompanyManager,
-  setSimulatedManagerStatus,
-  SIMULATED_MANAGER_STORAGE_KEY,
-} from "@/lib/businessStorage";
+import { createClient } from "@/lib/supabase/client";
 
 export function useCompanyManager() {
   const { user } = useAuth();
@@ -16,36 +12,62 @@ export function useCompanyManager() {
   const [primaryCompany, setPrimaryCompany] = useState<Company | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const evaluateManagerStatus = () => {
-    const status = checkIsCompanyManager(user?.email);
-    setIsManager(status.isManager);
-    setManagedCompanies(status.managedCompanies);
-    setPrimaryCompany(status.primaryCompany);
-    setIsLoading(false);
+  const evaluateManagerStatus = async () => {
+    if (!user) {
+      setIsManager(false);
+      setManagedCompanies([]);
+      setPrimaryCompany(null);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const db = createClient();
+      const { data, error } = await db
+        .from("organization_members")
+        .select(`
+          organization_id,
+          role,
+          organizations:organization_id (
+            id, name, trade_name, max_seats, status
+          )
+        `)
+        .eq("user_id", user.id)
+        .in("role", ["admin", "manager"])
+        .neq("status", "disabled");
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setIsManager(true);
+        // Note: this is a simplified mapping for the hook, real companies are fetched via getCompanies
+        const companies = data.map((d: any) => ({
+          id: d.organizations?.id,
+          name: d.organizations?.name,
+          tradeName: d.organizations?.trade_name,
+        } as Company));
+        
+        setManagedCompanies(companies);
+        setPrimaryCompany(companies[0]);
+      } else {
+        setIsManager(false);
+        setManagedCompanies([]);
+        setPrimaryCompany(null);
+      }
+    } catch (err) {
+      console.error("Error evaluating manager status:", err);
+      setIsManager(false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
     evaluateManagerStatus();
-
-    const handleUpdate = () => {
-      evaluateManagerStatus();
-    };
-
-    window.addEventListener("smartlms:manager_status_changed", handleUpdate);
-    window.addEventListener("storage", handleUpdate);
-
-    return () => {
-      window.removeEventListener("smartlms:manager_status_changed", handleUpdate);
-      window.removeEventListener("storage", handleUpdate);
-    };
   }, [user]);
 
-  const toggleSimulatedManager = (enable?: boolean) => {
-    if (enable !== undefined) {
-      setSimulatedManagerStatus(enable);
-    } else {
-      setSimulatedManagerStatus(!isManager);
-    }
+  const toggleSimulatedManager = () => {
+    // Only used for demo/mock mode, now disabled
   };
 
   return {

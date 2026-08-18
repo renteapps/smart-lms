@@ -11,10 +11,9 @@ import {
   Label, NumberField, ProgressBar, Skeleton, Tabs, ToggleButton, ToggleButtonGroup,
 } from '@heroui/react';
 import { LearningRole, LearningTrail, LearningTrailItem, SessionLoadRating, StudyAvailability, Weekday } from '@/types/trilha';
-import { readLearningTrail, saveLearningTrail } from '@/lib/trailStorage';
+import { getMyTrail, saveTrail } from '@/app/actions/trail';
 import { applySessionFeedback, postponeTrailSession, removeTrailItem, replanLearningTrail, restoreTrailItem, toLocalDateKey, updateTrailAvailability } from '@/lib/matching';
 import { contentHref } from '@/lib/studentHome';
-import { createDemoLearningTrail } from '@/lib/mocks/trilhaDemo';
 import { recordTrailEvent, TrailAnalyticsEvent, TrailAnalyticsEventType } from '@/lib/trailAnalytics';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useCardTransition } from '@/contexts/CardTransitionContext';
@@ -217,28 +216,31 @@ export default function MinhaTrilhaPage() {
    * ficaria presa no esqueleto até a aba receber foco.
    */
   useEffect(() => {
-    const result = readLearningTrail();
-    if (result.data) {
-      const next = replanLearningTrail(result.data);
-      setTrail(next.trail);
-      setDraftAvailability(next.trail.availability);
-      setReplanned(next.changed);
-      if (next.changed || result.migrated) saveLearningTrail(next.trail);
-      if (next.changed) recordTrailEvent('trail_replanned', { reason: 'overdue' });
-    } else if (result.error) {
-      setStorageError(true);
-    } else {
-      /*
-       * Sem trilha salva a tela abre com conteúdo de exemplo — mesma escolha
-       * da home. O exemplo vive só em memória: nada é gravado no dispositivo
-       * nem contabilizado nas métricas até a pessoa criar a trilha real.
-       */
-      const demo = createDemoLearningTrail();
-      setTrail(demo);
-      setDraftAvailability(demo.availability);
-      setIsDemo(true);
+    async function loadTrail() {
+      try {
+        const res = await getMyTrail();
+        if (res.success && res.trail) {
+          const next = replanLearningTrail(res.trail);
+          setTrail(next.trail);
+          setDraftAvailability(next.trail.availability);
+          setReplanned(next.changed);
+          if (next.changed) await saveTrail(next.trail);
+          if (next.changed) recordTrailEvent('trail_replanned', { reason: 'overdue' });
+        } else if (!res.success) {
+          setStorageError(true);
+        } else {
+          const demo = createDemoLearningTrail();
+          setTrail(demo);
+          setDraftAvailability(demo.availability);
+          setIsDemo(true);
+        }
+      } catch (err) {
+        setStorageError(true);
+      } finally {
+        setIsLoaded(true);
+      }
     }
-    setIsLoaded(true);
+    loadTrail();
   }, []);
 
   const sessions = useMemo(() => {
@@ -260,9 +262,9 @@ export default function MinhaTrilhaPage() {
   const todayFeedback = trail?.feedbackHistory?.find((item) => item.sessionId === todaySessionId);
 
   /** No modo exemplo os ajustes valem para a sessão atual, mas nada é gravado. */
-  const commitTrail = (updated: LearningTrail) => {
+  const commitTrail = async (updated: LearningTrail) => {
     setTrail(updated);
-    if (!isDemo) saveLearningTrail(updated);
+    if (!isDemo) await saveTrail(updated);
   };
 
   const trackTrailEvent = (type: TrailAnalyticsEventType, payload?: TrailAnalyticsEvent['payload']) => {

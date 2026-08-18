@@ -1,16 +1,9 @@
-"use client";
-
 import Link from "next/link";
 import { ArrowRight, BookOpen, Clock3, MessageSquare, Plus, Route, TrendingUp, Users } from "lucide-react";
 import { Button, Card, buttonVariants } from "@heroui/react";
 import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
 import { cn } from "@/lib/utils";
-
-const activity = [
-  { person: "Marina Souza", action: "concluiu Comunicação que move pessoas", time: "há 12 min", tone: "positive" as const },
-  { person: "Rafael Lima", action: "iniciou sua trilha de liderança", time: "há 34 min", tone: "primary" as const },
-  { person: "Curso atualizado", action: "Feedback que transforma foi publicado", time: "há 1 h", tone: "warning" as const },
-];
+import { createClient } from "@/lib/supabase/server";
 
 const quickActions = [
   { href: "/admin/onboarding", icon: Route, label: "Editar trilha", tone: "bg-accent-soft text-accent-soft-foreground" },
@@ -18,12 +11,84 @@ const quickActions = [
   { href: "/admin/comentarios", icon: MessageSquare, label: "Moderar comentários", tone: "bg-warning-soft text-warning-soft-foreground" },
 ];
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+  const supabase = await createClient();
+
+  // 1. Buscar métricas de Usuários Ativos
+  const { count: activeUsersCount } = await supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "active");
+
+  // 2. Buscar métricas de Cursos Publicados e Rascunhos
+  const { data: courses } = await supabase
+    .from("courses")
+    .select("is_published");
+    
+  const publishedCourses = courses?.filter(c => c.is_published).length || 0;
+  const draftCourses = (courses?.length || 0) - publishedCourses;
+
+  // 3. Buscar Atividades Recentes
+  // Limitar as 5 ações mais recentes. Pegamos também os nomes dos perfis
+  const { data: recentActivityData } = await supabase
+    .from("audit_logs")
+    .select(`
+      id,
+      action,
+      resource_type,
+      resource_id,
+      created_at,
+      profiles ( full_name )
+    `)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const activity = (recentActivityData || []).map((log) => {
+    // Calculando o tempo relativo
+    const diffInMs = new Date().getTime() - new Date(log.created_at).getTime();
+    const diffInMins = Math.floor(diffInMs / 60000);
+    const diffInHours = Math.floor(diffInMins / 60);
+    const timeStr = diffInHours > 0 ? `há ${diffInHours} h` : `há ${diffInMins} min`;
+
+    let actionLabel = "";
+    let tone: "positive" | "primary" | "warning" | "neutral" = "neutral";
+    const person = log.profiles?.full_name || "Sistema";
+
+    switch(log.action) {
+      case 'login':
+        actionLabel = "fez login na plataforma";
+        tone = "primary";
+        break;
+      case 'course_started':
+        actionLabel = "iniciou um curso";
+        tone = "primary";
+        break;
+      case 'course_completed':
+        actionLabel = "concluiu um curso";
+        tone = "positive";
+        break;
+      case 'profile_updated':
+        actionLabel = "atualizou o perfil";
+        tone = "neutral";
+        break;
+      default:
+        actionLabel = `realizou uma ação de ${log.action.replace('_', ' ')}`;
+    }
+
+    return {
+      id: log.id,
+      person,
+      action: actionLabel,
+      time: timeStr,
+      tone
+    };
+  });
+
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="Visão operacional"
-        title="Bom dia, Nohan"
+        title="Dashboard"
         description="Acompanhe o que está acontecendo na plataforma e priorize as próximas ações."
         actions={
           <Link href="/admin/cursos/novo" className={cn(buttonVariants({ variant: "primary" }), "gap-2")}>
@@ -33,10 +98,10 @@ export default function AdminDashboard() {
       />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicadores principais">
-        <StatCard label="Usuários ativos" value="1.248" helper="+8,2% nos últimos 30 dias" icon={Users} tone="primary" />
-        <StatCard label="Cursos publicados" value="24" helper="3 em edição" icon={BookOpen} tone="sage" />
-        <StatCard label="Horas assistidas" value="12,5 mil" helper="+1,4 mil neste mês" icon={Clock3} tone="terracotta" />
-        <StatCard label="Conclusão média" value="68%" helper="4 p.p. acima do mês anterior" icon={TrendingUp} tone="neutral" />
+        <StatCard label="Usuários ativos" value={(activeUsersCount || 0).toString()} helper="Pessoas ativas no momento" icon={Users} tone="primary" />
+        <StatCard label="Cursos publicados" value={publishedCourses.toString()} helper={`${draftCourses} em rascunho`} icon={BookOpen} tone="sage" />
+        <StatCard label="Horas assistidas" value="—" helper="Métrica em desenvolvimento" icon={Clock3} tone="terracotta" />
+        <StatCard label="Conclusão média" value="—" helper="Métrica em desenvolvimento" icon={TrendingUp} tone="neutral" />
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
@@ -46,25 +111,26 @@ export default function AdminDashboard() {
               <Card.Title>Atividade recente</Card.Title>
               <Card.Description>Movimentos importantes nas últimas horas</Card.Description>
             </div>
-            <Button variant="tertiary" size="sm">
-              Ver relatório
-            </Button>
           </Card.Header>
           <Card.Content className="px-0">
-            <ul className="divide-y divide-separator">
-              {activity.map((item) => (
-                <li key={`${item.person}-${item.time}`} className="flex items-start gap-4 px-5 py-4 sm:px-6">
-                  <span className="mt-1.5 size-2.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-muted">
-                      <strong className="font-semibold text-foreground">{item.person}</strong> {item.action}
-                    </p>
-                    <p className="mt-1 text-xs text-muted">{item.time}</p>
-                  </div>
-                  <StatusBadge tone={item.tone}>Atualização</StatusBadge>
-                </li>
-              ))}
-            </ul>
+            {activity.length > 0 ? (
+              <ul className="divide-y divide-separator">
+                {activity.map((item) => (
+                  <li key={item.id} className="flex items-start gap-4 px-5 py-4 sm:px-6">
+                    <span className="mt-1.5 size-2.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-muted">
+                        <strong className="font-semibold text-foreground">{item.person}</strong> {item.action}
+                      </p>
+                      <p className="mt-1 text-xs text-muted">{item.time}</p>
+                    </div>
+                    <StatusBadge tone={item.tone}>Atividade</StatusBadge>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="px-6 py-8 text-center text-sm text-muted">Nenhuma atividade recente registrada.</div>
+            )}
           </Card.Content>
         </Card>
 

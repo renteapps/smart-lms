@@ -7,14 +7,21 @@ import CarouselRow from "./CarouselRow";
 import LessonCard from "./LessonCard";
 import { ArrowIcon } from "@/components/ui/AnimatedIcon";
 import { LearningTrail } from "@/types/trilha";
-import { readLearningTrail } from "@/lib/trailStorage";
+import { getMyTrail } from "@/app/actions/trail";
 
 export default function MinhaTrilhaRow() {
   const [trail, setTrail] = useState<LearningTrail | null>(null);
 
   useEffect(() => {
-    const frame = requestAnimationFrame(() => setTrail(readLearningTrail().data));
-    return () => cancelAnimationFrame(frame);
+    let isMounted = true;
+    async function loadTrail() {
+      const res = await getMyTrail();
+      if (res.success && res.trail && isMounted) {
+        setTrail(res.trail);
+      }
+    }
+    loadTrail();
+    return () => { isMounted = false; };
   }, []);
 
   const pendingLessons = trail?.items.filter((item) => item.type === 'lesson' && item.status === 'pending').slice(0, 8) || [];

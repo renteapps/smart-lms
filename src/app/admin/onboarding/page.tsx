@@ -12,8 +12,8 @@ import { validateQuestionnaire } from '@/lib/matching';
 import { createClient } from '@/lib/supabase/client';
 import { getEditableQuestionnaire } from '@/lib/data/trail';
 import { analyzeQuestionnaire } from '@/lib/adminTrailDiagnostics';
-import { readTrailAnalytics, summarizeTrailAnalytics, TrailAnalyticsSummary } from '@/lib/trailAnalytics';
-import { readLearningTrail } from '@/lib/trailStorage';
+import { summarizeTrailAnalytics, TrailAnalyticsSummary } from '@/lib/trailAnalytics';
+import { getAdminTrailAnalytics } from '@/app/actions/trail';
 
 export default function AdminOnboardingPage() {
   const [questionnaire, setQuestionnaire] = useState<Questionnaire>(mockQuestionnaire);
@@ -43,8 +43,21 @@ export default function AdminOnboardingPage() {
 
   useEffect(() => {
     if (activeTab !== 'stats') return;
-    const frame = requestAnimationFrame(() => setAnalytics(summarizeTrailAnalytics(readTrailAnalytics(), readLearningTrail().data)));
-    return () => cancelAnimationFrame(frame);
+    let isMounted = true;
+    
+    async function loadAnalytics() {
+      try {
+        const res = await getAdminTrailAnalytics();
+        if (res.success && res.data && isMounted) {
+          setAnalytics(summarizeTrailAnalytics(res.data, res.trails || []));
+        }
+      } catch (err) {
+        console.error("Erro ao carregar analytics da trilha", err);
+      }
+    }
+    
+    loadAnalytics();
+    return () => { isMounted = false; };
   }, [activeTab]);
 
   const handleUpdateQuestion = (index: number, updatedQuestion: Question) => {
@@ -225,8 +238,6 @@ export default function AdminOnboardingPage() {
 
         {activeTab === 'stats' && (
           <div className="max-w-6xl space-y-8">
-            <div className="rounded-[12px] border border-primary/20 bg-primary/5 p-4 text-sm text-text-soft"><strong className="text-primary-active">Protótipo local:</strong> os indicadores abaixo representam a atividade registrada neste navegador e já usam os mesmos eventos que poderão ser enviados ao backend futuramente.</div>
-
             <section>
               <div className="mb-4 flex items-center justify-between"><div><p className="eyebrow">Efetividade</p><h2 className="mt-1 text-2xl font-extrabold text-ink">Sinais da experiência do aluno</h2></div><Activity className="h-6 w-6 text-primary" /></div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

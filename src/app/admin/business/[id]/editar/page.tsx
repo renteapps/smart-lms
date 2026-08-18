@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CompanyForm } from "@/components/admin/business/CompanyForm";
-import { getCompanyById } from "@/lib/businessStorage";
+import { getCompanyById } from "@/lib/data/business";
+import { createClient } from "@/lib/supabase/client";
 import { Company } from "@/types/business";
 import { Button } from "@heroui/react";
 import Link from "next/link";
@@ -18,11 +19,15 @@ export default function AdminBusinessEditPage() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (id) {
-      const found = getCompanyById(id);
-      setCompany(found);
+    async function load() {
+      if (id) {
+        const db = createClient();
+        const found = await getCompanyById(db, id);
+        setCompany(found);
+      }
       setLoaded(true);
     }
+    load();
   }, [id]);
 
   if (!loaded) {

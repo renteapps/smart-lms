@@ -52,12 +52,12 @@ function courseToRow(input: CourseInput): Record<string, unknown> {
 
 export async function saveCourse(input: CourseInput & { id?: string }): Promise<Saved<{ id: string }>> {
   try {
-    const { supabase } = await requireAdmin();
+    const { adminClient } = await requireAdmin();
     const row = courseToRow(input);
 
     const query = input.id
-      ? supabase.from("courses").update(row).eq("id", input.id).select("id").single()
-      : supabase.from("courses").insert(row).select("id").single();
+      ? adminClient.from("courses").update(row).eq("id", input.id).select("id").single()
+      : adminClient.from("courses").insert(row).select("id").single();
 
     const { data, error } = await query;
     if (error) return { success: false, message: error.message };
@@ -72,8 +72,8 @@ export async function saveCourse(input: CourseInput & { id?: string }): Promise<
 
 export async function deleteCourse(id: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireAdmin();
-    const { error } = await supabase.from("courses").delete().eq("id", id);
+    const { adminClient } = await requireAdmin();
+    const { error } = await adminClient.from("courses").delete().eq("id", id);
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/admin/cursos");
@@ -93,7 +93,7 @@ export async function saveModule(
   input: Partial<Module> & { id?: string },
 ): Promise<Saved<{ id: string }>> {
   try {
-    const { supabase } = await requireAdmin();
+    const { adminClient } = await requireAdmin();
 
     const row: Record<string, unknown> = { course_id: courseId };
     if (input.title !== undefined) row.title = input.title;
@@ -102,8 +102,8 @@ export async function saveModule(
     if (input.order !== undefined) row.order_index = input.order;
 
     const query = input.id
-      ? supabase.from("modules").update(row).eq("id", input.id).select("id").single()
-      : supabase.from("modules").insert(row).select("id").single();
+      ? adminClient.from("modules").update(row).eq("id", input.id).select("id").single()
+      : adminClient.from("modules").insert(row).select("id").single();
 
     const { data, error } = await query;
     if (error) return { success: false, message: error.message };
@@ -117,8 +117,8 @@ export async function saveModule(
 
 export async function deleteModule(id: string, courseId: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireAdmin();
-    const { error } = await supabase.from("modules").delete().eq("id", id);
+    const { adminClient } = await requireAdmin();
+    const { error } = await adminClient.from("modules").delete().eq("id", id);
     if (error) return { success: false, message: error.message };
 
     revalidatePath(`/admin/cursos/${courseId}/modulos`);
@@ -131,9 +131,9 @@ export async function deleteModule(id: string, courseId: string): Promise<Action
 /** Reordenação por arrasto: grava a ordem inteira de uma vez. */
 export async function reorderModules(courseId: string, orderedIds: string[]): Promise<ActionResult> {
   try {
-    const { supabase } = await requireAdmin();
+    const { adminClient } = await requireAdmin();
 
-    const { error } = await supabase.from("modules").upsert(
+    const { error } = await adminClient.from("modules").upsert(
       orderedIds.map((id, index) => ({ id, course_id: courseId, order_index: index + 1 })),
       { onConflict: "id" },
     );
@@ -156,7 +156,7 @@ export async function saveLesson(
   input: Partial<Lesson> & { id?: string },
 ): Promise<Saved<{ id: string }>> {
   try {
-    const { supabase } = await requireAdmin();
+    const { adminClient } = await requireAdmin();
 
     const row: Record<string, unknown> = { module_id: moduleId };
     const set = (key: string, value: unknown) => {
@@ -185,17 +185,17 @@ export async function saveLesson(
     set("is_eligible_for_trail", input.isEligibleForTrail);
 
     const query = input.id
-      ? supabase.from("lessons").update(row).eq("id", input.id).select("id").single()
-      : supabase.from("lessons").insert(row).select("id").single();
+      ? adminClient.from("lessons").update(row).eq("id", input.id).select("id").single()
+      : adminClient.from("lessons").insert(row).select("id").single();
 
     const { data, error } = await query;
     if (error) return { success: false, message: error.message };
 
     // Anexos são substituídos por completo: o editor manda a lista final.
     if (input.attachments) {
-      await supabase.from("attachments").delete().eq("lesson_id", data.id);
+      await adminClient.from("attachments").delete().eq("lesson_id", data.id);
       if (input.attachments.length > 0) {
-        await supabase.from("attachments").insert(
+        await adminClient.from("attachments").insert(
           input.attachments.map((item) => ({ lesson_id: data.id, name: item.name, url: item.url })),
         );
       }
@@ -210,8 +210,8 @@ export async function saveLesson(
 
 export async function deleteLesson(id: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireAdmin();
-    const { error } = await supabase.from("lessons").delete().eq("id", id);
+    const { adminClient } = await requireAdmin();
+    const { error } = await adminClient.from("lessons").delete().eq("id", id);
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/admin/cursos");
@@ -223,9 +223,9 @@ export async function deleteLesson(id: string): Promise<ActionResult> {
 
 export async function reorderLessons(moduleId: string, orderedIds: string[]): Promise<ActionResult> {
   try {
-    const { supabase } = await requireAdmin();
+    const { adminClient } = await requireAdmin();
 
-    const { error } = await supabase.from("lessons").upsert(
+    const { error } = await adminClient.from("lessons").upsert(
       orderedIds.map((id, index) => ({ id, module_id: moduleId, order_index: index + 1 })),
       { onConflict: "id" },
     );

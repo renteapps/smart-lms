@@ -43,12 +43,31 @@ export function emptyTrailAnalytics(): TrailAnalyticsData {
   return { formatVersion: 1, events: [] };
 }
 
-export function summarizeTrailAnalytics(data: TrailAnalyticsData, trail: LearningTrail | null): TrailAnalyticsSummary {
+export function summarizeTrailAnalytics(data: TrailAnalyticsData, trailOrTrails: LearningTrail | LearningTrail[] | null): TrailAnalyticsSummary {
+  const trails = Array.isArray(trailOrTrails) ? trailOrTrails : trailOrTrails ? [trailOrTrails] : [];
+  
   const sessions = new Map<string, LearningTrailItem[]>();
-  trail?.items.forEach((item) => sessions.set(item.sessionId, [...(sessions.get(item.sessionId) || []), item]));
+  let completedSessionsCount = 0;
+  
+  trails.forEach(trail => {
+    const trailSessions = new Map<string, LearningTrailItem[]>();
+    trail.items.forEach((item) => {
+      const key = `${trail.userId || Math.random()}-${item.sessionId}`;
+      trailSessions.set(key, [...(trailSessions.get(key) || []), item]);
+    });
+    
+    trailSessions.forEach((items, key) => {
+      sessions.set(key, items);
+      if (items.length > 0 && items.every((item) => item.status === 'completed')) {
+        completedSessionsCount++;
+      }
+    });
+  });
+
   const plannedSessions = sessions.size;
-  const completedSessions = [...sessions.values()].filter((items) => items.length > 0 && items.every((item) => item.status === 'completed')).length;
-  const feedback = trail?.feedbackHistory || [];
+  const completedSessions = completedSessionsCount;
+  
+  const feedback = trails.flatMap(t => t.feedbackHistory || []);
   const supported = feedback.filter((item) => item.rating !== 'heavy' && item.completedMinutes > 0);
   const replanTypes = new Set<TrailAnalyticsEventType>(['trail_replanned', 'routine_adjusted', 'session_postponed']);
   const replans = data.events.filter((event) => replanTypes.has(event.type)).length;

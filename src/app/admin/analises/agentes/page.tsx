@@ -1,5 +1,7 @@
 import { AgentsAnalyticsView } from "@/components/admin/analytics/AgentsAnalyticsView";
+import { getAgentsAnalytics } from "../actions";
 
-export default function AdminAnaliseAgentesPage() {
-  return <AgentsAnalyticsView basePath="/admin/analises" />;
+export default async function AdminAnaliseAgentesPage() {
+  const data = await getAgentsAnalytics();
+  return <AgentsAnalyticsView basePath="/admin/analises" data={data} />;
 }

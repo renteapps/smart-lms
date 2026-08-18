@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore, useEffect } from "react";
 import {
   loadQuestionnaire,
   QUESTIONNAIRE_STORAGE_KEY,
   readLearningTrail,
   TRAIL_STORAGE_KEY,
+  saveLearningTrail,
 } from "@/lib/trailStorage";
 import type { LearningTrail, Questionnaire } from "@/types/trilha";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * A trilha mora no dispositivo, e o dispositivo é um sistema externo ao React.
@@ -94,6 +96,28 @@ export function useTrailStore(): TrailStoreValue {
     if (!hydrated) return { data: null, error: undefined, migrated: false } as const;
     return readLearningTrail(trailRaw);
   }, [hydrated, trailRaw]);
+
+  // Sync with Supabase on mount
+  useEffect(() => {
+    if (!hydrated) return;
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('student_trails').select('trail_data').eq('user_id', user.id).single()
+          .then(({ data, error }) => {
+            if (!error && data?.trail_data) {
+              const remoteTrail = data.trail_data as LearningTrail;
+              const localTrail = parsed.data;
+              
+              // Only overwrite local if remote is newer or local is missing
+              if (!localTrail || (remoteTrail.generatedAt > localTrail.generatedAt)) {
+                saveLearningTrail(remoteTrail);
+              }
+            }
+          });
+      }
+    });
+  }, [hydrated]); // Depend only on hydrated to run once after hydration
 
   const questionnaire = useMemo(
     () => (hydrated ? loadQuestionnaire(questionnaireRaw) : null),

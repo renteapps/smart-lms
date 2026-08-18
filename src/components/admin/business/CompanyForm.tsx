@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { Button, Card } from "@heroui/react";
 import { Company, CompanyPlanType, CompanyStatus } from "@/types/business";
-import { saveCompany } from "@/lib/businessStorage";
+import { saveCompany } from "@/app/actions/admin/platform";
 import { CATALOG_COURSES } from "@/lib/catalog";
 import { StatusBadge } from "@/components/ui/editorial";
 import { toast } from "sonner";
@@ -168,7 +168,7 @@ export function CompanyForm({ initialCompany, mode = "create" }: CompanyFormProp
       .toUpperCase();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!tradeName.trim()) {
@@ -191,7 +191,7 @@ export function CompanyForm({ initialCompany, mode = "create" }: CompanyFormProp
     setIsSubmitting(true);
 
     try {
-      const saved = saveCompany({
+      const res = await saveCompany({
         id: initialCompany?.id,
         name: name.trim(),
         tradeName: tradeName.trim(),
@@ -212,17 +212,22 @@ export function CompanyForm({ initialCompany, mode = "create" }: CompanyFormProp
         departments: departments.length > 0 ? departments : ["Geral"],
       });
 
+      if (!res.success) {
+        toast.error(res.message || "Erro ao salvar empresa.");
+        return;
+      }
+
       toast.success(
         isEditing
-          ? `Empresa "${saved.tradeName}" atualizada com sucesso!`
-          : `Empresa "${saved.tradeName}" criada com sucesso!`
+          ? `Empresa atualizada com sucesso!`
+          : `Empresa criada com sucesso!`
       );
 
       router.push("/admin/business");
       router.refresh();
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao salvar empresa. Tente novamente.");
+      toast.error("Erro inesperado. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }

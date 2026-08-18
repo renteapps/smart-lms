@@ -16,7 +16,7 @@ import {
   ShieldCheck,
   UserRound,
 } from "lucide-react";
-import { Button, Card } from "@heroui/react";
+import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@heroui/react";
 import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
 import { getProfile } from "@/lib/data/profiles";
 import { createClient } from "@/lib/supabase/server";
@@ -115,11 +115,11 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
 
       <div className="grid grid-cols-1 gap-6 pt-2 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <Card.Header>
-            <Card.Title>Resumo do Perfil</Card.Title>
-            <Card.Description>Dados profissionais e de contato registrados</Card.Description>
-          </Card.Header>
-          <Card.Content className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <CardHeader>
+            <CardTitle>Resumo do Perfil</CardTitle>
+            <CardDescription>Dados profissionais e de contato registrados</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex items-center gap-3">
               <span className="grid size-10 shrink-0 place-items-center rounded-full bg-background-secondary text-muted">
                 <Briefcase className="size-4" aria-hidden="true" />
@@ -138,15 +138,15 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
                 <p className="text-sm font-semibold text-foreground">{profile.phone || "Não informado"}</p>
               </div>
             </div>
-          </Card.Content>
+          </CardContent>
         </Card>
 
         <Card>
-          <Card.Header>
-            <Card.Title>Ações de Suporte</Card.Title>
-            <Card.Description>Resolva problemas de acesso do usuário</Card.Description>
-          </Card.Header>
-          <Card.Content className="flex flex-col gap-2">
+          <CardHeader>
+            <CardTitle>Ações de Suporte</CardTitle>
+            <CardDescription>Resolva problemas de acesso do usuário</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
             <Button variant="tertiary" fullWidth className="justify-start gap-3">
               <Mail className="size-4" aria-hidden="true" />
               Reenviar e-mail de acesso
@@ -159,7 +159,7 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
               <MonitorOff className="size-4" aria-hidden="true" />
               Forçar Logoff
             </Button>
-          </Card.Content>
+          </CardContent>
         </Card>
       </div>
 
@@ -171,19 +171,19 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
             return (
               <Link key={card.href} href={card.href} className="group block rounded-xl">
                 <Card className="h-full transition-shadow group-hover:shadow-overlay">
-                  <Card.Header>
+                  <CardHeader>
                     <span className={`mb-2 grid size-12 place-items-center rounded-xl ${card.tone}`}>
                       <Icon className="size-6" aria-hidden="true" />
                     </span>
-                    <Card.Title className="group-hover:text-accent">{card.title}</Card.Title>
-                    <Card.Description>{card.description}</Card.Description>
-                  </Card.Header>
-                  <Card.Footer>
+                    <CardTitle className="group-hover:text-accent">{card.title}</CardTitle>
+                    <CardDescription>{card.description}</CardDescription>
+                  </CardHeader>
+                  <CardFooter>
                     <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
                       Abrir
                       <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                     </span>
-                  </Card.Footer>
+                  </CardFooter>
                 </Card>
               </Link>
             );

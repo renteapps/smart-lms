@@ -25,15 +25,19 @@ import {
   SimpleBarChart,
   type TimePeriod,
 } from "@/components/admin/analytics/AnalyticsComponents";
-import { MOCK_STUDENTS_ANALYTICS } from "@/lib/mocks/analyticsMocks";
+// Mock import removed
 import { toast } from "sonner";
 
-export function StudentsAnalyticsView({ basePath = "/admin/analises" }: { basePath?: string }) {
+export interface StudentsAnalyticsViewProps {
+  basePath?: string;
+  data: any;
+}
+
+export function StudentsAnalyticsView({ basePath = "/admin/analises", data }: StudentsAnalyticsViewProps) {
   const [period, setPeriod] = useState<TimePeriod>("30d");
   const [selectedTab, setSelectedTab] = useState("visao_geral");
 
-  const { kpis, activityByHour, profilesDistribution, engagementBadges } =
-    MOCK_STUDENTS_ANALYTICS;
+  const { kpis, activityByHour, profilesDistribution, engagementBadges } = data;
 
   const barChartData = activityByHour.map((a) => ({
     label: a.hour,

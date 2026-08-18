@@ -5,14 +5,17 @@ import { CheckCircle2, Heart } from "lucide-react";
 import { Button, Card, Chip, toast } from "@heroui/react";
 import { ArrowIcon, SparkIcon } from "@/components/ui/AnimatedIcon";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 interface DailyPillProps {
+  pillId?: string;
   challenge?: string;
   title?: string;
   initialLikes?: number;
 }
 
 export default function DailyPill({
+  pillId,
   title = "Prática de hoje",
   challenge = "Na sua próxima conversa, espere dois segundos antes de responder e confirme o que você entendeu.",
   initialLikes = 128,
@@ -21,14 +24,53 @@ export default function DailyPill({
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(initialLikes);
 
-  const handleLike = () => {
+  const supabase = createClient();
+
+  const handleLike = async () => {
     if (!liked) {
       setLiked(true);
       setLikesCount((prev) => prev + 1);
       toast.success("Você curtiu a pílula de hoje!");
+      
+      if (pillId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('pilula_interactions').upsert({
+            pilula_id: pillId,
+            user_id: user.id,
+            interaction_type: 'like'
+          });
+        }
+      }
     } else {
       setLiked(false);
       setLikesCount((prev) => prev - 1);
+      
+      if (pillId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('pilula_interactions').delete()
+            .eq('pilula_id', pillId)
+            .eq('user_id', user.id)
+            .eq('interaction_type', 'like');
+        }
+      }
+    }
+  };
+
+  const handleAccept = async () => {
+    const newAccepted = !accepted;
+    setAccepted(newAccepted);
+    
+    if (pillId && newAccepted) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('pilula_interactions').upsert({
+          pilula_id: pillId,
+          user_id: user.id,
+          interaction_type: 'accept'
+        });
+      }
     }
   };
 
@@ -99,7 +141,7 @@ export default function DailyPill({
           <Button
             variant={accepted ? "secondary" : "primary"}
             aria-pressed={accepted}
-            onClick={() => setAccepted((current) => !current)}
+            onClick={handleAccept}
           >
             {accepted ? (
               <>

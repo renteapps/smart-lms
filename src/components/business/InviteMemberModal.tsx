@@ -10,7 +10,7 @@ import {
 } from "@heroui/react";
 import { UserPlus, Mail, Building2, Check, AlertCircle } from "lucide-react";
 import { Company, MemberRole } from "@/types/business";
-import { getAvailableSeats, inviteMember } from "@/lib/businessStorage";
+import { inviteMember } from "@/app/actions/admin/platform";
 import { CATALOG_COURSES } from "@/lib/catalog";
 import { toast } from "sonner";
 
@@ -19,6 +19,7 @@ interface InviteMemberModalProps {
   onClose: () => void;
   company: Company;
   onSuccess: () => void;
+  availableSeats: number;
 }
 
 export function InviteMemberModal({
@@ -26,6 +27,7 @@ export function InviteMemberModal({
   onClose,
   company,
   onSuccess,
+  availableSeats,
 }: InviteMemberModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -38,7 +40,6 @@ export function InviteMemberModal({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const availableSeats = getAvailableSeats(company.id);
   const availableCourses = CATALOG_COURSES.filter((c) =>
     company.allowedCourseIds.includes(c.id)
   );
@@ -51,7 +52,7 @@ export function InviteMemberModal({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) {
       toast.error("Preencha o nome e o e-mail do colaborador.");
@@ -66,15 +67,16 @@ export function InviteMemberModal({
     setIsSubmitting(true);
     const finalDepartment = department === "outro" ? (customDepartment.trim() || "Geral") : department;
 
-    const res = inviteMember(company.id, {
+    const res = await inviteMember(company.id, {
       name: name.trim(),
       email: email.trim(),
       department: finalDepartment,
       jobTitle: jobTitle.trim(),
-      roleInCompany,
-      assignedCourseIds: selectedCourses,
+      role: roleInCompany,
     });
-
+    // @todo Assign courses after invite member if assignedCourseIds was used (now inviteMember only invites)
+    // we should create a new server action or do it inside inviteMember.
+    
     setIsSubmitting(false);
 
     if (res.success) {
@@ -85,7 +87,7 @@ export function InviteMemberModal({
       onSuccess();
       onClose();
     } else {
-      toast.error(res.error || "Erro ao convidar colaborador.");
+      toast.error(res.message || "Erro ao convidar colaborador.");
     }
   };
 

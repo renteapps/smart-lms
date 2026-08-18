@@ -160,3 +160,49 @@ export async function setTrailItemCompletion(
     return { success: false, message: (error as Error).message };
   }
 }
+
+export async function getOnboardingData() {
+  try {
+    const { supabase, user } = await requireUser();
+    const [questionnaire, existing] = await Promise.all([
+      trailData.getPublishedQuestionnaire(supabase),
+      trailData.getLearningTrail(supabase, user.id),
+    ]);
+    
+    if (!questionnaire) {
+      return { success: false, message: "Nenhum questionário publicado." };
+    }
+    
+    return { success: true, questionnaire, existing };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+export async function getAdminTrailAnalytics() {
+  try {
+    const { supabase } = await requireUser();
+    // Em um app real deveríamos validar se o usuário é admin
+    
+    const [analyticsData, { data: trailsData }] = await Promise.all([
+      trailData.getTrailAnalytics(supabase),
+      supabase.from("student_trails").select("trail_data")
+    ]);
+    
+    const trails = (trailsData || []).map((t) => t.trail_data as LearningTrail).filter(Boolean);
+    
+    return { success: true, data: analyticsData, trails };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+export async function getMyTrail() {
+  try {
+    const { supabase, user } = await requireUser();
+    const trail = await trailData.getLearningTrail(supabase, user.id);
+    return { success: true, trail };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}

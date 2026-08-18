@@ -11,7 +11,7 @@ import {
 import { BookOpen, Check, Sparkles } from "lucide-react";
 import { Company, CompanyMember } from "@/types/business";
 import { CATALOG_COURSES } from "@/lib/catalog";
-import { assignCoursesToDepartment, assignCoursesToMember } from "@/lib/businessStorage";
+import { assignCoursesToDepartment, assignCoursesToMember } from "@/app/actions/admin/platform";
 import { toast } from "sonner";
 
 interface AssignCourseModalProps {
@@ -63,7 +63,7 @@ export function AssignCourseModal({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedCourseIds.length === 0) {
       toast.error("Selecione pelo menos um curso para atribuir.");
@@ -73,17 +73,17 @@ export function AssignCourseModal({
     setIsSubmitting(true);
 
     if (targetMember) {
-      const ok = assignCoursesToMember(targetMember.id, selectedCourseIds);
+      const res = await assignCoursesToMember(targetMember.id, selectedCourseIds);
       setIsSubmitting(false);
-      if (ok) {
+      if (res.success) {
         toast.success(`Cursos atualizados para ${targetMember.name}!`);
         onSuccess();
         onClose();
       } else {
-        toast.error("Erro ao atribuir cursos.");
+        toast.error(res.message || "Erro ao atribuir cursos.");
       }
     } else if (targetDepartment) {
-      const res = assignCoursesToDepartment(company.id, targetDepartment, selectedCourseIds);
+      const res = await assignCoursesToDepartment(company.id, targetDepartment, selectedCourseIds);
       setIsSubmitting(false);
       if (res.success) {
         toast.success(
@@ -92,7 +92,7 @@ export function AssignCourseModal({
         onSuccess();
         onClose();
       } else {
-        toast.error("Erro ao atribuir cursos ao departamento.");
+        toast.error(res.message || "Erro ao atribuir cursos ao departamento.");
       }
     }
   };

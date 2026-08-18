@@ -28,5 +28,8 @@ export async function requireAdmin() {
     throw new Error("Acesso restrito a administradores.");
   }
 
-  return { supabase, user };
+  const { createAdminClient } = await import("./admin");
+  const adminClient = createAdminClient();
+
+  return { supabase, adminClient, user };
 }

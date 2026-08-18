@@ -36,10 +36,7 @@ import {
   Sparkline,
   type TimePeriod,
 } from "@/components/admin/analytics/AnalyticsComponents";
-import {
-  MOCK_ANALYTICS_CARDS,
-  MOCK_ANALYTICS_OVERVIEW,
-} from "@/lib/mocks/analyticsMocks";
+// Mock imports removed
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -62,12 +59,20 @@ const crossGrowthData = [
   { label: "Ago", value: 95, formattedValue: "R$ 95k • 1.890h" },
 ];
 
-export function AnalyticsHubView({ basePath = "/admin/analises" }: { basePath?: string }) {
+import { AnalyticsOverview, AnalyticsCardItem } from "@/lib/mocks/analyticsMocks";
+
+export interface AnalyticsHubViewProps {
+  basePath?: string;
+  overviewData: AnalyticsOverview;
+  cardsData: AnalyticsCardItem[];
+}
+
+export function AnalyticsHubView({ basePath = "/admin/analises", overviewData, cardsData }: AnalyticsHubViewProps) {
   const [period, setPeriod] = useState<TimePeriod>("30d");
   const [selectedCategoryTab, setSelectedCategoryTab] = useState<string>("todos");
   const [searchFilter, setSearchFilter] = useState("");
 
-  const filteredCards = MOCK_ANALYTICS_CARDS.filter((card) => {
+  const filteredCards = cardsData.filter((card) => {
     const matchesSearch =
       card.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
       card.description.toLowerCase().includes(searchFilter.toLowerCase());
@@ -116,42 +121,42 @@ export function AnalyticsHubView({ basePath = "/admin/analises" }: { basePath?: 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Métricas Principais">
         <MetricCard
           label="Faturamento Total"
-          value={`R$ ${MOCK_ANALYTICS_OVERVIEW.totalRevenue.toLocaleString("pt-BR")}`}
+          value={`R$ ${overviewData.totalRevenue.toLocaleString("pt-BR")}`}
           helper="vs mês anterior"
           icon={TrendingUp}
           tone="primary"
           tooltipText="Faturamento bruto acumulado somando assinaturas e compras avulsas."
-          trend={{ value: `+${MOCK_ANALYTICS_OVERVIEW.revenueChange}%`, isPositive: true }}
+          trend={{ value: `+${overviewData.revenueChange}%`, isPositive: true }}
           sparklineData={[28, 35, 42, 55, 62, 70, 82, 94]}
         />
         <MetricCard
           label="Alunos Ativos"
-          value={MOCK_ANALYTICS_OVERVIEW.activeStudents.toLocaleString("pt-BR")}
+          value={overviewData.activeStudents.toLocaleString("pt-BR")}
           helper="alunos com estudo ativo"
           icon={Users}
           tone="sage"
           tooltipText="Estudantes que assistiram aulas ou interagiram com IA nos últimos 30 dias."
-          trend={{ value: `+${MOCK_ANALYTICS_OVERVIEW.studentsChange}%`, isPositive: true }}
+          trend={{ value: `+${overviewData.studentsChange}%`, isPositive: true }}
           sparklineData={[40, 48, 52, 60, 68, 74, 80, 88]}
         />
         <MetricCard
           label="Horas Assistidas"
-          value={`${(MOCK_ANALYTICS_OVERVIEW.totalWatchHours / 1000).toFixed(1)}k h`}
-          helper="+1.4k h no período"
+          value={`${(overviewData.totalWatchHours / 1000).toFixed(1)}k h`}
+          helper="+0k h no período"
           icon={Clock3}
           tone="terracotta"
           tooltipText="Total de tempo em vídeo consumido pelos estudantes na plataforma."
-          trend={{ value: `+${MOCK_ANALYTICS_OVERVIEW.watchHoursChange}%`, isPositive: true }}
+          trend={{ value: `+${overviewData.watchHoursChange}%`, isPositive: true }}
           sparklineData={[30, 38, 45, 52, 60, 72, 85, 95]}
         />
         <MetricCard
           label="Interações com IA"
-          value={MOCK_ANALYTICS_OVERVIEW.totalAgentInteractions.toLocaleString("pt-BR")}
-          helper="94.8% CSAT de satisfação"
+          value={overviewData.totalAgentInteractions.toLocaleString("pt-BR")}
+          helper="Interações de agentes registradas"
           icon={Bot}
           tone="purple"
           tooltipText="Volume de sessões e mensagens trocadas com os agentes de tutoria."
-          trend={{ value: `+${MOCK_ANALYTICS_OVERVIEW.agentInteractionsChange}%`, isPositive: true }}
+          trend={{ value: `+${overviewData.agentInteractionsChange}%`, isPositive: true }}
           sparklineData={[15, 25, 38, 50, 65, 78, 88, 100]}
         />
       </section>

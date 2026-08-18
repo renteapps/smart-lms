@@ -20,10 +20,9 @@ import {
   recordSurveyAnswer,
   REFINEMENT_STORAGE_KEY,
 } from "@/lib/refinementSurveys";
-import { MOCK_PROFILE_TESTS } from "@/lib/seed/profileTests";
 import RecalibrationSlot from "@/components/home/RecalibrationSlot";
 import type { SessionLoadRating } from "@/types/trilha";
-import { CATALOG_COURSES } from "@/lib/catalog";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { PROFILE_STORAGE_KEY, PROFILE_SAVED_EVENT } from "@/components/profile/ProfileEditor";
 import DailyPill from "@/components/DailyPill";
 import DayCompleteHero from "@/components/home/DayCompleteHero";
@@ -100,6 +99,7 @@ function HomeSkeleton() {
  */
 export default function StudentHomeClient() {
   const { hydrated, trail, questionnaire, error, migrated } = useTrailStore();
+  const { courses, dailyPill, profileTests, loading } = useSupabaseData();
   const profileRaw = useSyncExternalStore(subscribeToProfile, readProfileRaw, noProfile);
   const refinementRaw = useStoredValue(REFINEMENT_STORAGE_KEY);
   /** O que a última recalibração mudou — some na próxima navegação, de propósito. */
@@ -132,20 +132,20 @@ export default function StudentHomeClient() {
     [trail, questionnaire],
   );
   const discovery = useMemo(
-    () => rankCatalogByAffinity(CATALOG_COURSES, trail, questionnaire).slice(0, 3),
-    [trail, questionnaire],
+    () => rankCatalogByAffinity(courses as any, trail, questionnaire).slice(0, 3),
+    [courses, trail, questionnaire],
   );
 
   const recalibration = useMemo(() => {
-    if (!trail) return null;
+    if (!trail || profileTests.length === 0) return null;
     return pickRecalibration({
       state,
       questionnaire,
       signals: deriveImplicitSignals(trail),
       refinement: readRefinementState(refinementRaw),
-      profileTests: MOCK_PROFILE_TESTS,
+      profileTests,
     });
-  }, [trail, state, questionnaire, refinementRaw]);
+  }, [trail, state, questionnaire, refinementRaw, profileTests]);
 
   const handleFeedback = useCallback(
     (rating: SessionLoadRating) => {
@@ -205,7 +205,7 @@ export default function StudentHomeClient() {
     [trail, questionnaire],
   );
 
-  if (!hydrated) {
+  if (!hydrated || loading) {
     return (
       <div className="pt-[76px]">
         <HomeSkeleton />
@@ -332,10 +332,14 @@ export default function StudentHomeClient() {
        * A prática do dia só aparece depois que a sessão fecha. Antes ela era um
        * quarto botão primário disputando a atenção com o próprio estudo.
        */}
-      {state.kind === "dia-concluido" && (
+      {state.kind === "dia-concluido" && dailyPill && (
         <section className="editorial-container pb-[clamp(2rem,4vw,3rem)]">
           <Rise>
-            <DailyPill />
+            <DailyPill 
+              pillId={dailyPill.id}
+              title={dailyPill.title}
+              challenge={dailyPill.challenge}
+            />
           </Rise>
         </section>
       )}

@@ -30,16 +30,20 @@ import {
   SimpleBarChart,
   type TimePeriod,
 } from "@/components/admin/analytics/AnalyticsComponents";
-import { MOCK_AGENTS_ANALYTICS } from "@/lib/mocks/analyticsMocks";
 import { toast } from "sonner";
 
-export function AgentsAnalyticsView({ basePath = "/admin/analises" }: { basePath?: string }) {
+export interface AgentsAnalyticsViewProps {
+  basePath?: string;
+  data: any;
+}
+
+export function AgentsAnalyticsView({ basePath = "/admin/analises", data }: AgentsAnalyticsViewProps) {
   const [period, setPeriod] = useState<TimePeriod>("30d");
   const [search, setSearch] = useState("");
   const [selectedTab, setSelectedTab] = useState("visao_geral");
 
   const { kpis, dailyInteractions, agentsRanking, topTopics, recentFeedback } =
-    MOCK_AGENTS_ANALYTICS;
+    data;
 
   const barChartData = dailyInteractions.map((d) => ({
     label: d.day,

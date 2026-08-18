@@ -25,7 +25,9 @@ import {
 } from "lucide-react";
 import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
 import { Company } from "@/types/business";
-import { deleteCompany, getCompanies } from "@/lib/businessStorage";
+import { deleteCompany } from "@/app/actions/admin/platform";
+import { getCompanies } from "@/lib/data/business";
+import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -43,23 +45,38 @@ export default function AdminBusinessPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
 
-  const loadCompanies = () => {
-    setCompanies(getCompanies());
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadCompanies = async () => {
+    setIsLoading(true);
+    try {
+      const db = createClient();
+      const data = await getCompanies(db);
+      setCompanies(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
     loadCompanies();
   }, []);
 
-  const handleDelete = (company: Company) => {
+  const handleDelete = async (company: Company) => {
     if (
       confirm(
         `Tem certeza que deseja excluir a empresa "${company.tradeName}" e todos os colaboradores vinculados?`
       )
     ) {
-      deleteCompany(company.id);
-      toast.success(`Empresa ${company.tradeName} removida com sucesso.`);
-      loadCompanies();
+      const res = await deleteCompany(company.id);
+      if (res.success) {
+        toast.success(`Empresa ${company.tradeName} removida com sucesso.`);
+        loadCompanies();
+      } else {
+        toast.error(res.message || "Erro ao remover empresa.");
+      }
     }
   };
 
@@ -167,7 +184,11 @@ export default function AdminBusinessPage() {
         </Card.Header>
 
         <Card.Content className="px-0 pb-0 pt-0">
-          {filtered.length === 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center py-16">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+            </div>
+          ) : filtered.length === 0 ? (
             <EmptyState className="flex flex-col items-center gap-3 px-6 py-16 text-center">
               <div className="grid size-12 place-items-center rounded-2xl bg-surface-secondary text-muted">
                 <Building2 className="size-6" />

@@ -14,7 +14,8 @@ import {
   TextField
 } from "@heroui/react";
 import { Brain, RotateCcw, SkipForward, Sparkles } from "lucide-react";
-import { MOCK_PROFILE_TESTS } from "@/lib/seed/profileTests";
+import { createClient } from "@/lib/supabase/client";
+import type { ProfileTest } from "@/types/profileTest";
 
 interface AddProfileTestModalProps {
   isOpen: boolean;
@@ -41,40 +42,55 @@ export default function AddProfileTestModal({
   onSave,
   initialData
 }: AddProfileTestModalProps) {
-  const [selectedTestId, setSelectedTestId] = useState<string>(
-    initialData?.profileTestId || MOCK_PROFILE_TESTS[0]?.id || ""
-  );
-  const [customTitle, setCustomTitle] = useState<string>(initialData?.title || "");
-  const [allowSkip, setAllowSkip] = useState<boolean>(
-    initialData?.allowSkipIfCompleted ?? true
-  );
-  const [requireRetake, setRequireRetake] = useState<boolean>(
-    initialData?.requireRetake ?? false
-  );
-  const [duration, setDuration] = useState<number>(
-    initialData?.durationInMinutes || 10
-  );
+  const [profileTests, setProfileTests] = useState<ProfileTest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTestId, setSelectedTestId] = useState<string>("");
+  const [customTitle, setCustomTitle] = useState<string>("");
+  const [allowSkip, setAllowSkip] = useState<boolean>(true);
+  const [requireRetake, setRequireRetake] = useState<boolean>(false);
+  const [duration, setDuration] = useState<number>(10);
+
+  useEffect(() => {
+    async function fetchTests() {
+      if (!isOpen) return;
+      setLoading(true);
+      const supabase = createClient();
+      const { data, error } = await supabase.from("profile_tests").select("*").order("title");
+      if (!error && data) {
+        const mapped = data.map((t: any) => ({
+          ...t,
+          coverUrl: t.cover_url,
+          resultType: t.result_type,
+          createdAt: t.created_at,
+          updatedAt: t.updated_at
+        }));
+        setProfileTests(mapped);
+      }
+      setLoading(false);
+    }
+    fetchTests();
+  }, [isOpen]);
 
   useEffect(() => {
     if (initialData) {
-      setSelectedTestId(initialData.profileTestId || MOCK_PROFILE_TESTS[0]?.id || "");
+      setSelectedTestId(initialData.profileTestId || (profileTests[0]?.id ?? ""));
       setCustomTitle(initialData.title || "");
       setAllowSkip(initialData.allowSkipIfCompleted ?? true);
       setRequireRetake(initialData.requireRetake ?? false);
       setDuration(initialData.durationInMinutes || 10);
-    } else if (MOCK_PROFILE_TESTS.length > 0) {
-      const firstTest = MOCK_PROFILE_TESTS[0];
+    } else if (profileTests.length > 0 && !selectedTestId) {
+      const firstTest = profileTests[0];
       setSelectedTestId(firstTest.id);
       setCustomTitle(`Diagnóstico: ${firstTest.title}`);
       setAllowSkip(true);
       setRequireRetake(false);
       setDuration(10);
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, profileTests]);
 
   const handleSelectTest = (testId: string) => {
     setSelectedTestId(testId);
-    const found = MOCK_PROFILE_TESTS.find((t) => t.id === testId);
+    const found = profileTests.find((t) => t.id === testId);
     if (found && (!customTitle || customTitle.startsWith("Diagnóstico:"))) {
       setCustomTitle(`Diagnóstico: ${found.title}`);
     }
@@ -98,7 +114,7 @@ export default function AddProfileTestModal({
     e.preventDefault();
     if (!selectedTestId) return;
 
-    const selectedTest = MOCK_PROFILE_TESTS.find((t) => t.id === selectedTestId);
+    const selectedTest = profileTests.find((t) => t.id === selectedTestId);
     const finalTitle = customTitle.trim() || selectedTest?.title || "Teste de Perfil";
 
     onSave({
@@ -142,7 +158,9 @@ export default function AddProfileTestModal({
                   className="gap-3"
                 >
                   <Label>Selecione o teste de perfil criado</Label>
-                  {MOCK_PROFILE_TESTS.map((test) => (
+                  {loading ? (
+                    <div className="text-sm text-muted">Carregando testes de perfil...</div>
+                  ) : profileTests.map((test) => (
                     <Radio
                       key={test.id}
                       value={test.id}

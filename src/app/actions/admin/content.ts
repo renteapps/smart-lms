@@ -19,13 +19,13 @@ type Saved<T> = { success: boolean; message?: string; data?: T };
 
 export async function saveAgent(payload: AgentFormPayload): Promise<Saved<{ id: string }>> {
   try {
-    const { supabase } = await requireAdmin();
+    const { adminClient } = await requireAdmin();
 
     // Slug só é recalculado na criação: mudar a URL de um agente publicado
     // quebraria os links que os alunos já têm.
     let slug = payload.slug;
     if (!payload.id) {
-      const { data: existing } = await supabase.from("agents").select("slug");
+      const { data: existing } = await adminClient.from("agents").select("slug");
       const taken = (existing ?? []).map((row: { slug: string }) => row.slug);
       slug = ensureUniqueSlug(slugifyAgentName(payload.name), taken);
     }
@@ -33,8 +33,8 @@ export async function saveAgent(payload: AgentFormPayload): Promise<Saved<{ id: 
     const row = agentToRow({ ...(payload as Partial<Agent>), slug });
 
     const query = payload.id
-      ? supabase.from("agents").update(row).eq("id", payload.id).select("id").single()
-      : supabase.from("agents").insert(row).select("id").single();
+      ? adminClient.from("agents").update(row).eq("id", payload.id).select("id").single()
+      : adminClient.from("agents").insert(row).select("id").single();
 
     const { data, error } = await query;
     if (error) return { success: false, message: error.message };
@@ -46,9 +46,9 @@ export async function saveAgent(payload: AgentFormPayload): Promise<Saved<{ id: 
       const validCourseUuids = payload.courseIds.filter((id) =>
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
       );
-      await supabase.from("agent_courses").delete().eq("agent_id", agentId);
+      await adminClient.from("agent_courses").delete().eq("agent_id", agentId);
       if (validCourseUuids.length > 0) {
-        await supabase.from("agent_courses").insert(
+        await adminClient.from("agent_courses").insert(
           validCourseUuids.map((cId) => ({ agent_id: agentId, course_id: cId })),
         );
       }
@@ -58,9 +58,9 @@ export async function saveAgent(payload: AgentFormPayload): Promise<Saved<{ id: 
       const validPlanUuids = payload.planIds.filter((id) =>
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
       );
-      await supabase.from("agent_plans").delete().eq("agent_id", agentId);
+      await adminClient.from("agent_plans").delete().eq("agent_id", agentId);
       if (validPlanUuids.length > 0) {
-        await supabase.from("agent_plans").insert(
+        await adminClient.from("agent_plans").insert(
           validPlanUuids.map((pId) => ({ agent_id: agentId, plan_id: pId })),
         );
       }
@@ -76,8 +76,8 @@ export async function saveAgent(payload: AgentFormPayload): Promise<Saved<{ id: 
 
 export async function deleteAgent(id: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireAdmin();
-    const { error } = await supabase.from("agents").delete().eq("id", id);
+    const { adminClient } = await requireAdmin();
+    const { error } = await adminClient.from("agents").delete().eq("id", id);
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/admin/agentes");
@@ -96,12 +96,12 @@ export async function savePilula(
   input: Partial<Pilula> & { id?: string; courseId?: string | null },
 ): Promise<Saved<{ id: string }>> {
   try {
-    const { supabase } = await requireAdmin();
+    const { adminClient } = await requireAdmin();
     const row = pilulaToRow(input);
 
     const query = input.id
-      ? supabase.from("pilulas").update(row).eq("id", input.id).select("id").single()
-      : supabase.from("pilulas").insert(row).select("id").single();
+      ? adminClient.from("pilulas").update(row).eq("id", input.id).select("id").single()
+      : adminClient.from("pilulas").insert(row).select("id").single();
 
     const { data, error } = await query;
     if (error) return { success: false, message: error.message };
@@ -116,8 +116,8 @@ export async function savePilula(
 
 export async function deletePilula(id: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireAdmin();
-    const { error } = await supabase.from("pilulas").delete().eq("id", id);
+    const { adminClient } = await requireAdmin();
+    const { error } = await adminClient.from("pilulas").delete().eq("id", id);
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/admin/pilulas");
@@ -135,12 +135,12 @@ export async function saveProfileTest(
   input: Partial<ProfileTest> & { id?: string },
 ): Promise<Saved<{ id: string }>> {
   try {
-    const { supabase } = await requireAdmin();
+    const { adminClient } = await requireAdmin();
     const row = profileTestToRow(input);
 
     const query = input.id
-      ? supabase.from("profile_tests").update(row).eq("id", input.id).select("id").single()
-      : supabase.from("profile_tests").insert(row).select("id").single();
+      ? adminClient.from("profile_tests").update(row).eq("id", input.id).select("id").single()
+      : adminClient.from("profile_tests").insert(row).select("id").single();
 
     const { data, error } = await query;
     if (error) return { success: false, message: error.message };
@@ -154,8 +154,8 @@ export async function saveProfileTest(
 
 export async function deleteProfileTest(id: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireAdmin();
-    const { error } = await supabase.from("profile_tests").delete().eq("id", id);
+    const { adminClient } = await requireAdmin();
+    const { error } = await adminClient.from("profile_tests").delete().eq("id", id);
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/admin/testes-perfil");
@@ -181,10 +181,10 @@ export async function saveQuestionnaire(
   publish = false,
 ): Promise<Saved<{ version: number }>> {
   try {
-    const { supabase } = await requireAdmin();
+    const { adminClient } = await requireAdmin();
 
     if (!publish) {
-      const { error } = await supabase.from("trail_questionnaires").upsert(
+      const { error } = await adminClient.from("trail_questionnaires").upsert(
         { version: questionnaire.version, status: "draft", questions: questionnaire.questions },
         { onConflict: "version" },
       );
@@ -193,7 +193,7 @@ export async function saveQuestionnaire(
         : { success: true, data: { version: questionnaire.version } };
     }
 
-    const { data: latest } = await supabase
+    const { data: latest } = await adminClient
       .from("trail_questionnaires")
       .select("version")
       .order("version", { ascending: false })
@@ -203,12 +203,12 @@ export async function saveQuestionnaire(
     const nextVersion = Math.max(questionnaire.version, (latest?.version ?? 0) + 1);
 
     // O índice parcial garante uma publicada por vez: rebaixa a atual primeiro.
-    await supabase
+    await adminClient
       .from("trail_questionnaires")
       .update({ status: "archived" })
       .eq("status", "published");
 
-    const { error } = await supabase.from("trail_questionnaires").upsert(
+    const { error } = await adminClient.from("trail_questionnaires").upsert(
       { version: nextVersion, status: "published", questions: questionnaire.questions },
       { onConflict: "version" },
     );
@@ -246,7 +246,7 @@ export type ArticleInput = {
 
 export async function saveArticle(input: ArticleInput): Promise<Saved<{ id: string }>> {
   try {
-    const { supabase } = await requireAdmin();
+    const { adminClient } = await requireAdmin();
 
     const row: Record<string, unknown> = {
       slug: input.slug,
@@ -265,8 +265,8 @@ export async function saveArticle(input: ArticleInput): Promise<Saved<{ id: stri
     if (input.publishedAt) row.published_at = input.publishedAt;
 
     const query = input.id
-      ? supabase.from("articles").update(row).eq("id", input.id).select("id").single()
-      : supabase.from("articles").insert(row).select("id").single();
+      ? adminClient.from("articles").update(row).eq("id", input.id).select("id").single()
+      : adminClient.from("articles").insert(row).select("id").single();
 
     const { data, error } = await query;
     if (error) return { success: false, message: error.message };

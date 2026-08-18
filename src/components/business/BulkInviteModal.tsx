@@ -11,7 +11,7 @@ import {
 } from "@heroui/react";
 import { Users, Upload, CheckCircle2, AlertTriangle, XCircle, Sparkles } from "lucide-react";
 import { Company } from "@/types/business";
-import { bulkInviteMembers, getAvailableSeats } from "@/lib/businessStorage";
+import { bulkInviteMembers } from "@/app/actions/admin/platform";
 import { toast } from "sonner";
 
 interface BulkInviteModalProps {
@@ -19,6 +19,7 @@ interface BulkInviteModalProps {
   onClose: () => void;
   company: Company;
   onSuccess: () => void;
+  availableSeats: number;
 }
 
 interface ParsedItem {
@@ -41,11 +42,10 @@ export function BulkInviteModal({
   onClose,
   company,
   onSuccess,
+  availableSeats,
 }: BulkInviteModalProps) {
   const [rawText, setRawText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const availableSeats = getAvailableSeats(company.id);
 
   // Parser em tempo real
   const parseLines = (text: string): ParsedItem[] => {
@@ -115,7 +115,7 @@ export function BulkInviteModal({
     reader.readAsText(file);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validItems.length === 0) {
       toast.error("Nenhum registro válido para importar.");
       return;
@@ -127,7 +127,7 @@ export function BulkInviteModal({
     }
 
     setIsSubmitting(true);
-    const res = bulkInviteMembers(
+    const res = await bulkInviteMembers(
       company.id,
       validItems.map((i) => ({
         name: i.name,

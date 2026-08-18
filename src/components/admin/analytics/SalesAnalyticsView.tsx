@@ -45,16 +45,18 @@ import {
   PeriodSelector,
   type TimePeriod,
 } from "@/components/admin/analytics/AnalyticsComponents";
-import {
-  MOCK_SALES_ANALYTICS,
-  type SalesTransaction,
-} from "@/lib/mocks/analyticsMocks";
+import { type SalesTransaction } from "@/lib/mocks/analyticsMocks";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type SalesTabId = "visao_geral" | "funil_checkout" | "transacoes" | "produtos" | "gateways";
 
-export function SalesAnalyticsView({ basePath = "/admin/analises" }: { basePath?: string }) {
+export interface SalesAnalyticsViewProps {
+  basePath?: string;
+  data: any;
+}
+
+export function SalesAnalyticsView({ basePath = "/admin/analises", data }: SalesAnalyticsViewProps) {
   const [period, setPeriod] = useState<TimePeriod>("30d");
   const [selectedTab, setSelectedTab] = useState<SalesTabId>("visao_geral");
   const [chartMetric, setChartMetric] = useState<"revenue" | "orders" | "ticket">("revenue");
@@ -77,7 +79,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises" }: { basePath?
     gatewayShare,
     topProducts,
     recentTransactions,
-  } = MOCK_SALES_ANALYTICS;
+  } = data;
 
   // Filtered transactions
   const filteredTransactions = recentTransactions.filter((tx) => {

@@ -38,14 +38,16 @@ import {
   CompanyMember,
 } from "@/types/business";
 import {
-  deactivateMember,
   getCompanies,
   getCompanyAnalytics,
   getCompanyMembers,
-  getSelectedCompanyId,
+} from "@/lib/data/business";
+import {
   resendInvite,
-  setSelectedCompanyId,
-} from "@/lib/businessStorage";
+  updateMember,
+  revokeInvite,
+} from "@/app/actions/admin/platform";
+import { createClient } from "@/lib/supabase/client";
 import { CATALOG_COURSES } from "@/lib/catalog";
 import { InviteMemberModal } from "@/components/business/InviteMemberModal";
 import { BulkInviteModal } from "@/components/business/BulkInviteModal";
@@ -90,19 +92,24 @@ function EmpresaGestaoContent() {
   const [targetMember, setTargetMember] = useState<CompanyMember | null>(null);
   const [targetDepartment, setTargetDepartment] = useState<string | null>(null);
 
-  const loadData = () => {
-    const list = getCompanies();
+  const loadData = async () => {
+    const db = createClient();
+    const list = await getCompanies(db);
     setCompanies(list);
 
-    let activeId = companyQueryId || getSelectedCompanyId();
+    let activeId = companyQueryId || localStorage.getItem("empresa_active_id");
     let current = list.find((c) => c.id === activeId) || list[0] || null;
 
     if (current) {
       setSelectedCompany(current);
-      setSelectedCompanyId(current.id);
-      const mems = getCompanyMembers(current.id);
+      localStorage.setItem("empresa_active_id", current.id);
+      
+      const [mems, stats] = await Promise.all([
+        getCompanyMembers(db, current.id),
+        getCompanyAnalytics(db, current.id)
+      ]);
+      
       setMembers(mems);
-      const stats = getCompanyAnalytics(current.id);
       setAnalytics(stats);
     }
   };
@@ -111,33 +118,46 @@ function EmpresaGestaoContent() {
     loadData();
   }, [companyQueryId]);
 
-  const handleSwitchCompany = (companyId: string) => {
-    setSelectedCompanyId(companyId);
+  const handleSwitchCompany = async (companyId: string) => {
+    localStorage.setItem("empresa_active_id", companyId);
     const target = companies.find((c) => c.id === companyId);
     if (target) {
       setSelectedCompany(target);
-      setMembers(getCompanyMembers(target.id));
-      setAnalytics(getCompanyAnalytics(target.id));
+      const db = createClient();
+      const [mems, stats] = await Promise.all([
+        getCompanyMembers(db, target.id),
+        getCompanyAnalytics(db, target.id)
+      ]);
+      setMembers(mems);
+      setAnalytics(stats);
       toast.info(`Alternado para o painel de ${target.tradeName}`);
     }
   };
 
-  const handleResendInvite = (member: CompanyMember) => {
-    const res = resendInvite(member.id);
+  const handleResendInvite = async (member: CompanyMember) => {
+    const res = await resendInvite(member.id);
     if (res.success) {
-      toast.success(res.message);
+      toast.success("Convite reenviado com sucesso.");
       loadData();
     } else {
       toast.error(res.message);
     }
   };
 
-  const handleDeactivateMember = (member: CompanyMember) => {
+  const handleDeactivateMember = async (member: CompanyMember) => {
     if (confirm(`Deseja desativar o acesso de ${member.name}? A vaga será liberada imediatamente no plano.`)) {
-      const ok = deactivateMember(member.id);
-      if (ok) {
+      let res;
+      if (member.status === "convidado") {
+        res = await revokeInvite(member.id);
+      } else {
+        res = await updateMember(member.id, { status: "disabled" });
+      }
+      
+      if (res.success) {
         toast.success(`Acesso de ${member.name} desativado. 1 vaga foi liberada!`);
         loadData();
+      } else {
+        toast.error(res.message || "Erro ao desativar membro.");
       }
     }
   };
@@ -983,6 +1003,7 @@ function EmpresaGestaoContent() {
         onClose={() => setIsInviteModalOpen(false)}
         company={selectedCompany}
         onSuccess={loadData}
+        availableSeats={availableSeats}
       />
 
       <BulkInviteModal
@@ -990,6 +1011,7 @@ function EmpresaGestaoContent() {
         onClose={() => setIsBulkModalOpen(false)}
         company={selectedCompany}
         onSuccess={loadData}
+        availableSeats={availableSeats}
       />
 
       <AssignCourseModal

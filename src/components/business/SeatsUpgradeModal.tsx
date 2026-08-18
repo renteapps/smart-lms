@@ -10,7 +10,7 @@ import {
 } from "@heroui/react";
 import { Check, ShieldCheck, Zap } from "lucide-react";
 import { Company } from "@/types/business";
-import { saveCompany } from "@/lib/businessStorage";
+import { saveCompany } from "@/app/actions/admin/platform";
 import { toast } from "sonner";
 
 interface SeatsUpgradeModalProps {
@@ -43,22 +43,27 @@ export function SeatsUpgradeModal({
   const currentTotal = company.seatsTotal;
   const newTotal = currentTotal + (extraSeats || 0);
 
-  const handleInstantApply = () => {
+  const handleInstantApply = async () => {
     setIsSubmitting(true);
     // Atualiza a empresa no armazenamento com o novo total de vagas
-    saveCompany({
-      ...company,
+    const res = await saveCompany({
+      id: company.id,
       seatsTotal: newTotal,
       contractValue: company.contractValue + (extraSeats * 69),
     });
 
     setIsSubmitting(false);
-    toast.success(
-      `Expansão aprovada! Seu limite foi atualizado para ${newTotal} vagas corporativas.`,
-      { duration: 5000 }
-    );
-    onSuccess();
-    onClose();
+    
+    if (res.success) {
+      toast.success(
+        `Expansão aprovada! Seu limite foi atualizado para ${newTotal} vagas corporativas.`,
+        { duration: 5000 }
+      );
+      onSuccess();
+      onClose();
+    } else {
+      toast.error(res.message || "Erro ao expandir vagas.");
+    }
   };
 
   return (

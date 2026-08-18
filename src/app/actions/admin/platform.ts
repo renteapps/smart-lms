@@ -17,7 +17,7 @@ export type CompanyInput = Partial<Company> & { id?: string };
 
 export async function saveCompany(input: CompanyInput): Promise<Saved<{ id: string }>> {
   try {
-    const { supabase } = await requireAdmin();
+    const { adminClient } = await requireAdmin();
 
     const row: Record<string, unknown> = {};
     const set = (key: string, value: unknown) => {
@@ -43,17 +43,17 @@ export async function saveCompany(input: CompanyInput): Promise<Saved<{ id: stri
     if (input.tradeName && !input.id) row.slug = slugify(input.tradeName);
 
     const query = input.id
-      ? supabase.from("organizations").update(row).eq("id", input.id).select("id").single()
-      : supabase.from("organizations").insert(row).select("id").single();
+      ? adminClient.from("organizations").update(row).eq("id", input.id).select("id").single()
+      : adminClient.from("organizations").insert(row).select("id").single();
 
     const { data, error } = await query;
     if (error) return { success: false, message: error.message };
 
     // Cursos liberados no contrato viram trilhas da organização.
     if (input.allowedCourseIds) {
-      await supabase.from("organization_tracks").delete().eq("organization_id", data.id);
+      await adminClient.from("organization_tracks").delete().eq("organization_id", data.id);
       if (input.allowedCourseIds.length > 0) {
-        await supabase.from("organization_tracks").insert(
+        await adminClient.from("organization_tracks").insert(
           input.allowedCourseIds.map((courseId) => ({
             organization_id: data.id,
             course_id: courseId,
@@ -71,8 +71,8 @@ export async function saveCompany(input: CompanyInput): Promise<Saved<{ id: stri
 
 export async function deleteCompany(id: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireAdmin();
-    const { error } = await supabase.from("organizations").delete().eq("id", id);
+    const { adminClient } = await requireAdmin();
+    const { error } = await adminClient.from("organizations").delete().eq("id", id);
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/admin/business");
@@ -142,12 +142,100 @@ export async function inviteMember(
   }
 }
 
+export async function bulkInviteMembers(
+  companyId: string,
+  members: { email: string; name?: string; department?: string; jobTitle?: string }[]
+): Promise<{ success: boolean; addedCount: number; errors: string[] }> {
+  const result = { success: false, addedCount: 0, errors: [] as string[] };
+  try {
+    const { supabase, user } = await requireUser();
+
+    const [{ data: company }, { count: used }] = await Promise.all([
+      supabase.from("organizations").select("max_seats").eq("id", companyId).maybeSingle(),
+      supabase
+        .from("organization_members")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", companyId)
+        .neq("status", "disabled"),
+    ]);
+
+    const { count: pending } = await supabase
+      .from("organization_invites")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", companyId)
+      .eq("status", "pending");
+
+    const occupied = (used ?? 0) + (pending ?? 0);
+    const maxSeats = company?.max_seats ?? 0;
+    const available = maxSeats - occupied;
+
+    if (available <= 0) {
+      result.errors.push("Não há assentos disponíveis no contrato.");
+      return result;
+    }
+
+    const toProcess = members.slice(0, available);
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 14);
+
+    const rows = toProcess.map(m => ({
+      organization_id: companyId,
+      email: m.email.trim().toLowerCase(),
+      full_name: m.name ?? null,
+      department: m.department ?? null,
+      role: "member",
+      token: crypto.randomUUID(),
+      expires_at: expiresAt.toISOString(),
+      created_by: user.id,
+    }));
+
+    const { error } = await supabase.from("organization_invites").insert(rows);
+
+    if (error) {
+      result.errors.push(error.message);
+      return result;
+    }
+
+    result.success = true;
+    result.addedCount = toProcess.length;
+
+    revalidatePath("/empresa/gestao");
+    return result;
+  } catch (error) {
+    result.errors.push((error as Error).message);
+    return result;
+  }
+}
+
 export async function revokeInvite(inviteId: string): Promise<ActionResult> {
   try {
     const { supabase } = await requireUser();
     const { error } = await supabase
       .from("organization_invites")
       .update({ status: "revoked" })
+      .eq("id", inviteId);
+
+    if (error) return { success: false, message: error.message };
+
+    revalidatePath("/empresa/gestao");
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+export async function resendInvite(inviteId: string): Promise<ActionResult> {
+  try {
+    const { supabase } = await requireUser();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 14);
+
+    const { error } = await supabase
+      .from("organization_invites")
+      .update({
+        expires_at: expiresAt.toISOString(),
+      })
       .eq("id", inviteId);
 
     if (error) return { success: false, message: error.message };
@@ -237,13 +325,66 @@ export async function assignCoursesToMember(
   }
 }
 
+/** Atribui cursos a todos os membros de um departamento. */
+export async function assignCoursesToDepartment(
+  companyId: string,
+  department: string,
+  courseIds: string[],
+): Promise<ActionResult & { affectedMembersCount?: number }> {
+  try {
+    const { supabase } = await requireUser();
+
+    const { data: members, error: membersError } = await supabase
+      .from("organization_members")
+      .select("id, user_id")
+      .eq("organization_id", companyId)
+      .eq("department", department)
+      .neq("status", "disabled");
+
+    if (membersError) return { success: false, message: membersError.message };
+    if (!members || members.length === 0) return { success: true, affectedMembersCount: 0 };
+
+    const memberIds = members.map((m) => m.id);
+
+    await supabase.from("organization_member_courses").delete().in("member_id", memberIds);
+
+    if (courseIds.length > 0) {
+      const rows = [];
+      for (const mId of memberIds) {
+        for (const cId of courseIds) {
+          rows.push({ member_id: mId, course_id: cId });
+        }
+      }
+      
+      const { error } = await supabase.from("organization_member_courses").insert(rows);
+      if (error) return { success: false, message: error.message };
+
+      const userIds = members.map((m) => m.user_id).filter(Boolean);
+      if (userIds.length > 0) {
+        const enrollments = [];
+        for (const uId of userIds) {
+          for (const cId of courseIds) {
+            enrollments.push({ user_id: uId, course_id: cId, status: "active" });
+          }
+        }
+        await supabase.from("enrollments").upsert(enrollments, { onConflict: "user_id,course_id" });
+      }
+    }
+
+    revalidatePath("/empresa/gestao");
+    return { success: true, affectedMembersCount: members.length };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Planos
 // ---------------------------------------------------------------------------
 
 export async function savePlan(input: Partial<Plan> & { id?: string }): Promise<Saved<{ id: string }>> {
   try {
-    const { supabase } = await requireAdmin();
+    const { adminClient } = await requireAdmin();
 
     const row: Record<string, unknown> = {};
     const set = (key: string, value: unknown) => {
@@ -264,8 +405,8 @@ export async function savePlan(input: Partial<Plan> & { id?: string }): Promise<
     set("order_index", input.orderIndex);
 
     const query = input.id
-      ? supabase.from("plans").update(row).eq("id", input.id).select("id").single()
-      : supabase.from("plans").insert(row).select("id").single();
+      ? adminClient.from("plans").update(row).eq("id", input.id).select("id").single()
+      : adminClient.from("plans").insert(row).select("id").single();
 
     const { data, error } = await query;
     if (error) return { success: false, message: error.message };
@@ -279,8 +420,8 @@ export async function savePlan(input: Partial<Plan> & { id?: string }): Promise<
 
 export async function deletePlan(id: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireAdmin();
-    const { error } = await supabase.from("plans").delete().eq("id", id);
+    const { adminClient } = await requireAdmin();
+    const { error } = await adminClient.from("plans").delete().eq("id", id);
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/admin/planos");
@@ -296,8 +437,8 @@ export async function deletePlan(id: string): Promise<ActionResult> {
 
 export async function saveSetting(key: string, value: unknown): Promise<ActionResult> {
   try {
-    const { supabase } = await requireAdmin();
-    const { error } = await supabase
+    const { adminClient } = await requireAdmin();
+    const { error } = await adminClient
       .from("app_settings")
       .upsert({ key, value }, { onConflict: "key" });
 
@@ -322,7 +463,7 @@ export async function saveIntegration(
   input: { name?: string; enabled?: boolean; config?: Record<string, unknown>; secrets?: Record<string, unknown>; status?: string },
 ): Promise<ActionResult> {
   try {
-    const { supabase } = await requireAdmin();
+    const { adminClient } = await requireAdmin();
 
     const row: Record<string, unknown> = { slug };
     if (input.name !== undefined) row.name = input.name;
@@ -331,7 +472,7 @@ export async function saveIntegration(
     if (input.status !== undefined) row.status = input.status;
     if (input.secrets && Object.keys(input.secrets).length > 0) row.secrets = input.secrets;
 
-    const { error } = await supabase.from("integrations").upsert(row, { onConflict: "slug" });
+    const { error } = await adminClient.from("integrations").upsert(row, { onConflict: "slug" });
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/admin/integracoes");
@@ -346,9 +487,9 @@ export async function saveEmailTemplate(
   input: { name: string; description?: string; category?: string; subject: string; previewText: string; html: string },
 ): Promise<ActionResult> {
   try {
-    const { supabase } = await requireAdmin();
+    const { adminClient } = await requireAdmin();
 
-    const { error } = await supabase.from("email_templates").upsert(
+    const { error } = await adminClient.from("email_templates").upsert(
       {
         type,
         name: input.name,
@@ -373,8 +514,8 @@ export async function saveEmailTemplate(
 
 export async function resetEmailTemplate(type: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireAdmin();
-    const { error } = await supabase.from("email_templates").delete().eq("type", type);
+    const { adminClient } = await requireAdmin();
+    const { error } = await adminClient.from("email_templates").delete().eq("type", type);
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/admin/emails");

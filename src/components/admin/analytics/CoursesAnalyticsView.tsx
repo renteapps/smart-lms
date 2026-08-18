@@ -33,17 +33,21 @@ import {
   SimpleBarChart,
   type TimePeriod,
 } from "@/components/admin/analytics/AnalyticsComponents";
-import { MOCK_COURSES_ANALYTICS } from "@/lib/mocks/analyticsMocks";
+// Mock import removed
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-export function CoursesAnalyticsView({ basePath = "/admin/analises" }: { basePath?: string }) {
+export interface CoursesAnalyticsViewProps {
+  basePath?: string;
+  data: any; // Type corresponds to the return type of getCoursesAnalytics()
+}
+
+export function CoursesAnalyticsView({ basePath = "/admin/analises", data }: CoursesAnalyticsViewProps) {
   const [period, setPeriod] = useState<TimePeriod>("30d");
   const [search, setSearch] = useState("");
   const [selectedTab, setSelectedTab] = useState("visao_geral");
 
-  const { kpis, monthlyEngagement, retentionFunnel, topCourses, ratingsBreakdown } =
-    MOCK_COURSES_ANALYTICS;
+  const { kpis, monthlyEngagement, retentionFunnel, topCourses, ratingsBreakdown } = data;
 
   const barChartData = monthlyEngagement.map((m) => ({
     label: m.period,

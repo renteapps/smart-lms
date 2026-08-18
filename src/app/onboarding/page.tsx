@@ -5,12 +5,8 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
 import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock3, LoaderCircle, Sparkles } from 'lucide-react';
-import { mockQuestionnaire } from '@/lib/seed/questionnaire';
-import { generateLearningTrail } from '@/lib/matching';
-import { cn } from '@/lib/utils';
 import { LearningTrail, Questionnaire, StudyAvailability, Weekday } from '@/types/trilha';
-import { loadQuestionnaire, readLearningTrail, saveLearningTrail } from '@/lib/trailStorage';
-import { recordTrailEvent } from '@/lib/trailAnalytics';
+import { getOnboardingData, generateTrail, trackTrailEvent } from '@/app/actions/trail';
 
 const PhysicsKeywordSelector = dynamic(
   () => import('@/components/PhysicsKeywordSelector').then((module) => module.default),
@@ -33,41 +29,47 @@ export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
-  const [questionnaire, setQuestionnaire] = useState<Questionnaire>(mockQuestionnaire);
+  const [questionnaire, setQuestionnaire] = useState<Questionnaire | null>(null);
   const [availability, setAvailability] = useState<StudyAvailability>({ weekdays: [1, 3, 5], minutesPerSession: 30 });
   const [existingTrail, setExistingTrail] = useState<LearningTrail | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const questions = questionnaire.questions;
+  const questions = questionnaire?.questions || [];
   const question = questions[currentStep];
-  const currentAnswers = answers[question.id] || [];
-  const progress = ((currentStep + 1) / questions.length) * 100;
+  const currentAnswers = question ? answers[question.id] || [] : [];
+  const progress = questions.length ? ((currentStep + 1) / questions.length) * 100 : 0;
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   }, [currentStep, reduceMotion]);
 
   useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      setQuestionnaire(loadQuestionnaire());
-      recordTrailEvent('onboarding_started');
-      const stored = readLearningTrail();
-      if (stored.data) {
-        setExistingTrail(stored.data);
-        setAnswers(stored.data.answers || {});
-        setAvailability(stored.data.availability);
+    async function initOnboarding() {
+      try {
+        const res = await getOnboardingData();
+        if (res.success && res.questionnaire) {
+          setQuestionnaire(res.questionnaire);
+        }
+        if (res.success && res.existing) {
+          setExistingTrail(res.existing);
+          setAnswers(res.existing.answers || {});
+          setAvailability(res.existing.availability);
+        }
+        await trackTrailEvent('onboarding_started');
+      } catch (err) {
+        console.error(err);
       }
-    });
-    return () => cancelAnimationFrame(frame);
+    }
+    initOnboarding();
   }, []);
 
   useEffect(() => {
-    const frame = requestAnimationFrame(() => recordTrailEvent('onboarding_step_viewed', {
+    if (!question?.text) return;
+    trackTrailEvent('onboarding_step_viewed', {
       step: currentStep + 1,
       label: question.text,
-    }));
-    return () => cancelAnimationFrame(frame);
-  }, [currentStep, question.text]);
+    }).catch(() => {});
+  }, [currentStep, question?.text]);
 
   const handleToggleSelect = (optionLabel: string) => {
     if (question.type === 'availability') return;
@@ -97,18 +99,17 @@ export default function OnboardingPage() {
 
   const isSelected = (label: string) => currentAnswers.includes(label);
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     setIsGenerating(true);
-    window.setTimeout(() => {
-      const trail = generateLearningTrail('user-1', answers, questionnaire, availability, existingTrail);
-      saveLearningTrail(trail);
-      recordTrailEvent('plan_generated', {
-        contentCount: trail.items.length,
-        sessionCount: new Set(trail.items.map((item) => item.sessionId)).size,
-        weeklyMinutes: availability.weekdays.length * availability.minutesPerSession,
-      });
+    const waitPromise = new Promise(resolve => setTimeout(resolve, 2500));
+    try {
+      await generateTrail(answers, availability);
+      await waitPromise;
       router.push('/minha-trilha');
-    }, 2500);
+    } catch (e) {
+      console.error(e);
+      setIsGenerating(false);
+    }
   };
 
   const handleNext = () => {
@@ -137,7 +138,7 @@ export default function OnboardingPage() {
         exit: (travelDirection: number) => ({ opacity: 0, x: travelDirection * -24, filter: 'blur(4px)', transition: { duration: 0.2 } }),
       };
 
-  if (isGenerating) {
+  if (isGenerating || !questionnaire) {
     return (
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-bg px-4 pt-[76px] text-text">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(49,87,183,0.12),transparent_40%)]" />
