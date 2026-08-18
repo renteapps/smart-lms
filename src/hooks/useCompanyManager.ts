@@ -66,7 +66,7 @@ export function useCompanyManager() {
     evaluateManagerStatus();
   }, [user]);
 
-  const toggleSimulatedManager = () => {
+  const toggleSimulatedManager = (_val?: boolean) => {
     // Only used for demo/mock mode, now disabled
   };
 

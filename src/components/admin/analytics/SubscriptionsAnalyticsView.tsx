@@ -40,7 +40,7 @@ export function SubscriptionsAnalyticsView({ basePath = "/admin/analises", data 
 
   const { kpis, mrrEvolution, plansDistribution, churnReasons, renewalsForecast } = data;
 
-  const mrrChartData = mrrEvolution.map((m) => ({
+  const mrrChartData = mrrEvolution.map((m: any) => ({
     label: m.period,
     value: m.mrr,
     formattedValue: `MRR: R$ ${m.mrr.toLocaleString("pt-BR")} (${m.subscribers} assinantes)`,
@@ -167,7 +167,7 @@ export function SubscriptionsAnalyticsView({ basePath = "/admin/analises", data 
                 <Card.Description>Fatia de assinantes por categoria de plano</Card.Description>
               </Card.Header>
               <Card.Content className="space-y-3.5 pt-0">
-                {plansDistribution.map((plan) => (
+                {plansDistribution.map((plan: any) => (
                   <div key={plan.name} className="space-y-1 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-foreground">{plan.name}</span>
@@ -192,7 +192,7 @@ export function SubscriptionsAnalyticsView({ basePath = "/admin/analises", data 
         {/* Tab 2: Plans Detailed Breakdown */}
         <Tabs.Panel id="planos" className="space-y-4 pt-4">
           <div className="grid gap-4 sm:grid-cols-3">
-            {plansDistribution.map((plan) => (
+            {plansDistribution.map((plan: any) => (
               <Card key={plan.name}>
                 <Card.Header>
                   <Card.Title className="text-base font-bold text-foreground">{plan.name}</Card.Title>
@@ -224,7 +224,7 @@ export function SubscriptionsAnalyticsView({ basePath = "/admin/analises", data 
               <Card.Description>Dados tabulados no questionário de saída dos membros</Card.Description>
             </Card.Header>
             <Card.Content className="space-y-4 pt-0">
-              {churnReasons.map((item) => (
+              {churnReasons.map((item: any) => (
                 <div key={item.reason} className="space-y-1.5 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-foreground font-medium">{item.reason}</span>
@@ -247,7 +247,7 @@ export function SubscriptionsAnalyticsView({ basePath = "/admin/analises", data 
         {/* Tab 4: Renewals Forecast */}
         <Tabs.Panel id="renovacoes" className="space-y-4 pt-4">
           <div className="grid gap-4 sm:grid-cols-3">
-            {renewalsForecast.map((item) => (
+            {renewalsForecast.map((item: any) => (
               <Card key={item.range}>
                 <Card.Header>
                   <div className="flex items-center gap-2">

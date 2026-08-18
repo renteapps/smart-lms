@@ -22,6 +22,7 @@ import {
 } from "@/lib/refinementSurveys";
 import RecalibrationSlot from "@/components/home/RecalibrationSlot";
 import type { SessionLoadRating } from "@/types/trilha";
+import type { CatalogCourse } from "@/types/course";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { PROFILE_STORAGE_KEY, PROFILE_SAVED_EVENT } from "@/components/profile/ProfileEditor";
 import DailyPill from "@/components/DailyPill";
@@ -132,7 +133,7 @@ export default function StudentHomeClient() {
     [trail, questionnaire],
   );
   const discovery = useMemo(
-    () => rankCatalogByAffinity(courses as any, trail, questionnaire).slice(0, 3),
+    () => rankCatalogByAffinity<CatalogCourse>(courses, trail, questionnaire).slice(0, 3),
     [courses, trail, questionnaire],
   );
 

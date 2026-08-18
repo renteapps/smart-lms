@@ -82,7 +82,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
   } = data;
 
   // Filtered transactions
-  const filteredTransactions = recentTransactions.filter((tx) => {
+  const filteredTransactions = recentTransactions.filter((tx: any) => {
     const matchesSearch =
       tx.customer.toLowerCase().includes(search.toLowerCase()) ||
       tx.product.toLowerCase().includes(search.toLowerCase()) ||
@@ -383,7 +383,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
 
                 {/* Clean SVG Bars Chart */}
                 <div className="grid grid-cols-8 gap-2 sm:gap-4 h-56 items-end pt-4 pb-2">
-                  {revenueEvolution.map((item) => {
+                  {revenueEvolution.map((item: any) => {
                     const maxVal =
                       chartMetric === "revenue" ? 100000 : chartMetric === "orders" ? 300 : 400;
                     const currentVal =
@@ -435,7 +435,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                 </Card.Header>
 
                 <Card.Content className="space-y-4 pt-4">
-                  {paymentMethods.map((pm) => (
+                  {paymentMethods.map((pm: any) => (
                     <div key={pm.name} className="space-y-1.5 text-xs">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
@@ -541,7 +541,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
               </Card.Header>
 
               <Card.Content className="space-y-5 pt-5">
-                {checkoutFunnel.map((stage, idx) => (
+                {checkoutFunnel.map((stage: any, idx: number) => (
                   <div key={stage.stage} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs sm:text-sm">
                       <div className="flex items-center gap-2">
@@ -738,7 +738,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                             <Table.Column>AÇÕES</Table.Column>
                           </Table.Header>
                           <Table.Body>
-                            {filteredTransactions.map((tx) => (
+                            {filteredTransactions.map((tx: any) => (
                               <Table.Row
                                 key={tx.id}
                                 className="cursor-pointer hover:bg-surface-secondary/60 transition-colors"
@@ -817,7 +817,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
 
                   {/* Mobile Cards */}
                   <ul className="divide-y divide-separator md:hidden">
-                    {filteredTransactions.map((tx) => (
+                    {filteredTransactions.map((tx: any) => (
                       <li
                         key={tx.id}
                         onClick={() => setSelectedTransaction(tx)}
@@ -873,7 +873,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
 
             <Card.Content className="pt-4 space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
-                {topProducts.map((prod) => (
+                {topProducts.map((prod: any) => (
                   <div
                     key={prod.id}
                     className="rounded-xl border border-border bg-background-secondary p-4 space-y-3"
@@ -937,7 +937,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
               </Card.Header>
 
               <Card.Content className="space-y-4 pt-4">
-                {gatewayShare.map((gw) => (
+                {gatewayShare.map((gw: any) => (
                   <div
                     key={gw.name}
                     className="p-4 rounded-xl border border-border bg-background-secondary space-y-3"

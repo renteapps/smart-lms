@@ -13,6 +13,7 @@ import {
 import { LearningRole, LearningTrail, LearningTrailItem, SessionLoadRating, StudyAvailability, Weekday } from '@/types/trilha';
 import { getMyTrail, saveTrail } from '@/app/actions/trail';
 import { applySessionFeedback, postponeTrailSession, removeTrailItem, replanLearningTrail, restoreTrailItem, toLocalDateKey, updateTrailAvailability } from '@/lib/matching';
+import { createDemoLearningTrail } from '@/lib/mocks/trilhaDemo';
 import { contentHref } from '@/lib/studentHome';
 import { recordTrailEvent, TrailAnalyticsEvent, TrailAnalyticsEventType } from '@/lib/trailAnalytics';
 import { useNotifications } from '@/contexts/NotificationContext';

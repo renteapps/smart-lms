@@ -49,14 +49,14 @@ export function CoursesAnalyticsView({ basePath = "/admin/analises", data }: Cou
 
   const { kpis, monthlyEngagement, retentionFunnel, topCourses, ratingsBreakdown } = data;
 
-  const barChartData = monthlyEngagement.map((m) => ({
+  const barChartData = monthlyEngagement.map((m: any) => ({
     label: m.period,
     value: m.watchHours,
     formattedValue: `${m.watchHours} horas • ${m.completions} conclusões`,
   }));
 
   const filteredCourses = topCourses.filter(
-    (c) =>
+    (c: any) =>
       c.title.toLowerCase().includes(search.toLowerCase()) ||
       c.instructor.toLowerCase().includes(search.toLowerCase()),
   );
@@ -237,7 +237,7 @@ export function CoursesAnalyticsView({ basePath = "/admin/analises", data }: Cou
                             <Table.Column>STATUS</Table.Column>
                           </Table.Header>
                           <Table.Body>
-                            {filteredCourses.map((course) => (
+                            {filteredCourses.map((course: any) => (
                               <Table.Row key={course.id}>
                                 <Table.Cell className="font-medium">
                                   <div className="flex items-center gap-2.5">
@@ -298,7 +298,7 @@ export function CoursesAnalyticsView({ basePath = "/admin/analises", data }: Cou
 
                   {/* Mobile Cards Fallback */}
                   <ul className="divide-y divide-separator md:hidden">
-                    {filteredCourses.map((course) => (
+                    {filteredCourses.map((course: any) => (
                       <li key={course.id} className="p-4 space-y-3">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2">
@@ -360,7 +360,7 @@ export function CoursesAnalyticsView({ basePath = "/admin/analises", data }: Cou
                 <Card.Description>Como os alunos avaliam a didática e os materiais</Card.Description>
               </Card.Header>
               <Card.Content className="space-y-3.5 pt-2">
-                {ratingsBreakdown.map((item) => (
+                {ratingsBreakdown.map((item: any) => (
                   <div key={item.stars} className="space-y-1 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1 font-semibold text-foreground">

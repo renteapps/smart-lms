@@ -52,7 +52,8 @@ export default async function AdminDashboard() {
 
     let actionLabel = "";
     let tone: "positive" | "primary" | "warning" | "neutral" = "neutral";
-    const person = log.profiles?.full_name || "Sistema";
+    const profileObj: any = Array.isArray(log.profiles) ? log.profiles[0] : log.profiles;
+    const person = profileObj?.full_name || "Sistema";
 
     switch(log.action) {
       case 'login':

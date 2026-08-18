@@ -94,7 +94,7 @@ export async function deleteCompany(id: string): Promise<ActionResult> {
  */
 export async function inviteMember(
   companyId: string,
-  input: { email: string; name?: string; department?: string; role: MemberRole },
+  input: { email: string; name?: string; department?: string; jobTitle?: string; role: MemberRole },
 ): Promise<ActionResult> {
   try {
     const { supabase, user } = await requireUser();

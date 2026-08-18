@@ -7,6 +7,7 @@ import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer
 import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock3, LoaderCircle, Sparkles } from 'lucide-react';
 import { LearningTrail, Questionnaire, StudyAvailability, Weekday } from '@/types/trilha';
 import { getOnboardingData, generateTrail, trackTrailEvent } from '@/app/actions/trail';
+import { cn } from '@/lib/utils';
 
 const PhysicsKeywordSelector = dynamic(
   () => import('@/components/PhysicsKeywordSelector').then((module) => module.default),

@@ -80,7 +80,7 @@ export default async function IntegracoesPage() {
                   <div className="flex items-center justify-between gap-2">
                     <Card.Title className="text-base">{integration.name}</Card.Title>
                     {isActive ? (
-                      <Chip size="sm" variant="flat" color="success" className="text-[10px]">Ativa</Chip>
+                      <Chip size="sm" variant="soft" color="success" className="text-[10px]">Ativa</Chip>
                     ) : integration.badge ? (
                       <Chip size="sm" variant="soft" color="accent" className="text-[10px]">{integration.badge}</Chip>
                     ) : null}

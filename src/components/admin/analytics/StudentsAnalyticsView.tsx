@@ -39,7 +39,7 @@ export function StudentsAnalyticsView({ basePath = "/admin/analises", data }: St
 
   const { kpis, activityByHour, profilesDistribution, engagementBadges } = data;
 
-  const barChartData = activityByHour.map((a) => ({
+  const barChartData = activityByHour.map((a: any) => ({
     label: a.hour,
     value: a.activeUsers,
     formattedValue: `${a.activeUsers} alunos ativos`,
@@ -162,7 +162,7 @@ export function StudentsAnalyticsView({ basePath = "/admin/analises", data }: St
                 <Card.Description>Arquétipos definidos no teste inicial</Card.Description>
               </Card.Header>
               <Card.Content className="space-y-3.5 pt-0">
-                {profilesDistribution.map((item) => (
+                {profilesDistribution.map((item: any) => (
                   <div key={item.profile} className="space-y-1 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-foreground">{item.profile}</span>
@@ -186,7 +186,7 @@ export function StudentsAnalyticsView({ basePath = "/admin/analises", data }: St
         {/* Tab 2: Profiles Breakdown */}
         <Tabs.Panel id="perfis" className="space-y-4 pt-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            {profilesDistribution.map((item) => (
+            {profilesDistribution.map((item: any) => (
               <Card key={item.profile}>
                 <Card.Header>
                   <Card.Title className="text-base font-bold text-foreground">{item.profile}</Card.Title>
@@ -211,7 +211,7 @@ export function StudentsAnalyticsView({ basePath = "/admin/analises", data }: St
         {/* Tab 3: Engagement Milestones */}
         <Tabs.Panel id="engajamento" className="space-y-4 pt-4">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {engagementBadges.map((badge, idx) => (
+            {engagementBadges.map((badge: any, idx: number) => (
               <Card key={idx}>
                 <Card.Content className="p-4 sm:p-5 flex items-start gap-3">
                   <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground">

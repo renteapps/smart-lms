@@ -1,5 +1,7 @@
 import { SubscriptionsAnalyticsView } from "@/components/admin/analytics/SubscriptionsAnalyticsView";
+import { getSubscriptionsAnalytics } from "@/app/admin/analises/actions";
 
-export default function AnalisesAssinaturasDirectPage() {
-  return <SubscriptionsAnalyticsView basePath="/analises" />;
+export default async function AnalisesAssinaturasDirectPage() {
+  const data = await getSubscriptionsAnalytics();
+  return <SubscriptionsAnalyticsView basePath="/analises" data={data} />;
 }

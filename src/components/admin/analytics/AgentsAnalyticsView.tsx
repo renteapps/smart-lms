@@ -45,14 +45,14 @@ export function AgentsAnalyticsView({ basePath = "/admin/analises", data }: Agen
   const { kpis, dailyInteractions, agentsRanking, topTopics, recentFeedback } =
     data;
 
-  const barChartData = dailyInteractions.map((d) => ({
+  const barChartData = dailyInteractions.map((d: any) => ({
     label: d.day,
     value: d.messages,
     formattedValue: `${d.messages.toLocaleString("pt-BR")} msgs • ${d.sessions} sessões`,
   }));
 
   const filteredAgents = agentsRanking.filter(
-    (a) =>
+    (a: any) =>
       a.name.toLowerCase().includes(search.toLowerCase()) ||
       a.role.toLowerCase().includes(search.toLowerCase()),
   );
@@ -175,7 +175,7 @@ export function AgentsAnalyticsView({ basePath = "/admin/analises", data }: Agen
                 <Card.Description>Principais intenções dos alunos ao acionar os agentes</Card.Description>
               </Card.Header>
               <Card.Content className="space-y-3 pt-0">
-                {topTopics.map((topic) => (
+                {topTopics.map((topic: any) => (
                   <div key={topic.topic} className="space-y-1 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-foreground truncate pr-2">{topic.topic}</span>
@@ -241,7 +241,7 @@ export function AgentsAnalyticsView({ basePath = "/admin/analises", data }: Agen
                             <Table.Column>SENTIMENTO</Table.Column>
                           </Table.Header>
                           <Table.Body>
-                            {filteredAgents.map((agent) => (
+                            {filteredAgents.map((agent: any) => (
                               <Table.Row key={agent.id}>
                                 <Table.Cell className="font-medium">
                                   <div className="flex items-center gap-3">
@@ -287,7 +287,7 @@ export function AgentsAnalyticsView({ basePath = "/admin/analises", data }: Agen
 
                   {/* Mobile Cards Fallback */}
                   <ul className="divide-y divide-separator md:hidden">
-                    {filteredAgents.map((agent) => (
+                    {filteredAgents.map((agent: any) => (
                       <li key={agent.id} className="p-4 space-y-2">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2">
@@ -324,7 +324,7 @@ export function AgentsAnalyticsView({ basePath = "/admin/analises", data }: Agen
               <Card.Description>Categorização de intenções das perguntas feitas à inteligência artificial</Card.Description>
             </Card.Header>
             <Card.Content className="grid gap-4 sm:grid-cols-2 pt-0">
-              {topTopics.map((topic) => (
+              {topTopics.map((topic: any) => (
                 <div
                   key={topic.topic}
                   className="rounded-xl border border-border/80 bg-background-secondary p-4 space-y-2"
@@ -348,7 +348,7 @@ export function AgentsAnalyticsView({ basePath = "/admin/analises", data }: Agen
         {/* Tab 4: Student Feedback */}
         <Tabs.Panel id="feedbacks" className="space-y-4 pt-4">
           <div className="grid gap-4 sm:grid-cols-3">
-            {recentFeedback.map((fb) => (
+            {recentFeedback.map((fb: any) => (
               <Card key={fb.id} className="flex flex-col justify-between">
                 <Card.Header className="pb-2">
                   <div className="flex items-center justify-between w-full">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Palette, Upload, Monitor, Sun, Type, Image as ImageIcon } from "lucide-react";
+import { Palette, Upload, Monitor, Sun, Type, Image as ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "@heroui/react";
 import { saveAppearance } from "./actions";
 
@@ -125,10 +125,11 @@ export function AppearanceForm({ initialData }: AppearanceFormProps) {
           <Button 
             type="submit"
             variant="primary" 
-            className="w-full font-semibold"
-            isLoading={loading}
+            className="w-full font-semibold flex items-center justify-center gap-2"
+            isDisabled={loading}
           >
-            Salvar e Aplicar
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {loading ? "Salvando..." : "Salvar e Aplicar"}
           </Button>
         </section>
       </div>
