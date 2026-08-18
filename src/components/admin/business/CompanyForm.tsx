@@ -28,6 +28,7 @@ import { CATALOG_COURSES } from "@/lib/catalog";
 import { StatusBadge } from "@/components/ui/editorial";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 interface CompanyFormProps {
   initialCompany?: Company | null;
@@ -394,50 +395,14 @@ export function CompanyForm({ initialCompany, mode = "create" }: CompanyFormProp
               </div>
 
               {/* LOGO */}
-              <div>
-                <label className="block text-xs font-bold text-foreground mb-1.5">
-                  URL do Logotipo da Empresa (Opcional)
-                </label>
-                <div className="flex gap-3 items-center">
-                  <div className="relative size-12 shrink-0 overflow-hidden rounded-xl border border-border bg-surface-secondary flex items-center justify-center">
-                    {logoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={logoUrl}
-                        alt="Logo Preview"
-                        className="size-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = "none";
-                        }}
-                      />
-                    ) : (
-                      <span className="font-bold text-xs text-accent">
-                        {getInitials(tradeName)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <input
-                      type="url"
-                      value={logoUrl}
-                      onChange={(e) => setLogoUrl(e.target.value)}
-                      placeholder="https://exemplo.com/logo.png"
-                      className="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-accent"
-                    />
-                  </div>
-                  {logoUrl && (
-                    <Button
-                      isIconOnly
-                      variant="ghost"
-                      size="sm"
-                      aria-label="Remover logo"
-                      onPress={() => setLogoUrl("")}
-                    >
-                      <X className="size-4 text-muted" />
-                    </Button>
-                  )}
-                </div>
-              </div>
+              <ImageUpload
+                label="Logotipo da Empresa (Opcional)"
+                value={logoUrl}
+                onChange={(url) => setLogoUrl(url ?? "")}
+                folder="companies"
+                aspect="square"
+                description="Quadrado, no mínimo 256x256px."
+              />
             </Card.Content>
           </Card>
 

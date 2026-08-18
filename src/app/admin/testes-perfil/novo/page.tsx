@@ -8,8 +8,9 @@ import { StepWizard, WizardStep } from '@/components/admin/profile-tests/StepWiz
 import { CategoryEditor } from '@/components/admin/profile-tests/CategoryEditor';
 import { QuestionEditor } from '@/components/admin/profile-tests/QuestionEditor';
 import { TestPreview } from '@/components/admin/profile-tests/TestPreview';
-import { ArrowLeft, ArrowRight, Save, Eye, Sparkles, CheckCircle2, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, Eye, Sparkles, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ImageUpload } from '@/components/ui/ImageUpload';
 
 const STEPS: WizardStep[] = [
   { id: 1, title: '1. Informações', subtitle: 'Título e Capa' },
@@ -212,24 +213,14 @@ export default function NewProfileTestPage() {
                 />
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-text-soft uppercase tracking-wider block mb-2 flex items-center gap-2">
-                  <ImageIcon className="w-4 h-4 text-primary" />
-                  URL da Imagem de Capa (Opcional)
-                </label>
-                <input
-                  type="url"
-                  value={coverUrl}
-                  onChange={(e) => setCoverUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/photo-..."
-                  className="w-full bg-canvas-soft border border-border/60 rounded-xl px-4 py-3 text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-                {coverUrl && (
-                  <div className="mt-3 h-36 rounded-xl overflow-hidden border border-border/50">
-                    <img src={coverUrl} alt="Preview da Capa" className="w-full h-full object-cover" />
-                  </div>
-                )}
-              </div>
+              <ImageUpload
+                label="Imagem de capa (Opcional)"
+                value={coverUrl}
+                onChange={(url) => setCoverUrl(url ?? '')}
+                folder="profile-tests"
+                aspect="video"
+                description="Recomendado: 1280x720px (16:9)."
+              />
 
               <div>
                 <label className="text-xs font-bold text-text-soft uppercase tracking-wider block mb-2">

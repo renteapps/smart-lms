@@ -1,7 +1,25 @@
-import { Palette, Upload, Monitor, Sun, Type, Image as ImageIcon } from "lucide-react";
+import { Palette, Monitor, Sun, Type, Image as ImageIcon } from "lucide-react";
 import { PageHeader } from "@/components/ui/editorial";
+import { createClient } from "@/lib/supabase/server";
+import { BrandingImages } from "./BrandingImages";
 
-export default function AparenciaPage() {
+export default async function AparenciaPage() {
+  const supabase = await createClient();
+  const { data: settings } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "appearance")
+    .maybeSingle();
+
+  const appearance = (settings?.value as Record<string, unknown> | null) ?? {};
+  const asUrl = (key: string) => (typeof appearance[key] === "string" ? (appearance[key] as string) : null);
+
+  const branding = {
+    logoUrl: asUrl("logoUrl"),
+    faviconUrl: asUrl("faviconUrl"),
+    ogImageUrl: asUrl("ogImageUrl"),
+  };
+
   return (
     <div className="mx-auto max-w-6xl space-y-8 pb-16">
       <PageHeader eyebrow="Plataforma" title="Aparência" description="Personalize a identidade visual e as configurações de marca da plataforma." />
@@ -76,49 +94,7 @@ export default function AparenciaPage() {
               Mídia e Imagens
             </h2>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {/* Logo */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-text">Logo da Plataforma</label>
-                <div className="border-2 border-dashed border-border rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-surface-hover hover:border-primary/50 transition-colors cursor-pointer group bg-canvas-soft">
-                  <div className="w-12 h-12 rounded-full bg-primary-pale flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                    <Upload className="w-5 h-5" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-ink">Fazer upload da Logo</p>
-                    <p className="text-xs text-text-mute">PNG, SVG ou JPG (max. 2MB)</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Favicon */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-text">Favicon</label>
-                <div className="border-2 border-dashed border-border rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-surface-hover hover:border-primary/50 transition-colors cursor-pointer group bg-canvas-soft">
-                  <div className="w-12 h-12 rounded-full bg-primary-pale flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                    <Upload className="w-5 h-5" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-ink">Fazer upload do Favicon</p>
-                    <p className="text-xs text-text-mute">Formato 1:1, de preferência .ico ou .png</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Imagem de Capa para Redes Sociais */}
-            <div className="space-y-2 pt-4 border-t border-border">
-              <label className="block text-sm font-semibold text-text">Capa de Redes Sociais (Open Graph)</label>
-              <div className="border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center gap-3 hover:bg-surface-hover hover:border-primary/50 transition-colors cursor-pointer group bg-canvas-soft">
-                <div className="w-14 h-14 rounded-full bg-primary-pale flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                  <Upload className="w-6 h-6" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-ink">Clique para buscar ou arraste uma imagem</p>
-                  <p className="text-xs text-text-mute mt-1">Recomendado: 1200x630px para melhor visualização no WhatsApp, Facebook, LinkedIn...</p>
-                </div>
-              </div>
-            </div>
+            <BrandingImages initial={branding} />
           </section>
 
           {/* Botão de Salvar */}

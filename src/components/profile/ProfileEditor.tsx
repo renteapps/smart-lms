@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   BellRing,
   Camera,
@@ -10,12 +10,9 @@ import {
   Save,
   ShieldCheck,
   Target,
-  Trash2,
-  Upload,
   UserRound,
 } from "lucide-react";
 import {
-  Avatar,
   Button,
   Card,
   Description,
@@ -37,16 +34,12 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  compressAndConvertToWebP,
-  deleteAvatarFromStorage,
-  uploadAvatarToStorage,
-} from "@/lib/imageOptimization";
-import {
   BRAZILIAN_STATES,
   COUNTRIES,
   getCitiesForState,
 } from "@/lib/locationData";
 import { PhoneInputField } from "@/components/ui/PhoneInputField";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 import { composeFullPhone, parseStoredPhone } from "@/lib/phoneUtils";
 
 export const CAREER_ROLES = [
@@ -193,7 +186,6 @@ export function ProfileEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [cities, setCities] = useState<string[]>([]);
   const [isLoadingCities, setIsLoadingCities] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, signOut, isAuthenticated } = useAuth();
 
   // Carrega dados do Supabase ou localStorage
@@ -300,118 +292,44 @@ export function ProfileEditor() {
     setSaveState("idle");
   };
 
-  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      toast.danger("Formato inválido", { description: "Por favor, selecione um arquivo de imagem (PNG, JPG, WEBP)." });
-      return;
-    }
-
+  /**
+   * Recebe a URL já otimizada pelo ImageUpload (ou `null` na remoção) e cuida
+   * apenas dos efeitos que o componente não conhece: tabela `profiles`, metadata
+   * do auth, cache local e o evento que atualiza o avatar no restante da UI.
+   */
+  const handleAvatarChange = async (url: string | null) => {
     setIsProcessingAvatar(true);
     try {
       const supabase = createClient();
       const { data: { user: authUser } } = await supabase.auth.getUser();
 
       if (authUser) {
-        const oldAvatarUrl = profile.avatarUrl;
-
-        // Converte para WebP com 70% de qualidade e sobe no bucket avatars
-        const { publicUrl } = await uploadAvatarToStorage(supabase, authUser.id, file);
-
-        // Se havia foto antiga no storage, deleta para poupar espaço
-        if (oldAvatarUrl && oldAvatarUrl !== publicUrl) {
-          await deleteAvatarFromStorage(supabase, oldAvatarUrl);
-        }
-
-        // Salva na tabela profiles
         await supabase
           .from("profiles")
           .update({
-            avatar_url: publicUrl,
+            avatar_url: url,
             updated_at: new Date().toISOString(),
           })
           .eq("id", authUser.id);
 
-        // Atualiza auth metadata
-        await supabase.auth.updateUser({
-          data: { avatar_url: publicUrl },
-        });
-
-        const updated: ProfilePreferences = { ...profile, avatarUrl: publicUrl };
-        setProfile(updated);
-        setSavedProfile(updated);
-        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
-        window.dispatchEvent(new CustomEvent<ProfilePreferences>(PROFILE_SAVED_EVENT, { detail: updated }));
-
-        toast.success("Foto de perfil atualizada!", {
-          description: "Sua nova foto já está disponível na plataforma.",
-        });
-      } else {
-        const webpFile = await compressAndConvertToWebP(file, { quality: 0.7 });
-        const localPreviewUrl = URL.createObjectURL(webpFile);
-
-        const updated: ProfilePreferences = { ...profile, avatarUrl: localPreviewUrl };
-        setProfile(updated);
-        setSavedProfile(updated);
-        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
-        window.dispatchEvent(new CustomEvent<ProfilePreferences>(PROFILE_SAVED_EVENT, { detail: updated }));
-
-        toast.success("Foto atualizada localmente!", {
-          description: "Foto atualizada com sucesso.",
-        });
-      }
-    } catch (err: any) {
-      console.error("Erro no processamento da foto de perfil:", err);
-      toast.danger("Erro ao atualizar foto", {
-        description: err?.message || "Não foi possível processar ou enviar a imagem.",
-      });
-    } finally {
-      setIsProcessingAvatar(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
-
-  const handleRemoveAvatar = async () => {
-    if (!profile.avatarUrl) return;
-
-    setIsProcessingAvatar(true);
-    try {
-      const supabase = createClient();
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-
-      if (authUser) {
-        await deleteAvatarFromStorage(supabase, profile.avatarUrl);
-
-        await supabase
-          .from("profiles")
-          .update({
-            avatar_url: null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", authUser.id);
-
-        await supabase.auth.updateUser({
-          data: { avatar_url: null },
-        });
+        await supabase.auth.updateUser({ data: { avatar_url: url } });
       }
 
-      const updated: ProfilePreferences = { ...profile, avatarUrl: null };
+      const updated: ProfilePreferences = { ...profile, avatarUrl: url };
       setProfile(updated);
       setSavedProfile(updated);
       localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
       window.dispatchEvent(new CustomEvent<ProfilePreferences>(PROFILE_SAVED_EVENT, { detail: updated }));
 
-      toast.success("Foto de perfil removida com sucesso.", {
-        description: "O arquivo foi excluído do servidor para otimizar o armazenamento.",
-      });
-    } catch (err: any) {
-      console.error("Erro ao remover foto de perfil:", err);
-      toast.danger("Erro ao remover foto", {
-        description: err?.message || "Falha ao excluir o arquivo.",
+      if (!url) {
+        toast.success("Foto de perfil removida.", {
+          description: "O arquivo foi excluído do servidor para otimizar o armazenamento.",
+        });
+      }
+    } catch (err: unknown) {
+      console.error("Erro ao atualizar a foto de perfil:", err);
+      toast.danger("Erro ao atualizar foto", {
+        description: err instanceof Error ? err.message : "Não foi possível salvar a nova foto.",
       });
     } finally {
       setIsProcessingAvatar(false);
@@ -442,6 +360,7 @@ export function ProfileEditor() {
       toast.danger("Erro ao solicitar redefinição", { description: err?.message });
     }
   };
+
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -532,92 +451,23 @@ export function ProfileEditor() {
           />
 
           <Card.Content className="pt-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-              {/* Avatar Preview */}
-              <div className="relative group shrink-0">
-                <Avatar
-                  size="lg"
-                  color="accent"
-                  className="size-24 rounded-2xl ring-4 ring-surface shadow-elev-2 overflow-hidden"
-                >
-                  {profile.avatarUrl ? (
-                    <Avatar.Image
-                      src={profile.avatarUrl}
-                      alt={profile.name}
-                      className="size-full object-cover"
-                    />
-                  ) : null}
-                  <Avatar.Fallback className="font-display text-3xl font-extrabold">
-                    {getInitials(profile.name)}
-                  </Avatar.Fallback>
-                </Avatar>
-
-                {isProcessingAvatar && (
-                  <div className="absolute inset-0 bg-background/80 backdrop-blur-xs rounded-2xl flex items-center justify-center">
-                    <Spinner size="sm" color="accent" />
-                  </div>
-                )}
-              </div>
-
-              {/* Controles de Foto */}
-              <div className="flex-1 space-y-3">
-                <div>
-                  <h4 className="font-display text-base font-bold text-foreground">
-                    Sua foto de identificação
-                  </h4>
-                  <p className="text-xs text-muted mt-1 leading-relaxed">
-                    Formatos aceitos: PNG, JPG ou WEBP. Recomendamos uma foto com boa iluminação e fundo neutro.
-                  </p>
-                </div>
-
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleAvatarFileChange}
-                  accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
-                  className="sr-only"
-                  aria-label="Upload de foto de perfil"
-                  disabled={isProcessingAvatar}
-                />
-
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    isDisabled={isProcessingAvatar}
-                    onPress={() => fileInputRef.current?.click()}
-                  >
-                    {isProcessingAvatar ? (
-                      <>
-                        <Spinner size="sm" /> Otimizando...
-                      </>
-                    ) : profile.avatarUrl ? (
-                      <>
-                        <Upload className="size-3.5" aria-hidden="true" /> Alterar foto
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="size-3.5" aria-hidden="true" /> Enviar foto
-                      </>
-                    )}
-                  </Button>
-
-                  {profile.avatarUrl && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      isDisabled={isProcessingAvatar}
-                      onPress={handleRemoveAvatar}
-                      className="text-danger hover:bg-danger-soft/20 border-danger/30"
-                    >
-                      <Trash2 className="size-3.5" aria-hidden="true" /> Remover foto
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
+            <ImageUpload
+              label="Sua foto de identificação"
+              value={profile.avatarUrl}
+              onChange={(url) => void handleAvatarChange(url)}
+              bucket="avatars"
+              folder={user?.id ?? ""}
+              aspect="square"
+              allowUrl={false}
+              isDisabled={!user || isProcessingAvatar}
+              description="PNG, JPG ou WEBP. Prefira uma foto nítida, com boa iluminação e fundo neutro."
+              previewClassName="size-24 rounded-2xl border-solid ring-4 ring-surface shadow-elev-2"
+              fallback={
+                <span className="font-display text-3xl font-extrabold text-muted">
+                  {getInitials(profile.name)}
+                </span>
+              }
+            />
           </Card.Content>
         </Card>
       </section>

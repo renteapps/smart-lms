@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { PageHeader } from "@/components/ui/editorial";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 type Banner = {
   id: string;
@@ -128,10 +129,14 @@ export default function AdminHome() {
                   <label className="block text-sm font-medium text-ink-deep mb-1">Título</label>
                   <input type="text" className="w-full px-3 py-2 rounded-lg border border-border bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" value={bannerFormData.title} onChange={e => setBannerFormData({...bannerFormData, title: e.target.value})} placeholder="Ex: Liderança do Futuro" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-ink-deep mb-1">URL da Imagem</label>
-                  <input type="text" className="w-full px-3 py-2 rounded-lg border border-border bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" value={bannerFormData.image} onChange={e => setBannerFormData({...bannerFormData, image: e.target.value})} placeholder="https://..." />
-                </div>
+                <ImageUpload
+                  label="Imagem do banner"
+                  value={bannerFormData.image}
+                  onChange={(url) => setBannerFormData({ ...bannerFormData, image: url ?? "" })}
+                  folder="banners"
+                  aspect="wide"
+                  description="Recomendado: 1920x1005px."
+                />
               </div>
               <div className="flex justify-end gap-3">
                 <button onClick={() => setBannerFormVisible(false)} className="px-4 py-2 text-sm font-medium text-text-soft hover:bg-ink-deep/5 rounded-lg transition-colors">Cancelar</button>

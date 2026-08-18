@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Button, Chip, Input, Label, Modal, TextArea, TextField } from "@heroui/react";
 import { Layers, Image as ImageIcon, Sparkles, Check } from "lucide-react";
 import { Module } from "@/types/course";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 interface AddEditModuleModalProps {
   isOpen: boolean;
@@ -111,30 +112,14 @@ export default function AddEditModuleModal({
                     <Chip variant="soft" size="sm">16:9 HD</Chip>
                   </div>
 
-                  {/* Preview Box 16:9 */}
-                  <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-border bg-background-secondary shadow-surface">
-                    {coverUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={coverUrl}
-                        alt="Prévia da capa em proporção 16:9"
-                        className="size-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = PRESET_COVERS[0].url;
-                        }}
-                      />
-                    ) : (
-                      <div className="flex size-full flex-col items-center justify-center text-muted">
-                        <ImageIcon className="mb-1 size-8 opacity-40" aria-hidden="true" />
-                        <span className="text-xs">Sem capa selecionada</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <TextField value={coverUrl} onChange={setCoverUrl}>
-                    <Label>URL da capa</Label>
-                    <Input type="url" placeholder="https://exemplo.com/imagem-capa-16x9.jpg" />
-                  </TextField>
+                  <ImageUpload
+                    label="Capa do módulo"
+                    value={coverUrl}
+                    onChange={(url) => setCoverUrl(url ?? "")}
+                    folder="modules"
+                    aspect="video"
+                    description="Recomendado: 1280x720px (16:9)."
+                  />
 
                   <div>
                     <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-muted">

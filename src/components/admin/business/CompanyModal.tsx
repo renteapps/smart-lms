@@ -13,6 +13,7 @@ import { Company, CompanyPlanType, CompanyStatus } from "@/types/business";
 import { saveCompany } from "@/lib/businessStorage";
 import { CATALOG_COURSES } from "@/lib/catalog";
 import { toast } from "sonner";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 interface CompanyModalProps {
   isOpen: boolean;
@@ -179,6 +180,17 @@ export function CompanyModal({
                       <Label>Domínio Corporativo (para auto-admissão)</Label>
                       <Input placeholder="empresa.com.br" />
                     </TextField>
+                  </div>
+
+                  <div className="mt-4">
+                    <ImageUpload
+                      label="Logotipo da Empresa (Opcional)"
+                      value={logoUrl}
+                      onChange={(url) => setLogoUrl(url ?? "")}
+                      folder="companies"
+                      aspect="square"
+                      description="Quadrado, no mínimo 256x256px."
+                    />
                   </div>
 
                   <div className="mt-3 flex items-center gap-2">

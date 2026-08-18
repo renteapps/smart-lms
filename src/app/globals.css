@@ -662,6 +662,83 @@
     opacity: 1;
     transform: none;
   }
+
+  /* ------------------------------------------------------------------
+     ImageUpload — ver src/components/ui/ImageUpload.tsx
+     Loader em CSS puro: anel cônico girando + varredura sobre o preview.
+     As duas fases (otimizar / enviar) tambem sao ditas em texto, porque
+     estado nunca pode depender so de cor ou movimento.
+     ------------------------------------------------------------------ */
+  .image-upload-loader {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    border-radius: inherit;
+    background: color-mix(in oklch, var(--overlay), transparent 12%);
+    backdrop-filter: blur(6px) saturate(140%);
+    -webkit-backdrop-filter: blur(6px) saturate(140%);
+    overflow: hidden;
+  }
+
+  /* Barra que varre o preview enquanto o arquivo sobe. */
+  .image-upload-loader::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inline-size: 45%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklch, var(--accent), transparent 82%),
+      transparent
+    );
+    animation: image-upload-sweep 1.5s var(--ease-precise) infinite;
+  }
+
+  .image-upload-spinner {
+    position: relative;
+    z-index: 1;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    border-radius: 9999px;
+    background: conic-gradient(from 0deg, transparent 0turn, var(--accent) 1turn);
+    /* Vira um anel: o miolo e recortado, sem precisar de elemento extra. */
+    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+    animation: image-upload-spin 900ms linear infinite;
+  }
+
+  /* Anel interno, mais lento e no sentido oposto, dá profundidade ao loader. */
+  .image-upload-spinner::before {
+    content: "";
+    position: absolute;
+    inset: 0.4375rem;
+    border-radius: 9999px;
+    background: conic-gradient(from 180deg, transparent 0turn, var(--accent-soft-foreground, var(--muted)) 1turn);
+    mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+    animation: image-upload-spin 1.4s linear infinite reverse;
+  }
+
+  .image-upload-status {
+    position: relative;
+    z-index: 1;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--foreground);
+  }
+
+  /* Estado de arraste sobre a área de drop. */
+  .image-upload-zone[data-dragging="true"] {
+    border-color: var(--accent);
+    background: color-mix(in oklch, var(--accent), transparent 92%);
+  }
 }
 
 @keyframes icon-draw {
@@ -671,6 +748,41 @@
 
   to {
     stroke-dashoffset: 0;
+  }
+}
+
+@keyframes image-upload-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes image-upload-sweep {
+  from {
+    transform: translateX(-160%);
+  }
+
+  to {
+    transform: translateX(320%);
+  }
+}
+
+@keyframes image-upload-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Sem movimento: o loader vira uma pulsação de opacidade e a varredura some. */
+@media (prefers-reduced-motion: reduce) {
+  .image-upload-spinner,
+  .image-upload-spinner::before {
+    animation: image-upload-pulse 1.4s ease-in-out infinite;
+  }
+
+  .image-upload-loader::after {
+    animation: none;
+    opacity: 0;
   }
 }
 

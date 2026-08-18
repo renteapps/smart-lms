@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Plus, Upload, Type, Image as ImageIcon, Tag, FileText } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Plus, Type, Image as ImageIcon, Tag, FileText } from "lucide-react";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 export default function AdminCursoNovoPage() {
+  const [coverUrl, setCoverUrl] = useState("");
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-300 pb-16">
       <header className="sticky top-[76px] z-10 -mx-3 flex flex-col gap-4 rounded-[10px] border border-border bg-bg/95 p-4 shadow-sm backdrop-blur-xl md:flex-row md:items-center md:justify-between">
@@ -75,18 +79,14 @@ export default function AdminCursoNovoPage() {
             </h2>
             
             <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-text">Imagem de Capa (Thumbnail)</label>
-                <div className="border-2 border-dashed border-border rounded-xl p-8 flex flex-col items-center justify-center gap-3 hover:bg-surface-hover hover:border-primary/50 transition-colors cursor-pointer group bg-canvas-soft">
-                  <div className="w-14 h-14 rounded-full bg-primary-pale flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                    <Upload className="w-6 h-6" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-ink">Clique para enviar a capa do curso</p>
-                    <p className="text-xs text-text-mute mt-1">Recomendado: 1280x720px (16:9), máximo de 5MB</p>
-                  </div>
-                </div>
-              </div>
+              <ImageUpload
+                label="Imagem de Capa (Thumbnail)"
+                value={coverUrl}
+                onChange={(url) => setCoverUrl(url ?? "")}
+                folder="courses"
+                aspect="video"
+                description="Recomendado: 1280x720px (16:9), máximo de 5MB."
+              />
               
               <div>
                 <label className="block text-sm font-semibold text-text mb-1.5">Link do Vídeo Promocional (Opcional)</label>
