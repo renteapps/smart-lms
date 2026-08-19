@@ -1,4 +1,4 @@
-import type { LearningTrail, Questionnaire } from "@/types/trilha";
+import type { LearningTrail, Questionnaire, QuestionnaireVersion } from "@/types/trilha";
 import type {
   TrailAnalyticsData,
   TrailAnalyticsEvent,
@@ -24,16 +24,15 @@ export async function getPublishedQuestionnaire(db: DB): Promise<Questionnaire |
   };
 }
 
-/** Rascunho em edição no admin; cai para o publicado quando não há rascunho. */
-export async function getEditableQuestionnaire(db: DB): Promise<Questionnaire | null> {
+/** O rascunho em edição no admin — no máximo uma linha, garantida pelo índice único parcial. */
+export async function getDraftQuestionnaire(db: DB): Promise<Questionnaire | null> {
   const { data, error } = await db
     .from("trail_questionnaires")
     .select("version, status, questions")
-    .order("version", { ascending: false })
-    .limit(1)
+    .eq("status", "draft")
     .maybeSingle();
 
-  logQueryError("getEditableQuestionnaire", error);
+  logQueryError("getDraftQuestionnaire", error);
   if (!data) return null;
 
   return {
@@ -43,17 +42,30 @@ export async function getEditableQuestionnaire(db: DB): Promise<Questionnaire | 
   };
 }
 
-export async function getAllQuestionnaires(db: DB): Promise<Questionnaire[]> {
+/** Rascunho em edição no admin; cai para o publicado quando não há rascunho. */
+export async function getEditableQuestionnaire(db: DB): Promise<Questionnaire | null> {
+  const draft = await getDraftQuestionnaire(db);
+  if (draft) return draft;
+  return getPublishedQuestionnaire(db);
+}
+
+/** Histórico completo de versões, mais recente primeiro — alimenta o painel de histórico do admin. */
+export async function listQuestionnaireVersions(db: DB): Promise<QuestionnaireVersion[]> {
   const { data, error } = await db
     .from("trail_questionnaires")
-    .select("version, status, questions")
+    .select("id, version, status, questions, notes, published_at, created_at, created_by")
     .order("version", { ascending: false });
 
-  logQueryError("getAllQuestionnaires", error);
+  logQueryError("listQuestionnaireVersions", error);
   return (data ?? []).map((row: Row) => ({
+    id: row.id,
     version: row.version,
     status: row.status as Questionnaire["status"],
     questions: row.questions ?? [],
+    notes: row.notes,
+    publishedAt: row.published_at,
+    createdAt: row.created_at,
+    createdBy: row.created_by,
   }));
 }
 

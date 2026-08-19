@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applySessionFeedback, generateLearningTrail, postponeTrailSession, removeTrailItem, replanLearningTrail, restoreTrailItem, schedulePendingItems, updateTrailAvailability, validateQuestionnaire } from './matching';
-import { mockQuestionnaire } from './seed/questionnaire';
+import { mockQuestionnaire, TRAIL_CONTENT_INDEX } from './seed/questionnaire';
 import { ContentMapping, LearningTrailItem, Questionnaire } from '@/types/trilha';
 
 describe('adaptive learning trail', () => {
@@ -10,7 +10,7 @@ describe('adaptive learning trail', () => {
       q_objetivo: ['Aprofundar o que já pratico'],
       q_problema: ['Estagnação'],
       q_habilidades: ['Prática'],
-    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10));
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
 
     expect(trail.items.map((item) => item.id)).toEqual(['l1', 'l2', 'l-profile-1', 'l3', 'l4', 'a2']);
     expect(new Set(trail.items.map((item) => item.id)).size).toBe(trail.items.length);
@@ -50,12 +50,12 @@ describe('adaptive learning trail', () => {
   it('preserves completed content while recalculating future recommendations', () => {
     const initial = generateLearningTrail('u1', {
       q_formato: ['Teoria Profunda (Conceitos base)'], q_objetivo: ['Sair do zero com segurança'],
-    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10));
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
     initial.items[0] = { ...initial.items[0], status: 'completed', completedAt: '2026-08-10T12:00:00.000Z' };
 
     const updated = generateLearningTrail('u1', {
       q_formato: ['Prática Rápida (Mão na massa)'], q_objetivo: ['Aprofundar o que já pratico'],
-    }, mockQuestionnaire, { weekdays: [2, 4], minutesPerSession: 45 }, initial, new Date(2026, 7, 10));
+    }, mockQuestionnaire, { weekdays: [2, 4], minutesPerSession: 45 }, initial, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
 
     expect(updated.items.find((item) => item.id === initial.items[0].id)?.status).toBe('completed');
     expect(updated.items.filter((item) => item.status === 'pending').every((item) => ['2026-08-11', '2026-08-13', '2026-08-18'].includes(item.scheduledDate))).toBe(true);
@@ -79,7 +79,7 @@ describe('adaptive learning trail', () => {
     // `l1` tem topics ['fundamentos'] e nenhum pré-requisito.
     const trail = generateLearningTrail('u1', { q_tags: ['Fundamentos'] },
       tagsOnlyQuestionnaire('Fundamentos', ['fundamentos']),
-      { weekdays: [1, 3], minutesPerSession: 60 }, undefined, new Date(2026, 7, 10));
+      { weekdays: [1, 3], minutesPerSession: 60 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
 
     const l1 = trail.items.find((item) => item.id === 'l1');
     expect(l1).toBeDefined();
@@ -92,7 +92,7 @@ describe('adaptive learning trail', () => {
     // mapeou. Entrar sozinho arrastaria a cadeia l3 → l2 → l1 como "essencial".
     const trail = generateLearningTrail('u1', { q_tags: ['Aprofundar'] },
       tagsOnlyQuestionnaire('Aprofundar', ['aprofundamento']),
-      { weekdays: [1, 3], minutesPerSession: 60 }, undefined, new Date(2026, 7, 10));
+      { weekdays: [1, 3], minutesPerSession: 60 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
 
     expect(trail.items).toEqual([]);
   });
@@ -101,7 +101,7 @@ describe('adaptive learning trail', () => {
     const trail = generateLearningTrail('u1', {
       q_problema: ['Insegurança'],
       q_habilidades: ['Fundamentos'],
-    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 60 }, undefined, new Date(2026, 7, 10));
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 60 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
 
     const roles = trail.items.map((item) => item.learningRole);
     const firstExtra = roles.indexOf('extra');
@@ -111,7 +111,7 @@ describe('adaptive learning trail', () => {
   it('keeps completed content that the new answers no longer recommend', () => {
     const initial = generateLearningTrail('u1', {
       q_formato: ['Prática Rápida (Mão na massa)'], q_habilidades: ['Prática'],
-    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10));
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
 
     const doneId = initial.items[0].id;
     initial.items[0] = { ...initial.items[0], status: 'completed', completedAt: '2026-08-10T12:00:00.000Z' };
@@ -119,7 +119,7 @@ describe('adaptive learning trail', () => {
     // Respostas completamente diferentes: o conteúdo concluído sai da curadoria.
     const updated = generateLearningTrail('u1', {
       q_problema: ['Falta de Tempo'],
-    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, initial, new Date(2026, 7, 10));
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, initial, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
 
     const retained = updated.items.find((item) => item.id === doneId);
     expect(retained?.status).toBe('completed');
@@ -132,7 +132,7 @@ describe('adaptive learning trail', () => {
   it('replans overdue pending items without moving completed history', () => {
     const trail = generateLearningTrail('u1', {
       q_formato: ['Teoria Profunda (Conceitos base)'], q_objetivo: ['Sair do zero com segurança'],
-    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 20 }, undefined, new Date(2026, 7, 3));
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 20 }, undefined, new Date(2026, 7, 3), TRAIL_CONTENT_INDEX);
     trail.items[0] = { ...trail.items[0], status: 'completed' };
     const completedDate = trail.items[0].scheduledDate;
 
@@ -144,12 +144,12 @@ describe('adaptive learning trail', () => {
   });
 
   it('validates the unique final availability question and custom durations', () => {
-    expect(validateQuestionnaire(mockQuestionnaire)).toEqual([]);
+    expect(validateQuestionnaire(mockQuestionnaire, TRAIL_CONTENT_INDEX)).toEqual([]);
     const invalid: Questionnaire = {
       ...mockQuestionnaire,
       questions: [mockQuestionnaire.questions.at(-1)!, ...mockQuestionnaire.questions.slice(0, -1)],
     };
-    expect(validateQuestionnaire(invalid)).toContain('A disponibilidade precisa ser a última pergunta.');
+    expect(validateQuestionnaire(invalid, TRAIL_CONTENT_INDEX)).toContain('A disponibilidade precisa ser a última pergunta.');
   });
 
   it('keeps the trail usable when prerequisites contain a cycle', () => {
@@ -180,7 +180,7 @@ describe('adaptive learning trail', () => {
   it('adapts the next session target from load feedback', () => {
     const trail = generateLearningTrail('u1', {
       q_formato: ['Teoria Profunda (Conceitos base)'], q_objetivo: ['Sair do zero com segurança'],
-    }, mockQuestionnaire, { weekdays: [1, 3, 5], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10));
+    }, mockQuestionnaire, { weekdays: [1, 3, 5], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
     const sessionId = trail.items[0].sessionId;
     trail.items[0] = { ...trail.items[0], status: 'completed' };
 
@@ -197,7 +197,7 @@ describe('adaptive learning trail', () => {
   it('updates routine, postpones sessions and preserves completed history', () => {
     const trail = generateLearningTrail('u1', {
       q_formato: ['Teoria Profunda (Conceitos base)'], q_objetivo: ['Sair do zero com segurança'],
-    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 20 }, undefined, new Date(2026, 7, 10));
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 20 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
     trail.items[0] = { ...trail.items[0], status: 'completed' };
     const completedDate = trail.items[0].scheduledDate;
     const adjusted = updateTrailAvailability(trail, { weekdays: [2, 4], minutesPerSession: 45 }, new Date(2026, 7, 10));
@@ -212,7 +212,7 @@ describe('adaptive learning trail', () => {
   it('removes and restores pending content without losing it', () => {
     const trail = generateLearningTrail('u1', {
       q_formato: ['Teoria Profunda (Conceitos base)'], q_objetivo: ['Sair do zero com segurança'],
-    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10));
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
     const target = trail.items.at(-1)!;
     const removed = removeTrailItem(trail, target.id, new Date(2026, 7, 10));
     expect(removed.items.some((item) => item.id === target.id)).toBe(false);

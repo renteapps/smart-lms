@@ -15,6 +15,10 @@ export type UserProfile = {
   birthDate?: string;
   gender?: string;
   careerRole?: string;
+  company?: string;
+  state?: string;
+  city?: string;
+  country?: string;
   location?: string;
   status: string;
   aiCredits: number;
@@ -27,7 +31,7 @@ export type UserProfile = {
 const PROFILE_SELECT = `
   id, full_name, username, email, avatar_url, role, headline, bio, phone,
   birth_date, gender, career_role, location, status, ai_credits, preferences,
-  last_access_at, onboarding_completed_at, created_at
+  last_access_at, onboarding_completed_at, created_at, company, state, city, country
 `;
 
 export function mapProfile(row: Row): UserProfile {
@@ -44,6 +48,10 @@ export function mapProfile(row: Row): UserProfile {
     birthDate: row.birth_date ?? undefined,
     gender: row.gender ?? undefined,
     careerRole: row.career_role ?? undefined,
+    company: row.company ?? undefined,
+    state: row.state ?? undefined,
+    city: row.city ?? undefined,
+    country: row.country ?? undefined,
     location: row.location ?? undefined,
     status: row.status ?? "active",
     aiCredits: row.ai_credits ?? 0,

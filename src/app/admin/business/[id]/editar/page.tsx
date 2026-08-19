@@ -4,8 +4,10 @@ import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CompanyForm } from "@/components/admin/business/CompanyForm";
 import { getCompanyById } from "@/lib/data/business";
+import { getCatalogCourses } from "@/lib/data/courses";
 import { createClient } from "@/lib/supabase/client";
 import { Company } from "@/types/business";
+import { CatalogCourse } from "@/types/course";
 import { Button } from "@heroui/react";
 import Link from "next/link";
 import { ArrowLeft, Building2 } from "lucide-react";
@@ -16,15 +18,18 @@ export default function AdminBusinessEditPage() {
   const id = params?.id as string;
 
   const [company, setCompany] = useState<Company | null>(null);
+  const [availableCourses, setAvailableCourses] = useState<CatalogCourse[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     async function load() {
+      const db = createClient();
       if (id) {
-        const db = createClient();
         const found = await getCompanyById(db, id);
         setCompany(found);
       }
+      const courses = await getCatalogCourses(db);
+      setAvailableCourses(courses);
       setLoaded(true);
     }
     load();
@@ -58,5 +63,5 @@ export default function AdminBusinessEditPage() {
     );
   }
 
-  return <CompanyForm initialCompany={company} mode="edit" />;
+  return <CompanyForm initialCompany={company} mode="edit" availableCourses={availableCourses} />;
 }

@@ -1,26 +1,21 @@
 import { Questionnaire, ResolvedContent } from '@/types/trilha';
 import { DEFAULT_AVAILABILITY, generateLearningTrail } from '@/lib/matching';
-import { createContentIndex, EMPTY_CONTENT_INDEX, type ContentIndex, type ContentResolver } from '@/lib/contentCatalog';
-import { MOCK_CONTENT_ITEMS } from '@/lib/mocks/onboardingMocks';
-import { mockEligibleLessons } from '@/lib/seed/questionnaire';
+import { EMPTY_CONTENT_INDEX, type ContentIndex, type ContentResolver } from '@/lib/contentCatalog';
 
 export type AdminTrailDiagnostic = {
   id: string;
   severity: 'error' | 'warning' | 'info';
   title: string;
   detail: string;
+  /** Presente nos diagnósticos por pergunta — alimenta o badge de pendências no editor. */
+  questionId?: string;
 };
 
+/** Sem índice explícito, cai no catálogo vazio — nunca em dados mock (ver matching.ts). */
 function normalizeIndex(indexOrResolver?: ContentIndex | ContentResolver): ContentIndex {
-  if (!indexOrResolver) {
-    return createContentIndex(MOCK_CONTENT_ITEMS as any, mockEligibleLessons);
-  }
+  if (!indexOrResolver) return EMPTY_CONTENT_INDEX;
   if (typeof indexOrResolver === 'function') {
-    const base = createContentIndex(MOCK_CONTENT_ITEMS as any, mockEligibleLessons);
-    return {
-      ...base,
-      resolve: indexOrResolver,
-    };
+    return { ...EMPTY_CONTENT_INDEX, resolve: indexOrResolver };
   }
   return indexOrResolver;
 }
@@ -41,8 +36,21 @@ export function analyzeQuestionnaire(
         severity: 'warning',
         title: 'Resposta sem conteúdo associado',
         detail: `“${option.label}”, em “${question.text}”, não influencia a trilha final.`,
+        questionId: question.id,
       });
-      option.contentMappings?.forEach((mapping) => index.resolve(mapping).forEach((item) => allResolved.set(item.id, item)));
+      option.contentMappings?.forEach((mapping) => {
+        const resolved = index.resolve(mapping);
+        // Curso/módulo/aula que sumiu do catálogo desde que foi mapeado (despublicado
+        // ou excluído) — sem isso o admin só descobre quando a trilha do aluno sai vazia.
+        if (resolved.length === 0) diagnostics.push({
+          id: `orphan-${question.id}-${optionIndex}-${mapping.id}`,
+          severity: 'error',
+          title: 'Conteúdo não encontrado no catálogo',
+          detail: `“${mapping.title}”, em “${option.label}” (${question.text}), não existe mais entre os cursos, módulos ou artigos publicados. Remova ou substitua o mapeamento.`,
+          questionId: question.id,
+        });
+        resolved.forEach((item) => allResolved.set(item.id, item));
+      });
     });
 
     if (question.type === 'single') {
@@ -56,6 +64,7 @@ export function analyzeQuestionnaire(
           severity: 'info',
           title: 'Conteúdo em respostas exclusivas',
           detail: `O mesmo conteúdo aparece em “${[...new Set(labels)].join('” e “')}”. Confirme se essa recomendação deve ser comum às duas escolhas.`,
+          questionId: question.id,
         });
       });
     }

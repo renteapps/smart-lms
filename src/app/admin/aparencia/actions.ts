@@ -10,15 +10,13 @@ export type BrandingImages = {
   ogImageUrl: string | null;
 };
 
-export async function saveAppearance(formData: FormData) {
+export async function saveAppearance(appearanceData: {
+  platformName: string;
+  slogan: string;
+  primaryColor: string;
+  theme: string;
+}) {
   const supabase = await createClient();
-
-  const appearanceData = {
-    platformName: formData.get("platformName"),
-    slogan: formData.get("slogan"),
-    primaryColor: formData.get("primaryColor"),
-    theme: formData.get("theme"),
-  };
 
   const { error } = await supabase
     .from("app_settings")

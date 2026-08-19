@@ -60,8 +60,17 @@ export type Question = {
 
 export type Questionnaire = {
   version: number;
-  status: 'draft' | 'published';
+  status: 'draft' | 'published' | 'archived';
   questions: Question[];
+};
+
+/** Uma linha de `trail_questionnaires` com os metadados de auditoria — usada no histórico do admin. */
+export type QuestionnaireVersion = Questionnaire & {
+  id: string;
+  notes?: string | null;
+  publishedAt?: string | null;
+  createdAt: string;
+  createdBy?: string | null;
 };
 
 export type ResolvedContent = {

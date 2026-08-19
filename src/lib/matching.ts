@@ -9,8 +9,7 @@ import {
   StudyAvailability,
   Weekday,
 } from '@/types/trilha';
-import { createContentIndex, EMPTY_CONTENT_INDEX, type ContentIndex, type ContentResolver } from '@/lib/contentCatalog';
-import { mockEligibleLessons, TRAIL_CONTENT_INDEX } from '@/lib/seed/questionnaire';
+import { EMPTY_CONTENT_INDEX, type ContentIndex, type ContentResolver } from '@/lib/contentCatalog';
 
 type UserAnswers = Record<string, string[]>;
 type Candidate = ResolvedContent & {
@@ -56,10 +55,16 @@ function nextPreferredDate(from: Date, weekdays: Weekday[], includeFrom = true):
   return cursor;
 }
 
+/**
+ * Sem índice explícito, cai no catálogo vazio — nunca em dados mock.
+ *
+ * Um fallback silencioso para mock já causou trilhas geradas com ids que não
+ * existem no Supabase; melhor a trilha vir vazia (visível) do que errada.
+ */
 function normalizeIndex(indexOrResolver?: ContentIndex | ContentResolver): ContentIndex {
-  if (!indexOrResolver) return TRAIL_CONTENT_INDEX;
+  if (!indexOrResolver) return EMPTY_CONTENT_INDEX;
   if (typeof indexOrResolver === 'function') {
-    return { ...createContentIndex([], mockEligibleLessons), resolve: indexOrResolver };
+    return { ...EMPTY_CONTENT_INDEX, resolve: indexOrResolver };
   }
   return indexOrResolver;
 }
@@ -107,7 +112,8 @@ const AFFINITY_ENTRY_THRESHOLD = 2;
 
 type AffinitySignal = { tag: string; label: string };
 
-function normalizeTag(value: string): string {
+/** Exportada para o editor do admin normalizar tags do mesmo jeito que o motor de afinidade compara. */
+export function normalizeTag(value: string): string {
   return value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
 

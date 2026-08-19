@@ -22,7 +22,12 @@ export function AppearanceForm({ initialData }: AppearanceFormProps) {
     e.preventDefault();
     setLoading(true);
     const formData = new FormData(e.currentTarget);
-    await saveAppearance(formData);
+    await saveAppearance({
+      platformName: formData.get("platformName") as string,
+      slogan: formData.get("slogan") as string,
+      primaryColor: formData.get("primaryColor") as string,
+      theme: formData.get("theme") as string,
+    });
     setLoading(false);
     // Ideally add a toast here
   };

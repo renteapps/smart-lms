@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Avatar,
   Button,
@@ -48,7 +48,8 @@ import {
   revokeInvite,
 } from "@/app/actions/admin/platform";
 import { createClient } from "@/lib/supabase/client";
-import { CATALOG_COURSES } from "@/lib/catalog";
+import { getCatalogCourses } from "@/lib/data/courses";
+import { CatalogCourse } from "@/types/course";
 import { InviteMemberModal } from "@/components/business/InviteMemberModal";
 import { BulkInviteModal } from "@/components/business/BulkInviteModal";
 import { AssignCourseModal } from "@/components/business/AssignCourseModal";
@@ -57,6 +58,16 @@ import { useCompanyManager } from "@/hooks/useCompanyManager";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+// Exemplo de departamentos permitidos
+const DEPARTMENTS = [
+  "Todos",
+  "Engenharia",
+  "Design",
+  "Produto",
+  "Operações",
+  "Vendas",
+];
 
 const initials = (name: string) =>
   name
@@ -67,14 +78,14 @@ const initials = (name: string) =>
     .toUpperCase();
 
 function EmpresaGestaoContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const companyQueryId = searchParams.get("empresaId") || searchParams.get("id");
-
+  const companyQueryId = searchParams?.get("empresaId") || searchParams?.get("id");
   const { isManager, isLoading: isManagerLoading, toggleSimulatedManager } = useCompanyManager();
-  const { user } = useAuth();
 
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+
   const [members, setMembers] = useState<CompanyMember[]>([]);
   const [analytics, setAnalytics] = useState<CompanyAnalytics | null>(null);
 
@@ -84,13 +95,13 @@ function EmpresaGestaoContent() {
   const [selectedStatus, setSelectedStatus] = useState<string>("todos");
   const [activeTab, setActiveTab] = useState<"visao" | "colaboradores" | "cursos" | "config">("colaboradores");
 
-  // Modais
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [targetMember, setTargetMember] = useState<CompanyMember | null>(null);
   const [targetDepartment, setTargetDepartment] = useState<string | null>(null);
+  const [availableCourses, setAvailableCourses] = useState<CatalogCourse[]>([]);
 
   const loadData = async () => {
     const db = createClient();
@@ -905,7 +916,7 @@ function EmpresaGestaoContent() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {CATALOG_COURSES.filter((c) => selectedCompany.allowedCourseIds.includes(c.id)).map((course) => {
+            {availableCourses.filter((c) => selectedCompany.allowedCourseIds.includes(c.id)).map((course) => {
               const enrolledCount = members.filter((m) => m.assignedCourseIds?.includes(course.id)).length;
               return (
                 <Card key={course.id} className="flex flex-col justify-between overflow-hidden">
@@ -1004,6 +1015,7 @@ function EmpresaGestaoContent() {
         company={selectedCompany}
         onSuccess={loadData}
         availableSeats={availableSeats}
+        availableCourses={availableCourses}
       />
 
       <BulkInviteModal
@@ -1021,6 +1033,7 @@ function EmpresaGestaoContent() {
         targetMember={targetMember}
         targetDepartment={targetDepartment}
         onSuccess={loadData}
+        availableCourses={availableCourses}
       />
 
       <SeatsUpgradeModal

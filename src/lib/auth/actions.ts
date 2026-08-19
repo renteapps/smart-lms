@@ -168,9 +168,9 @@ export async function signUpAction(formData: FormData): Promise<AuthActionResult
   };
 }
 
-export async function resendSignUpEmailAction(formData: FormData): Promise<AuthActionResult> {
-  const email = (formData.get("email") as string)?.trim();
-  const next = (formData.get("next") as string) || "/onboarding";
+export async function resendSignUpEmailAction(data: { email: string; next?: string }): Promise<AuthActionResult> {
+  const email = data.email?.trim();
+  const next = data.next || "/onboarding";
 
   if (!email) {
     return {

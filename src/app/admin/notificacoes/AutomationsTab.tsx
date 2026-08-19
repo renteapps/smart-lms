@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useAutomations } from "@/contexts/AutomationContext";
 import {
   Plus,
   Play,
@@ -19,10 +18,10 @@ import {
 import { toast } from "sonner";
 import { StatusBadge } from "@/components/ui/editorial";
 import { EmailTemplateType } from "@/types/resend";
+import { createAutomation, deleteAutomation, toggleAutomationStatus } from "./actions";
 
-export function AutomationsTab() {
-  const { automations, addAutomation, toggleStatus, deleteAutomation } = useAutomations();
-
+export function AutomationsTab({ initialAutomations }: { initialAutomations: any[] }) {
+  const [automations, setAutomations] = useState<any[]>(initialAutomations);
   const [isCreating, setIsCreating] = useState(false);
 
   // Form State
@@ -60,7 +59,7 @@ export function AutomationsTab() {
     setTimeout(() => setCopiedTag(null), 2000);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name || !title || !message) {
@@ -78,45 +77,50 @@ export function AutomationsTab() {
       return;
     }
 
-    addAutomation({
-      name,
-      trigger: {
-        type: triggerType,
-        days,
-        courseId: courseId || undefined,
-      },
-      action: {
-        title,
-        message,
-        channels,
-        emailDetails: channels.includes("email")
-          ? {
-              template: emailTemplate,
-              subject: emailSubject || title,
-              previewText: emailPreviewText || title,
-              emailTitle: emailTitle || title,
-              emailBody: emailBody || message,
-              buttonText: emailButtonText,
-              buttonUrl: emailButtonUrl,
-            }
-          : undefined,
-      },
-    });
+    try {
+      const newAutomation = await createAutomation({
+        name,
+        trigger: {
+          type: triggerType,
+          days,
+          courseId: courseId || undefined,
+        },
+        action: {
+          title,
+          message,
+          channels,
+          emailDetails: channels.includes("email")
+            ? {
+                template: emailTemplate,
+                subject: emailSubject || title,
+                previewText: emailPreviewText || title,
+                emailTitle: emailTitle || title,
+                emailBody: emailBody || message,
+                buttonText: emailButtonText,
+                buttonUrl: emailButtonUrl,
+              }
+            : undefined,
+        },
+      });
 
-    toast.success("Automação criada com sucesso!");
-    setIsCreating(false);
-
-    // Reset form
-    setName("");
-    setTitle("");
-    setMessage("");
-    setDays(1);
-    setCourseId("");
-    setEmailSubject("");
-    setEmailPreviewText("");
-    setEmailTitle("");
-    setEmailBody("");
-    setChannels(["platform"]);
+      setAutomations((prev) => [newAutomation, ...prev]);
+      toast.success("Automação criada com sucesso!");
+      setIsCreating(false);
+      
+      // Reset form
+      setName("");
+      setTitle("");
+      setMessage("");
+      setDays(1);
+      setCourseId("");
+      setEmailSubject("");
+      setEmailPreviewText("");
+      setEmailTitle("");
+      setEmailBody("");
+      setChannels(["platform"]);
+    } catch (err: any) {
+      toast.error("Erro ao criar automação: " + err.message);
+    }
   };
 
   const triggerLabels = {
@@ -528,8 +532,8 @@ export function AutomationsTab() {
                   <h4 className="font-bold text-text text-sm">{automation.name}</h4>
                   <div className="inline-flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md mt-1">
                     <Activity className="size-3" />
-                    {triggerLabels[automation.trigger.type]} {automation.trigger.days} dias
-                    {automation.trigger.courseId && ` (${automation.trigger.courseId})`}
+                    {triggerLabels[automation.trigger_type as keyof typeof triggerLabels]} {automation.trigger_days} dias
+                    {automation.trigger_course_id && ` (${automation.trigger_course_id})`}
                   </div>
                 </div>
                 <StatusBadge tone={automation.status === "active" ? "positive" : "neutral"}>
@@ -538,12 +542,12 @@ export function AutomationsTab() {
               </div>
 
               <div className="bg-surface rounded-xl p-3 border border-border/60 space-y-1.5">
-                <p className="font-bold text-text text-xs">{automation.action.title}</p>
+                <p className="font-bold text-text text-xs">{automation.action_title}</p>
                 <p className="text-xs text-text-mute line-clamp-2 leading-relaxed">
-                  {automation.action.message}
+                  {automation.action_message}
                 </p>
                 <div className="flex gap-1.5 pt-1 flex-wrap">
-                  {automation.action.channels.map((c) => (
+                  {automation.channels && automation.channels.map((c: string) => (
                     <span
                       key={c}
                       className={`text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold ${
@@ -555,9 +559,9 @@ export function AutomationsTab() {
                       {c === "email" ? "E-mail (Resend)" : c === "platform" ? "Plataforma" : c}
                     </span>
                   ))}
-                  {automation.action.emailDetails?.template && (
+                  {automation.email_details?.template && (
                     <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full font-mono bg-primary/10 text-primary">
-                      Modelo: {automation.action.emailDetails.template}
+                      Modelo: {automation.email_details.template}
                     </span>
                   )}
                 </div>
@@ -565,19 +569,19 @@ export function AutomationsTab() {
 
               <div className="grid grid-cols-4 gap-2 pt-2 border-t border-border/50 text-[11px] text-text-mute">
                 <div className="flex flex-col items-center gap-0.5 text-center">
-                  <span className="font-bold text-text">{automation.stats.triggeredCount}</span>
+                  <span className="font-bold text-text">{automation.triggered_count || 0}</span>
                   <span className="text-[10px]">Envios</span>
                 </div>
                 <div className="flex flex-col items-center gap-0.5 text-center">
-                  <span className="font-bold text-text">{automation.stats.views}</span>
+                  <span className="font-bold text-text">{automation.views || 0}</span>
                   <span className="text-[10px]">Views</span>
                 </div>
                 <div className="flex flex-col items-center gap-0.5 text-center">
-                  <span className="font-bold text-text">{automation.stats.opens}</span>
+                  <span className="font-bold text-text">{automation.opens || 0}</span>
                   <span className="text-[10px]">Abertas</span>
                 </div>
                 <div className="flex flex-col items-center gap-0.5 text-center">
-                  <span className="font-bold text-text">{automation.stats.clicks}</span>
+                  <span className="font-bold text-text">{automation.clicks || 0}</span>
                   <span className="text-[10px]">Cliques</span>
                 </div>
               </div>
@@ -585,7 +589,15 @@ export function AutomationsTab() {
               <div className="absolute top-4 right-4 flex gap-1">
                 <button
                   type="button"
-                  onClick={() => toggleStatus(automation.id)}
+                  onClick={async () => {
+                    try {
+                      const updated = await toggleAutomationStatus(automation.id, automation.status);
+                      setAutomations(prev => prev.map(a => a.id === updated.id ? updated : a));
+                      toast.success(updated.status === "active" ? "Automação ativada" : "Automação pausada");
+                    } catch (err: any) {
+                      toast.error("Erro ao alterar status: " + err.message);
+                    }
+                  }}
                   className="grid size-7 place-items-center rounded-lg text-text-mute hover:bg-surface hover:text-text transition-colors"
                   title={automation.status === "active" ? "Pausar" : "Ativar"}
                 >
@@ -593,7 +605,15 @@ export function AutomationsTab() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => deleteAutomation(automation.id)}
+                  onClick={async () => {
+                    try {
+                      await deleteAutomation(automation.id);
+                      setAutomations(prev => prev.filter(a => a.id !== automation.id));
+                      toast.success("Automação excluída com sucesso");
+                    } catch (err: any) {
+                      toast.error("Erro ao excluir: " + err.message);
+                    }
+                  }}
                   className="grid size-7 place-items-center rounded-lg text-text-mute hover:bg-negative/10 hover:text-negative transition-colors"
                   title="Excluir"
                 >

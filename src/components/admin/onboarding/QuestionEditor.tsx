@@ -1,21 +1,32 @@
 import React, { useState } from 'react';
 import { Question, QuestionOption } from '@/types/trilha';
-import { ChevronDown, ChevronUp, GripVertical, Settings2, Plus, Type, CalendarClock } from 'lucide-react';
+import { ChevronDown, ChevronUp, GripVertical, Settings2, Plus, Type, Copy, Trash2, TriangleAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OptionMappingRow } from './OptionMappingRow';
+import type { ContentIndex } from '@/lib/contentCatalog';
 
 interface QuestionEditorProps {
   question: Question;
   index: number;
   onUpdate: (updatedQuestion: Question) => void;
   onOpenContentPicker: (optionIndex: number) => void;
+  onDelete: () => void;
+  onDuplicate: () => void;
+  /** Catálogo real do Supabase — repassado até o picker de conteúdo e a detecção de mapeamentos órfãos. */
+  contentIndex: ContentIndex;
+  /** Erros/avisos desta pergunta específica, computados pela validação em tempo real do editor. */
+  issueCount?: number;
 }
 
-export const QuestionEditor: React.FC<QuestionEditorProps> = ({ 
-  question, 
-  index, 
+export const QuestionEditor: React.FC<QuestionEditorProps> = ({
+  question,
+  index,
   onUpdate,
-  onOpenContentPicker
+  onOpenContentPicker,
+  onDelete,
+  onDuplicate,
+  contentIndex,
+  issueCount = 0,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -40,32 +51,56 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
   };
 
   return (
-    <div className="rounded-2xl border border-border/40 bg-surface shadow-sm overflow-hidden transition-all hover:border-border/80">
-      
+    <div className={`rounded-2xl border bg-surface shadow-sm overflow-hidden transition-all ${issueCount > 0 ? 'border-warning/50' : 'border-border/40 hover:border-border/80'}`}>
+
       {/* Header / Summary */}
-      <div 
+      <div
         className="flex items-center gap-4 p-4 cursor-pointer select-none"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <GripVertical size={20} className="text-text-mute hover:text-text cursor-grab shrink-0" />
-        
+
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold shrink-0">
           {index + 1}
         </div>
-        
+
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-text truncate">{question.text}</h3>
           <div className="flex items-center gap-2 mt-1 text-xs text-text-soft">
             <span className="capitalize">{question.role}</span>
             <span>•</span>
-            <span>{question.type === 'availability' ? 'Rotina semanal' : question.type === 'single' ? 'Escolha Única' : 'Múltipla Escolha'}</span>
+            <span>{question.type === 'single' ? 'Escolha Única' : 'Múltipla Escolha'}</span>
             <span>•</span>
-            <span>{question.type === 'availability' ? 'Agenda automática' : `${question.options.length} opções`}</span>
+            <span>{question.options.length} opções</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button className="p-2 text-text-mute hover:text-primary hover:bg-primary/5 rounded-lg transition-colors">
+        {issueCount > 0 && (
+          <span className="flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-bold text-warning shrink-0">
+            <TriangleAlert size={13} />
+            {issueCount}
+          </span>
+        )}
+
+        <div className="flex items-center gap-1 shrink-0" onClick={(event) => event.stopPropagation()}>
+          <button
+            onClick={onDuplicate}
+            title="Duplicar pergunta"
+            className="p-2 text-text-mute hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+          >
+            <Copy size={17} />
+          </button>
+          <button
+            onClick={onDelete}
+            title="Excluir pergunta"
+            className="p-2 text-text-mute hover:text-negative hover:bg-negative/5 rounded-lg transition-colors"
+          >
+            <Trash2 size={17} />
+          </button>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-2 text-text-mute hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+          >
             {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </button>
         </div>
@@ -82,15 +117,15 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
             className="border-t border-border/40 bg-surface-card"
           >
             <div className="p-5 flex flex-col gap-5">
-              
+
               {/* Question Settings Row */}
               <div className="flex flex-wrap gap-4 items-center bg-surface p-3 rounded-xl border border-border/40">
                 <div className="flex-1 min-w-[200px]">
                   <label className="text-xs font-semibold text-text-mute mb-1 block">Título da Pergunta</label>
                   <div className="flex items-center gap-2 border-b border-border/60 pb-1 focus-within:border-primary transition-colors">
                     <Type size={16} className="text-text-mute" />
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={question.text}
                       onChange={(e) => onUpdate({ ...question, text: e.target.value })}
                       className="w-full bg-transparent text-sm font-medium outline-none text-text"
@@ -100,7 +135,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
 
                 <div>
                   <label className="text-xs font-semibold text-text-mute mb-1 block">Papel (Role)</label>
-                  <select 
+                  <select
                     value={question.role}
                     onChange={(e) => onUpdate({ ...question, role: e.target.value as Question['role'] })}
                     className="bg-bg border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-primary"
@@ -110,35 +145,27 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                     <option value="interesse">Interesse</option>
                     <option value="nivel">Nível</option>
                     <option value="restricao">Restrição</option>
-                    <option value="disponibilidade">Disponibilidade</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="text-xs font-semibold text-text-mute mb-1 block">Seleção</label>
-                  <select 
+                  <select
                     value={question.type}
                     onChange={(e) => {
                       const type = e.target.value as Question['type'];
-                      onUpdate({
-                        ...question,
-                        type,
-                        role: type === 'availability' ? 'disponibilidade' : question.role === 'disponibilidade' ? 'perfil' : question.role,
-                        options: type === 'availability' ? [] : question.options.length > 0 ? question.options : [{ label: 'Opção 1', tags: [], contentMappings: [] }],
-                        availabilityConfig: type === 'availability' ? question.availabilityConfig || { minutePresets: [15, 30, 45, 60, 90], minMinutes: 10, maxMinutes: 240 } : undefined,
-                      });
+                      onUpdate({ ...question, type });
                     }}
                     className="bg-bg border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-primary"
                   >
                     <option value="single">Única</option>
                     <option value="multiple">Múltipla</option>
-                    <option value="availability">Disponibilidade</option>
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="text-xs font-semibold text-text-mute mb-1 block">Visual</label>
-                  <select 
+                  <select
                     value={question.visualType || 'list'}
                     onChange={(e) => onUpdate({ ...question, visualType: e.target.value as NonNullable<Question['visualType']> })}
                     className="bg-bg border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-primary"
@@ -153,18 +180,6 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                 </div>
               </div>
 
-              {question.type === 'availability' ? (
-                <div className="rounded-xl border border-primary/25 bg-primary/5 p-5">
-                  <div className="flex items-start gap-3">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-primary-pale text-primary"><CalendarClock size={20} /></span>
-                    <div>
-                      <h4 className="font-bold text-ink">Configuração inteligente da rotina</h4>
-                      <p className="mt-1 text-sm leading-6 text-text-soft">O aluno escolherá dias específicos e uma meta de 10 a 240 minutos por sessão. Esta pergunta não associa conteúdos e deve permanecer por último.</p>
-                      <p className="mt-3 text-xs font-semibold text-primary-active">Sugestões exibidas: {(question.availabilityConfig?.minutePresets || [15, 30, 45, 60, 90]).join(', ')} minutos</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between mb-1">
                   <h4 className="text-sm font-bold text-ink-deep flex items-center gap-2">
@@ -172,20 +187,21 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                     Opções de Resposta e Mapeamento
                   </h4>
                 </div>
-                
+
                 <div className="flex flex-col gap-3">
                   {question.options.map((option, optIdx) => (
-                    <OptionMappingRow 
+                    <OptionMappingRow
                       key={optIdx}
                       option={option}
                       onUpdate={(updated) => handleUpdateOption(optIdx, updated)}
                       onDelete={() => handleDeleteOption(optIdx)}
                       onOpenContentPicker={() => onOpenContentPicker(optIdx)}
+                      index={contentIndex}
                     />
                   ))}
                 </div>
 
-                <button 
+                <button
                   onClick={handleAddOption}
                   className="mt-2 flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 hover:border-primary/60"
                 >
@@ -193,7 +209,6 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                   Adicionar Opção
                 </button>
               </div>
-              )}
 
             </div>
           </motion.div>

@@ -15,6 +15,7 @@ tokens:
   danger: "var(--danger)"
   border: "var(--border)"
   radius: "0.625rem"
+  radiusAdmin: "0.5rem"
 fonts:
   display: "Manrope"
   interface: "DM Sans"
@@ -109,7 +110,8 @@ O código anterior usava um vocabulário próprio (`text-ink`, `bg-canvas-soft`,
 
 ## 6. Forma e profundidade
 
-- `--radius` do produto é `0.625rem`; todos os raios derivam dele (`rounded-sm|md|lg|xl|2xl`). Não usar raios arbitrários.
+- `--radius` do produto é `0.625rem`; toda a escala (`rounded-xs|sm|md|lg|xl|2xl|3xl`) deriva dele por múltiplos fixos — nunca declarar um raio isolado. Não usar raios arbitrários (`rounded-[10px]` etc.): se a escala não tem o valor certo, o valor certo é o mais próximo da escala, não um número novo.
+- **Admin usa `--radius: 0.5rem`**, aplicado em `.admin-theme`. É a mesma escala, só com a base menor — reforça a leitura de precisão/densidade da área operacional (§2) sem introduzir um vocabulário de forma diferente. `rounded-full` (pílulas, avatares) e `rounded-none` continuam fora da escala, como sempre.
 - Elevação vem de `shadow-surface` (cards) e `shadow-overlay` (modais, popovers). Profundidade indica hierarquia, não decoração.
 - Imagens usam proporção consistente e `object-fit: cover`.
 

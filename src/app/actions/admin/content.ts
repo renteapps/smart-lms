@@ -5,10 +5,13 @@ import { requireAdmin } from "@/lib/supabase/auth";
 import { agentToRow, ensureUniqueSlug, slugifyAgentName } from "@/lib/data/agents";
 import { pilulaToRow } from "@/lib/data/pilulas";
 import { profileTestToRow } from "@/lib/data/profileTests";
+import { getContentIndex } from "@/lib/data/content";
+import { listQuestionnaireVersions } from "@/lib/data/trail";
+import { validateQuestionnaire } from "@/lib/matching";
 import type { Agent, AgentFormPayload } from "@/types/agente";
 import type { Pilula } from "@/types/pilula";
 import type { ProfileTest } from "@/types/profileTest";
-import type { Questionnaire } from "@/types/trilha";
+import type { Question, QuestionnaireVersion } from "@/types/trilha";
 import type { ActionResult } from "../progress";
 
 type Saved<T> = { success: boolean; message?: string; data?: T };
@@ -172,25 +175,33 @@ export async function deleteProfileTest(id: string): Promise<ActionResult> {
 /**
  * Salva o rascunho do questionário.
  *
- * Publicar cria uma versão nova em vez de mutar a publicada: as trilhas já
- * geradas guardam `questionnaireVersion`, e é isso que permite detectar quem
- * respondeu uma versão antiga e oferecer a recalibração.
+ * Sempre grava por `id` quando já existe rascunho — nunca por `upsert` em
+ * `version` — porque o rascunho e o publicado podiam colidir na mesma versão
+ * e o upsert antigo rebaixava a versão publicada para `draft`, derrubando o
+ * onboarding de quem já estava usando o link.
  */
-export async function saveQuestionnaire(
-  questionnaire: Questionnaire,
-  publish = false,
+export async function saveQuestionnaireDraft(
+  questions: Question[],
+  notes?: string,
 ): Promise<Saved<{ version: number }>> {
   try {
-    const { adminClient } = await requireAdmin();
+    const { adminClient, user } = await requireAdmin();
 
-    if (!publish) {
-      const { error } = await adminClient.from("trail_questionnaires").upsert(
-        { version: questionnaire.version, status: "draft", questions: questionnaire.questions },
-        { onConflict: "version" },
-      );
-      return error
-        ? { success: false, message: error.message }
-        : { success: true, data: { version: questionnaire.version } };
+    const { data: existingDraft } = await adminClient
+      .from("trail_questionnaires")
+      .select("id, version")
+      .eq("status", "draft")
+      .maybeSingle();
+
+    if (existingDraft) {
+      const { error } = await adminClient
+        .from("trail_questionnaires")
+        .update({ questions, notes: notes ?? null })
+        .eq("id", existingDraft.id);
+
+      if (error) return { success: false, message: error.message };
+      revalidatePath("/admin/onboarding");
+      return { success: true, data: { version: existingDraft.version } };
     }
 
     const { data: latest } = await adminClient
@@ -200,24 +211,117 @@ export async function saveQuestionnaire(
       .limit(1)
       .maybeSingle();
 
-    const nextVersion = Math.max(questionnaire.version, (latest?.version ?? 0) + 1);
+    const draftVersion = (latest?.version ?? 0) + 1;
 
-    // O índice parcial garante uma publicada por vez: rebaixa a atual primeiro.
-    await adminClient
-      .from("trail_questionnaires")
-      .update({ status: "archived" })
-      .eq("status", "published");
+    const { error } = await adminClient.from("trail_questionnaires").insert({
+      version: draftVersion,
+      status: "draft",
+      questions,
+      notes: notes ?? null,
+      created_by: user.id,
+    });
 
-    const { error } = await adminClient.from("trail_questionnaires").upsert(
-      { version: nextVersion, status: "published", questions: questionnaire.questions },
-      { onConflict: "version" },
-    );
+    if (error) return { success: false, message: error.message };
+    revalidatePath("/admin/onboarding");
+    return { success: true, data: { version: draftVersion } };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+/**
+ * Publica o rascunho como uma versão nova, nunca mutando a que já está no ar.
+ *
+ * As trilhas já geradas guardam `questionnaireVersion`, e é isso que permite
+ * detectar quem respondeu uma versão antiga e oferecer a recalibração. A
+ * troca de versão publicada + arquivamento da anterior roda inteira dentro de
+ * `publish_trail_questionnaire` (SECURITY DEFINER): Server Actions são
+ * alcançáveis por POST direto, então a validação abaixo — e a checagem de
+ * admin dentro da própria função do banco — são a garantia real, não só a UI.
+ */
+export async function publishQuestionnaire(
+  questions: Question[],
+  notes?: string,
+): Promise<Saved<{ version: number }>> {
+  try {
+    const { supabase, adminClient, user } = await requireAdmin();
+
+    const index = await getContentIndex(adminClient);
+    const errors = validateQuestionnaire({ version: 0, status: "draft", questions }, index);
+    if (errors.length > 0) {
+      return { success: false, message: errors.join(" ") };
+    }
+
+    // Roda no client de sessão (não no adminClient): a função do banco lê
+    // `auth.uid()` para registrar o autor e checar `is_admin()` de novo.
+    const { data: version, error } = await supabase.rpc("publish_trail_questionnaire", {
+      p_questions: questions,
+      p_notes: notes ?? null,
+    });
 
     if (error) return { success: false, message: error.message };
 
+    await adminClient.from("audit_logs").insert({
+      actor_id: user.id,
+      action: "publish_questionnaire",
+      target_type: "trail_questionnaire",
+      target_id: String(version),
+      metadata: { notes: notes ?? null, questionCount: questions.length },
+    });
+
     revalidatePath("/onboarding");
-    revalidatePath("/admin/trilhas/questionario");
-    return { success: true, data: { version: nextVersion } };
+    revalidatePath("/admin/onboarding");
+    return { success: true, data: { version: version as number } };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+/**
+ * Copia as perguntas de uma versão antiga de volta para o rascunho.
+ *
+ * Não republica sozinho: quem restaura revisa e decide publicar, então o
+ * questionário em produção nunca muda como efeito colateral de um clique.
+ */
+export async function restoreQuestionnaireVersion(version: number): Promise<Saved<{ version: number }>> {
+  try {
+    const { adminClient } = await requireAdmin();
+
+    const { data: target, error: targetError } = await adminClient
+      .from("trail_questionnaires")
+      .select("questions, notes")
+      .eq("version", version)
+      .maybeSingle();
+
+    if (targetError) return { success: false, message: targetError.message };
+    if (!target) return { success: false, message: "Versão não encontrada." };
+
+    return saveQuestionnaireDraft(target.questions ?? [], target.notes ?? undefined);
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+/** Descarta o rascunho em edição, voltando a tela a refletir só o publicado. */
+export async function discardQuestionnaireDraft(): Promise<ActionResult> {
+  try {
+    const { adminClient } = await requireAdmin();
+    const { error } = await adminClient.from("trail_questionnaires").delete().eq("status", "draft");
+    if (error) return { success: false, message: error.message };
+
+    revalidatePath("/admin/onboarding");
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+/** Alimenta o painel de histórico do admin — chamado sob demanda, não a cada digitação. */
+export async function getQuestionnaireVersions(): Promise<Saved<{ versions: QuestionnaireVersion[] }>> {
+  try {
+    const { adminClient } = await requireAdmin();
+    const versions = await listQuestionnaireVersions(adminClient);
+    return { success: true, data: { versions } };
   } catch (error) {
     return { success: false, message: (error as Error).message };
   }

@@ -3,10 +3,15 @@
 import React, { useMemo, useState } from 'react';
 import { Questionnaire, StudyAvailability, Weekday } from '@/types/trilha';
 import { generateLearningTrail } from '@/lib/matching';
+import type { ContentIndex } from '@/lib/contentCatalog';
 import { CalendarDays, Clock3, Sparkles, TriangleAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface TrailPreviewProps { questionnaire: Questionnaire }
+interface TrailPreviewProps {
+  questionnaire: Questionnaire;
+  /** Catálogo real — a prévia simula exatamente o que o aluno receberia. */
+  index: ContentIndex;
+}
 
 const DAYS: Array<{ value: Weekday; label: string }> = [
   { value: 1, label: 'Seg' }, { value: 2, label: 'Ter' }, { value: 3, label: 'Qua' },
@@ -15,7 +20,7 @@ const DAYS: Array<{ value: Weekday; label: string }> = [
 
 const roleLabels = { essential: 'Essencial', deepening: 'Aprofundamento', extra: 'Extra' };
 
-export const TrailPreview: React.FC<TrailPreviewProps> = ({ questionnaire }) => {
+export const TrailPreview: React.FC<TrailPreviewProps> = ({ questionnaire, index }) => {
   const contentQuestions = questionnaire.questions.filter((question) => question.type !== 'availability');
   const [answers, setAnswers] = useState<Record<string, string[]>>(() => Object.fromEntries(
     contentQuestions.map((question) => [question.id, question.options[0] ? [question.options[0].label] : []]),
@@ -23,8 +28,8 @@ export const TrailPreview: React.FC<TrailPreviewProps> = ({ questionnaire }) => 
   const [availability, setAvailability] = useState<StudyAvailability>({ weekdays: [1, 3, 5], minutesPerSession: 30 });
 
   const trail = useMemo(
-    () => generateLearningTrail('preview', answers, questionnaire, availability),
-    [answers, availability, questionnaire],
+    () => generateLearningTrail('preview', answers, questionnaire, availability, undefined, new Date(), index),
+    [answers, availability, questionnaire, index],
   );
   const sessions = useMemo(() => trail.items.reduce<Record<string, typeof trail.items>>((groups, item) => {
     groups[item.sessionId] = [...(groups[item.sessionId] || []), item];

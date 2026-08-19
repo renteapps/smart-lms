@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeQuestionnaire } from './adminTrailDiagnostics';
 import { Questionnaire } from '@/types/trilha';
-import { mockQuestionnaire } from './seed/questionnaire';
+import { mockQuestionnaire, TRAIL_CONTENT_INDEX } from './seed/questionnaire';
 
 describe('admin trail diagnostics', () => {
   it('detects answers without content and content shared by exclusive answers', () => {
@@ -15,7 +15,7 @@ describe('admin trail diagnostics', () => {
         ],
       }, mockQuestionnaire.questions.at(-1)!],
     };
-    const diagnostics = analyzeQuestionnaire(questionnaire);
+    const diagnostics = analyzeQuestionnaire(questionnaire, TRAIL_CONTENT_INDEX);
     expect(diagnostics.some((item) => item.title === 'Resposta sem conteúdo associado')).toBe(true);
     expect(diagnostics.some((item) => item.title === 'Conteúdo em respostas exclusivas')).toBe(true);
   });

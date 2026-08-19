@@ -24,7 +24,6 @@ import {
 import { Button, Card } from "@heroui/react";
 import { Company, CompanyPlanType, CompanyStatus } from "@/types/business";
 import { saveCompany } from "@/app/actions/admin/platform";
-import { CATALOG_COURSES } from "@/lib/catalog";
 import { StatusBadge } from "@/components/ui/editorial";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -33,6 +32,7 @@ import { ImageUpload } from "@/components/ui/ImageUpload";
 interface CompanyFormProps {
   initialCompany?: Company | null;
   mode?: "create" | "edit";
+  availableCourses?: any[];
 }
 
 const DEFAULT_DEPARTMENTS = [
@@ -44,7 +44,7 @@ const DEFAULT_DEPARTMENTS = [
   "Financeiro",
 ];
 
-export function CompanyForm({ initialCompany, mode = "create" }: CompanyFormProps) {
+export function CompanyForm({ initialCompany, mode = "create", availableCourses = [] }: CompanyFormProps) {
   const router = useRouter();
 
   const isEditing = mode === "edit" || !!initialCompany;
@@ -89,7 +89,7 @@ export function CompanyForm({ initialCompany, mode = "create" }: CompanyFormProp
 
   // 5. Cursos
   const [selectedCourses, setSelectedCourses] = useState<string[]>(
-    initialCompany?.allowedCourseIds || CATALOG_COURSES.map((c) => c.id)
+    initialCompany?.allowedCourseIds || availableCourses.map((c) => c.id)
   );
   const [courseSearch, setCourseSearch] = useState("");
 
@@ -136,10 +136,10 @@ export function CompanyForm({ initialCompany, mode = "create" }: CompanyFormProp
   };
 
   const handleSelectAllCourses = () => {
-    if (selectedCourses.length === CATALOG_COURSES.length) {
+    if (selectedCourses.length === availableCourses.length) {
       setSelectedCourses([]);
     } else {
-      setSelectedCourses(CATALOG_COURSES.map((c) => c.id));
+      setSelectedCourses(availableCourses.map((c) => c.id));
     }
   };
 
@@ -149,12 +149,12 @@ export function CompanyForm({ initialCompany, mode = "create" }: CompanyFormProp
       ? (contractValue / seatsTotal).toFixed(2)
       : "0.00";
 
-  const filteredCourses = CATALOG_COURSES.filter((course) => {
+  const filteredCourses = availableCourses.filter((course) => {
     const q = courseSearch.toLowerCase();
     return (
       course.title.toLowerCase().includes(q) ||
       course.category.toLowerCase().includes(q) ||
-      course.description.toLowerCase().includes(q)
+      (course.description || "").toLowerCase().includes(q)
     );
   });
 
@@ -691,7 +691,7 @@ export function CompanyForm({ initialCompany, mode = "create" }: CompanyFormProp
                 </div>
                 <div>
                   <h2 className="text-sm font-bold text-foreground">
-                    Cursos Liberados no Pacote ({selectedCourses.length} de {CATALOG_COURSES.length})
+                    Cursos Liberados no Pacote ({selectedCourses.length} de {availableCourses.length})
                   </h2>
                   <p className="text-xs text-muted">
                     Selecione quais conteúdos do catálogo ficarão disponíveis para esta organização.
@@ -706,7 +706,7 @@ export function CompanyForm({ initialCompany, mode = "create" }: CompanyFormProp
                 className="text-xs font-semibold shrink-0"
                 onPress={handleSelectAllCourses}
               >
-                {selectedCourses.length === CATALOG_COURSES.length
+                {selectedCourses.length === availableCourses.length
                   ? "Desmarcar Todos"
                   : "Liberar Catálogo Completo"}
               </Button>
@@ -849,7 +849,7 @@ export function CompanyForm({ initialCompany, mode = "create" }: CompanyFormProp
                   <span className="text-muted block text-[11px]">Cursos Liberados</span>
                   <strong className="text-sm font-bold text-foreground flex items-center gap-1.5 mt-0.5">
                     <CheckCircle2 className="size-4 text-success" />
-                    {selectedCourses.length} de {CATALOG_COURSES.length}
+                    {selectedCourses.length} de {availableCourses.length}
                   </strong>
                 </div>
 

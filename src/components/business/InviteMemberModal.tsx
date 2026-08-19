@@ -11,8 +11,8 @@ import {
 import { UserPlus, Mail, Building2, Check, AlertCircle } from "lucide-react";
 import { Company, MemberRole } from "@/types/business";
 import { inviteMember } from "@/app/actions/admin/platform";
-import { CATALOG_COURSES } from "@/lib/catalog";
 import { toast } from "sonner";
+import { CatalogCourse } from "@/types/course";
 
 interface InviteMemberModalProps {
   isOpen: boolean;
@@ -20,6 +20,7 @@ interface InviteMemberModalProps {
   company: Company;
   onSuccess: () => void;
   availableSeats: number;
+  availableCourses?: CatalogCourse[];
 }
 
 export function InviteMemberModal({
@@ -28,6 +29,7 @@ export function InviteMemberModal({
   company,
   onSuccess,
   availableSeats,
+  availableCourses = [],
 }: InviteMemberModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -40,7 +42,7 @@ export function InviteMemberModal({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const availableCourses = CATALOG_COURSES.filter((c) =>
+  const companyCourses = availableCourses.filter((c) =>
     company.allowedCourseIds.includes(c.id)
   );
 
@@ -213,7 +215,7 @@ export function InviteMemberModal({
                     </span>
                   </div>
                   <div className="max-h-40 overflow-y-auto space-y-1.5 rounded-lg border border-border p-2 bg-surface">
-                    {availableCourses.map((course) => {
+                    {companyCourses.map((course) => {
                       const isSelected = selectedCourses.includes(course.id);
                       return (
                         <button

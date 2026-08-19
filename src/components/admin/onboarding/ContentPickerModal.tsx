@@ -1,13 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search, Video, Folder, BookOpen, FileText, Link as LinkIcon, Check, Plus } from 'lucide-react';
-import { getMockContentByType } from '@/lib/mocks/onboardingMocks';
+import { X, Search, Video, Folder, BookOpen, FileText, Link as LinkIcon, Check, Plus, Inbox } from 'lucide-react';
+import type { ContentIndex } from '@/lib/contentCatalog';
+import { filterContentByType } from '@/lib/contentCatalog';
 import { ContentMapping } from '@/types/trilha';
 
 interface ContentPickerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddMappings: (mappings: ContentMapping[]) => void;
+  /** Catálogo real montado a partir do Supabase — cursos, módulos, aulas e artigos publicados. */
+  index: ContentIndex;
 }
 
 const TABS = [
@@ -19,7 +22,7 @@ const TABS = [
   { id: 'external_link', label: 'Links Ext.', icon: LinkIcon },
 ];
 
-export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, onClose, onAddMappings }) => {
+export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, onClose, onAddMappings, index }) => {
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -29,13 +32,13 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
   const [customLinkUrl, setCustomLinkUrl] = useState('');
   const [customLinkDuration, setCustomLinkDuration] = useState(10);
 
-  const contents = useMemo(() => getMockContentByType(activeTab), [activeTab]);
+  const contents = useMemo(() => filterContentByType(index, activeTab), [index, activeTab]);
 
   const filteredContents = useMemo(() => {
     if (!search) return contents;
     const lowerSearch = search.toLowerCase();
-    return contents.filter(item => 
-      item.title.toLowerCase().includes(lowerSearch) || 
+    return contents.filter(item =>
+      item.title.toLowerCase().includes(lowerSearch) ||
       item.category?.toLowerCase().includes(lowerSearch)
     );
   }, [contents, search]);
@@ -55,7 +58,7 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
 
     // Add selected items from the list
     selectedIds.forEach(id => {
-      const item = getMockContentByType('all').find(i => i.id === id);
+      const item = index.byId(id);
       if (item) {
         newMappings.push({
           id: item.id,
@@ -82,7 +85,7 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
     }
 
     onAddMappings(newMappings);
-    
+
     // Reset state and close
     setSelectedIds(new Set());
     setCustomLinkTitle('');
@@ -139,8 +142,8 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors shrink-0 ${
-                    activeTab === tab.id 
-                      ? 'border-primary text-primary' 
+                    activeTab === tab.id
+                      ? 'border-primary text-primary'
                       : 'border-transparent text-text-mute hover:text-text'
                   }`}
                 >
@@ -154,8 +157,8 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
             <div className="p-5 border-b border-border/40 bg-surface-card/50">
               <div className="relative">
                 <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-mute" />
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar por título ou categoria..."
@@ -173,8 +176,8 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                     Adicionar Link Personalizado
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_120px] gap-3">
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Título do Link (ex: Entrar no Grupo VIP)"
                       value={customLinkTitle}
                       onChange={e => setCustomLinkTitle(e.target.value)}
@@ -190,8 +193,8 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                         className="w-12 bg-transparent text-sm text-text outline-none"
                       /> min
                     </label>
-                    <input 
-                      type="url" 
+                    <input
+                      type="url"
                       placeholder="https://..."
                       value={customLinkUrl}
                       onChange={e => setCustomLinkUrl(e.target.value)}
@@ -206,12 +209,12 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                   {filteredContents.map(item => {
                     const isSelected = selectedIds.has(item.id);
                     return (
-                      <div 
+                      <div
                         key={item.id}
                         onClick={() => toggleSelect(item.id)}
                         className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                          isSelected 
-                            ? 'border-primary bg-primary/5 shadow-sm' 
+                          isSelected
+                            ? 'border-primary bg-primary/5 shadow-sm'
                             : 'border-border/60 bg-surface hover:border-border hover:shadow-sm'
                         }`}
                       >
@@ -220,31 +223,37 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                         }`}>
                           {isSelected && <Check size={14} className="text-white" />}
                         </div>
-                        
+
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             {getIconForType(item.type)}
                             <span className="text-xs font-semibold uppercase tracking-wider text-text-mute">
                               {item.type}
                             </span>
+                            {item.estimatedDurationMin && (
+                              <span className="text-xs font-semibold text-text-mute">· {item.estimatedDurationMin} min</span>
+                            )}
                           </div>
                           <h4 className={`font-semibold text-sm truncate ${isSelected ? 'text-primary' : 'text-text'}`}>
                             {item.title}
                           </h4>
                           {item.category && (
-                            <p className="text-xs text-text-soft mt-0.5">{item.category}</p>
+                            <p className="text-xs text-text-soft mt-0.5 truncate">{item.category}</p>
                           )}
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              ) : (
+              ) : activeTab !== 'external_link' ? (
                 <div className="flex flex-col items-center justify-center py-12 text-text-mute">
-                  <Search size={40} className="mb-4 opacity-20" />
-                  <p>Nenhum conteúdo encontrado para sua busca.</p>
+                  <Inbox size={40} className="mb-4 opacity-20" />
+                  <p className="font-semibold">
+                    {search ? 'Nenhum conteúdo encontrado para sua busca.' : 'Nenhum conteúdo publicado nesta categoria ainda.'}
+                  </p>
+                  {!search && <p className="mt-1 text-xs text-text-soft">Publique cursos, módulos ou artigos para poder mapeá-los aqui.</p>}
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* Footer */}
@@ -254,13 +263,13 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                 {customLinkTitle && customLinkUrl ? ' + 1 Link Pers.' : ''}
               </span>
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={onClose}
                   className="px-5 py-2.5 rounded-lg font-semibold text-text-mute hover:text-text hover:bg-surface-hover transition-colors"
                 >
                   Cancelar
                 </button>
-                <button 
+                <button
                   onClick={handleAdd}
                   disabled={selectedIds.size === 0 && (!customLinkTitle || !customLinkUrl)}
                   className="px-6 py-2.5 rounded-lg font-bold bg-primary text-white hover:bg-primary-active disabled:opacity-50 transition-colors shadow-sm"

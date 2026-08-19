@@ -14,7 +14,20 @@
 @custom-variant dark (&:is(.dark *, [data-theme="dark"] *));
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.625rem;
+
+  /*
+   * HeroUI só deriva `xs/xl/2xl/3xl/4xl` de `--radius` (ver node_modules/@heroui/styles).
+   * `sm/md/lg` ficavam presos no default fixo do Tailwind, o que empurrava o produto a
+   * escrever raios arbitrários (`rounded-[10px]`, `rounded-[12px]`...) toda vez que precisava
+   * de um meio-termo. Completar a escala aqui é o que torna "todos os raios derivam de
+   * --radius" (design.md §6) verdadeiro, e é o que faz o admin ficar menos arredondado só
+   * por trocar um token — HeroUI e as classes `rounded-*` do produto passam a ler o mesmo
+   * `--radius` do ponto em que estão.
+   */
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
 }
 
 /* ---------------------------------------------------------------------------
@@ -183,9 +196,16 @@
   --duration-lg: 420ms;
 }
 
-/* O admin usa um canvas mais frio para separar a área operacional do site. */
+/*
+ * O admin usa um canvas mais frio para separar a área operacional do site, e uma base de
+ * raio menor (design.md §6): mesma escala do produto, só mais contida — o vocabulário de
+ * precisão que a área pede. Como toda a escala deriva de `--radius`, este único token
+ * ajusta Card, Modal, Popover, Dropdown, Table, Tabs, Alert, Toast, Tooltip, Button e
+ * campos do HeroUI, além de qualquer `rounded-*` do produto dentro do admin.
+ */
 .admin-theme {
   --background: var(--surface-secondary);
+  --radius: 0.5rem;
 }
 
 @layer base {

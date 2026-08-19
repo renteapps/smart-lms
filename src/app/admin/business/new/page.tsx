@@ -4,21 +4,26 @@ import React, { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { CompanyForm } from "@/components/admin/business/CompanyForm";
 import { getCompanyById } from "@/lib/data/business";
+import { getCatalogCourses } from "@/lib/data/courses";
 import { createClient } from "@/lib/supabase/client";
+import { CatalogCourse } from "@/types/course";
 
 function BusinessNewContent() {
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
   const [initialCompany, setInitialCompany] = React.useState<any>(null);
-  const [loading, setLoading] = React.useState(!!editId);
+  const [availableCourses, setAvailableCourses] = React.useState<CatalogCourse[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     async function load() {
+      const db = createClient();
       if (editId) {
-        const db = createClient();
         const found = await getCompanyById(db, editId);
         setInitialCompany(found);
       }
+      const courses = await getCatalogCourses(db);
+      setAvailableCourses(courses);
       setLoading(false);
     }
     load();
@@ -36,6 +41,7 @@ function BusinessNewContent() {
     <CompanyForm
       initialCompany={initialCompany}
       mode={initialCompany ? "edit" : "create"}
+      availableCourses={availableCourses}
     />
   );
 }

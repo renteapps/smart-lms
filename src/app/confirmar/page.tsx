@@ -88,13 +88,12 @@ function ConfirmarContent() {
     }
 
     setErrorMessage(null);
-    const formData = new FormData();
-    formData.append("email", email.trim());
-    formData.append("next", next);
-
     startTransition(async () => {
       try {
-        const result = await resendSignUpEmailAction(formData);
+        const result = await resendSignUpEmailAction({
+          email: email.trim(),
+          next: next,
+        });
         if (!result.success) {
           setErrorMessage(result.error || "Não foi possível reenviar o e-mail no momento.");
         } else {

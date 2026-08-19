@@ -1,25 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { Search, MessageSquare, Filter, UserX, Trash2, Send, Globe, Lock } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { StatusBadge } from "@/components/ui/editorial";
-import { useNotifications } from "@/contexts/NotificationContext";
-import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import { AlertTriangle, Filter, Globe, Lock, MessageSquare, Send, Trash2, UserX } from "lucide-react";
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-
+  Button,
+  Card,
+  EmptyState,
+  Label,
+  Modal,
+  SearchField,
+  Table,
+  TextArea,
+  toast,
+} from "@heroui/react";
+import { PageHeader, StatusBadge } from "@/components/ui/editorial";
+import { useNotifications } from "@/contexts/NotificationContext";
 import { createClient } from "@/lib/supabase/client";
-import { useEffect } from "react";
 
 type CommentType = {
   id: string;
@@ -33,6 +30,11 @@ type CommentType = {
   status: "Aguardando" | "Respondido";
 };
 
+const filters = [
+  { id: "all", label: "Todos" },
+  { id: "pending", label: "Aguardando resposta" },
+] as const;
+
 export default function AdminComentarios() {
   const [selectedComment, setSelectedComment] = useState<CommentType | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -41,6 +43,10 @@ export default function AdminComentarios() {
 
   const [comments, setComments] = useState<CommentType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<(typeof filters)[number]["id"]>("all");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
 
   const loadComments = async () => {
     setIsLoading(true);
@@ -97,7 +103,7 @@ export default function AdminComentarios() {
       setComments(formatted);
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao carregar comentários.");
+      toast.danger("Erro ao carregar comentários.");
     } finally {
       setIsLoading(false);
     }
@@ -131,273 +137,323 @@ export default function AdminComentarios() {
         targetId: selectedComment.studentEmail,
         channels: ["platform"],
       });
-      
+
       toast.success("Resposta enviada e aluno notificado!");
       setSelectedComment(null);
       setReplyText("");
       loadComments();
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao enviar resposta.");
+      toast.danger("Erro ao enviar resposta.");
     }
   };
 
+  const filtered = comments
+    .filter((c) => filter === "all" || c.status === "Aguardando")
+    .filter((c) =>
+      !search.trim() ||
+      c.studentName.toLowerCase().includes(search.toLowerCase()) ||
+      c.content.toLowerCase().includes(search.toLowerCase()) ||
+      c.courseName.toLowerCase().includes(search.toLowerCase()),
+    );
+
+  const isEmpty = !isLoading && filtered.length === 0;
+
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-display font-black text-primary flex items-center gap-3">
-            <MessageSquare className="w-8 h-8" />
-            Comentários
-          </h1>
-          <p className="text-text-soft mt-1">Gerencie e responda às dúvidas dos alunos em todos os cursos.</p>
-        </div>
-        <button className="bg-surface-hover text-text px-4 py-2 rounded-xl font-semibold hover:bg-surface-active transition-all flex items-center gap-2 border border-border/40">
-          <Filter className="w-4 h-4" />
-          <span>Filtrar</span>
-        </button>
-      </div>
-      
-      <div className="bg-surface-card rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden border border-border/40">
-        <div className="p-6 border-b border-border/40 flex flex-col md:flex-row justify-between md:items-center gap-4">
+    <div className="space-y-7">
+      <PageHeader
+        eyebrow="Pessoas"
+        title="Comentários"
+        description="Gerencie e responda às dúvidas dos alunos em todos os cursos."
+        actions={
+          <Button variant="outline" size="md" className="gap-2">
+            <Filter className="size-4" aria-hidden="true" />
+            Filtrar
+          </Button>
+        }
+      />
+
+      <Card>
+        <Card.Header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex gap-2">
-            <button className="px-4 py-2 rounded-full text-sm font-semibold bg-primary text-on-primary">
-              Todos
-            </button>
-            <button className="px-4 py-2 rounded-full text-sm font-semibold bg-surface hover:bg-surface-hover text-text-soft transition-colors border border-border/40">
-              Aguardando Resposta
-            </button>
+            {filters.map((f) => (
+              <Button
+                key={f.id}
+                variant={filter === f.id ? "primary" : "outline"}
+                size="sm"
+                className="rounded-full"
+                onClick={() => setFilter(f.id)}
+              >
+                {f.label}
+              </Button>
+            ))}
           </div>
-          <div className="relative w-full md:w-64">
-            <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-text-mute" />
-            <input 
-              type="text" 
-              placeholder="Buscar comentário..." 
-              className="w-full bg-canvas-soft border-transparent rounded-xl pl-12 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:bg-surface transition-all"
-            />
-          </div>
-        </div>
+          <SearchField value={search} onChange={setSearch} className="w-full md:w-72" aria-label="Buscar comentário">
+            <Label className="sr-only">Buscar comentário</Label>
+            <SearchField.Group>
+              <SearchField.SearchIcon />
+              <SearchField.Input placeholder="Buscar comentário..." />
+              <SearchField.ClearButton />
+            </SearchField.Group>
+          </SearchField>
+        </Card.Header>
 
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full text-left border-collapse min-w-[900px]">
-            <thead>
-              <tr className="border-b border-border/40 bg-surface-hover/50">
-                <th className="py-4 px-6 font-semibold text-text-soft text-sm uppercase tracking-wider w-[20%]">Aluno</th>
-                <th className="py-4 px-6 font-semibold text-text-soft text-sm uppercase tracking-wider w-[25%]">Curso / Aula</th>
-                <th className="py-4 px-6 font-semibold text-text-soft text-sm uppercase tracking-wider w-[35%]">Comentário</th>
-                <th className="py-4 px-6 font-semibold text-text-soft text-sm uppercase tracking-wider w-[10%]">Status</th>
-                <th className="py-4 px-6 font-semibold text-text-soft text-sm uppercase tracking-wider text-right w-[10%]">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan={5} className="py-8 px-6 text-center text-sm text-text-mute">
-                    Carregando comentários...
-                  </td>
-                </tr>
-              ) : comments.map((comment) => (
-                <tr 
-                  key={comment.id} 
-                  className="border-b border-border/40 hover:bg-surface-hover transition-colors group cursor-pointer"
-                  onClick={() => setSelectedComment(comment)}
-                >
-                  <td className="py-4 px-6">
-                    <div className="font-medium text-ink-deep">{comment.studentName}</div>
-                    <div className="text-xs text-text-mute">{comment.studentEmail}</div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="font-medium text-ink-deep text-sm">{comment.courseName}</div>
-                    <div className="text-xs text-text-soft">{comment.lessonName}</div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <p className="text-sm text-text-soft line-clamp-2">
-                      {comment.content}
-                    </p>
-                    <div className="text-xs text-text-mute mt-1">{comment.timeAgo}</div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap ${
-                      comment.status === "Aguardando" 
-                        ? "bg-warning/10 text-warning" 
-                        : "bg-positive/10 text-positive"
-                    }`}>
-                      {comment.status}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 text-right">
-                    <button 
-                      className="text-sm font-medium text-primary hover:bg-primary/10 px-4 py-2 bg-primary/5 rounded-lg opacity-100 md:opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedComment(comment);
-                      }}
-                    >
-                      {comment.status === "Aguardando" ? "Responder" : "Ver"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="divide-y divide-border md:hidden">
+        <Card.Content className="px-0 pb-0">
           {isLoading ? (
-            <div className="p-8 text-center text-sm text-text-mute">
-              Carregando comentários...
-            </div>
-          ) : comments.map((comment) => (
-            <article key={comment.id} className="p-4" onClick={() => setSelectedComment(comment)}>
-              <div className="flex items-start justify-between gap-3"><div><p className="font-bold text-ink">{comment.studentName}</p><p className="text-xs text-text-mute">{comment.studentEmail}</p></div><StatusBadge tone={comment.status === "Aguardando" ? "warning" : "positive"}>{comment.status}</StatusBadge></div>
-              <p className="mt-3 text-xs font-bold text-primary-active">{comment.courseName}</p><p className="mt-1 text-xs text-text-mute">{comment.lessonName}</p>
-              <p className="mt-3 line-clamp-3 text-sm leading-6 text-text-soft">{comment.content}</p>
-              <div className="mt-4 flex items-center justify-between"><span className="text-xs font-medium text-text-mute">{comment.timeAgo}</span><button onClick={(event) => { event.stopPropagation(); setSelectedComment(comment); }} className="min-h-10 rounded-[10px] bg-primary-pale px-3 text-sm font-bold text-primary-active">{comment.status === "Aguardando" ? "Responder" : "Ver"}</button></div>
-            </article>
-          ))}
-        </div>
-      </div>
-
-      <Dialog open={!!selectedComment} onOpenChange={(open) => !open && setSelectedComment(null)}>
-        <DialogContent className="sm:max-w-[600px] bg-surface-card border-border/40 p-0 overflow-hidden rounded-2xl">
-          {selectedComment && (
+            <div className="px-6 py-10 text-center text-sm text-muted">Carregando comentários...</div>
+          ) : isEmpty ? (
+            <EmptyState className="flex flex-col items-center gap-2 px-6 py-14 text-center">
+              <span className="grid size-11 place-items-center rounded-xl bg-background-secondary">
+                <MessageSquare className="size-5 text-muted" aria-hidden="true" />
+              </span>
+              <p className="font-semibold text-foreground">Nenhum comentário encontrado</p>
+              <p className="text-sm text-muted">Ajuste os filtros ou a busca para ver outros comentários.</p>
+            </EmptyState>
+          ) : (
             <>
-              <div className="p-6 border-b border-border/40 bg-surface-hover/30">
-                <div className="flex justify-between items-start gap-4">
-                  <div>
-                    <h3 className="font-display font-bold text-xl text-ink-deep mb-1">
-                      {selectedComment.courseName}
-                    </h3>
-                    <p className="text-sm text-primary font-semibold">
-                      {selectedComment.lessonName}
-                    </p>
-                  </div>
-                  <span className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap mt-1 ${
-                      selectedComment.status === "Aguardando" 
-                        ? "bg-warning/10 text-warning" 
-                        : "bg-positive/10 text-positive"
-                    }`}>
-                      {selectedComment.status}
-                  </span>
-                </div>
+              <div className="hidden md:block">
+                <Table.Root>
+                  <Table.ScrollContainer>
+                    <Table.Content aria-label="Comentários dos alunos">
+                      <Table.Header>
+                        <Table.Column isRowHeader>Aluno</Table.Column>
+                        <Table.Column>Curso / Aula</Table.Column>
+                        <Table.Column>Comentário</Table.Column>
+                        <Table.Column>Status</Table.Column>
+                        <Table.Column><span className="sr-only">Ações</span></Table.Column>
+                      </Table.Header>
+                      <Table.Body items={filtered}>
+                        {(comment) => (
+                          <Table.Row id={comment.id} onAction={() => setSelectedComment(comment)}>
+                            <Table.Cell>
+                              <div className="font-semibold text-foreground">{comment.studentName}</div>
+                              <div className="text-xs text-muted">{comment.studentEmail}</div>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <div className="text-sm font-medium text-foreground">{comment.courseName}</div>
+                              <div className="text-xs text-muted">{comment.lessonName}</div>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <p className="line-clamp-2 max-w-sm text-sm text-muted">{comment.content}</p>
+                              <div className="mt-1 text-xs text-muted">{comment.timeAgo}</div>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <StatusBadge tone={comment.status === "Aguardando" ? "warning" : "positive"}>
+                                {comment.status}
+                              </StatusBadge>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <Button variant="ghost" size="sm" onClick={() => setSelectedComment(comment)}>
+                                {comment.status === "Aguardando" ? "Responder" : "Ver"}
+                              </Button>
+                            </Table.Cell>
+                          </Table.Row>
+                        )}
+                      </Table.Body>
+                    </Table.Content>
+                  </Table.ScrollContainer>
+                </Table.Root>
               </div>
 
-              <div className="p-6">
-                <div className="flex items-start gap-4 mb-6">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary font-bold">
-                    {selectedComment.studentName.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-semibold text-ink-deep">{selectedComment.studentName}</span>
-                      <span className="text-xs text-text-mute">{selectedComment.timeAgo}</span>
+              <ul className="divide-y divide-separator md:hidden">
+                {filtered.map((comment) => (
+                  <li key={comment.id} className="p-4" onClick={() => setSelectedComment(comment)}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-bold text-foreground">{comment.studentName}</p>
+                        <p className="text-xs text-muted">{comment.studentEmail}</p>
+                      </div>
+                      <StatusBadge tone={comment.status === "Aguardando" ? "warning" : "positive"}>
+                        {comment.status}
+                      </StatusBadge>
                     </div>
-                    <p className="text-text-soft text-sm mb-1">{selectedComment.studentEmail}</p>
-                    <div className="bg-canvas p-4 rounded-xl mt-3 text-ink-deep border border-border/40 relative">
-                      <div className="absolute top-0 left-4 -translate-y-full w-0 h-0 border-8 border-transparent border-b-canvas"></div>
-                      <div className="absolute top-[-1px] left-4 -translate-y-full w-0 h-0 border-[9px] border-transparent border-b-border/40 -z-10"></div>
-                      {selectedComment.content}
+                    <p className="mt-3 text-xs font-bold text-accent">{comment.courseName}</p>
+                    <p className="mt-1 text-xs text-muted">{comment.lessonName}</p>
+                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted">{comment.content}</p>
+                    <div className="mt-4 flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted">{comment.timeAgo}</span>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedComment(comment);
+                        }}
+                      >
+                        {comment.status === "Aguardando" ? "Responder" : "Ver"}
+                      </Button>
                     </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4 mb-2">
-                    <button 
-                      onClick={() => setReplyVisibility("public")}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                        replyVisibility === "public" 
-                        ? "bg-primary text-on-primary shadow-sm" 
-                        : "bg-surface text-text-soft hover:bg-surface-hover border border-border/40"
-                      }`}
-                    >
-                      <Globe className="w-4 h-4" />
-                      Visível para todos
-                    </button>
-                    <button 
-                      onClick={() => setReplyVisibility("private")}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                        replyVisibility === "private" 
-                        ? "bg-primary text-on-primary shadow-sm" 
-                        : "bg-surface text-text-soft hover:bg-surface-hover border border-border/40"
-                      }`}
-                    >
-                      <Lock className="w-4 h-4" />
-                      Só para o aluno
-                    </button>
-                  </div>
-                  
-                  <textarea 
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="Escreva sua resposta aqui..."
-                    className="w-full bg-canvas-soft border border-border/60 rounded-xl p-4 min-h-[120px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all text-ink-deep placeholder:text-text-mute resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="p-4 border-t border-border/40 bg-surface-hover/30 flex justify-between items-center">
-                <div className="flex gap-2">
-                  <AlertDialog>
-                    <AlertDialogTrigger render={<button className="p-2 text-text-soft hover:text-negative hover:bg-negative/10 rounded-lg transition-colors group" title="Excluir Comentário" />}>
-                      <Trash2 className="w-5 h-5" />
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-surface-card border-border/40">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="text-ink-deep font-display font-black">Excluir Comentário?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-text-soft">
-                          Tem certeza de que deseja excluir permanentemente este comentário? Esta ação não pode ser desfeita.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel className="bg-surface text-text hover:bg-surface-hover border-border/40">Cancelar</AlertDialogCancel>
-                        <AlertDialogAction className="bg-negative text-on-negative hover:bg-negative/90" onClick={() => setSelectedComment(null)}>
-                          Excluir Comentário
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-
-                  <AlertDialog>
-                    <AlertDialogTrigger render={<button className="p-2 text-text-soft hover:text-negative hover:bg-negative/10 rounded-lg transition-colors" title="Bloquear Aluno" />}>
-                      <UserX className="w-5 h-5" />
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-surface-card border-border/40">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="text-ink-deep font-display font-black">Bloquear Aluno?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-text-soft">
-                          Tem certeza de que deseja bloquear este aluno de comentar? Ele não poderá mais enviar dúvidas nos cursos.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel className="bg-surface text-text hover:bg-surface-hover border-border/40">Cancelar</AlertDialogCancel>
-                        <AlertDialogAction className="bg-negative text-on-negative hover:bg-negative/90">
-                          Bloquear Aluno
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-                
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => setSelectedComment(null)}
-                    className="px-5 py-2.5 rounded-xl font-semibold text-text-soft hover:bg-surface transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button 
-                    onClick={handleSendReply}
-                    className="bg-primary text-on-primary px-6 py-2.5 rounded-xl font-semibold hover:bg-primary-active transition-all flex items-center gap-2 shadow-sm"
-                  >
-                    <Send className="w-4 h-4" />
-                    <span>Enviar Resposta</span>
-                  </button>
-                </div>
-              </div>
+                  </li>
+                ))}
+              </ul>
             </>
           )}
-        </DialogContent>
-      </Dialog>
+        </Card.Content>
+      </Card>
+
+      <Modal.Root isOpen={!!selectedComment} onOpenChange={(open) => !open && setSelectedComment(null)}>
+        <Modal.Backdrop>
+          <Modal.Container size="lg">
+            <Modal.Dialog>
+              {selectedComment && (
+                <>
+                  <Modal.Header className="flex flex-row items-start justify-between gap-4">
+                    <div>
+                      <p className="font-display text-xl font-bold text-foreground">{selectedComment.courseName}</p>
+                      <p className="text-sm font-semibold text-accent">{selectedComment.lessonName}</p>
+                    </div>
+                    <StatusBadge tone={selectedComment.status === "Aguardando" ? "warning" : "positive"}>
+                      {selectedComment.status}
+                    </StatusBadge>
+                  </Modal.Header>
+
+                  <Modal.Body className="space-y-6">
+                    <div className="flex items-start gap-4">
+                      <div className="grid size-10 shrink-0 place-items-center rounded-full bg-accent-soft font-bold text-accent-soft-foreground">
+                        {selectedComment.studentName.charAt(0)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline gap-2">
+                          <span className="font-semibold text-foreground">{selectedComment.studentName}</span>
+                          <span className="text-xs text-muted">{selectedComment.timeAgo}</span>
+                        </div>
+                        <p className="mb-1 text-sm text-muted">{selectedComment.studentEmail}</p>
+                        <div className="mt-3 rounded-xl border border-border bg-background-secondary p-4 text-foreground">
+                          {selectedComment.content}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant={replyVisibility === "public" ? "primary" : "outline"}
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => setReplyVisibility("public")}
+                        >
+                          <Globe className="size-4" aria-hidden="true" />
+                          Visível para todos
+                        </Button>
+                        <Button
+                          variant={replyVisibility === "private" ? "primary" : "outline"}
+                          size="sm"
+                          className="gap-2"
+                          onClick={() => setReplyVisibility("private")}
+                        >
+                          <Lock className="size-4" aria-hidden="true" />
+                          Só para o aluno
+                        </Button>
+                      </div>
+
+                      <TextArea
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder="Escreva sua resposta aqui..."
+                        rows={5}
+                        className="resize-none"
+                      />
+                    </div>
+                  </Modal.Body>
+
+                  <Modal.Footer className="flex items-center justify-between">
+                    <div className="flex gap-1">
+                      <Button
+                        isIconOnly
+                        variant="ghost"
+                        size="sm"
+                        aria-label="Excluir comentário"
+                        className="text-danger hover:bg-danger-soft hover:text-danger-soft-foreground"
+                        onClick={() => setConfirmDelete(true)}
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </Button>
+                      <Button
+                        isIconOnly
+                        variant="ghost"
+                        size="sm"
+                        aria-label="Bloquear aluno"
+                        className="text-danger hover:bg-danger-soft hover:text-danger-soft-foreground"
+                        onClick={() => setConfirmBlock(true)}
+                      >
+                        <UserX className="size-4" aria-hidden="true" />
+                      </Button>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <Button variant="tertiary" onClick={() => setSelectedComment(null)}>
+                        Cancelar
+                      </Button>
+                      <Button variant="primary" className="gap-2" onClick={handleSendReply}>
+                        <Send className="size-4" aria-hidden="true" />
+                        Enviar resposta
+                      </Button>
+                    </div>
+                  </Modal.Footer>
+                </>
+              )}
+            </Modal.Dialog>
+          </Modal.Container>
+        </Modal.Backdrop>
+      </Modal.Root>
+
+      <AlertDialog.Root isOpen={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialog.Backdrop>
+          <AlertDialog.Container size="md">
+            <AlertDialog.Dialog>
+              <AlertDialog.Header>
+                <AlertDialog.Icon status="danger">
+                  <AlertTriangle className="size-5" aria-hidden="true" />
+                </AlertDialog.Icon>
+                <AlertDialog.Heading>Excluir comentário?</AlertDialog.Heading>
+              </AlertDialog.Header>
+              <AlertDialog.Body>
+                <p>Tem certeza de que deseja excluir permanentemente este comentário? Esta ação não pode ser desfeita.</p>
+              </AlertDialog.Body>
+              <AlertDialog.Footer>
+                <Button variant="tertiary" onClick={() => setConfirmDelete(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    setConfirmDelete(false);
+                    setSelectedComment(null);
+                  }}
+                >
+                  Excluir comentário
+                </Button>
+              </AlertDialog.Footer>
+            </AlertDialog.Dialog>
+          </AlertDialog.Container>
+        </AlertDialog.Backdrop>
+      </AlertDialog.Root>
+
+      <AlertDialog.Root isOpen={confirmBlock} onOpenChange={setConfirmBlock}>
+        <AlertDialog.Backdrop>
+          <AlertDialog.Container size="md">
+            <AlertDialog.Dialog>
+              <AlertDialog.Header>
+                <AlertDialog.Icon status="danger">
+                  <AlertTriangle className="size-5" aria-hidden="true" />
+                </AlertDialog.Icon>
+                <AlertDialog.Heading>Bloquear aluno?</AlertDialog.Heading>
+              </AlertDialog.Header>
+              <AlertDialog.Body>
+                <p>Tem certeza de que deseja bloquear este aluno de comentar? Ele não poderá mais enviar dúvidas nos cursos.</p>
+              </AlertDialog.Body>
+              <AlertDialog.Footer>
+                <Button variant="tertiary" onClick={() => setConfirmBlock(false)}>
+                  Cancelar
+                </Button>
+                <Button variant="danger" onClick={() => setConfirmBlock(false)}>
+                  Bloquear aluno
+                </Button>
+              </AlertDialog.Footer>
+            </AlertDialog.Dialog>
+          </AlertDialog.Container>
+        </AlertDialog.Backdrop>
+      </AlertDialog.Root>
     </div>
   );
 }

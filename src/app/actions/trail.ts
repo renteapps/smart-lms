@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/supabase/auth";
+import { requireUser, requireAdmin } from "@/lib/supabase/auth";
 import type { LearningTrail, StudyAvailability } from "@/types/trilha";
 import type { TrailAnalyticsEvent, TrailAnalyticsEventType } from "@/lib/trailAnalytics";
 import { generateLearningTrail } from "@/lib/matching";
@@ -181,16 +181,15 @@ export async function getOnboardingData() {
 
 export async function getAdminTrailAnalytics() {
   try {
-    const { supabase } = await requireUser();
-    // Em um app real deveríamos validar se o usuário é admin
-    
+    const { adminClient } = await requireAdmin();
+
     const [analyticsData, { data: trailsData }] = await Promise.all([
-      trailData.getTrailAnalytics(supabase),
-      supabase.from("student_trails").select("trail_data")
+      trailData.getTrailAnalytics(adminClient),
+      adminClient.from("student_trails").select("trail_data"),
     ]);
-    
+
     const trails = (trailsData || []).map((t) => t.trail_data as LearningTrail).filter(Boolean);
-    
+
     return { success: true, data: analyticsData, trails };
   } catch (error) {
     return { success: false, message: (error as Error).message };

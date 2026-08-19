@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, BookOpen, MoreHorizontal, Plus } from "lucide-react";
+import { Button, Card, EmptyState, Table } from "@heroui/react";
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 import { createClient } from "@/lib/supabase/server";
 import { getProgressByCourse } from "@/lib/data/courses";
@@ -13,7 +14,7 @@ export default async function AdminUserMatriculasPage({ params }: { params: Prom
     .from("enrollments")
     .select(`
       status,
-      created_at,
+      enrolled_at,
       course_id,
       course:courses (
         id,
@@ -53,116 +54,137 @@ export default async function AdminUserMatriculasPage({ params }: { params: Prom
       progress: `${progress}%`,
       status: displayStatus,
       statusTone,
-      enrolledAt: new Date(enrollment.created_at).toLocaleDateString("pt-BR", { day: '2-digit', month: 'short', year: 'numeric' }),
+      enrolledAt: new Date(enrollment.enrolled_at).toLocaleDateString("pt-BR", { day: '2-digit', month: 'short', year: 'numeric' }),
     };
   });
 
   const concludedCount = matriculas.filter(m => m.status === "Concluído").length;
   const activeCount = matriculas.filter(m => m.status === "Em andamento").length;
 
+  const isEmpty = matriculas.length === 0;
+
   return (
     <div className="space-y-7 pb-16">
       <div>
-        <Link href={`/admin/users/${id}`} className="inline-flex items-center gap-2 text-text-soft hover:text-primary transition-colors text-sm font-medium mb-4">
-          <ArrowLeft className="w-4 h-4" />
+        <Link
+          href={`/admin/users/${id}`}
+          className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-accent"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
           Voltar para o Perfil
         </Link>
-        <PageHeader 
-          eyebrow="Aprendizagem" 
-          title="Matrículas" 
+        <PageHeader
+          eyebrow="Aprendizagem"
+          title="Matrículas"
           description="Acompanhe os cursos em que o usuário está inscrito e seu progresso."
-          actions={<button className="inline-flex min-h-11 items-center gap-2 rounded-[11px] bg-primary px-4 text-sm font-bold text-on-primary shadow-sm hover:bg-primary-active"><Plus className="h-4 w-4" /> Nova matrícula</button>}
+          actions={
+            <Button variant="primary" className="gap-2">
+              <Plus className="size-4" aria-hidden="true" /> Nova matrícula
+            </Button>
+          }
         />
       </div>
 
-      <section className="editorial-card overflow-hidden">
-        <div className="flex flex-col gap-4 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <h2 className="font-bold text-ink text-lg">Cursos do Aluno</h2>
-          <div className="flex items-center gap-2 text-xs font-semibold text-text-mute">
-            {concludedCount > 0 && <StatusBadge tone="positive">{concludedCount} concluído{concludedCount > 1 ? 's' : ''}</StatusBadge>}
+      <Card>
+        <Card.Header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <Card.Title>Cursos do aluno</Card.Title>
+          <div className="flex items-center gap-2">
+            {concludedCount > 0 && (
+              <StatusBadge tone="positive">
+                {concludedCount} concluído{concludedCount > 1 ? "s" : ""}
+              </StatusBadge>
+            )}
             {activeCount > 0 && <StatusBadge tone="primary">{activeCount} em andamento</StatusBadge>}
           </div>
-        </div>
+        </Card.Header>
 
-        <div className="hidden md:block">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-canvas-soft/75 text-[11px] font-bold uppercase tracking-[0.09em] text-text-mute">
-                <th className="px-5 py-3.5">Curso</th>
-                <th className="px-5 py-3.5">Categoria</th>
-                <th className="px-5 py-3.5">Progresso</th>
-                <th className="px-5 py-3.5">Status</th>
-                <th className="px-5 py-3.5">Data de Inscrição</th>
-                <th className="w-16 px-5 py-3.5"><span className="sr-only">Ações</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {matriculas.map((mat) => (
-                <tr key={mat.id} className="border-t border-border/70 hover:bg-primary-pale/20">
-                  <td className="px-5 py-4">
-                    <Link href={`/admin/cursos/${mat.id}`} className="flex items-center gap-3 font-bold text-ink hover:text-primary-active">
-                      <span className="grid h-9 w-9 place-items-center rounded-[11px] bg-primary-pale text-primary">
-                        <BookOpen className="h-4 w-4" />
+        <Card.Content className="px-0 pb-0">
+          {isEmpty ? (
+            <EmptyState className="flex flex-col items-center gap-2 px-6 py-14 text-center">
+              <span className="grid size-11 place-items-center rounded-xl bg-background-secondary">
+                <BookOpen className="size-5 text-muted" aria-hidden="true" />
+              </span>
+              <p className="font-semibold text-foreground">Nenhuma matrícula encontrada</p>
+              <p className="text-sm text-muted">Inscreva o aluno em um curso para começar a acompanhar o progresso.</p>
+            </EmptyState>
+          ) : (
+            <>
+              <div className="hidden md:block">
+                <Table.Root>
+                  <Table.ScrollContainer>
+                    <Table.Content aria-label="Matrículas do aluno">
+                      <Table.Header>
+                        <Table.Column isRowHeader>Curso</Table.Column>
+                        <Table.Column>Categoria</Table.Column>
+                        <Table.Column>Progresso</Table.Column>
+                        <Table.Column>Status</Table.Column>
+                        <Table.Column>Inscrição</Table.Column>
+                        <Table.Column><span className="sr-only">Ações</span></Table.Column>
+                      </Table.Header>
+                      <Table.Body items={matriculas}>
+                        {(mat) => (
+                          <Table.Row id={mat.id}>
+                            <Table.Cell>
+                              <Link
+                                href={`/admin/cursos/${mat.id}`}
+                                className="flex items-center gap-3 font-semibold text-foreground hover:text-accent"
+                              >
+                                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground">
+                                  <BookOpen className="size-4" aria-hidden="true" />
+                                </span>
+                                {mat.courseName}
+                              </Link>
+                            </Table.Cell>
+                            <Table.Cell>{mat.category}</Table.Cell>
+                            <Table.Cell className="font-semibold text-foreground">{mat.progress}</Table.Cell>
+                            <Table.Cell>
+                              <StatusBadge tone={mat.statusTone}>{mat.status}</StatusBadge>
+                            </Table.Cell>
+                            <Table.Cell className="text-muted">{mat.enrolledAt}</Table.Cell>
+                            <Table.Cell>
+                              <Button
+                                isIconOnly
+                                variant="ghost"
+                                size="sm"
+                                aria-label={`Ações da matrícula ${mat.courseName}`}
+                              >
+                                <MoreHorizontal className="size-4" aria-hidden="true" />
+                              </Button>
+                            </Table.Cell>
+                          </Table.Row>
+                        )}
+                      </Table.Body>
+                    </Table.Content>
+                  </Table.ScrollContainer>
+                </Table.Root>
+              </div>
+
+              <ul className="divide-y divide-separator md:hidden">
+                {matriculas.map((mat) => (
+                  <li key={mat.id} className="p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground">
+                        <BookOpen className="size-4" aria-hidden="true" />
                       </span>
-                      {mat.courseName}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-4 text-sm text-text-soft">{mat.category}</td>
-                  <td className="px-5 py-4 text-sm font-bold text-ink">{mat.progress}</td>
-                  <td className="px-5 py-4">
-                    <StatusBadge tone={mat.statusTone}>
-                      {mat.status}
-                    </StatusBadge>
-                  </td>
-                  <td className="px-5 py-4 text-xs font-medium text-text-mute">{mat.enrolledAt}</td>
-                  <td className="px-5 py-4">
-                    <button aria-label={`Ações da matrícula ${mat.courseName}`} className="grid h-10 w-10 place-items-center rounded-[10px] text-text-mute hover:bg-surface-hover hover:text-ink">
-                      <MoreHorizontal className="h-5 w-5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {matriculas.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-sm text-text-mute">
-                    Nenhuma matrícula encontrada.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="divide-y divide-border md:hidden">
-          {matriculas.map((mat) => (
-            <article key={mat.id} className="p-4">
-              <div className="flex items-start gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-primary-pale text-primary">
-                  <BookOpen className="h-4 w-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <Link href={`/admin/cursos/${mat.id}`} className="font-bold leading-5 text-ink hover:text-primary-active block">
-                    {mat.courseName}
-                  </Link>
-                  <p className="mt-1 text-xs text-text-mute">{mat.category}</p>
-                </div>
-                <StatusBadge tone={mat.statusTone}>
-                  {mat.status}
-                </StatusBadge>
-              </div>
-              <div className="mt-4 flex items-center justify-between text-xs font-medium text-text-mute">
-                <span>Inscrito em {mat.enrolledAt.toLowerCase()}</span>
-                <span className="font-bold text-ink">{mat.progress} completo</span>
-              </div>
-            </article>
-          ))}
-          {matriculas.length === 0 && (
-            <div className="p-8 text-center text-sm text-text-mute">
-              Nenhuma matrícula encontrada.
-            </div>
+                      <div className="min-w-0 flex-1">
+                        <Link href={`/admin/cursos/${mat.id}`} className="block font-semibold leading-5 text-foreground">
+                          {mat.courseName}
+                        </Link>
+                        <p className="mt-1 text-xs text-muted">{mat.category}</p>
+                      </div>
+                      <StatusBadge tone={mat.statusTone}>{mat.status}</StatusBadge>
+                    </div>
+                    <div className="mt-4 flex items-center justify-between gap-3 text-xs text-muted">
+                      <span>Inscrito em {mat.enrolledAt.toLowerCase()}</span>
+                      <span className="font-semibold text-foreground">{mat.progress} completo</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
-        </div>
-      </section>
+        </Card.Content>
+      </Card>
     </div>
   );
 }

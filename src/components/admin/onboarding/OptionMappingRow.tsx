@@ -1,13 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ContentMapping, QuestionOption } from '@/types/trilha';
-import { X, Clock, Plus, GripVertical, FileText, Video, Folder, BookOpen, Link as LinkIcon, Layers3 } from 'lucide-react';
+import { X, Clock, Plus, GripVertical, FileText, Video, Folder, BookOpen, Link as LinkIcon, Layers3, TriangleAlert } from 'lucide-react';
 import { Reorder } from 'framer-motion';
+import type { ContentIndex } from '@/lib/contentCatalog';
+import { normalizeTag } from '@/lib/matching';
 
 interface OptionMappingRowProps {
   option: QuestionOption;
   onUpdate: (updatedOption: QuestionOption) => void;
   onDelete: () => void;
   onOpenContentPicker: () => void;
+  /** Catálogo real — usado para sinalizar mapeamentos que já não existem mais (curso/aula despublicada). */
+  index: ContentIndex;
 }
 
 const getTypeIcon = (type: string) => {
@@ -32,13 +36,29 @@ const getTypeLabel = (type: string) => {
   }
 };
 
-export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUpdate, onDelete, onOpenContentPicker }) => {
-  
+/** Um link externo customizado nunca precisa existir no catálogo — só cursos/módulos/aulas/artigos. */
+function isOrphan(mapping: ContentMapping, index: ContentIndex): boolean {
+  if (mapping.type === 'external_link') return index.resolve(mapping).length === 0 && !(mapping.url && mapping.estimatedDurationMin);
+  return index.resolve(mapping).length === 0;
+}
+
+export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUpdate, onDelete, onOpenContentPicker, index }) => {
+  const [newTag, setNewTag] = useState('');
+
   const handleRemoveTag = (tagToRemove: string) => {
     onUpdate({
       ...option,
       tags: option.tags?.filter(tag => tag !== tagToRemove)
     });
+  };
+
+  const handleAddTag = () => {
+    const normalized = normalizeTag(newTag);
+    if (!normalized) return;
+    if (!option.tags?.includes(normalized)) {
+      onUpdate({ ...option, tags: [...(option.tags || []), normalized] });
+    }
+    setNewTag('');
   };
 
   const handleRemoveMapping = (mappingId: string) => {
@@ -51,7 +71,7 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
   const handleUpdateMapping = (mappingId: string, patch: Partial<ContentMapping>) => {
     onUpdate({
       ...option,
-      contentMappings: option.contentMappings?.map(m => 
+      contentMappings: option.contentMappings?.map(m =>
         m.id === mappingId ? { ...m, ...patch } : m
       )
     });
@@ -59,21 +79,21 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border/50 bg-surface/50 p-4 transition-colors hover:border-border">
-      
+
       {/* Top Row: Label and Tags */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-1 items-center gap-3">
           <GripVertical size={16} className="cursor-grab text-text-mute hover:text-text" />
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={option.label}
             onChange={(e) => onUpdate({ ...option, label: e.target.value })}
             className="flex-1 bg-transparent text-sm font-medium outline-none border-b border-transparent focus:border-primary px-1 py-0.5 transition-colors"
             placeholder="Texto da Opção"
           />
         </div>
-        
-        <div className="flex items-center gap-2">
+
+        <div className="flex flex-wrap items-center gap-2">
           {option.tags?.map((tag, idx) => (
             <span key={idx} className="flex items-center gap-1 rounded-full bg-surface-hover px-2.5 py-1 text-xs text-text-soft">
               {tag}
@@ -82,6 +102,29 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
               </button>
             </span>
           ))}
+          <div className="flex items-center gap-1 rounded-full border border-dashed border-border/70 pl-2.5 pr-1 py-0.5">
+            <input
+              type="text"
+              value={newTag}
+              onChange={(event) => setNewTag(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  handleAddTag();
+                }
+              }}
+              placeholder="nova tag"
+              className="w-16 bg-transparent text-xs text-text-soft outline-none placeholder:text-text-mute"
+            />
+            <button
+              onClick={handleAddTag}
+              disabled={!newTag.trim()}
+              className="p-0.5 text-text-mute hover:text-primary disabled:opacity-30 transition-colors"
+              aria-label="Adicionar tag"
+            >
+              <Plus size={12} />
+            </button>
+          </div>
           <button onClick={onDelete} className="p-1.5 text-text-mute hover:bg-negative/10 hover:text-negative rounded-lg transition-colors">
             <X size={16} />
           </button>
@@ -97,28 +140,36 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
 
         <div className="flex flex-col gap-2 mb-3">
           {option.contentMappings && option.contentMappings.length > 0 ? (
-            <Reorder.Group 
-              axis="y" 
-              values={option.contentMappings} 
+            <Reorder.Group
+              axis="y"
+              values={option.contentMappings}
               onReorder={(newOrder) => onUpdate({ ...option, contentMappings: newOrder })}
               className="flex flex-col gap-2"
             >
-              {option.contentMappings.map((mapping) => (
-                <Reorder.Item 
-                  key={mapping.id} 
+              {option.contentMappings.map((mapping) => {
+                const orphan = isOrphan(mapping, index);
+                return (
+                <Reorder.Item
+                  key={mapping.id}
                   value={mapping}
-                  className="flex items-center gap-3 rounded-lg border border-border/60 bg-surface px-3 py-2 text-sm shadow-sm"
+                  className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm shadow-sm ${orphan ? 'border-negative/40 bg-negative/5' : 'border-border/60 bg-surface'}`}
                 >
                   <GripVertical size={14} className="cursor-grab text-text-mute shrink-0" />
-                  
+
                   <div className="flex items-center justify-center w-6 h-6 rounded bg-bg shrink-0" title={getTypeLabel(mapping.type)}>
                     {getTypeIcon(mapping.type)}
                   </div>
-                  
-                  <div className="flex-1 truncate font-medium text-text">
-                    {mapping.title}
+
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate font-medium text-text">{mapping.title}</div>
+                    {orphan && (
+                      <div className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-negative">
+                        <TriangleAlert size={11} />
+                        Não encontrado no catálogo — remova ou substitua
+                      </div>
+                    )}
                   </div>
-                  
+
                   <div className="flex flex-wrap items-center justify-end gap-2 border-l border-border/60 pl-3">
                     <Layers3 size={14} className="text-text-mute" />
                     <select
@@ -148,14 +199,15 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
                     )}
                   </div>
 
-                  <button 
+                  <button
                     onClick={() => handleRemoveMapping(mapping.id)}
                     className="ml-2 p-1 text-text-mute hover:bg-negative/10 hover:text-negative rounded transition-colors"
                   >
                     <X size={14} />
                   </button>
                 </Reorder.Item>
-              ))}
+                );
+              })}
             </Reorder.Group>
           ) : (
             <div className="text-sm text-text-soft italic py-2 px-3 border border-dashed border-border/60 rounded-lg bg-surface/30">
@@ -164,7 +216,7 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
           )}
         </div>
 
-        <button 
+        <button
           onClick={onOpenContentPicker}
           className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-active transition-colors px-2 py-1.5 rounded-md hover:bg-primary/5 w-max"
         >

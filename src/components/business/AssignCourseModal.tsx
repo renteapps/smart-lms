@@ -10,9 +10,9 @@ import {
 } from "@heroui/react";
 import { BookOpen, Check, Sparkles } from "lucide-react";
 import { Company, CompanyMember } from "@/types/business";
-import { CATALOG_COURSES } from "@/lib/catalog";
 import { assignCoursesToDepartment, assignCoursesToMember } from "@/app/actions/admin/platform";
 import { toast } from "sonner";
+import { CatalogCourse } from "@/types/course";
 
 interface AssignCourseModalProps {
   isOpen: boolean;
@@ -21,6 +21,7 @@ interface AssignCourseModalProps {
   targetMember?: CompanyMember | null;
   targetDepartment?: string | null;
   onSuccess: () => void;
+  availableCourses?: CatalogCourse[];
 }
 
 export function AssignCourseModal({
@@ -30,6 +31,7 @@ export function AssignCourseModal({
   targetMember,
   targetDepartment,
   onSuccess,
+  availableCourses = [],
 }: AssignCourseModalProps) {
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>(
     targetMember?.assignedCourseIds || []
@@ -37,11 +39,11 @@ export function AssignCourseModal({
   const [search, setSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const availableCourses = CATALOG_COURSES.filter((c) =>
+  const companyCourses = availableCourses.filter((c) =>
     company.allowedCourseIds.includes(c.id)
   );
 
-  const filteredCourses = availableCourses.filter(
+  const filteredCourses = companyCourses.filter(
     (c) =>
       c.title.toLowerCase().includes(search.toLowerCase()) ||
       c.category.toLowerCase().includes(search.toLowerCase())
@@ -56,10 +58,10 @@ export function AssignCourseModal({
   };
 
   const handleSelectAll = () => {
-    if (selectedCourseIds.length === availableCourses.length) {
+    if (selectedCourseIds.length === companyCourses.length) {
       setSelectedCourseIds([]);
     } else {
-      setSelectedCourseIds(availableCourses.map((c) => c.id));
+      setSelectedCourseIds(companyCourses.map((c) => c.id));
     }
   };
 
@@ -146,7 +148,7 @@ export function AssignCourseModal({
                     className="shrink-0 text-xs"
                     onPress={handleSelectAll}
                   >
-                    {selectedCourseIds.length === availableCourses.length ? "Desmarcar todos" : "Marcar todos"}
+                    {selectedCourseIds.length === companyCourses.length ? "Desmarcar todos" : "Marcar todos"}
                   </Button>
                 </div>
 
@@ -200,7 +202,7 @@ export function AssignCourseModal({
 
                 <div className="flex items-center justify-between text-xs text-muted bg-surface-secondary/40 p-2.5 rounded-lg border border-border">
                   <span>
-                    <strong>{selectedCourseIds.length}</strong> de {availableCourses.length} cursos selecionados
+                    <strong>{selectedCourseIds.length}</strong> de {companyCourses.length} cursos selecionados
                   </span>
                   <span className="text-accent font-semibold flex items-center gap-1">
                     <Sparkles className="size-3" /> Acesso imediato aos alunos

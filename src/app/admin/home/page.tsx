@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { Button, Card, Chip, Input, Label, ListBox, ListBoxItem, Select } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 
@@ -17,6 +18,11 @@ type Shelf = {
   title: string;
   type: string;
 };
+
+const shelfTypeOptions = [
+  { id: "Dinâmico", label: "Dinâmico (automático)" },
+  { id: "Manual", label: "Manual (escolher cursos)" },
+];
 
 export default function AdminHome() {
   const [banners, setBanners] = useState<Banner[]>([
@@ -105,123 +111,143 @@ export default function AdminHome() {
   return (
     <div className="space-y-7 pb-20">
       <PageHeader eyebrow="Plataforma" title="Editar Home Page" description="Organize destaques e coleções que aparecem para os estudantes." />
-      
+
       <div className="grid gap-6">
         {/* Carrossel */}
-        <div className="bg-surface-card rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 md:p-8">
-          <div className="flex justify-between items-start mb-6">
+        <Card>
+          <Card.Header className="flex flex-row items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold mb-2 text-ink-deep">Carrossel Principal (Hero)</h2>
-              <p className="text-text-soft">Gerencie os banners em destaque na página inicial.</p>
+              <Card.Title>Carrossel principal (hero)</Card.Title>
+              <Card.Description>Gerencie os banners em destaque na página inicial.</Card.Description>
             </div>
             {!bannerFormVisible && (
-              <button onClick={openAddBanner} className="bg-primary text-on-primary px-4 py-2 rounded-lg font-semibold hover:bg-primary-active transition-all shadow-sm hover:shadow-md text-sm">
-                Adicionar Banner
-              </button>
+              <Button variant="primary" size="sm" onClick={openAddBanner}>
+                Adicionar banner
+              </Button>
             )}
-          </div>
-          
-          {bannerFormVisible && (
-            <div className="bg-canvas-soft rounded-xl p-5 mb-6 border border-border/60">
-              <h3 className="font-bold text-ink-deep mb-4">{editingBannerId ? "Editar Banner" : "Novo Banner"}</h3>
-              <div className="grid gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-ink-deep mb-1">Título</label>
-                  <input type="text" className="w-full px-3 py-2 rounded-lg border border-border bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" value={bannerFormData.title} onChange={e => setBannerFormData({...bannerFormData, title: e.target.value})} placeholder="Ex: Liderança do Futuro" />
-                </div>
-                <ImageUpload
-                  label="Imagem do banner"
-                  value={bannerFormData.image}
-                  onChange={(url) => setBannerFormData({ ...bannerFormData, image: url ?? "" })}
-                  folder="banners"
-                  aspect="wide"
-                  description="Recomendado: 1920x1005px."
-                />
-              </div>
-              <div className="flex justify-end gap-3">
-                <button onClick={() => setBannerFormVisible(false)} className="px-4 py-2 text-sm font-medium text-text-soft hover:bg-ink-deep/5 rounded-lg transition-colors">Cancelar</button>
-                <button onClick={saveBanner} className="px-4 py-2 text-sm font-medium bg-primary text-on-primary rounded-lg hover:bg-primary-active transition-colors">Salvar Banner</button>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-4">
-            {banners.map((banner) => (
-              <div key={banner.id} className="bg-canvas-soft rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-border/40">
-                <div className="flex items-center gap-4">
-                  <div className="relative h-14 w-24 overflow-hidden rounded-lg bg-bg shadow-sm">
-                    <Image src={banner.image} fill sizes="96px" className="object-cover" alt={banner.title} />
-                  </div>
+          </Card.Header>
+          <Card.Content className="space-y-4">
+            {bannerFormVisible && (
+              <div className="rounded-xl border border-border/60 bg-background-secondary p-5">
+                <h3 className="mb-4 font-bold text-foreground">{editingBannerId ? "Editar banner" : "Novo banner"}</h3>
+                <div className="mb-4 grid gap-4">
                   <div>
-                    <p className="font-semibold text-ink-deep">{banner.title}</p>
-                    <p className="text-sm text-text-soft">Ordem: {banner.order}</p>
+                    <Label className="mb-1 block text-sm font-medium text-foreground">Título</Label>
+                    <Input
+                      value={bannerFormData.title}
+                      onChange={(e) => setBannerFormData({ ...bannerFormData, title: e.target.value })}
+                      placeholder="Ex: Liderança do Futuro"
+                    />
                   </div>
+                  <ImageUpload
+                    label="Imagem do banner"
+                    value={bannerFormData.image}
+                    onChange={(url) => setBannerFormData({ ...bannerFormData, image: url ?? "" })}
+                    folder="banners"
+                    aspect="wide"
+                    description="Recomendado: 1920x1005px."
+                  />
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => openEditBanner(banner)} className="text-sm text-primary font-medium hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors">Editar</button>
-                  <button onClick={() => deleteBanner(banner.id)} className="text-sm text-red-500 font-medium hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">Remover</button>
+                <div className="flex justify-end gap-3">
+                  <Button variant="tertiary" size="sm" onClick={() => setBannerFormVisible(false)}>Cancelar</Button>
+                  <Button variant="primary" size="sm" onClick={saveBanner}>Salvar banner</Button>
                 </div>
               </div>
-            ))}
-            {banners.length === 0 && !bannerFormVisible && (
-              <p className="text-sm text-text-soft italic text-center py-4">Nenhum banner cadastrado.</p>
             )}
-          </div>
-        </div>
+
+            <div className="space-y-4">
+              {banners.map((banner) => (
+                <div key={banner.id} className="flex flex-col items-start justify-between gap-4 rounded-xl border border-border/40 bg-background-secondary p-4 sm:flex-row sm:items-center">
+                  <div className="flex items-center gap-4">
+                    <div className="relative h-14 w-24 overflow-hidden rounded-lg bg-background shadow-elev-1">
+                      <Image src={banner.image} fill sizes="96px" className="object-cover" alt={banner.title} />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">{banner.title}</p>
+                      <p className="text-sm text-muted">Ordem: {banner.order}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" className="text-accent" onClick={() => openEditBanner(banner)}>Editar</Button>
+                    <Button variant="ghost" size="sm" className="text-danger hover:bg-danger-soft hover:text-danger-soft-foreground" onClick={() => deleteBanner(banner.id)}>Remover</Button>
+                  </div>
+                </div>
+              ))}
+              {banners.length === 0 && !bannerFormVisible && (
+                <p className="py-4 text-center text-sm italic text-muted">Nenhum banner cadastrado.</p>
+              )}
+            </div>
+          </Card.Content>
+        </Card>
 
         {/* Prateleiras */}
-        <div className="bg-surface-card rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 md:p-8">
-          <div className="flex justify-between items-start mb-6">
+        <Card>
+          <Card.Header className="flex flex-row items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold mb-2 text-ink-deep">Prateleiras de Cursos (Rows)</h2>
-              <p className="text-text-soft">Organize quais categorias ou coleções de cursos aparecem na home.</p>
+              <Card.Title>Prateleiras de cursos (rows)</Card.Title>
+              <Card.Description>Organize quais categorias ou coleções de cursos aparecem na home.</Card.Description>
             </div>
             {!shelfFormVisible && (
-              <button onClick={openAddShelf} className="bg-primary text-on-primary px-4 py-2 rounded-lg font-semibold hover:bg-primary-active transition-all shadow-sm hover:shadow-md text-sm">
-                Nova Prateleira
-              </button>
+              <Button variant="primary" size="sm" onClick={openAddShelf}>
+                Nova prateleira
+              </Button>
             )}
-          </div>
+          </Card.Header>
+          <Card.Content className="space-y-3">
+            {shelfFormVisible && (
+              <div className="rounded-xl border border-border/60 bg-background-secondary p-5">
+                <h3 className="mb-4 font-bold text-foreground">{editingShelfId ? "Editar prateleira" : "Nova prateleira"}</h3>
+                <div className="mb-4 grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label className="mb-1 block text-sm font-medium text-foreground">Título</Label>
+                    <Input
+                      value={shelfFormData.title}
+                      onChange={(e) => setShelfFormData({ ...shelfFormData, title: e.target.value })}
+                      placeholder="Ex: Em Alta"
+                    />
+                  </div>
+                  <Select
+                    selectedKey={shelfFormData.type}
+                    onSelectionChange={(k) => setShelfFormData({ ...shelfFormData, type: String(k) })}
+                  >
+                    <Label>Tipo</Label>
+                    <Select.Trigger>
+                      <Select.Value />
+                      <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                      <ListBox>
+                        {shelfTypeOptions.map((opt) => (
+                          <ListBoxItem key={opt.id} id={opt.id}>{opt.label}</ListBoxItem>
+                        ))}
+                      </ListBox>
+                    </Select.Popover>
+                  </Select>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <Button variant="tertiary" size="sm" onClick={() => setShelfFormVisible(false)}>Cancelar</Button>
+                  <Button variant="primary" size="sm" onClick={saveShelf}>Salvar prateleira</Button>
+                </div>
+              </div>
+            )}
 
-          {shelfFormVisible && (
-            <div className="bg-canvas-soft rounded-xl p-5 mb-6 border border-border/60">
-              <h3 className="font-bold text-ink-deep mb-4">{editingShelfId ? "Editar Prateleira" : "Nova Prateleira"}</h3>
-              <div className="grid gap-4 mb-4 md:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-ink-deep mb-1">Título</label>
-                  <input type="text" className="w-full px-3 py-2 rounded-lg border border-border bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" value={shelfFormData.title} onChange={e => setShelfFormData({...shelfFormData, title: e.target.value})} placeholder="Ex: Em Alta" />
+            <div className="space-y-3">
+              {shelves.map((shelf, index) => (
+                <div key={shelf.id} className="flex items-center justify-between rounded-xl border border-border/40 bg-background-secondary p-4">
+                  <span className="font-medium text-foreground">{index + 1}. {shelf.title}</span>
+                  <div className="flex items-center gap-3">
+                    <Chip color="accent" variant="soft" size="sm">{shelf.type}</Chip>
+                    <Button variant="ghost" size="sm" className="text-accent" onClick={() => openEditShelf(shelf)}>Editar</Button>
+                    <Button variant="ghost" size="sm" className="text-danger hover:bg-danger-soft hover:text-danger-soft-foreground" onClick={() => deleteShelf(shelf.id)}>Remover</Button>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-ink-deep mb-1">Tipo</label>
-                  <select className="w-full px-3 py-2 rounded-lg border border-border bg-surface-card focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" value={shelfFormData.type} onChange={e => setShelfFormData({...shelfFormData, type: e.target.value})}>
-                    <option value="Dinâmico">Dinâmico (Automático)</option>
-                    <option value="Manual">Manual (Escolher cursos)</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex justify-end gap-3">
-                <button onClick={() => setShelfFormVisible(false)} className="px-4 py-2 text-sm font-medium text-text-soft hover:bg-ink-deep/5 rounded-lg transition-colors">Cancelar</button>
-                <button onClick={saveShelf} className="px-4 py-2 text-sm font-medium bg-primary text-on-primary rounded-lg hover:bg-primary-active transition-colors">Salvar Prateleira</button>
-              </div>
+              ))}
+              {shelves.length === 0 && !shelfFormVisible && (
+                <p className="py-4 text-center text-sm italic text-muted">Nenhuma prateleira cadastrada.</p>
+              )}
             </div>
-          )}
-          
-          <div className="space-y-3">
-            {shelves.map((shelf, index) => (
-              <div key={shelf.id} className="flex justify-between items-center bg-canvas-soft p-4 rounded-xl border border-border/40">
-                <span className="font-medium text-ink-deep">{index + 1}. {shelf.title}</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-primary bg-primary/10 px-3 py-1 rounded-full font-bold">{shelf.type}</span>
-                  <button onClick={() => openEditShelf(shelf)} className="text-sm text-primary font-medium hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors">Editar</button>
-                  <button onClick={() => deleteShelf(shelf.id)} className="text-sm text-red-500 font-medium hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">Remover</button>
-                </div>
-              </div>
-            ))}
-            {shelves.length === 0 && !shelfFormVisible && (
-              <p className="text-sm text-text-soft italic text-center py-4">Nenhuma prateleira cadastrada.</p>
-            )}
-          </div>
-        </div>
+          </Card.Content>
+        </Card>
       </div>
     </div>
   );
