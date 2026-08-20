@@ -4,8 +4,6 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/supabase/auth";
 import { calculateExpiresAt, type ExpirationOption } from "@/lib/enrollmentUtils";
 
-export type { ExpirationOption };
-
 export interface CreateEnrollmentInput {
   userId: string;
   courseId: string;

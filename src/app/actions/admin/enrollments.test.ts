@@ -54,6 +54,17 @@ describe("calculateExpiresAt", () => {
 });
 
 describe("Enrollment Action Inputs", () => {
+  it("expõe somente Server Actions em runtime", async () => {
+    const actions = await import("./enrollments");
+
+    expect(Object.keys(actions).sort()).toEqual([
+      "createEnrollment",
+      "deleteEnrollment",
+      "updateEnrollmentExpiration",
+    ]);
+    expect(Object.values(actions).every((action) => typeof action === "function")).toBe(true);
+  });
+
   it("valida parâmetros de entrada para createEnrollment", async () => {
     const { createEnrollment } = await import("./enrollments");
     

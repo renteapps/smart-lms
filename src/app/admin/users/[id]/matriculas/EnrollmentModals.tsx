@@ -85,6 +85,7 @@ export function CreateEnrollmentModal({
   const [customDate, setCustomDate] = useState<string>("");
   const [search, setSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   // Define uma data padrão para o campo customizado (30 dias à frente)
   useEffect(() => {
@@ -102,6 +103,7 @@ export function CreateEnrollmentModal({
       setExpirationType("indefinite");
       setSearch("");
       setIsSubmitting(false);
+      setSubmitError("");
     }
   }, [isOpen]);
 
@@ -143,6 +145,7 @@ export function CreateEnrollmentModal({
       return;
     }
 
+    setSubmitError("");
     setIsSubmitting(true);
     try {
       const res = await createEnrollment({
@@ -168,10 +171,15 @@ export function CreateEnrollmentModal({
         router.refresh();
         onClose();
       } else {
-        toast.error(res.message || "Erro ao criar matrícula.");
+        const message = res.message || "Erro ao criar matrícula.";
+        setSubmitError(message);
+        toast.error(message);
       }
-    } catch {
-      toast.error("Ocorreu um erro inesperado ao salvar a matrícula.");
+    } catch (error) {
+      console.error("Erro ao criar matrícula:", error);
+      const message = "Ocorreu um erro inesperado ao salvar a matrícula.";
+      setSubmitError(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -415,6 +423,15 @@ export function CreateEnrollmentModal({
                     <p className="text-muted mt-0.5">{previewDateText}</p>
                   </div>
                 </div>
+
+                {submitError && (
+                  <p
+                    role="alert"
+                    className="rounded-xl border border-danger/30 bg-danger/10 px-3.5 py-3 text-xs font-medium text-danger"
+                  >
+                    {submitError}
+                  </p>
+                )}
               </Modal.Body>
 
               <Modal.Footer className="justify-between">
