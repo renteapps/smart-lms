@@ -15,12 +15,15 @@ interface AgentCatalogContextData {
   categories: string[];
   getAgentBySlug: (slug: string) => Agent | undefined;
   /** Cria ou atualiza pelo id do payload. */
-  saveAgent: (payload: AgentFormPayload) => void;
+  saveAgent: (payload: AgentFormPayload) => Promise<{ success: boolean; message?: string; data?: { id: string } }>;
   duplicateAgent: (id: string) => void;
   deleteAgent: (id: string) => void;
 }
 
 const AgentCatalogContext = createContext<AgentCatalogContextData>({} as AgentCatalogContextData);
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (val?: string | null): val is string => Boolean(val && UUID_REGEX.test(val));
 
 /**
  * Catálogo de agentes.
@@ -61,26 +64,30 @@ export function AgentCatalogProvider({
   );
 
   const saveAgent = useCallback(
-    (payload: AgentFormPayload) => {
-      startMutation(async () => {
-        const result = await saveAgentAction(payload);
+    (payload: AgentFormPayload): Promise<{ success: boolean; message?: string; data?: { id: string } }> => {
+      return new Promise((resolve) => {
+        startMutation(async () => {
+          const result = await saveAgentAction(payload);
 
-        if (!result.success) {
-          toast.danger(result.message ?? "Não foi possível salvar o agente.");
-          return;
-        }
+          if (!result.success) {
+            toast.danger(result.message ?? "Não foi possível salvar o agente.");
+            resolve(result);
+            return;
+          }
 
-        if (payload.id) {
-          toast.success(`${payload.name} atualizado.`);
-        } else {
-          toast.success(
-            payload.status === "Disponível"
-              ? `${payload.name} publicado em /agentes.`
-              : `${payload.name} criado como ${payload.status.toLocaleLowerCase("pt-BR")}.`,
-          );
-        }
+          if (isUuid(payload.id)) {
+            toast.success(`${payload.name} atualizado.`);
+          } else {
+            toast.success(
+              payload.status === "Disponível"
+                ? `${payload.name} publicado em /agentes.`
+                : `${payload.name} criado como ${payload.status.toLocaleLowerCase("pt-BR")}.`,
+            );
+          }
 
-        router.refresh();
+          router.refresh();
+          resolve(result);
+        });
       });
     },
     [router],

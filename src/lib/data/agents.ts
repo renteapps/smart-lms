@@ -69,6 +69,9 @@ export function mapAgent(row: Row, conversationsCount?: number): Agent {
   };
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (val: unknown): val is string => typeof val === "string" && UUID_REGEX.test(val);
+
 /** Payload de escrita: converte o tipo de domínio para colunas. */
 export function agentToRow(agent: Partial<Agent> & { courseId?: string | null }): Row {
   const row: Row = {};
@@ -84,10 +87,18 @@ export function agentToRow(agent: Partial<Agent> & { courseId?: string | null })
   set("status", agent.status);
   set("avatar", agent.avatar);
   set("created_by", agent.createdBy);
-  set("course_id", agent.courseId ?? (agent.courseIds && agent.courseIds.length > 0 ? agent.courseIds[0] : null));
+
+  const validCourseIds = Array.isArray(agent.courseIds) ? agent.courseIds.filter(isUuid) : [];
+  const validCourseId = isUuid(agent.courseId)
+    ? agent.courseId
+    : validCourseIds.length > 0
+      ? validCourseIds[0]
+      : null;
+
+  set("course_id", validCourseId);
   set("course_title", agent.courseTitle);
-  set("course_ids", agent.courseIds ?? (agent.courseId ? [agent.courseId] : []));
-  set("plan_ids", agent.planIds ?? []);
+  set("course_ids", validCourseIds.length > 0 ? validCourseIds : validCourseId ? [validCourseId] : []);
+  set("plan_ids", Array.isArray(agent.planIds) ? agent.planIds.filter(isUuid) : []);
   set("skills", agent.skills);
   set("avg_minutes", agent.avgMinutes);
   set("greeting", agent.greeting);

@@ -21,14 +21,19 @@ type Saved<T> = { success: boolean; message?: string; data?: T };
 // Agentes
 // ---------------------------------------------------------------------------
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (val?: string | null): val is string => Boolean(val && UUID_REGEX.test(val));
+
 export async function saveAgent(payload: AgentFormPayload): Promise<Saved<{ id: string }>> {
   try {
     const { adminClient } = await requireAdmin();
 
+    const targetId = isUuid(payload.id) ? payload.id : undefined;
+
     // Slug só é recalculado na criação: mudar a URL de um agente publicado
     // quebraria os links que os alunos já têm.
     let slug = payload.slug;
-    if (!payload.id) {
+    if (!targetId) {
       const { data: existing } = await adminClient.from("agents").select("slug");
       const taken = (existing ?? []).map((row: { slug: string }) => row.slug);
       slug = ensureUniqueSlug(slugifyAgentName(payload.name), taken);
@@ -36,8 +41,8 @@ export async function saveAgent(payload: AgentFormPayload): Promise<Saved<{ id: 
 
     const row = agentToRow({ ...(payload as Partial<Agent>), slug });
 
-    const query = payload.id
-      ? adminClient.from("agents").update(row).eq("id", payload.id).select("id").single()
+    const query = targetId
+      ? adminClient.from("agents").update(row).eq("id", targetId).select("id").single()
       : adminClient.from("agents").insert(row).select("id").single();
 
     const { data, error } = await query;
@@ -47,9 +52,7 @@ export async function saveAgent(payload: AgentFormPayload): Promise<Saved<{ id: 
 
     // Sincroniza tabelas relacionais caso IDs sejam UUIDs válidos no banco
     if (Array.isArray(payload.courseIds)) {
-      const validCourseUuids = payload.courseIds.filter((id) =>
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
-      );
+      const validCourseUuids = payload.courseIds.filter(isUuid);
       await adminClient.from("agent_courses").delete().eq("agent_id", agentId);
       if (validCourseUuids.length > 0) {
         await adminClient.from("agent_courses").insert(
@@ -59,9 +62,7 @@ export async function saveAgent(payload: AgentFormPayload): Promise<Saved<{ id: 
     }
 
     if (Array.isArray(payload.planIds)) {
-      const validPlanUuids = payload.planIds.filter((id) =>
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
-      );
+      const validPlanUuids = payload.planIds.filter(isUuid);
       await adminClient.from("agent_plans").delete().eq("agent_id", agentId);
       if (validPlanUuids.length > 0) {
         await adminClient.from("agent_plans").insert(

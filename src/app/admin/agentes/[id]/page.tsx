@@ -586,17 +586,27 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
     return true;
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!validate()) return;
+    if (!validate() || isSaving) return;
 
-    saveAgent({
-      ...draftAgent,
-      starters: starters.map((item) => ({ ...item, label: item.label.trim(), message: item.message.trim() })),
-    });
+    setIsSaving(true);
+    try {
+      const isUpdating = !isNew && Boolean(agentToEdit?.id);
+      const res = await saveAgent({
+        ...draftAgent,
+        id: isUpdating ? agentToEdit?.id : undefined,
+        starters: starters.map((item) => ({ ...item, label: item.label.trim(), message: item.message.trim() })),
+      });
 
-    toast.success(agentToEdit ? "Agente atualizado com sucesso!" : "Novo agente publicado com sucesso!");
-    router.push("/admin/agentes");
+      if (res.success) {
+        router.push("/admin/agentes");
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const applyPromptTemplate = (tpl: (typeof PROMPT_TEMPLATES)[0]) => {
@@ -715,9 +725,9 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                 </Link>
               </>
             )}
-            <Button variant="primary" onClick={handleSubmit}>
+            <Button variant="primary" onClick={handleSubmit} isDisabled={isSaving}>
               <Sparkles className="size-4" aria-hidden="true" />
-              {agentToEdit ? "Salvar alterações" : "Publicar agente"}
+              {isSaving ? "Salvando..." : agentToEdit ? "Salvar alterações" : "Publicar agente"}
             </Button>
           </div>
         </div>
@@ -1953,9 +1963,9 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                 <Button variant="tertiary" type="button" onClick={() => router.push("/admin/agentes")}>
                   Cancelar
                 </Button>
-                <Button variant="primary" type="submit">
+                <Button variant="primary" type="submit" isDisabled={isSaving}>
                   <Sparkles className="size-4" aria-hidden="true" />
-                  {agentToEdit ? "Salvar alterações" : "Publicar agente"}
+                  {isSaving ? "Salvando..." : agentToEdit ? "Salvar alterações" : "Publicar agente"}
                 </Button>
               </div>
             </div>
