@@ -8,6 +8,7 @@ import {
   OpenRouterStatus,
 } from "@/types/openrouter";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getSupabaseServiceRoleKey } from "@/lib/supabase/env";
 
 const OPENROUTER_CONFIG_KEY = "@smartlms:openrouter_config";
 const OPENROUTER_LOGS_KEY = "@smartlms:openrouter_logs";
@@ -146,6 +147,33 @@ export const DEFAULT_OPENROUTER_CONFIG: OpenRouterConfig = {
   updatedAt: new Date().toISOString(),
 };
 
+export type OpenRouterUnavailableReason =
+  | "disabled"
+  | "missing_api_key"
+  | "invalid_key"
+  | "rate_limited";
+
+/**
+ * O chat dos alunos não pode tratar o modo simulado como uma resposta de IA.
+ * Esta checagem roda antes do débito de créditos e da persistência da mensagem.
+ */
+export function getOpenRouterUnavailableReason(
+  config: Pick<OpenRouterConfig, "apiKey" | "enabled" | "status">,
+): OpenRouterUnavailableReason | null {
+  if (!config.enabled) return "disabled";
+  if (!config.apiKey?.trim()) return "missing_api_key";
+  if (config.status === "invalid_key") return "invalid_key";
+  if (config.status === "rate_limited") return "rate_limited";
+  return null;
+}
+
+/** Só aceita conteúdo real, não vazio e não simulado vindo do provedor. */
+export function getOpenRouterResponseText(response: OpenRouterChatResponse): string | null {
+  if (!response.success || response.simulated) return null;
+  const text = response.text?.trim();
+  return text || null;
+}
+
 // In-memory cache for server-side execution
 let serverConfig: OpenRouterConfig = { ...DEFAULT_OPENROUTER_CONFIG };
 let serverLogs: OpenRouterLog[] = [];
@@ -182,13 +210,35 @@ export function getOpenRouterConfig(): OpenRouterConfig {
  * de serviço) e cai para a env var como último recurso.
  */
 export async function getOpenRouterServerConfig(): Promise<OpenRouterConfig> {
+  const envApiKey = process.env.OPENROUTER_API_KEY?.trim() ?? "";
+
+  // Sem service role, o client administrativo cai para anon e a RLS devolve
+  // zero linhas para `integrations`. Evitamos transformar isso silenciosamente
+  // em uma configuração aparentemente válida.
+  if (!getSupabaseServiceRoleKey()) {
+    if (!envApiKey) {
+      console.error(
+        "[openrouter:config] Configure SUPABASE_SERVICE_ROLE_KEY para ler a integração ou OPENROUTER_API_KEY diretamente no servidor.",
+      );
+    }
+
+    return {
+      ...DEFAULT_OPENROUTER_CONFIG,
+      apiKey: envApiKey,
+      defaultModel: process.env.OPENROUTER_DEFAULT_MODEL || DEFAULT_OPENROUTER_CONFIG.defaultModel,
+      enabled: Boolean(envApiKey),
+      status: envApiKey ? "connected" : "disconnected",
+    };
+  }
+
   try {
     const admin = createAdminClient();
-    const { data } = await admin
+    const { data, error } = await admin
       .from("integrations")
       .select("enabled, config, secrets, status")
       .eq("slug", "openrouter")
       .maybeSingle();
+    if (error) throw error;
 
     const storedConfig = (data?.config ?? {}) as Partial<OpenRouterConfig>;
     const apiKey = ((data?.secrets as { apiKey?: string } | null)?.apiKey ?? "").trim();
@@ -196,18 +246,19 @@ export async function getOpenRouterServerConfig(): Promise<OpenRouterConfig> {
     return {
       ...DEFAULT_OPENROUTER_CONFIG,
       ...storedConfig,
-      apiKey: apiKey || process.env.OPENROUTER_API_KEY || "",
-      enabled: data ? Boolean(data.enabled) : Boolean(process.env.OPENROUTER_API_KEY),
+      apiKey: apiKey || envApiKey,
+      enabled: data ? Boolean(data.enabled) : Boolean(envApiKey),
       status:
         (data?.status as OpenRouterStatus | undefined) ??
-        (process.env.OPENROUTER_API_KEY ? "connected" : "disconnected"),
+        (envApiKey ? "connected" : "disconnected"),
     };
   } catch (e) {
     console.error("Erro ao carregar configuração do OpenRouter do Supabase:", e);
     return {
       ...DEFAULT_OPENROUTER_CONFIG,
-      apiKey: process.env.OPENROUTER_API_KEY || "",
-      enabled: Boolean(process.env.OPENROUTER_API_KEY),
+      apiKey: envApiKey,
+      enabled: Boolean(envApiKey),
+      status: envApiKey ? "connected" : "disconnected",
     };
   }
 }
@@ -471,6 +522,31 @@ export async function sendOpenRouterChatCompletion(
     }
 
     const data = await res.json();
+    if (data?.error) {
+      const errorMsg = data.error.message || "O provedor não conseguiu concluir a resposta.";
+
+      addOpenRouterLog({
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        model: data.model || model,
+        promptTokens: data.usage?.prompt_tokens || 0,
+        completionTokens: data.usage?.completion_tokens || 0,
+        totalTokens: data.usage?.total_tokens || 0,
+        latencyMs,
+        status: "error",
+        error: errorMsg,
+        userPromptPreview,
+        responsePreview: "",
+        source: (payload.agentId ? "agent" : "sandbox") as OpenRouterLog["source"],
+      });
+
+      return {
+        success: false,
+        error: errorMsg,
+        latencyMs,
+      };
+    }
+
     const messageContent = data.choices?.[0]?.message?.content || "";
     const usage = {
       promptTokens: data.usage?.prompt_tokens || 0,

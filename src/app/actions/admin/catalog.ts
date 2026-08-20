@@ -211,6 +211,25 @@ export async function reorderModules(courseId: string, orderedIds: string[]): Pr
   try {
     const { adminClient } = await requireAdmin();
 
+    if (new Set(orderedIds).size !== orderedIds.length) {
+      return { success: false, message: "A lista de módulos contém itens duplicados." };
+    }
+
+    const { data: currentModules, error: modulesError } = await adminClient
+      .from("modules")
+      .select("id")
+      .eq("course_id", courseId);
+
+    if (modulesError) return { success: false, message: modulesError.message };
+
+    const currentIds = new Set((currentModules ?? []).map((module) => module.id));
+    const containsEveryModule = orderedIds.length === currentIds.size
+      && orderedIds.every((id) => currentIds.has(id));
+
+    if (!containsEveryModule) {
+      return { success: false, message: "A lista de módulos não corresponde ao conteúdo atual do curso." };
+    }
+
     const { error } = await adminClient.from("modules").upsert(
       orderedIds.map((id, index) => ({ id, course_id: courseId, order_index: index + 1 })),
       { onConflict: "id" },
@@ -219,6 +238,8 @@ export async function reorderModules(courseId: string, orderedIds: string[]): Pr
     if (error) return { success: false, message: error.message };
 
     revalidatePath(`/admin/cursos/${courseId}/modulos`);
+    revalidatePath(`/admin/cursos/${courseId}`);
+    revalidatePath("/courses/[id]", "page");
     return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };
@@ -236,7 +257,8 @@ export async function saveLesson(
   try {
     const { adminClient } = await requireAdmin();
 
-    const row: Record<string, unknown> = { module_id: moduleId };
+    const row: Record<string, unknown> = {};
+    if (moduleId) row.module_id = moduleId;
     const set = (key: string, value: unknown) => {
       if (value !== undefined) row[key] = value;
     };
@@ -253,8 +275,8 @@ export async function saveLesson(
     set("is_published", input.isPublished);
     set("slug", input.slug);
     set("short_description", input.shortDescription);
-    set("quiz_id", input.quizId ?? null);
-    set("profile_test_ref", input.profileTestId ?? null);
+    if (input.quizId !== undefined) row.quiz_id = input.quizId || null;
+    if (input.profileTestId !== undefined) row.profile_test_ref = input.profileTestId || null;
     set("profile_test_config", input.profileTestConfig);
     set("topics", input.topics);
     set("solves", input.solves);
@@ -315,9 +337,42 @@ export async function deleteLesson(id: string): Promise<ActionResult> {
   }
 }
 
-export async function reorderLessons(moduleId: string, orderedIds: string[]): Promise<ActionResult> {
+export async function reorderLessons(
+  courseId: string,
+  moduleId: string,
+  orderedIds: string[],
+): Promise<ActionResult> {
   try {
     const { adminClient } = await requireAdmin();
+
+    if (new Set(orderedIds).size !== orderedIds.length) {
+      return { success: false, message: "A lista de aulas contém itens duplicados." };
+    }
+
+    const { data: courseModule, error: moduleError } = await adminClient
+      .from("modules")
+      .select("id")
+      .eq("id", moduleId)
+      .eq("course_id", courseId)
+      .maybeSingle();
+
+    if (moduleError) return { success: false, message: moduleError.message };
+    if (!courseModule) return { success: false, message: "Módulo não encontrado neste curso." };
+
+    const { data: currentLessons, error: lessonsError } = await adminClient
+      .from("lessons")
+      .select("id")
+      .eq("module_id", moduleId);
+
+    if (lessonsError) return { success: false, message: lessonsError.message };
+
+    const currentIds = new Set((currentLessons ?? []).map((lesson) => lesson.id));
+    const containsEveryLesson = orderedIds.length === currentIds.size
+      && orderedIds.every((id) => currentIds.has(id));
+
+    if (!containsEveryLesson) {
+      return { success: false, message: "A lista de aulas não corresponde ao conteúdo atual do módulo." };
+    }
 
     const { error } = await adminClient.from("lessons").upsert(
       orderedIds.map((id, index) => ({ id, module_id: moduleId, order_index: index + 1 })),
@@ -326,7 +381,9 @@ export async function reorderLessons(moduleId: string, orderedIds: string[]): Pr
 
     if (error) return { success: false, message: error.message };
 
-    revalidatePath("/admin/cursos");
+    revalidatePath(`/admin/cursos/${courseId}/modulos`);
+    revalidatePath(`/admin/cursos/${courseId}`);
+    revalidatePath("/courses/[id]", "page");
     return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };

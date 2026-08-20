@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { BookmarkPlus, Copy, CornerDownLeft, Send, Sparkles, Wrench } from "lucide-react";
 import { Alert, Button, Label, TextArea, TextField, toast } from "@heroui/react";
 import { AgentAvatar } from "@/components/agentes/AgentAvatar";
+import { AgentMarkdown } from "@/components/agentes/AgentMarkdown";
 import { saveAgentNote } from "@/lib/agentNotes";
 import type { Agent, AgentConversation } from "@/types/agente";
 import { cn } from "@/lib/utils";
@@ -209,8 +210,8 @@ function AgentMessage({ agent, text, onCopy, onSaveNote }: AgentMessageProps) {
       <AgentAvatar avatar={agent.avatar} size="sm" className="mt-1" />
       <div className="min-w-0 max-w-[85%]">
         {/* Bolha opaca de propósito: texto longo sobre material perde contraste. */}
-        <div className="whitespace-pre-line rounded-2xl rounded-tl-sm border border-hairline bg-surface px-4 py-3 text-sm leading-7 text-foreground shadow-elev-1">
-          {text}
+        <div className="rounded-2xl rounded-tl-sm border border-hairline bg-surface px-4 py-3 text-sm text-foreground shadow-elev-1">
+          <AgentMarkdown text={text} />
         </div>
 
         {hasActions && (

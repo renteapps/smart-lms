@@ -140,6 +140,7 @@ export default function CoursesCatalogClient({ courses, trail, questionnaire }: 
               <Rise key={course.id} className="min-w-0" delay={Math.min(index, 5) * 60}>
                 <CourseCard
                   id={course.id}
+                  slug={course.slug}
                   title={course.title}
                   category={course.category}
                   cover={course.cover}
@@ -148,6 +149,8 @@ export default function CoursesCatalogClient({ courses, trail, questionnaire }: 
                   lessonCount={course.lessonCount}
                   level={course.level as "Essencial" | "Intermediário" | "Avançado"}
                   progress={course.progress}
+                  studentState={course.studentState}
+                  certificateEnabled={course.certificateEnabled}
                   eager={index === 0}
                   featured={index === 0}
                   className="h-full"

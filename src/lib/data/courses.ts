@@ -8,6 +8,13 @@ import type {
   LessonContentBlock,
   Module,
 } from "@/types/course";
+import {
+  deriveStudentCourseState,
+  getCourseSalesTemplate,
+  hasCourseAccess,
+  isEnrollmentActive,
+  isSubscriptionActive,
+} from "@/lib/courseAccess";
 import { logQueryError, type DB, type Row } from "./types";
 
 const FALLBACK_COVER =
@@ -39,6 +46,7 @@ export function mapLesson(row: Row, progress?: Row | null): Lesson {
     slug: row.slug ?? undefined,
     transcription: row.transcription ?? undefined,
     shortDescription: row.short_description ?? undefined,
+    quizId: row.quiz_id ?? undefined,
     profileTestId: row.profile_test_ref ?? row.profile_test_id ?? undefined,
     profileTestConfig: row.profile_test_config ?? undefined,
     topics: row.topics ?? [],
@@ -100,13 +108,13 @@ export function formatDuration(totalMinutes: number): string {
  * Vitrine de cursos. Duração e número de aulas saem do próprio conteúdo — não
  * de um campo que alguém precisa lembrar de atualizar.
  *
- * @param userId quando presente, cada cartão volta com o progresso real.
+ * @param userId quando presente, cada cartão volta com acesso, início, progresso e conclusão.
  */
 export async function getCatalogCourses(db: DB, userId?: string | null): Promise<CatalogCourse[]> {
   const { data, error } = await db
     .from("courses")
     .select(
-      "id, slug, title, category, description, short_description, cover_url, duration, level, order_index, created_at, status, is_published, modules(id, lessons(id, duration_in_minutes, is_published))",
+      "id, slug, title, category, description, short_description, cover_url, duration, level, order_index, created_at, status, is_published, sales_url, sales_config, enable_certificates, modules(id, lessons(id, duration_in_minutes, is_published))",
     )
     .eq("is_published", true)
     .neq("status", "Arquivado")
@@ -138,17 +146,120 @@ export async function getCatalogCourses(db: DB, userId?: string | null): Promise
         duration: row.duration || formatDuration(totalMinutes),
         lessonCount: lessons.length,
         level: row.level ?? "Essencial",
+        certificateEnabled: row.enable_certificates ?? true,
+        studentState: deriveStudentCourseState({
+          hasAccess: false,
+          hasStarted: false,
+          progress: 0,
+          certificateEnabled: row.enable_certificates ?? true,
+          salesUrl: getCourseSalesTemplate({
+            salesUrl: row.sales_url,
+            salesConfig: row.sales_config,
+          }),
+        }),
       } satisfies CatalogCourse;
     })
     .filter((course) => course.lessonCount > 0);
 
-  if (!userId) return courses;
+  if (!userId || courses.length === 0) return courses;
 
-  const progressByCourse = await getProgressForLessonSets(db, userId, lessonIdsByCourse);
+  const now = new Date();
+  const allLessonIds = Array.from(lessonIdsByCourse.values()).flat();
+  const [progressResult, enrollmentsResult, subscriptionsResult, certificatesResult] = await Promise.all([
+    db
+      .from("lesson_progress")
+      .select("lesson_id, is_completed, last_watched_second")
+      .eq("user_id", userId)
+      .in("lesson_id", allLessonIds),
+    db
+      .from("enrollments")
+      .select("course_id, status, expires_at")
+      .eq("user_id", userId),
+    db
+      .from("subscriptions")
+      .select("status, current_period_end, plans!inner(features, is_active)")
+      .eq("user_id", userId),
+    db.from("certificates").select("course_id").eq("user_id", userId),
+  ]);
+
+  logQueryError("getCatalogCourses:progress", progressResult.error);
+  logQueryError("getCatalogCourses:enrollments", enrollmentsResult.error);
+  logQueryError("getCatalogCourses:subscriptions", subscriptionsResult.error);
+  logQueryError("getCatalogCourses:certificates", certificatesResult.error);
+
+  const enrollmentCourseIds = new Set(
+    (enrollmentsResult.data ?? [])
+      .filter((row: Row) => isEnrollmentActive({
+        status: row.status,
+        expiresAt: row.expires_at,
+      }, now))
+      .map((row: Row) => row.course_id),
+  );
+  const issuedCertificateCourseIds = new Set(
+    (certificatesResult.data ?? []).map((row: Row) => row.course_id),
+  );
+  const progressByLesson = new Map(
+    (progressResult.data ?? []).map((row: Row) => [row.lesson_id, row]),
+  );
+  const activePlanFeatures = (subscriptionsResult.data ?? [])
+    .filter((row: Row) => {
+      if (!isSubscriptionActive({
+        status: row.status,
+        currentPeriodEnd: row.current_period_end,
+      }, now)) return false;
+      const plan = Array.isArray(row.plans) ? row.plans[0] : row.plans;
+      return plan?.is_active !== false;
+    })
+    .map((row: Row) => {
+      const plan = Array.isArray(row.plans) ? row.plans[0] : row.plans;
+      return plan?.features;
+    });
+
   return courses.map((course) => ({
     ...course,
-    progress: progressByCourse.get(course.id),
+    ...deriveCatalogCourseStudentData({
+      course,
+      lessonIds: lessonIdsByCourse.get(course.id) ?? [],
+      progressByLesson,
+      hasAccess: hasCourseAccess({
+        courseId: course.id,
+        enrolledCourseIds: enrollmentCourseIds,
+        activePlanFeatures,
+      }),
+      certificateIssued: issuedCertificateCourseIds.has(course.id),
+    }),
   }));
+}
+
+function deriveCatalogCourseStudentData(input: {
+  course: CatalogCourse;
+  lessonIds: string[];
+  progressByLesson: Map<string, Row>;
+  hasAccess: boolean;
+  certificateIssued: boolean;
+}): Pick<CatalogCourse, "progress" | "studentState"> {
+  const progressRows = input.lessonIds
+    .map((lessonId) => input.progressByLesson.get(lessonId))
+    .filter(Boolean) as Row[];
+  const completedLessons = progressRows.filter((row) => row.is_completed === true).length;
+  const progress = input.lessonIds.length
+    ? Math.round((completedLessons / input.lessonIds.length) * 100)
+    : 0;
+  const lockedState = input.course.studentState?.kind === "locked"
+    ? input.course.studentState
+    : { kind: "locked" as const, salesUrl: null };
+
+  return {
+    progress,
+    studentState: deriveStudentCourseState({
+      hasAccess: input.hasAccess,
+      hasStarted: progressRows.length > 0,
+      progress,
+      certificateEnabled: input.course.certificateEnabled ?? true,
+      certificateIssued: input.certificateIssued,
+      salesUrl: lockedState.salesUrl,
+    }),
+  };
 }
 
 async function getProgressForLessonSets(
@@ -244,7 +355,7 @@ const COURSE_TREE_SELECT = `
     id, course_id, title, slug, description, cover_url, order_index,
     lessons (
       id, module_id, title, type, video_url, pandavideo_id, content, blocks, duration_in_minutes,
-      order_index, is_published, slug, transcription, short_description,
+      order_index, is_published, slug, transcription, short_description, quiz_id,
       profile_test_id, profile_test_ref, profile_test_config, topics, solves,
       level, objective, audience, prerequisites, is_eligible_for_trail,
       attachments ( id, name, url )
@@ -260,7 +371,7 @@ const COURSE_OUTLINE_SELECT = `
     id, course_id, title, slug, description, cover_url, order_index,
     lessons (
       id, module_id, title, type, duration_in_minutes, order_index,
-      is_published, slug
+      is_published, slug, quiz_id
     )
   )
 `;
@@ -268,7 +379,7 @@ const COURSE_OUTLINE_SELECT = `
 const LESSON_DETAIL_SELECT = `
   id, module_id, title, type, video_url, pandavideo_id, content, blocks,
   duration_in_minutes, order_index, is_published, slug, transcription,
-  short_description, profile_test_id, profile_test_ref, profile_test_config,
+  short_description, quiz_id, profile_test_id, profile_test_ref, profile_test_config,
   topics, solves, level, objective, audience, prerequisites,
   is_eligible_for_trail, attachments ( id, name, url )
 `;

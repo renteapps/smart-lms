@@ -151,6 +151,21 @@ export type CourseOutline = Omit<Course, 'modules'> & {
 export type CourseOverviewData = CourseOutline;
 export type LessonDetail = Lesson;
 
+/** Estado do curso para o aluno da sessão. */
+export type StudentCourseState =
+  | {
+      kind: 'locked';
+      /** Template do checkout; as variáveis são resolvidas no card com os dados do aluno. */
+      salesUrl: string | null;
+    }
+  | { kind: 'available' }
+  | { kind: 'in-progress'; progress: number }
+  | {
+      kind: 'completed';
+      certificateEnabled: boolean;
+      certificateIssued: boolean;
+    };
+
 /**
  * Cartão do catálogo: o suficiente para a vitrine, sem carregar módulos e aulas.
  */
@@ -166,6 +181,10 @@ export type CatalogCourse = {
   level: 'Essencial' | 'Intermediário' | 'Avançado' | string;
   /** Só vem preenchido quando há um aluno na sessão. */
   progress?: number;
+  /** Configuração acadêmica usada para decidir o CTA ao concluir. */
+  certificateEnabled?: boolean;
+  /** Presente nas vitrines do aluno; consumidores administrativos podem omitir. */
+  studentState?: StudentCourseState;
 };
 
 /** Aula em andamento, para a faixa "continue de onde parou". */

@@ -30,6 +30,8 @@ export async function setLessonCompletion(
     if (error) return { success: false, message: error.message };
 
     if (courseId) revalidatePath(`/courses/${courseId}`);
+    revalidatePath("/cursos");
+    revalidatePath("/certificados");
     revalidatePath("/");
     return { success: true };
   } catch (error) {

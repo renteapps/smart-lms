@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAgentReply } from "@/lib/agentChat";
 import { parseAgentChatRequest } from "@/lib/agentChatRequest";
 import { deriveConversationTitle, getAgentById } from "@/lib/data/agents";
-import { sendOpenRouterChatCompletion, getOpenRouterServerConfig } from "@/lib/openrouterService";
+import {
+  getOpenRouterResponseText,
+  getOpenRouterServerConfig,
+  getOpenRouterUnavailableReason,
+  sendOpenRouterChatCompletion,
+} from "@/lib/openrouterService";
 import { requireUser } from "@/lib/supabase/auth";
 import type { OpenRouterChatMessage } from "@/types/openrouter";
+
+const AI_UNAVAILABLE_MESSAGE =
+  "A IA deste agente está temporariamente indisponível. Avise um administrador para revisar a integração com o OpenRouter.";
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,6 +36,16 @@ export async function POST(req: NextRequest) {
       if (!owned) {
         return NextResponse.json({ success: false, error: "Conversa não encontrada." }, { status: 404 });
       }
+    }
+
+    const config = await getOpenRouterServerConfig();
+    const unavailableReason = getOpenRouterUnavailableReason(config);
+    if (unavailableReason) {
+      console.error("[agent-chat:openrouter-unavailable]", { agentId, reason: unavailableReason });
+      return NextResponse.json(
+        { success: false, error: AI_UNAVAILABLE_MESSAGE },
+        { status: 503 },
+      );
     }
 
     // A função SQL faz UPDATE condicional e devolve o saldo em uma operação.
@@ -89,7 +106,6 @@ export async function POST(req: NextRequest) {
       content: item.text,
     })));
 
-    const config = await getOpenRouterServerConfig();
     const aiResult = await sendOpenRouterChatCompletion(
       {
         model: agent.aiModel || config.defaultModel || "google/gemini-2.0-flash-001",
@@ -102,9 +118,25 @@ export async function POST(req: NextRequest) {
       config,
     );
 
-    const previousAgentTurns = (history ?? []).filter((item) => item.author === "agent").length;
-    const source = aiResult.success && aiResult.text && !aiResult.simulated ? "ai" : "scripted";
-    const reply = source === "ai" ? aiResult.text! : getAgentReply(agent, message, previousAgentTurns);
+    const reply = getOpenRouterResponseText(aiResult);
+    if (!reply) {
+      console.error("[agent-chat:openrouter-response]", {
+        agentId,
+        error: aiResult.error || (aiResult.simulated ? "simulated_response" : "empty_response"),
+        latencyMs: aiResult.latencyMs,
+      });
+      await supabase
+        .from("agent_conversations")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", conversationId);
+      return NextResponse.json({
+        success: false,
+        error: "O agente não conseguiu gerar uma resposta agora. Tente novamente em instantes.",
+        conversationId,
+        userMessage,
+        creditsRemaining,
+      }, { status: 502 });
+    }
 
     const [{ data: assistantMessage, error: assistantError }] = await Promise.all([
       supabase
@@ -125,10 +157,10 @@ export async function POST(req: NextRequest) {
       userMessage,
       assistantMessage,
       text: reply,
-      source,
+      source: "ai",
       creditsRemaining,
-      model: source === "ai" ? aiResult.model : undefined,
-      usage: source === "ai" ? aiResult.usage : undefined,
+      model: aiResult.model,
+      usage: aiResult.usage,
       latencyMs: aiResult.latencyMs,
     });
   } catch (error: unknown) {

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import StudentHomeClient from "@/components/home/StudentHomeClient";
 import { StudentShell } from "@/components/shells/StudentShell";
+import { getSessionUser } from "@/lib/supabase/auth";
+import { getCatalogCourses } from "@/lib/data/courses";
 
 export const metadata: Metadata = {
   title: "Início | Smart LMS",
@@ -17,6 +19,9 @@ export const metadata: Metadata = {
  * Server Component fino de propósito: a trilha mora no dispositivo (localStorage),
  * então quem lê é o cliente — uma vez, no orquestrador.
  */
-export default function Home() {
-  return <StudentShell><StudentHomeClient /></StudentShell>;
+export default async function Home() {
+  const { supabase, user } = await getSessionUser();
+  const courses = await getCatalogCourses(supabase, user?.id);
+
+  return <StudentShell><StudentHomeClient courses={courses} /></StudentShell>;
 }

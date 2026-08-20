@@ -793,7 +793,13 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                               </Link>
                             ) : isLesson ? (
                               <Link
-                                href={`/courses/c1/lessons/${note.id}`}
+                                href={
+                                  note.courseId && note.lessonId
+                                    ? `/courses/${note.courseId}/lessons/${note.lessonId}`
+                                    : note.lessonId
+                                      ? `/courses/c1/lessons/${note.lessonId}`
+                                      : "/cursos"
+                                }
                                 className={buttonVariants({ variant: "secondary", size: "sm" }) + " w-full justify-between rounded-xl"}
                               >
                                 <span>Reabrir aula</span>
@@ -1142,7 +1148,13 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
 
                       {isLessonNote(viewingNote) && (
                         <Link
-                          href={`/courses/c1/lessons/${viewingNote.id}`}
+                          href={
+                            viewingNote.courseId && viewingNote.lessonId
+                              ? `/courses/${viewingNote.courseId}/lessons/${viewingNote.lessonId}`
+                              : viewingNote.lessonId
+                                ? `/courses/c1/lessons/${viewingNote.lessonId}`
+                                : "/cursos"
+                          }
                           className={buttonVariants({ variant: "primary", size: "sm" }) + " rounded-xl gap-1"}
                         >
                           Reabrir Aula <ArrowUpRight className="size-3.5" />

@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { GripVertical, Plus, Edit2, Trash2, ChevronDown, ChevronUp, PlayCircle, FileText, CheckCircle, Brain, SkipForward, RotateCcw, Image as ImageIcon, HelpCircle } from "lucide-react";
+import { useRef, useState, useTransition, type DragEvent, type KeyboardEvent } from "react";
+import { GripVertical, Plus, Edit2, Trash2, ChevronDown, ChevronUp, PlayCircle, FileText, CheckCircle, Brain, SkipForward, RotateCcw, Image as ImageIcon, HelpCircle, LoaderCircle } from "lucide-react";
 import { Course, Module, Lesson } from "@/types/course";
 import Link from "next/link";
-import { Button } from "@heroui/react";
+import { Button, Toast } from "@heroui/react";
 import AddProfileTestModal from "./AddProfileTestModal";
 import AddEditModuleModal from "./AddEditModuleModal";
-import { saveModule, deleteModule, saveLesson, deleteLesson } from "@/app/actions/admin/catalog";
+import { saveModule, deleteModule, saveLesson, deleteLesson, reorderLessons, reorderModules } from "@/app/actions/admin/catalog";
 import { useRouter } from "next/navigation";
 
 interface ModuleListProps {
@@ -15,10 +15,76 @@ interface ModuleListProps {
   initialCourse: Course;
 }
 
+type LessonDropTarget = {
+  lessonId: string;
+  placement: "before" | "after";
+};
+
+type LessonDragState = {
+  moduleId: string;
+  lessonId: string;
+  originalLessons: Lesson[];
+};
+
+type ModuleDragState = {
+  moduleId: string;
+  originalModules: Module[];
+};
+
+function moveLesson(
+  lessons: Lesson[],
+  lessonId: string,
+  targetId: string,
+  placement: LessonDropTarget["placement"],
+) {
+  const sourceIndex = lessons.findIndex((lesson) => lesson.id === lessonId);
+  if (sourceIndex < 0 || lessonId === targetId) return lessons;
+
+  const reordered = [...lessons];
+  const [movedLesson] = reordered.splice(sourceIndex, 1);
+  const targetIndex = reordered.findIndex((lesson) => lesson.id === targetId);
+  if (targetIndex < 0) return lessons;
+
+  reordered.splice(targetIndex + (placement === "after" ? 1 : 0), 0, movedLesson);
+  return reordered.map((lesson, index) => ({ ...lesson, order: index + 1 }));
+}
+
+function lessonOrderChanged(previous: Lesson[], next: Lesson[]) {
+  return previous.some((lesson, index) => lesson.id !== next[index]?.id);
+}
+
+function moveModule(
+  modules: Module[],
+  moduleId: string,
+  targetId: string,
+  placement: LessonDropTarget["placement"],
+) {
+  const sourceIndex = modules.findIndex((module) => module.id === moduleId);
+  if (sourceIndex < 0 || moduleId === targetId) return modules;
+
+  const reordered = [...modules];
+  const [movedModule] = reordered.splice(sourceIndex, 1);
+  const targetIndex = reordered.findIndex((module) => module.id === targetId);
+  if (targetIndex < 0) return modules;
+
+  reordered.splice(targetIndex + (placement === "after" ? 1 : 0), 0, movedModule);
+  return reordered.map((module, index) => ({ ...module, order: index + 1 }));
+}
+
+function moduleOrderChanged(previous: Module[], next: Module[]) {
+  return previous.some((module, index) => module.id !== next[index]?.id);
+}
+
 export default function ModuleList({ courseId, initialCourse }: ModuleListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [course, setCourse] = useState(initialCourse);
+  const lessonDragRef = useRef<LessonDragState | null>(null);
+  const [draggedLessonId, setDraggedLessonId] = useState<string | null>(null);
+  const [lessonDropTarget, setLessonDropTarget] = useState<LessonDropTarget | null>(null);
+  const moduleDragRef = useRef<ModuleDragState | null>(null);
+  const [draggedModuleId, setDraggedModuleId] = useState<string | null>(null);
+  const [moduleDropTarget, setModuleDropTarget] = useState<LessonDropTarget | null>(null);
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>(
     initialCourse.modules.reduce((acc, m) => ({ ...acc, [m.id]: true }), {})
   );
@@ -37,6 +103,214 @@ export default function ModuleList({ courseId, initialCourse }: ModuleListProps)
       ...prev,
       [moduleId]: !prev[moduleId]
     }));
+  };
+
+  const replaceModuleLessons = (moduleId: string, lessons: Lesson[]) => {
+    setCourse((previousCourse) => ({
+      ...previousCourse,
+      modules: previousCourse.modules.map((module) =>
+        module.id === moduleId ? { ...module, lessons } : module
+      ),
+    }));
+  };
+
+  const persistLessonOrder = (moduleId: string, nextLessons: Lesson[], previousLessons: Lesson[]) => {
+    replaceModuleLessons(moduleId, nextLessons);
+
+    startTransition(async () => {
+      const result = await reorderLessons(courseId, moduleId, nextLessons.map((lesson) => lesson.id));
+
+      if (!result.success) {
+        replaceModuleLessons(moduleId, previousLessons);
+        Toast.toast.danger("Não foi possível salvar a ordem das aulas.", {
+          description: result.message || "A ordem anterior foi restaurada.",
+        });
+        return;
+      }
+
+      Toast.toast.success("Ordem das aulas atualizada.");
+    });
+  };
+
+  const clearLessonDrag = () => {
+    lessonDragRef.current = null;
+    setDraggedLessonId(null);
+    setLessonDropTarget(null);
+  };
+
+  const handleLessonDragStart = (
+    event: DragEvent<HTMLButtonElement>,
+    moduleId: string,
+    lessonId: string,
+    lessons: Lesson[],
+  ) => {
+    if (isPending) {
+      event.preventDefault();
+      return;
+    }
+
+    lessonDragRef.current = { moduleId, lessonId, originalLessons: lessons };
+    setDraggedLessonId(lessonId);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", lessonId);
+  };
+
+  const handleLessonDragOver = (
+    event: DragEvent<HTMLDivElement>,
+    moduleId: string,
+    targetLessonId: string,
+  ) => {
+    const dragState = lessonDragRef.current;
+    if (!dragState || dragState.moduleId !== moduleId || dragState.lessonId === targetLessonId) return;
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const placement = event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
+    setLessonDropTarget({ lessonId: targetLessonId, placement });
+  };
+
+  const handleLessonDrop = (event: DragEvent<HTMLDivElement>, moduleId: string) => {
+    event.preventDefault();
+    const dragState = lessonDragRef.current;
+    const target = lessonDropTarget;
+
+    if (!dragState || dragState.moduleId !== moduleId || !target) {
+      clearLessonDrag();
+      return;
+    }
+
+    const nextLessons = moveLesson(
+      dragState.originalLessons,
+      dragState.lessonId,
+      target.lessonId,
+      target.placement,
+    );
+    clearLessonDrag();
+
+    if (lessonOrderChanged(dragState.originalLessons, nextLessons)) {
+      persistLessonOrder(moduleId, nextLessons, dragState.originalLessons);
+    }
+  };
+
+  const handleLessonReorderKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    moduleId: string,
+    lessonId: string,
+    lessons: Lesson[],
+  ) => {
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+    event.preventDefault();
+    if (isPending) return;
+
+    const currentIndex = lessons.findIndex((lesson) => lesson.id === lessonId);
+    const targetIndex = currentIndex + (event.key === "ArrowUp" ? -1 : 1);
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= lessons.length) return;
+
+    const target = lessons[targetIndex];
+    const nextLessons = moveLesson(
+      lessons,
+      lessonId,
+      target.id,
+      event.key === "ArrowUp" ? "before" : "after",
+    );
+    persistLessonOrder(moduleId, nextLessons, lessons);
+  };
+
+  const persistModuleOrder = (nextModules: Module[], previousModules: Module[]) => {
+    setCourse((previousCourse) => ({ ...previousCourse, modules: nextModules }));
+
+    startTransition(async () => {
+      const result = await reorderModules(courseId, nextModules.map((module) => module.id));
+
+      if (!result.success) {
+        setCourse((previousCourse) => ({ ...previousCourse, modules: previousModules }));
+        Toast.toast.danger("Não foi possível salvar a ordem dos módulos.", {
+          description: result.message || "A ordem anterior foi restaurada.",
+        });
+        return;
+      }
+
+      Toast.toast.success("Ordem dos módulos atualizada.");
+    });
+  };
+
+  const clearModuleDrag = () => {
+    moduleDragRef.current = null;
+    setDraggedModuleId(null);
+    setModuleDropTarget(null);
+  };
+
+  const handleModuleDragStart = (
+    event: DragEvent<HTMLButtonElement>,
+    moduleId: string,
+    modules: Module[],
+  ) => {
+    if (isPending) {
+      event.preventDefault();
+      return;
+    }
+
+    moduleDragRef.current = { moduleId, originalModules: modules };
+    setDraggedModuleId(moduleId);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", moduleId);
+  };
+
+  const handleModuleDragOver = (
+    event: DragEvent<HTMLDivElement>,
+    targetModuleId: string,
+  ) => {
+    const dragState = moduleDragRef.current;
+    if (!dragState || dragState.moduleId === targetModuleId) return;
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const placement = event.clientY < bounds.top + bounds.height / 2 ? "before" : "after";
+    setModuleDropTarget({ lessonId: targetModuleId, placement });
+  };
+
+  const handleModuleDrop = (event: DragEvent<HTMLDivElement>) => {
+    const dragState = moduleDragRef.current;
+    const target = moduleDropTarget;
+    if (!dragState || !target) return;
+
+    event.preventDefault();
+    const nextModules = moveModule(
+      dragState.originalModules,
+      dragState.moduleId,
+      target.lessonId,
+      target.placement,
+    );
+    clearModuleDrag();
+
+    if (moduleOrderChanged(dragState.originalModules, nextModules)) {
+      persistModuleOrder(nextModules, dragState.originalModules);
+    }
+  };
+
+  const handleModuleReorderKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    moduleId: string,
+    modules: Module[],
+  ) => {
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+    event.preventDefault();
+    if (isPending) return;
+
+    const currentIndex = modules.findIndex((module) => module.id === moduleId);
+    const targetIndex = currentIndex + (event.key === "ArrowUp" ? -1 : 1);
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= modules.length) return;
+
+    const target = modules[targetIndex];
+    const nextModules = moveModule(
+      modules,
+      moduleId,
+      target.id,
+      event.key === "ArrowUp" ? "before" : "after",
+    );
+    persistModuleOrder(nextModules, modules);
   };
 
   // --- Module Handlers ---
@@ -203,9 +477,14 @@ export default function ModuleList({ courseId, initialCourse }: ModuleListProps)
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-muted">
-          {course.modules.length} {course.modules.length === 1 ? "módulo cadastrado" : "módulos cadastrados"}
-        </p>
+        <div>
+          <p className="text-sm font-semibold text-muted">
+            {course.modules.length} {course.modules.length === 1 ? "módulo cadastrado" : "módulos cadastrados"}
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            Arraste módulos e aulas pelos puxadores para mudar a ordem.
+          </p>
+        </div>
         <Button variant="primary" size="sm" className="gap-2" onClick={handleOpenAddModule}>
           <Plus className="size-4" aria-hidden="true" />
           Novo Módulo
@@ -213,15 +492,30 @@ export default function ModuleList({ courseId, initialCourse }: ModuleListProps)
       </div>
 
       <div className="space-y-4">
-        {course.modules.map((module) => (
-          <div key={module.id} className="overflow-hidden rounded-2xl border border-border bg-surface shadow-elev-2 transition-shadow hover:shadow-elev-3">
+        {course.modules.map((module, moduleIndex) => (
+          <div
+            key={module.id}
+            onDragOver={(event) => handleModuleDragOver(event, module.id)}
+            onDrop={handleModuleDrop}
+            className={`overflow-hidden rounded-2xl border border-border bg-surface shadow-elev-2 transition-all hover:shadow-elev-3 ${
+              draggedModuleId === module.id ? "opacity-45" : ""
+            } ${moduleDropTarget?.lessonId === module.id && moduleDropTarget.placement === "before" ? "border-t-2 border-t-accent" : ""} ${
+              moduleDropTarget?.lessonId === module.id && moduleDropTarget.placement === "after" ? "border-b-2 border-b-accent" : ""
+            }`}
+          >
             {/* Header do Módulo */}
             <div className="flex items-start justify-between gap-4 border-b border-border p-4 sm:p-5">
               <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
                 <button
                   type="button"
-                  aria-label="Reordenar módulo"
-                  className="mt-1 shrink-0 cursor-grab text-muted transition-colors hover:text-accent"
+                  draggable={!isPending}
+                  disabled={isPending}
+                  aria-label={`Reordenar ${module.title}. Posição ${moduleIndex + 1} de ${course.modules.length}`}
+                  title="Arraste para reordenar ou use as setas para cima e para baixo"
+                  onDragStart={(event) => handleModuleDragStart(event, module.id, course.modules)}
+                  onDragEnd={clearModuleDrag}
+                  onKeyDown={(event) => handleModuleReorderKeyDown(event, module.id, course.modules)}
+                  className="mt-1 shrink-0 cursor-grab touch-none rounded-md p-1 text-muted transition-all hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent active:cursor-grabbing disabled:cursor-wait disabled:opacity-30"
                 >
                   <GripVertical className="size-5" aria-hidden="true" />
                 </button>
@@ -303,20 +597,31 @@ export default function ModuleList({ courseId, initialCourse }: ModuleListProps)
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {module.lessons.map((lesson) => {
+                    {module.lessons.map((lesson, lessonIndex) => {
                       const isProfileTest = lesson.type === 'profile_test';
+                      const isDragged = draggedLessonId === lesson.id;
+                      const isDropBefore = lessonDropTarget?.lessonId === lesson.id && lessonDropTarget.placement === "before";
+                      const isDropAfter = lessonDropTarget?.lessonId === lesson.id && lessonDropTarget.placement === "after";
                       return (
                         <div
                           key={lesson.id}
+                          onDragOver={(event) => handleLessonDragOver(event, module.id, lesson.id)}
+                          onDrop={(event) => handleLessonDrop(event, module.id)}
                           className={`group flex items-center justify-between rounded-xl border p-3.5 transition-all hover:bg-surface-hover ${
                             isProfileTest ? 'border-accent/25 bg-accent-soft/40' : 'border-border/60 hover:border-border'
-                          }`}
+                          } ${isDragged ? 'opacity-45' : ''} ${isDropBefore ? 'border-t-2 border-t-accent' : ''} ${isDropAfter ? 'border-b-2 border-b-accent' : ''}`}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
                             <button
                               type="button"
-                              aria-label="Reordenar item"
-                              className="cursor-grab text-muted opacity-0 transition-opacity group-hover:opacity-100"
+                              draggable={!isPending}
+                              disabled={isPending}
+                              aria-label={`Reordenar ${lesson.title}. Posição ${lessonIndex + 1} de ${module.lessons.length}`}
+                              title="Arraste para reordenar ou use as setas para cima e para baixo"
+                              onDragStart={(event) => handleLessonDragStart(event, module.id, lesson.id, module.lessons)}
+                              onDragEnd={clearLessonDrag}
+                              onKeyDown={(event) => handleLessonReorderKeyDown(event, module.id, lesson.id, module.lessons)}
+                              className="shrink-0 cursor-grab touch-none rounded-md p-1 text-muted opacity-60 transition-all hover:bg-accent-soft hover:text-accent hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent active:cursor-grabbing disabled:cursor-wait disabled:opacity-30 sm:opacity-0 sm:group-hover:opacity-100"
                             >
                               <GripVertical className="size-4" aria-hidden="true" />
                             </button>
@@ -371,7 +676,7 @@ export default function ModuleList({ courseId, initialCourse }: ModuleListProps)
                               </Button>
                             ) : (
                               <Link
-                                href={lesson.type === 'quiz' ? `/admin/cursos/${courseId}/aulas/quiz/${lesson.id}` : `/admin/cursos/${courseId}/aulas/${lesson.id}`}
+                                href={lesson.type === 'quiz' ? `/admin/cursos/${courseId}/aulas/quiz/${lesson.id}?module=${module.id}` : `/admin/cursos/${courseId}/aulas/${lesson.id}?module=${module.id}`}
                                 aria-label="Editar aula"
                                 className="grid size-8 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent"
                               >
@@ -426,6 +731,16 @@ export default function ModuleList({ courseId, initialCourse }: ModuleListProps)
           </div>
         ))}
       </div>
+
+      <p className="sr-only" aria-live="polite">
+        {isPending ? "Salvando a nova ordem do conteúdo." : ""}
+      </p>
+      {isPending && (
+        <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-muted shadow-elev-3">
+          <LoaderCircle className="size-4 animate-spin text-accent" aria-hidden="true" />
+          Salvando ordem...
+        </div>
+      )}
 
       {/* Modal de Criação / Edição de Módulo */}
       <AddEditModuleModal

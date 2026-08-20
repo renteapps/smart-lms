@@ -34,8 +34,12 @@ export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialDat
 
   const [title, setTitle] = useState(initialLessonTitle || initialData?.title || "");
   const [description, setDescription] = useState(initialData?.description || "");
-  const [passingScore, setPassingScore] = useState(initialData?.passingScore || 70);
-  const [questions, setQuestions] = useState<QuizQuestion[]>(initialData?.questions || [emptyQuestion]);
+  const [passingScore, setPassingScore] = useState(initialData?.passingScore ?? 70);
+  const [questions, setQuestions] = useState<QuizQuestion[]>(
+    initialData?.questions && initialData.questions.length > 0
+      ? initialData.questions
+      : [emptyQuestion]
+  );
 
   const handleAddQuestion = () => {
     setQuestions(prev => [
@@ -156,13 +160,13 @@ export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialDat
       }
 
       // 2. Link Quiz to a Lesson record
-      const lessonRes = await saveLesson(targetModuleId as string, {
+      const lessonRes = await saveLesson((targetModuleId || "") as string, {
         id: isNew ? undefined : aulaId,
         title,
         type: "quiz",
-        content: description,
+        content: description || "",
         quizId: quizRes.data.id,
-        durationInMinutes: questions.length * 2, // estimate 2 min per question
+        durationInMinutes: Math.max(1, questions.length * 2), // estimate 2 min per question
         isPublished: true, // Auto publish for now
       });
 

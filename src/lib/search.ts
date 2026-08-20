@@ -229,7 +229,9 @@ export function getStaticCandidates(localNotes?: SearchFilterOptions["localNotes
 
       let noteUrl = "/notas";
       if (!isPersonal && !isAgent) {
-        noteUrl = `/courses/c1/lessons/${note.lessonId}`;
+        noteUrl = note.courseId && note.lessonId
+          ? `/courses/${note.courseId}/lessons/${note.lessonId}`
+          : `/courses/c1/lessons/${note.lessonId}`;
       } else if (isAgent) {
         noteUrl = "/agentes";
       }

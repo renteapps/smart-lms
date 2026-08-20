@@ -1,7 +1,9 @@
+import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import QuizBuilderForm from "./QuizBuilderForm";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/supabase/auth";
 import { getCourse } from "@/lib/data/courses";
+import type { Quiz } from "@/types/quiz";
 
 // Simple skeleton for loading
 function QuizBuilderSkeleton() {
@@ -22,46 +24,53 @@ export default async function QuizAdminPage({
   const { id, aulaId } = await params;
   const { module } = await searchParams;
 
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
   const course = await getCourse(supabase, id);
-  
-  let initialQuizData = undefined;
-  let initialLessonTitle = undefined;
-  
-  if (aulaId !== "nova" && course) {
-    const lesson = course.modules
-      .flatMap(m => m.lessons)
-      .find(l => l.id === aulaId);
-      
-    if (lesson && lesson.quizId) {
-      initialLessonTitle = lesson.title;
-      const { data: quiz } = await supabase
-        .from("quizzes")
-        .select("*")
-        .eq("id", lesson.quizId)
-        .single();
-        
-      if (quiz) {
-        initialQuizData = {
-          id: quiz.id,
-          title: quiz.title,
-          description: quiz.description,
-          questions: quiz.questions,
-          passingScore: quiz.passing_score
-        };
-      }
+
+  if (!course) {
+    notFound();
+  }
+
+  const isNew = aulaId === "nova";
+  const lesson = !isNew
+    ? course.modules.flatMap((m) => m.lessons).find((l) => l.id === aulaId) || null
+    : null;
+
+  if (!isNew && !lesson) {
+    notFound();
+  }
+
+  let initialQuizData: Quiz | undefined = undefined;
+  let initialLessonTitle = lesson?.title || undefined;
+
+  if (lesson?.quizId) {
+    const { data: quiz } = await supabase
+      .from("quizzes")
+      .select("*")
+      .eq("id", lesson.quizId)
+      .maybeSingle();
+
+    if (quiz) {
+      initialQuizData = {
+        id: quiz.id,
+        title: quiz.title,
+        description: quiz.description,
+        questions: Array.isArray(quiz.questions) ? quiz.questions : [],
+        passingScore: quiz.passing_score ?? 70,
+      };
     }
   }
 
   return (
     <Suspense fallback={<QuizBuilderSkeleton />}>
-      <QuizBuilderForm 
-        courseId={id} 
-        aulaId={aulaId} 
-        moduleId={module || null}
+      <QuizBuilderForm
+        courseId={id}
+        aulaId={aulaId}
+        moduleId={module || lesson?.moduleId || null}
         initialData={initialQuizData}
         initialLessonTitle={initialLessonTitle}
       />
     </Suspense>
   );
 }
+

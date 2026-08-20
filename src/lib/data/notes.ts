@@ -32,11 +32,15 @@ const NOTE_SELECT = `
 `;
 
 function mapNote(row: Row): StudentNote {
+  const lesson = Array.isArray(row.lessons) ? row.lessons[0] : row.lessons;
+  const mod = lesson?.modules && Array.isArray(lesson.modules) ? lesson.modules[0] : lesson?.modules;
+  const courseId = mod?.course_id ?? undefined;
+
   return {
     id: row.id,
     kind: (row.kind ?? "lesson") as NoteKind,
     lessonId: row.lesson_id ?? undefined,
-    courseId: row.lessons?.modules?.course_id ?? undefined,
+    courseId,
     agentId: row.agent_id ?? undefined,
     title: row.lesson_title ?? "Anotação sem título",
     content: row.content ?? "",

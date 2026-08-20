@@ -133,12 +133,27 @@ export function AgentChatProvider({ children }: { children: React.ReactNode }) {
       }),
     }).then(async (response) => {
       const body = (await response.json()) as AgentChatResponse;
+
+      // A rota pode ter persistido a pergunta antes de o provedor falhar.
+      // Mantemos o rascunho ligado ao UUID real e trocamos o id otimista para
+      // que uma nova tentativa continue na mesma conversa.
+      if (body.conversationId && targetId.startsWith("draft-")) {
+        persistedIds.current.set(targetId, body.conversationId);
+      }
+      if (body.userMessage) {
+        setConversations((current) => current.map((item) => item.id === targetId ? {
+          ...item,
+          messages: item.messages.map((entry) => entry.id === optimisticId
+            ? { id: body.userMessage!.id, author: "student" as const, text: body.userMessage!.text }
+            : entry),
+        } : item));
+      }
+
       if (!response.ok || !body.success || !body.conversationId || !body.text) {
         if (typeof body.creditsRemaining === "number") setCredits(body.creditsRemaining);
         throw new Error(body.error || "Não foi possível obter a resposta do agente.");
       }
 
-      if (targetId.startsWith("draft-")) persistedIds.current.set(targetId, body.conversationId);
       if (typeof body.creditsRemaining === "number") setCredits(body.creditsRemaining);
 
       const remainingDelay = Math.max(0, typingDelay(message) - (Date.now() - startedAt));

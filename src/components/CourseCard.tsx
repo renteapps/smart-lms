@@ -1,14 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Clock3, Layers3 } from "lucide-react";
+import { CheckCircle2, Clock3, Layers3, LockKeyhole } from "lucide-react";
 import { Card, Chip, Label, ProgressBar } from "@heroui/react";
 import { ArrowIcon } from "@/components/ui/AnimatedIcon";
 import { Reveal } from "@/components/ui/Reveal";
 import { useCardTransition } from "@/contexts/CardTransitionContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { resolveDynamicSalesUrl } from "@/lib/salesUrlHelper";
+import { getStudentCourseAction } from "@/lib/courseAccess";
 import { cn } from "@/lib/utils";
+import type { StudentCourseState } from "@/types/course";
 
 const FALLBACK_COVER =
   "https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=85&w=1200&auto=format&fit=crop";
@@ -22,6 +26,8 @@ type CourseCardProps = {
   coverUrl?: string;
   cover_url?: string;
   progress?: number;
+  studentState?: StudentCourseState;
+  certificateEnabled?: boolean;
   href?: string;
   description?: string;
   duration?: string;
@@ -35,12 +41,15 @@ type CourseCardProps = {
 
 export default function CourseCard({
   id,
+  slug,
   title,
   category,
   cover,
   coverUrl,
   cover_url,
   progress,
+  studentState,
+  certificateEnabled = true,
   href,
   description,
   duration,
@@ -51,17 +60,41 @@ export default function CourseCard({
   featured = false,
 }: CourseCardProps) {
   const { triggerTransition } = useCardTransition();
-  const linkUrl = href || (id ? `/courses/${id}` : "#");
+  const { user } = useAuth();
   const hasMeta = Boolean(duration) || lessonCount !== undefined || Boolean(level);
 
-  const rawCover = cover || coverUrl || cover_url || "";
-  const initialCover = rawCover.trim() !== "" ? rawCover : FALLBACK_COVER;
-  const [imgSrc, setImgSrc] = useState(initialCover);
+  const state: StudentCourseState = studentState ?? (
+    progress === 100
+      ? { kind: "completed", certificateEnabled, certificateIssued: false }
+      : progress !== undefined && progress > 0
+        ? { kind: "in-progress", progress }
+        : { kind: "available" }
+  );
 
-  useEffect(() => {
-    const nextCover = cover || coverUrl || cover_url || "";
-    setImgSrc(nextCover.trim() !== "" ? nextCover : FALLBACK_COVER);
-  }, [cover, coverUrl, cover_url]);
+  const resolvedSalesUrl = state.kind === "locked" && state.salesUrl
+    ? resolveDynamicSalesUrl(state.salesUrl, {
+        contact: {
+          name: user?.user_metadata?.full_name || user?.user_metadata?.name || undefined,
+          email: user?.email || undefined,
+          phone: user?.user_metadata?.phone || undefined,
+          id: user?.id,
+        },
+        course: { id, title, slug, category },
+      })
+    : null;
+  const action = getStudentCourseAction({
+    state,
+    courseId: id,
+    courseHref: href,
+    resolvedSalesUrl,
+  });
+  const linkUrl = action.href;
+  const isExternal = Boolean(linkUrl?.startsWith("http://") || linkUrl?.startsWith("https://"));
+
+  const rawCover = (cover || coverUrl || cover_url || "").trim();
+  const selectedCover = rawCover || FALLBACK_COVER;
+  const [failedCover, setFailedCover] = useState<string | null>(null);
+  const imgSrc = failedCover === selectedCover ? FALLBACK_COVER : selectedCover;
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (
@@ -72,8 +105,7 @@ export default function CourseCard({
       e.altKey ||
       e.shiftKey ||
       !linkUrl ||
-      linkUrl === "#" ||
-      linkUrl.startsWith("http")
+      isExternal
     ) {
       return;
     }
@@ -99,17 +131,9 @@ export default function CourseCard({
     });
   };
 
-  return (
-    <Link
-      href={linkUrl}
-      onClick={handleClick}
-      className={cn("icon-draw group block h-full min-w-0 rounded-lg", className)}
-    >
-      {/*
-       * Um gesto por card: o foco de luz do Reveal somado ao `.lift`.
-       * `edge` fica só no card em destaque — se todos brilham, nenhum destaca.
-       */}
-      <Reveal edge={featured} className="h-full rounded-lg">
+  // Um gesto por card: o foco do Reveal somado ao lift; a borda fica no destaque.
+  const card = (
+    <Reveal edge={featured} className="h-full rounded-lg">
         <Card className="lift h-full gap-0 overflow-hidden p-0">
           <div className="relative aspect-[16/9] overflow-hidden bg-background-secondary">
             <Image
@@ -121,11 +145,19 @@ export default function CourseCard({
               sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
               onError={() => {
                 if (imgSrc !== FALLBACK_COVER) {
-                  setImgSrc(FALLBACK_COVER);
+                  setFailedCover(selectedCover);
                 }
               }}
               className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.035]"
             />
+            {state.kind === "locked" && (
+              <div className="absolute inset-0 z-10 grid place-items-center bg-foreground/45 backdrop-blur-[2px]">
+                <span className="grid size-12 place-items-center rounded-full border border-background/30 bg-foreground/65 text-background shadow-elev-2">
+                  <LockKeyhole className="size-5" aria-hidden="true" />
+                  <span className="sr-only">Curso bloqueado</span>
+                </span>
+              </div>
+            )}
             {/*
              * Véu curto e só no rodapé da capa: assenta a etiqueta sem lavar a
              * imagem inteira de cinza quando a foto é clara.
@@ -141,6 +173,17 @@ export default function CourseCard({
             <span className="material-thick absolute bottom-3 left-3 rounded-md px-2.5 py-1 text-[0.6875rem] font-bold uppercase tracking-[0.06em] text-foreground">
               {category}
             </span>
+            {state.kind === "in-progress" && (
+              <Chip size="sm" variant="soft" color="accent" className="absolute right-3 top-3 z-20">
+                Em progresso
+              </Chip>
+            )}
+            {state.kind === "completed" && (
+              <Chip size="sm" variant="soft" color="success" className="absolute right-3 top-3 z-20">
+                <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                Finalizado
+              </Chip>
+            )}
           </div>
 
           <Card.Header className="gap-1.5 px-5 pt-5">
@@ -175,8 +218,8 @@ export default function CourseCard({
               </div>
             )}
 
-            {progress !== undefined && (
-              <ProgressBar value={progress} color="accent" size="sm">
+            {state.kind === "in-progress" && (
+              <ProgressBar value={state.progress} color="accent" size="sm">
                 <Label className="text-xs font-bold text-muted">Seu progresso</Label>
                 <ProgressBar.Output className="text-xs font-bold text-accent" />
                 <ProgressBar.Track>
@@ -191,16 +234,43 @@ export default function CourseCard({
            * separa a leitura do curso da ação. Duas linhas viravam formulário.
            */}
           <Card.Footer className="mt-auto justify-between border-t border-hairline px-5 py-4 text-sm font-bold text-accent">
-            <span>{progress !== undefined ? "Continuar curso" : "Conhecer curso"}</span>
+            <span className={cn(!linkUrl && "text-muted")}>{action.label}</span>
             <span
               aria-hidden="true"
-              className="grid size-8 place-items-center rounded-md bg-accent-soft text-accent-soft-foreground transition-[background-color,color,transform] duration-[var(--duration-md)] group-hover:translate-x-0.5 group-hover:bg-accent group-hover:text-accent-foreground"
+              className={cn(
+                "grid size-8 place-items-center rounded-md bg-accent-soft text-accent-soft-foreground transition-[background-color,color,transform] duration-[var(--duration-md)]",
+                linkUrl && "group-hover:translate-x-0.5 group-hover:bg-accent group-hover:text-accent-foreground",
+                !linkUrl && "bg-background-secondary text-muted",
+              )}
             >
-              <ArrowIcon size={16} />
+              {state.kind === "locked" ? <LockKeyhole className="size-4" /> : <ArrowIcon size={16} />}
             </span>
           </Card.Footer>
         </Card>
-      </Reveal>
+    </Reveal>
+  );
+
+  const wrapperClassName = cn(
+    "icon-draw group block h-full min-w-0 rounded-lg",
+    !linkUrl && "cursor-not-allowed opacity-80",
+    className,
+  );
+
+  if (!linkUrl) {
+    return <div className={wrapperClassName} aria-disabled="true">{card}</div>;
+  }
+
+  if (isExternal) {
+    return (
+      <a href={linkUrl} target="_blank" rel="noopener noreferrer" className={wrapperClassName}>
+        {card}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={linkUrl} onClick={handleClick} className={wrapperClassName}>
+      {card}
     </Link>
   );
 }

@@ -56,6 +56,7 @@ export interface SearchFilterOptions {
   userId?: string;
   localNotes?: Array<{
     lessonId: string;
+    courseId?: string;
     lessonTitle: string;
     content: string;
     updatedAt: string;

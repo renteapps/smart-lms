@@ -36,7 +36,6 @@ import SessionRest from "@/components/home/SessionRest";
 import StudyLedger from "@/components/home/StudyLedger";
 import WhyThisTrail from "@/components/home/WhyThisTrail";
 import { Rise } from "@/components/ui/Rise";
-import { useUserAccess } from "@/hooks/useUserAccess";
 
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   weekday: "long",
@@ -99,20 +98,15 @@ function HomeSkeleton() {
  * com uma normalização própria — era por isso que o "continuar aprendendo" do
  * topo e o "comece por aqui" do meio apontavam para aulas diferentes.
  */
-export default function StudentHomeClient() {
+export default function StudentHomeClient({ courses }: { courses: CatalogCourse[] }) {
   const { hydrated, trail, questionnaire, error, migrated } = useTrailStore();
-  const { courses, dailyPill, profileTests, loading } = useSupabaseData();
+  const { dailyPill, profileTests, loading } = useSupabaseData();
   const profileRaw = useSyncExternalStore(subscribeToProfile, readProfileRaw, noProfile);
   const refinementRaw = useStoredValue(REFINEMENT_STORAGE_KEY);
   /** O que a última recalibração mudou — some na próxima navegação, de propósito. */
   const [outcome, setOutcome] = useState<string | null>(null);
 
-  /*
-   * Verifica acesso ao conteúdo somente quando não há trilha — evita chamadas
-   * desnecessárias ao Supabase para quem já está estudando.
-   */
   const state = useMemo(() => selectHomeState(trail), [trail]);
-  const accessState = useUserAccess(hydrated && state.kind === "sem-trilha");
 
   /*
    * Sinal implícito: o que ficou para trás volta para a agenda sozinho. É uma
@@ -266,25 +260,14 @@ export default function StudentHomeClient() {
 
   if (state.kind === "sem-trilha") {
     /*
-     * Se ainda estamos verificando o acesso, mantém o skeleton para não
-     * piscar entre estados.
-     */
-    if (accessState.status === "loading") {
-      return (
-        <div className="pt-[76px]">
-          <HomeSkeleton />
-        </div>
-      );
-    }
-
-    /*
      * Sem matrícula nem plano ativo → exibe vitrine de compra.
      * Com acesso mas sem trilha → exibe convite ao onboarding.
      */
-    if (accessState.status === "no-access") {
+    const hasCourseAccess = courses.some((course) => course.studentState?.kind !== "locked");
+    if (!hasCourseAccess) {
       return (
         <div className="pt-[76px]">
-          <HomeNoCourses courses={accessState.courses} />
+          <HomeNoCourses courses={courses} />
         </div>
       );
     }
