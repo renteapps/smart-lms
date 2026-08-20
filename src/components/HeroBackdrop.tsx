@@ -34,6 +34,7 @@ export default function HeroBackdrop({ src }: HeroBackdropProps) {
           src={src}
           alt=""
           fill
+          unoptimized
           /* Acima da dobra: carrega junto com a página, mas sem disputar prioridade com a capa da aula. */
           loading="eager"
           /*

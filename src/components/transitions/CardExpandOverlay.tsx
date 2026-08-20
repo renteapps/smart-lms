@@ -132,6 +132,7 @@ export function CardExpandOverlay() {
                   src={metadata.cover}
                   alt=""
                   fill
+                  unoptimized
                   priority
                   sizes="860px"
                   className="object-cover"

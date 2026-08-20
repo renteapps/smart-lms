@@ -18,27 +18,40 @@ export async function getLessonComments(db: DB, lessonId: string): Promise<Comme
   const { data, error } = await db
     .from("comments")
     .select(`
-      id, lesson_id, user_id, content, parent_id, created_at,
-      profiles:user_id (name, avatar_url)
+      id, lesson_id, user_id, content, parent_id, created_at
     `)
     .eq("lesson_id", lessonId)
     .order("created_at", { ascending: true });
 
   logQueryError("getLessonComments", error);
-  if (!data) return [];
+  if (!data || data.length === 0) return [];
 
-  const comments = data.map((row: any) => ({
-    id: row.id,
-    lessonId: row.lesson_id,
-    userId: row.user_id,
-    content: row.content,
-    parentId: row.parent_id,
-    createdAt: row.created_at,
-    user: {
-      name: row.profiles?.name || "Usuário",
-      avatarUrl: row.profiles?.avatar_url,
-    },
-  }));
+  const userIds = Array.from(new Set(data.map((row: any) => row.user_id)));
+  
+  const { data: profilesData } = await db
+    .from("profiles")
+    .select("id, name, avatar_url")
+    .in("id", userIds);
+    
+  const profilesMap = new Map(
+    (profilesData || []).map((p: any) => [p.id, p])
+  );
+
+  const comments = data.map((row: any) => {
+    const profile = profilesMap.get(row.user_id) || {};
+    return {
+      id: row.id,
+      lessonId: row.lesson_id,
+      userId: row.user_id,
+      content: row.content,
+      parentId: row.parent_id,
+      createdAt: row.created_at,
+      user: {
+        name: profile.name || "Usuário",
+        avatarUrl: profile.avatar_url,
+      },
+    };
+  });
 
   const rootComments = comments.filter((c: any) => !c.parentId);
   const replies = comments.filter((c: any) => c.parentId);

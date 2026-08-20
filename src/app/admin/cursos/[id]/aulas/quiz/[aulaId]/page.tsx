@@ -16,19 +16,22 @@ export default async function QuizAdminPage({
   params,
   searchParams,
 }: {
-  params: { id: string; aulaId: string };
-  searchParams: { module?: string };
+  params: Promise<{ id: string; aulaId: string }>;
+  searchParams: Promise<{ module?: string }>;
 }) {
+  const { id, aulaId } = await params;
+  const { module } = await searchParams;
+
   const supabase = await createClient();
-  const course = await getCourse(supabase, params.id);
+  const course = await getCourse(supabase, id);
   
   let initialQuizData = undefined;
   let initialLessonTitle = undefined;
   
-  if (params.aulaId !== "nova" && course) {
+  if (aulaId !== "nova" && course) {
     const lesson = course.modules
       .flatMap(m => m.lessons)
-      .find(l => l.id === params.aulaId);
+      .find(l => l.id === aulaId);
       
     if (lesson && lesson.quizId) {
       initialLessonTitle = lesson.title;
@@ -53,9 +56,9 @@ export default async function QuizAdminPage({
   return (
     <Suspense fallback={<QuizBuilderSkeleton />}>
       <QuizBuilderForm 
-        courseId={params.id} 
-        aulaId={params.aulaId} 
-        moduleId={searchParams.module || null}
+        courseId={id} 
+        aulaId={aulaId} 
+        moduleId={module || null}
         initialData={initialQuizData}
         initialLessonTitle={initialLessonTitle}
       />

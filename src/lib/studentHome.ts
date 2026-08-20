@@ -1,5 +1,5 @@
 import type { CatalogCourse } from '@/types/course';
-import { fromLocalDateKey, toLocalDateKey } from '@/lib/matching';
+import { fromLocalDateKey, minutesForWeekday, normalizeAvailability, toLocalDateKey, weeklyMinutes } from '@/lib/matching';
 import type {
   LearningRole,
   LearningTrail,
@@ -171,6 +171,8 @@ export type WeekDayProgress = {
 
 export type StudyStats = {
   weekGoalDays: number;
+  /** Soma real da semana: no modo por dia, cada dia com o seu tempo. */
+  weekGoalMinutes: number;
   weekDoneDays: number;
   weekDays: WeekDayProgress[];
   streakDays: number;
@@ -279,6 +281,7 @@ export function computeStudyStats(trail: LearningTrail, now = new Date()): Study
   return {
     // A meta é a rotina que a pessoa escolheu, não uma constante do produto.
     weekGoalDays: trail.availability.weekdays.length,
+    weekGoalMinutes: weeklyMinutes(trail.availability),
     weekDoneDays: weekDays.filter((day) => day.done).length,
     weekDays,
     streakDays: computeStreak(trail, now),
@@ -344,18 +347,27 @@ export function deriveProfileSummary(
 
   const chips: ProfileChip[] = [...byLabel.values()];
 
-  const { weekdays, minutesPerSession } = trail.availability;
-  const effectiveMinutes = trail.adaptiveMinutesPerSession || minutesPerSession;
+  const routine = normalizeAvailability(trail.availability);
+  const scale = trail.adaptiveMinutesPerSession
+    ? trail.adaptiveMinutesPerSession / routine.minutesPerSession
+    : 1;
 
-  if (weekdays.length > 0) {
-    chips.push({
-      id: '__availability',
-      label: ROLE_LABELS.disponibilidade,
-      values: [
-        [...weekdays].sort().map((day) => WEEKDAY_LABELS[day]).join(' · '),
-        `${effectiveMinutes} min por sessão`,
-      ],
-    });
+  if (routine.weekdays.length > 0) {
+    /*
+     * No modo por dia, o resumo mostra dia a dia: dizer "45 min por sessão" para
+     * quem reservou 20 na terça e 90 no sábado seria uma média que não existe em
+     * nenhum dia real da semana dessa pessoa.
+     */
+    const values = routine.mode === 'per_day'
+      ? routine.weekdays.map((day) => (
+        `${WEEKDAY_LABELS[day]}: ${Math.round(minutesForWeekday(routine, day) * scale)} min`
+      ))
+      : [
+        routine.weekdays.map((day) => WEEKDAY_LABELS[day]).join(' · '),
+        `${Math.round(routine.minutesPerSession * scale)} min por sessão`,
+      ];
+
+    chips.push({ id: '__availability', label: ROLE_LABELS.disponibilidade, values });
   }
 
   return chips;

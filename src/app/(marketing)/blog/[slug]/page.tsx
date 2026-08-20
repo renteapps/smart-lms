@@ -91,18 +91,20 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       </header>
 
       {/* Cover Image */}
-      <div className="editorial-container mb-16 max-w-5xl">
-        <div className="relative aspect-[21/9] rounded-[var(--radius-xl)] overflow-hidden bg-muted border border-border/30 shadow-sm">
-          <Image 
-            src={article.cover} 
-            alt={article.title}
-            fill
-            priority
-            sizes="(max-width: 1024px) 100vw, 1024px"
-            className="object-cover"
-          />
+      {article.cover && article.cover.trim() !== "" && (
+        <div className="editorial-container mb-16 max-w-5xl">
+          <div className="relative aspect-[21/9] rounded-[var(--radius-xl)] overflow-hidden bg-muted border border-border/30 shadow-sm">
+            <Image 
+              src={article.cover} 
+              alt={article.title}
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 1024px"
+              className="object-cover"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Content */}
       <div className="editorial-container max-w-3xl">

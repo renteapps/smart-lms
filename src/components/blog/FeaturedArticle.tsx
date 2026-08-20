@@ -5,24 +5,30 @@ import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
 import Image from 'next/image';
 
+const FALLBACK_BLOG_COVER =
+  "https://images.unsplash.com/photo-1521737711867-e3b97375f902?q=85&w=1400&auto=format&fit=crop";
+
 interface FeaturedArticleProps {
   article: Article;
   className?: string;
 }
 
 export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
+  const coverSrc = article.cover && article.cover.trim() !== "" ? article.cover : FALLBACK_BLOG_COVER;
+
   return (
     <div className={cn("group relative overflow-hidden rounded-2xl bg-foreground shadow-elev-4", className)}>
       <div className="absolute inset-0">
         <Image
-          src={article.cover}
+          src={coverSrc}
           alt={article.title}
           fill
           sizes="(max-width: 1280px) 100vw, 1280px"
           className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.025]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/80 to-transparent opacity-90" />
-        <div className="absolute inset-0 bg-gradient-to-r from-foreground/80 via-foreground/20 to-transparent opacity-80" />
+        {/* Véu de baixo para cima e lateral para legibilidade perfeita do texto sem escurecer a foto inteira */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
       </div>
 
       <div className="relative flex min-h-[480px] flex-col justify-end p-7 sm:p-10 md:min-h-[560px] lg:p-14">

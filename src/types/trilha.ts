@@ -1,8 +1,18 @@
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
+/**
+ * `uniform`: o mesmo tempo em todos os dias escolhidos.
+ * `per_day`: cada dia da semana tem sua própria meta de minutos.
+ */
+export type AvailabilityMode = 'uniform' | 'per_day';
+
 export type StudyAvailability = {
   weekdays: Weekday[];
+  /** Meta uniforme e, no modo por dia, o valor padrão de um dia sem minutos próprios. */
   minutesPerSession: number;
+  mode?: AvailabilityMode;
+  /** Só no modo `per_day`: minutos declarados para cada dia escolhido. */
+  minutesByWeekday?: Partial<Record<Weekday, number>>;
 };
 
 export type EligibleLesson = {
@@ -46,6 +56,8 @@ export type AvailabilityQuestionConfig = {
   minutePresets: number[];
   minMinutes: number;
   maxMinutes: number;
+  /** Oferece ao aluno a opção de definir um tempo diferente por dia da semana. */
+  allowPerDayMinutes?: boolean;
 };
 
 export type Question = {
@@ -85,6 +97,8 @@ export type ResolvedContent = {
   url?: string;
   cover?: string;
   prerequisites?: string[];
+  /** Posição na ordem editorial do curso — o agendador nunca a inverte. */
+  sequence?: number;
 };
 
 export type LearningTrailItem = ResolvedContent & {
@@ -97,6 +111,8 @@ export type LearningTrailItem = ResolvedContent & {
   sessionId: string;
   overBudget?: boolean;
   rescheduled?: boolean;
+  /** Antecipado para preencher um dia que sobrava tempo, sem furar a sequência do curso. */
+  movedForFit?: boolean;
   completedAt?: string;
   warnings?: string[];
 };
@@ -120,7 +136,24 @@ export type LearningTrail = {
   questionnaireVersion: number;
   answers: Record<string, string[]>;
   availability: StudyAvailability;
+  /**
+   * Meta adaptada pelo comportamento (feedback de carga, dias em branco).
+   *
+   * É lida como **razão** sobre `availability.minutesPerSession`, e essa razão
+   * escala também os minutos por dia — assim uma rotina com tempos diferentes
+   * encolhe ou cresce mantendo a proporção que a pessoa escolheu.
+   */
   adaptiveMinutesPerSession?: number;
+  /** Sessões planejadas que passaram sem nenhuma conclusão, desde a última geração. */
+  missedSessions?: number;
+  /**
+   * Carimbo do catálogo + questionário usado na última reconciliação.
+   *
+   * É o que permite descobrir, com uma consulta só, que o admin mapeou conteúdo
+   * novo numa resposta que esta pessoa já deu — e trazê-lo para a trilha dela
+   * sem remontar o índice inteiro a cada visita.
+   */
+  catalogStamp?: string;
   feedbackHistory?: SessionFeedback[];
   excludedItems?: LearningTrailItem[];
 };

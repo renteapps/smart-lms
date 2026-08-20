@@ -382,29 +382,97 @@ export async function assignCoursesToDepartment(
 // Planos
 // ---------------------------------------------------------------------------
 
-export async function savePlan(input: Partial<Plan> & { id?: string }): Promise<Saved<{ id: string }>> {
+export async function savePlan(input: Partial<Plan> & { id?: string; productId?: string }): Promise<Saved<{ id: string }>> {
   try {
+    const name = input.name?.trim();
+    if (!name) {
+      return { success: false, message: "O nome do plano é obrigatório." };
+    }
+
+    if (input.price == null || isNaN(Number(input.price)) || Number(input.price) < 0) {
+      return { success: false, message: "Informe um preço válido para o plano." };
+    }
+
     const { adminClient } = await requireAdmin();
 
-    const row: Record<string, unknown> = {};
-    const set = (key: string, value: unknown) => {
-      if (value !== undefined) row[key] = value;
+    const isNew = !input.id || input.id === "novo" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.id);
+
+    // Mapeia frequência para o enum do Postgres ('monthly', 'yearly', 'lifetime', 'custom')
+    const frequencyMapping: Record<string, "monthly" | "yearly" | "lifetime" | "custom"> = {
+      mensal: "monthly",
+      anual: "yearly",
+      vitalicio: "lifetime",
+      personalizado: "custom",
+      semanal: "custom",
+      quinzenal: "custom",
+      trimestral: "custom",
+      semestral: "custom",
+      monthly: "monthly",
+      yearly: "yearly",
+      lifetime: "lifetime",
+      custom: "custom",
+    };
+    const validFrequency = frequencyMapping[input.frequency || "monthly"] || "monthly";
+
+    // Resolução de Slug único
+    let baseSlug = slugify(input.slug?.trim() || name);
+    if (!baseSlug) baseSlug = `plano-${Date.now()}`;
+
+    let slugQuery = adminClient.from("plans").select("id, slug").like("slug", `${baseSlug}%`);
+    if (!isNew && input.id) {
+      slugQuery = slugQuery.neq("id", input.id);
+    }
+    const { data: existingSlugs } = await slugQuery;
+
+    let finalSlug = baseSlug;
+    const takenSlugs = new Set((existingSlugs ?? []).map((s) => s.slug));
+    if (takenSlugs.has(finalSlug)) {
+      let counter = 2;
+      while (takenSlugs.has(`${baseSlug}-${counter}`)) {
+        counter++;
+      }
+      finalSlug = `${baseSlug}-${counter}`;
+    }
+
+    const gatewayProductId = input.gatewayProductId?.trim() || input.productId?.trim() || null;
+
+    // Serialização de metadados estendidos dentro do JSONB de features
+    const structuredFeatures = {
+      items: Array.isArray(input.features) ? input.features : [],
+      courseAccessType: input.courseAccessType || "all",
+      specificCourses: Array.isArray(input.specificCourses) ? input.specificCourses : [],
+      aiTokensUnlimited: input.aiTokensUnlimited !== undefined ? Boolean(input.aiTokensUnlimited) : true,
+      aiTokensWeekly: input.aiTokensWeekly != null ? Number(input.aiTokensWeekly) : undefined,
+      accessTimeDays: input.accessTimeDays != null ? Number(input.accessTimeDays) : undefined,
+      gateway: input.gateway?.trim() || undefined,
+      producerId: input.producerId?.trim() || undefined,
+      productId: gatewayProductId || undefined,
+      offerId: input.offerId?.trim() || undefined,
+      checkoutUrl: input.checkoutUrl?.trim() || undefined,
     };
 
-    set("name", input.name);
-    set("slug", input.slug);
-    set("description", input.description);
-    set("price", input.price);
-    set("frequency", input.frequency);
-    set("seats", input.seats);
-    set("features", input.features);
-    set("is_b2b", input.isB2B);
-    set("is_active", input.isActive);
-    set("is_highlighted", input.isHighlighted);
-    set("gateway_product_id", input.gatewayProductId);
-    set("order_index", input.orderIndex);
+    const row: Record<string, unknown> = {
+      name,
+      slug: finalSlug,
+      description: input.description !== undefined ? (input.description?.trim() || null) : undefined,
+      price: Number(input.price),
+      frequency: validFrequency,
+      seats: input.seats != null && !isNaN(Number(input.seats)) ? Number(input.seats) : null,
+      features: structuredFeatures,
+      is_b2b: Boolean(input.isB2B),
+      is_active: input.isActive !== undefined ? Boolean(input.isActive) : true,
+      is_highlighted: Boolean(input.isHighlighted),
+      gateway_product_id: gatewayProductId,
+      order_index: input.orderIndex != null ? Number(input.orderIndex) : 0,
+      updated_at: new Date().toISOString(),
+    };
 
-    const query = input.id
+    // Remove undefined values
+    Object.keys(row).forEach((key) => {
+      if (row[key] === undefined) delete row[key];
+    });
+
+    const query = !isNew && input.id
       ? adminClient.from("plans").update(row).eq("id", input.id).select("id").single()
       : adminClient.from("plans").insert(row).select("id").single();
 
@@ -412,6 +480,9 @@ export async function savePlan(input: Partial<Plan> & { id?: string }): Promise<
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/admin/planos");
+    revalidatePath("/admin/planos/[id]", "page");
+    revalidatePath("/planos");
+    revalidatePath("/", "layout");
     return { success: true, data: { id: data.id } };
   } catch (error) {
     return { success: false, message: (error as Error).message };
@@ -420,11 +491,15 @@ export async function savePlan(input: Partial<Plan> & { id?: string }): Promise<
 
 export async function deletePlan(id: string): Promise<ActionResult> {
   try {
+    if (!id || id === "novo") return { success: false, message: "ID de plano inválido." };
+
     const { adminClient } = await requireAdmin();
+
     const { error } = await adminClient.from("plans").delete().eq("id", id);
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/admin/planos");
+    revalidatePath("/", "layout");
     return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };

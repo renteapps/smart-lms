@@ -30,6 +30,8 @@ export type ContentItem = {
   moduleName?: string;
   cover?: string;
   prerequisites?: string[];
+  /** Posição da aula na ordem editorial do curso — o agendador nunca a inverte. */
+  sequence?: number;
 };
 
 export type ContentResolver = (mapping: ContentMapping) => ResolvedContent[];
@@ -104,6 +106,7 @@ export function createContentIndex(
       url: source.url,
       cover: source.cover,
       prerequisites: source.prerequisites?.length ? source.prerequisites : undefined,
+      sequence: source.sequence,
     }];
   };
 

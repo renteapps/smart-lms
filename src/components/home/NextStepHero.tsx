@@ -178,6 +178,7 @@ export default function NextStepHero({ session, nextStep, greeting }: NextStepHe
                   src={cover}
                   alt=""
                   fill
+                  unoptimized
                   priority
                   sizes="22rem"
                   className="object-cover transition-transform duration-[var(--duration-lg)] group-hover:scale-[1.03]"

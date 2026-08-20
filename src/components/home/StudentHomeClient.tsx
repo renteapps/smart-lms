@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { Alert } from "@heroui/react/alert";
 import { Skeleton } from "@heroui/react/skeleton";
 import { applySessionFeedback, generateLearningTrail, replanLearningTrail } from "@/lib/matching";
+import { refreshTrail } from "@/app/actions/trail";
 import { saveLearningTrail } from "@/lib/trailStorage";
 import { notifyTrailChanged, useStoredValue, useTrailStore } from "@/lib/useTrailStore";
 import { recordTrailEvent } from "@/lib/trailAnalytics";
@@ -126,6 +127,33 @@ export default function StudentHomeClient() {
     notifyTrailChanged();
   }, [trail, migrated]);
 
+  /*
+   * Uma vez por visita, o servidor põe a trilha em dia: tira o que já foi
+   * concluído fora da agenda, traz o conteúdo que o admin mapeou depois de a
+   * pessoa ter respondido, e redistribui os dias em branco. O replanejamento
+   * local acima continua valendo como rede — ele funciona offline e cobre a
+   * trilha que ainda só existe neste dispositivo.
+   */
+  useEffect(() => {
+    if (!hydrated) return;
+    let cancelled = false;
+
+    refreshTrail()
+      .then((result) => {
+        if (cancelled || !result.success || !result.trail) return;
+        saveLearningTrail(result.trail);
+        notifyTrailChanged();
+        if (result.notice?.summary) setOutcome(result.notice.summary);
+      })
+      .catch(() => {
+        // Sem rede a home segue com o que está no dispositivo.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated]);
+
   // `state` já foi derivado acima junto com `accessState` para evitar duplicação.
   const stats = useMemo(() => (trail ? computeStudyStats(trail) : null), [trail]);
   const profileChips = useMemo(
@@ -177,11 +205,16 @@ export default function StudentHomeClient() {
 
       const answers = { ...trail.answers, [questionId]: values };
       const before = new Set(trail.items.map((item) => item.id));
+      /*
+       * A rotina passada é a **declarada**: `generateLearningTrail` já aplica a
+       * meta adaptada por cima na hora de agendar. Passar a adaptada aqui
+       * gravava o valor temporário como se a pessoa tivesse escolhido ele.
+       */
       const updated = generateLearningTrail(
         trail.userId,
         answers,
         questionnaire,
-        { ...trail.availability, minutesPerSession: trail.adaptiveMinutesPerSession || trail.availability.minutesPerSession },
+        trail.availability,
         trail,
       );
       const added = updated.items.filter((item) => !before.has(item.id)).length;

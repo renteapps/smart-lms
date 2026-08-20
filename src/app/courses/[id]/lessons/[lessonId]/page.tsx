@@ -59,7 +59,10 @@ export default async function AulaPage({
     }
   }
 
-  const note = user ? await getLessonNote(supabase, user.id, lesson.id) : null;
+  const [note, comments] = await Promise.all([
+    user ? getLessonNote(supabase, user.id, lesson.id) : null,
+    getLessonComments(supabase, lesson.id),
+  ]);
 
   return (
     <LessonClientWrapper
@@ -69,6 +72,8 @@ export default async function AulaPage({
       profileTests={profileTests}
       initialNote={note}
       quiz={quiz}
+      initialComments={comments}
+      currentUser={user}
     />
   );
 }

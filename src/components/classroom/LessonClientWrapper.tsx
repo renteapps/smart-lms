@@ -135,8 +135,8 @@ export default function LessonClientWrapper({
 
   return (
     <div className="mx-auto w-full max-w-[76rem] px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-12">
-      <header className="mb-8">
-        <div className="flex flex-wrap items-center gap-3">
+      <header className="mb-7 sm:mb-8">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <p className="eyebrow" data-numeric>
             Etapa {currentIndex + 1} de {allLessons.length}
           </p>
@@ -156,13 +156,18 @@ export default function LessonClientWrapper({
 
         <h1 className="display-2 mt-3 text-foreground">{lesson.title}</h1>
 
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+        {/*
+          Abaixo de `lg` as ações e a navegação viram duas linhas empilhadas: no
+          celular não há largura para "concluir + avaliar + navegar" na mesma
+          faixa sem quebrar em pedaços desalinhados.
+        */}
+        <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-x-6 lg:gap-y-4">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <Button
               variant={isCompleted ? "secondary" : "primary"}
               onClick={handleToggleComplete}
               aria-pressed={isCompleted}
-              className="gap-2"
+              className="w-full gap-2 sm:w-auto"
             >
               <Check className={cn("size-4", isCompleted && "text-success")} aria-hidden="true" />
               {isCompleted ? "Concluído" : "Marcar como concluído"}
@@ -171,7 +176,7 @@ export default function LessonClientWrapper({
             <div
               role="group"
               aria-label="Avaliação da aula"
-              className="flex min-h-11 items-center gap-0.5 rounded-xl border border-hairline bg-surface px-1.5"
+              className="flex min-h-11 flex-1 items-center justify-center gap-0.5 rounded-xl border border-hairline bg-surface px-1.5 sm:flex-none sm:justify-start"
               onMouseLeave={() => setHoveredStar(0)}
             >
               {[1, 2, 3, 4, 5].map((star) => (
@@ -197,20 +202,25 @@ export default function LessonClientWrapper({
               ))}
             </div>
 
+            {/*
+              O modo foco só esconde o índice do curso — que abaixo de `lg` já é
+              um Drawer fechado. No celular ele não teria o que esconder, então
+              some junto com a coluna que ele controla.
+            */}
             <Tooltip.Root>
               <Tooltip.Trigger>
                 <Button
                   variant="ghost"
                   onClick={toggleZenMode}
                   aria-pressed={isZenMode}
-                  className="gap-2"
+                  className="hidden gap-2 lg:inline-flex"
                 >
                   {isZenMode ? (
                     <Minimize className="size-4" aria-hidden="true" />
                   ) : (
                     <Maximize className="size-4" aria-hidden="true" />
                   )}
-                  <span className="hidden sm:inline">{isZenMode ? "Sair do foco" : "Modo foco"}</span>
+                  <span>{isZenMode ? "Sair do foco" : "Modo foco"}</span>
                 </Button>
               </Tooltip.Trigger>
               <Tooltip.Content>
@@ -219,40 +229,47 @@ export default function LessonClientWrapper({
             </Tooltip.Root>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 max-lg:w-full">
             {prevLessonId ? (
               <Link
                 href={`/courses/${courseId}/lessons/${prevLessonId}`}
-                className={buttonVariants({ variant: "outline", className: "gap-2" })}
+                className={buttonVariants({ variant: "outline", className: "gap-2 max-lg:flex-1" })}
               >
                 <ArrowLeft className="size-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Anterior</span>
+                Anterior
               </Link>
             ) : (
-              <Button variant="outline" isDisabled className="gap-2">
+              <Button variant="outline" isDisabled className="gap-2 max-lg:flex-1">
                 <ArrowLeft className="size-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Anterior</span>
+                Anterior
               </Button>
             )}
 
             {nextLessonId ? (
               <Link
                 href={`/courses/${courseId}/lessons/${nextLessonId}`}
-                className={buttonVariants({ variant: "primary", className: "icon-spring gap-2" })}
+                className={buttonVariants({
+                  variant: "primary",
+                  className: "icon-spring gap-2 max-lg:flex-1",
+                })}
               >
-                <span className="hidden sm:inline">Próxima etapa</span>
+                <span>
+                  Próxima<span className="hidden sm:inline">&nbsp;etapa</span>
+                </span>
                 <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
             ) : (
-              <Button variant="primary" isDisabled className="gap-2">
-                <span className="hidden sm:inline">Próxima etapa</span>
+              <Button variant="primary" isDisabled className="gap-2 max-lg:flex-1">
+                <span>
+                  Próxima<span className="hidden sm:inline">&nbsp;etapa</span>
+                </span>
                 <ArrowRight className="size-4" aria-hidden="true" />
               </Button>
             )}
           </div>
         </div>
 
-        <Separator className="mt-8" />
+        <Separator className="mt-7 sm:mt-8" />
       </header>
 
       {/* Main Content: Profile Test Runner vs Video Player vs Quiz Runner */}

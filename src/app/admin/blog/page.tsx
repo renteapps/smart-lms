@@ -6,7 +6,7 @@ export default async function AdminBlogPage() {
 
   const { data } = await supabase
     .from("articles")
-    .select("id, title, slug, category, format, is_published, featured, updated_at")
+    .select("id, title, slug, category, cover, format, is_published, featured, updated_at")
     .order("updated_at", { ascending: false });
 
   const articles: AdminArticleRow[] = (data ?? []).map((row) => ({
@@ -14,6 +14,7 @@ export default async function AdminBlogPage() {
     title: row.title,
     slug: row.slug,
     category: row.category ?? "Geral",
+    cover: row.cover ?? null,
     format: row.format ?? "text",
     isPublished: row.is_published ?? true,
     featured: row.featured ?? false,

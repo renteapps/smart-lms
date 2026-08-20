@@ -92,6 +92,9 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
         cover: mod.cover_url || course.cover_url || FALLBACK_COVER,
         prerequisites,
         slug: lesson.slug ?? undefined,
+        // Ordem editorial do curso inteiro: o agendador divide o curso pelo tempo
+        // das aulas, mas sempre seguindo esta sequência.
+        sequence: position,
       });
 
       if (lesson.is_eligible_for_trail !== false) {

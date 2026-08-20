@@ -71,7 +71,7 @@ function ContentRow({ item, locked, completed }: RowProps) {
   const body = (
     <>
       <span className="relative size-14 shrink-0 overflow-hidden rounded-lg bg-background-secondary">
-        <Image src={item.cover || DEFAULT_COVER} alt="" fill sizes="3.5rem" className="object-cover" />
+        <Image src={item.cover || DEFAULT_COVER} alt="" fill unoptimized sizes="3.5rem" className="object-cover" />
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold text-foreground">{item.title}</span>

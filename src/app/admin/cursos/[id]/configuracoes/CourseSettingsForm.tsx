@@ -20,13 +20,15 @@ function SettingSwitch({
   description: string;
 }) {
   return (
-    <Switch isSelected={isSelected} onChange={onChange} className="items-start gap-4">
-      <Switch.Control className="mt-0.5">
-        <Switch.Thumb />
-      </Switch.Control>
-      <Switch.Content className="text-left">
-        <span className="block text-sm font-bold text-foreground">{title}</span>
-        <span className="mt-1 block text-sm font-normal text-muted">{description}</span>
+    <Switch isSelected={isSelected} onChange={onChange}>
+      <Switch.Content className="items-start gap-4">
+        <Switch.Control className="mt-0.5">
+          <Switch.Thumb />
+        </Switch.Control>
+        <span className="text-left">
+          <span className="block text-sm font-bold text-foreground">{title}</span>
+          <span className="mt-1 block text-sm font-normal text-muted">{description}</span>
+        </span>
       </Switch.Content>
     </Switch>
   );

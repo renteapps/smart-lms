@@ -29,7 +29,92 @@ const rolePriority: Record<LearningRole, number> = {
 export const DEFAULT_AVAILABILITY: StudyAvailability = {
   weekdays: [1, 3, 5],
   minutesPerSession: 30,
+  mode: 'uniform',
 };
+
+/** Limites duros da meta diária: a UI, o admin e o motor usam os mesmos. */
+export const MIN_SESSION_MINUTES = 10;
+export const MAX_SESSION_MINUTES = 240;
+
+/**
+ * Tolerância de ±20% entre o tempo que a pessoa tem e o que o dia recebe.
+ *
+ * Sem folga, o encaixe é perfeito e o plano é ruim: uma aula de 35 minutos numa
+ * meta de 30 empurrava a semana inteira para frente, e um dia fechado com 12 dos
+ * 30 minutos disponíveis desperdiçava a rotina que a pessoa reservou. Com a
+ * folga, um dia é considerado bem montado quando fica entre 80% e 120% da meta
+ * — abaixo disso o motor continua puxando conteúdo, acima ele para.
+ */
+export const BUDGET_TOLERANCE = 0.2;
+
+export function clampSessionMinutes(value: number): number {
+  const rounded = Math.round(Number(value) || 0);
+  if (!rounded) return DEFAULT_AVAILABILITY.minutesPerSession;
+  return Math.max(MIN_SESSION_MINUTES, Math.min(MAX_SESSION_MINUTES, rounded));
+}
+
+/**
+ * Rotina saneada: dias sem duplicata, minutos dentro dos limites e, no modo por
+ * dia, um valor explícito para cada dia escolhido. Todo o resto do motor assume
+ * que passou por aqui.
+ */
+export function normalizeAvailability(availability: StudyAvailability): StudyAvailability {
+  const unique = [...new Set(availability.weekdays || [])].sort((a, b) => a - b) as Weekday[];
+  const weekdays = unique.length > 0 ? unique : DEFAULT_AVAILABILITY.weekdays;
+  const minutesPerSession = clampSessionMinutes(availability.minutesPerSession);
+
+  if (availability.mode !== 'per_day') {
+    return { weekdays, minutesPerSession, mode: 'uniform' };
+  }
+
+  const minutesByWeekday: Partial<Record<Weekday, number>> = {};
+  weekdays.forEach((weekday) => {
+    minutesByWeekday[weekday] = clampSessionMinutes(
+      availability.minutesByWeekday?.[weekday] ?? minutesPerSession,
+    );
+  });
+
+  return { weekdays, minutesPerSession, mode: 'per_day', minutesByWeekday };
+}
+
+/** Meta de um dia específico — o mesmo número no modo uniforme, o do dia no modo por dia. */
+export function minutesForWeekday(availability: StudyAvailability, weekday: Weekday): number {
+  const declared = availability.mode === 'per_day'
+    ? availability.minutesByWeekday?.[weekday]
+    : undefined;
+  return clampSessionMinutes(declared ?? availability.minutesPerSession);
+}
+
+/** Soma da semana: no modo por dia, a soma real; no uniforme, dias × minutos. */
+export function weeklyMinutes(availability: StudyAvailability): number {
+  const routine = normalizeAvailability(availability);
+  return routine.weekdays.reduce<number>(
+    (total, weekday) => total + minutesForWeekday(routine, weekday),
+    0,
+  );
+}
+
+/** Encolhe ou aumenta a rotina inteira mantendo a proporção entre os dias. */
+export function scaleAvailability(availability: StudyAvailability, factor: number): StudyAvailability {
+  const routine = normalizeAvailability(availability);
+  if (!Number.isFinite(factor) || factor <= 0 || factor === 1) return routine;
+
+  const scaled: StudyAvailability = {
+    ...routine,
+    minutesPerSession: clampSessionMinutes(routine.minutesPerSession * factor),
+  };
+
+  if (routine.mode === 'per_day' && routine.minutesByWeekday) {
+    scaled.minutesByWeekday = Object.fromEntries(
+      Object.entries(routine.minutesByWeekday).map(([weekday, minutes]) => [
+        weekday,
+        clampSessionMinutes((minutes ?? routine.minutesPerSession) * factor),
+      ]),
+    ) as Partial<Record<Weekday, number>>;
+  }
+
+  return scaled;
+}
 
 export function toLocalDateKey(date: Date): string {
   const year = date.getFullYear();
@@ -324,38 +409,150 @@ function collectCandidates(
   return ordered;
 }
 
+type QueueEntry = { item: LearningTrailItem; position: number };
+
+/**
+ * Chave de sequência: dentro de um curso (ou módulo solto) a ordem é intocável.
+ *
+ * É o que permite "dividir o curso pelo tempo das aulas" sem embaralhar a
+ * didática: o motor pode adiantar um artigo ou uma aula de outro curso para
+ * fechar um dia, mas nunca a aula 5 antes da aula 3 do mesmo curso.
+ */
+function sequenceKeyOf(item: LearningTrailItem): string | null {
+  return item.courseId || item.moduleId || null;
+}
+
+function comesFirst(a: QueueEntry, b: QueueEntry): boolean {
+  const left = a.item.sequence;
+  const right = b.item.sequence;
+  if (typeof left === 'number' && typeof right === 'number' && left !== right) return left < right;
+  return a.position < b.position;
+}
+
+/** Liberado = nada que precisa vir antes dele continua na fila. */
+function isReleased(entry: QueueEntry, index: number, queue: QueueEntry[], queuedIds: Set<string>): boolean {
+  const blockedByPrerequisite = entry.item.prerequisites?.some(
+    (id) => id !== entry.item.id && queuedIds.has(id),
+  );
+  if (blockedByPrerequisite) return false;
+
+  const key = sequenceKeyOf(entry.item);
+  if (!key) return true;
+
+  return !queue.some((other, otherIndex) => (
+    otherIndex !== index
+    && sequenceKeyOf(other.item) === key
+    && comesFirst(other, entry)
+  ));
+}
+
+function capacityFor(budget: number): number {
+  return Math.round(budget * (1 + BUDGET_TOLERANCE));
+}
+
+/**
+ * Distribui o que está pendente pelos dias da rotina.
+ *
+ * O agendador antigo era uma fila cega: pegava o próximo item, e se ele não
+ * coubesse no que restava do dia, fechava o dia e abria o seguinte. Com meta de
+ * 30 minutos, uma aula de 32 sozinha empurrava a semana inteira, e um dia
+ * fechado com 12 minutos usados desperdiçava a rotina reservada.
+ *
+ * Agora cada dia tem meta própria (`minutesForWeekday`) e uma faixa de ±20%: o
+ * motor continua puxando conteúdo enquanto o dia estiver abaixo de 80% da meta e
+ * aceita qualquer item que caiba em até 120%. Quando o próximo da fila não cabe,
+ * ele procura adiante alguém que caiba — respeitando pré-requisitos e a sequência
+ * do curso — em vez de deixar o dia pela metade. Conteúdo maior do que qualquer
+ * dia da rotina não fica preso: ganha um dia só para ele, marcado `overBudget`.
+ */
 export function schedulePendingItems(
   items: LearningTrailItem[],
   availability: StudyAvailability,
   startDate = new Date(),
 ): LearningTrailItem[] {
-  const weekdays = availability.weekdays.length > 0 ? availability.weekdays : DEFAULT_AVAILABILITY.weekdays;
-  const budget = Math.max(10, Math.min(240, availability.minutesPerSession || DEFAULT_AVAILABILITY.minutesPerSession));
-  let sessionDate = nextPreferredDate(startDate, weekdays);
-  let sessionMinutes = 0;
+  const routine = normalizeAvailability(availability);
+  const done = items.filter((item) => item.status === 'completed');
+  const queue: QueueEntry[] = items
+    .filter((item) => item.status !== 'completed')
+    .map((item, position) => ({ item, position }));
+
+  const scheduled: LearningTrailItem[] = [];
+  const queuedIds = new Set(queue.map((entry) => entry.item.id));
+  const largestCapacity = Math.max(
+    ...routine.weekdays.map((weekday) => capacityFor(minutesForWeekday(routine, weekday))),
+  );
+
+  let cursor = nextPreferredDate(startDate, routine.weekdays);
   let sessionNumber = 1;
 
-  return items.map((item) => {
-    if (item.status === 'completed') return item;
-    const mustAdvance = sessionMinutes > 0 && sessionMinutes + item.durationMin > budget;
-    if (mustAdvance) {
-      sessionDate = nextPreferredDate(sessionDate, weekdays, false);
-      sessionMinutes = 0;
-      sessionNumber += 1;
+  const place = (index: number, dateKey: string, sessionId: string, capacity: number): LearningTrailItem => {
+    const [entry] = queue.splice(index, 1);
+    queuedIds.delete(entry.item.id);
+    const placed: LearningTrailItem = {
+      ...entry.item,
+      scheduledDate: dateKey,
+      sessionId,
+      overBudget: entry.item.durationMin > capacity,
+      // `index > 0`: passou na frente de alguém que continuou na fila.
+      movedForFit: index > 0 || undefined,
+    };
+    scheduled.push(placed);
+    return placed;
+  };
+
+  // Limite de segurança: 1000 dias de rotina é mais do que qualquer trilha real.
+  for (let day = 0; queue.length > 0 && day < 1000; day += 1) {
+    const dateKey = toLocalDateKey(cursor);
+    const sessionId = `${dateKey}-${sessionNumber}`;
+    const budget = minutesForWeekday(routine, cursor.getDay() as Weekday);
+    const capacity = capacityFor(budget);
+    const floor = Math.round(budget * (1 - BUDGET_TOLERANCE));
+    let used = 0;
+
+    while (used < floor) {
+      const index = queue.findIndex((entry, position) => (
+        isReleased(entry, position, queue, queuedIds)
+        && used + entry.item.durationMin <= capacity
+      ));
+      if (index === -1) break;
+      used += place(index, dateKey, sessionId, capacity).durationMin;
     }
 
-    const dateKey = toLocalDateKey(sessionDate);
-    const scheduled = {
-      ...item,
-      scheduledDate: dateKey,
-      sessionId: `${dateKey}-${sessionNumber}`,
-      overBudget: item.durationMin > budget,
-    };
-    sessionMinutes += item.durationMin;
-    return scheduled;
+    /*
+     * Dia vazio tem dois motivos possíveis. Ou o próximo liberado não cabe em
+     * dia nenhum da rotina — e então ele ganha este dia inteiro, porque adiar
+     * para sempre seria pior do que estourar a meta uma vez — ou existe um dia
+     * maior à frente, e pular hoje é exatamente o que faz ele caber lá.
+     */
+    if (used === 0 && queue.length > 0) {
+      const released = queue.findIndex((entry, position) => isReleased(entry, position, queue, queuedIds));
+      // Sem nenhum liberado só num ciclo de pré-requisitos: agenda mesmo assim.
+      const head = released === -1 ? 0 : released;
+      if (queue[head].item.durationMin > largestCapacity) place(head, dateKey, sessionId, capacity);
+    }
+
+    cursor = nextPreferredDate(cursor, routine.weekdays, false);
+    sessionNumber += 1;
+  }
+
+  // O limite de segurança nunca pode fazer conteúdo desaparecer da trilha.
+  const overflowDate = toLocalDateKey(cursor);
+  queue.forEach((entry) => {
+    scheduled.push({
+      ...entry.item,
+      scheduledDate: overflowDate,
+      sessionId: `${overflowDate}-${sessionNumber}`,
+    });
   });
+
+  return [...done, ...scheduled].map((item, index) => ({ ...item, order: index + 1 }));
 }
 
+/**
+ * @param completedContentIds conteúdo que a pessoa já concluiu **fora** da trilha
+ * (progresso da sala de aula). Nunca volta para a agenda: refazer os objetivos
+ * muda o que vem pela frente, não o que já foi visto.
+ */
 export function generateLearningTrail(
   userId: string,
   answers: UserAnswers,
@@ -364,16 +561,19 @@ export function generateLearningTrail(
   existingTrail?: LearningTrail | null,
   startDate = new Date(),
   indexOrResolver?: ContentIndex | ContentResolver,
+  completedContentIds: Iterable<string> = [],
 ): LearningTrail {
   const index = normalizeIndex(indexOrResolver);
   const existingCompleted = new Map(
     (existingTrail?.items || []).filter((item) => item.status === 'completed').map((item) => [item.id, item]),
   );
+  const alreadySeen = new Set([...completedContentIds, ...existingCompleted.keys()]);
 
   const candidates = collectCandidates(answers, questionnaire, index);
   const excludedIds = new Set((existingTrail?.excludedItems || []).map((item) => item.id));
-  const draftItems: LearningTrailItem[] = candidates.filter((candidate) => !excludedIds.has(candidate.id)).map((candidate, index) => {
-    const completed = existingCompleted.get(candidate.id);
+  const draftItems: LearningTrailItem[] = candidates.filter(
+    (candidate) => !excludedIds.has(candidate.id) && !alreadySeen.has(candidate.id),
+  ).map((candidate, index) => {
     return {
       id: candidate.id,
       type: candidate.type,
@@ -386,16 +586,16 @@ export function generateLearningTrail(
       url: candidate.url,
       cover: candidate.cover,
       prerequisites: candidate.prerequisites,
+      sequence: candidate.sequence,
       order: index + 1,
       reason: candidate.reasons.size > 1
         ? `Conecta ${[...candidate.reasons].slice(0, 2).join(' e ')}`
         : `Recomendado por: ${[...candidate.reasons][0]}`,
       score: candidate.score,
       learningRole: candidate.learningRole,
-      status: completed ? 'completed' : 'pending',
-      scheduledDate: completed?.scheduledDate || '',
-      sessionId: completed?.sessionId || '',
-      completedAt: completed?.completedAt,
+      status: 'pending',
+      scheduledDate: '',
+      sessionId: '',
       warnings: candidate.warnings.length > 0 ? candidate.warnings : undefined,
     };
   });
@@ -410,14 +610,18 @@ export function generateLearningTrail(
    * trabalho que realmente fez. Recalibrar muda o que vem pela frente, nunca o
    * que já passou.
    */
-  const candidateIds = new Set(draftItems.map((item) => item.id));
-  const retainedCompleted = [...existingCompleted.values()].filter((item) => !candidateIds.has(item.id));
-  const orderedItems = [...retainedCompleted, ...draftItems].map((item, index) => ({
+  const orderedItems = [...existingCompleted.values(), ...draftItems].map((item, index) => ({
     ...item,
     order: index + 1,
   }));
 
-  const items = schedulePendingItems(orderedItems, availability, startDate);
+  const declared = normalizeAvailability(availability);
+  const items = schedulePendingItems(
+    orderedItems,
+    adaptedRoutine(declared, existingTrail?.adaptiveMinutesPerSession),
+    startDate,
+  );
+
   return {
     formatVersion: 3,
     userId,
@@ -425,21 +629,28 @@ export function generateLearningTrail(
     generatedAt: Date.now(),
     questionnaireVersion: questionnaire.version,
     answers,
-    availability: {
-      weekdays: [...new Set(availability.weekdays)].sort() as Weekday[],
-      minutesPerSession: Math.max(10, Math.min(240, availability.minutesPerSession)),
-    },
+    availability: declared,
     adaptiveMinutesPerSession: existingTrail?.adaptiveMinutesPerSession,
+    missedSessions: existingTrail?.missedSessions,
     feedbackHistory: existingTrail?.feedbackHistory || [],
     excludedItems: existingTrail?.excludedItems || [],
   };
 }
 
-function effectiveAvailability(trail: LearningTrail): StudyAvailability {
-  return {
-    ...trail.availability,
-    minutesPerSession: trail.adaptiveMinutesPerSession || trail.availability.minutesPerSession,
-  };
+/**
+ * A meta adaptada é lida como razão sobre a declarada, e a razão escala todos os
+ * dias. Assim uma rotina de tempos diferentes ("30 na terça, 90 no sábado")
+ * encolhe proporcionalmente quando o comportamento pede — em vez de achatar
+ * tudo num único número, que era o que `adaptiveMinutesPerSession` fazia.
+ */
+function adaptedRoutine(declared: StudyAvailability, adaptiveMinutes?: number): StudyAvailability {
+  if (!adaptiveMinutes) return declared;
+  return scaleAvailability(declared, adaptiveMinutes / declared.minutesPerSession);
+}
+
+/** A rotina que o motor realmente usa para planejar: a declarada, já adaptada. */
+export function effectiveAvailability(trail: LearningTrail): StudyAvailability {
+  return adaptedRoutine(normalizeAvailability(trail.availability), trail.adaptiveMinutesPerSession);
 }
 
 export function updateTrailAvailability(
@@ -447,17 +658,47 @@ export function updateTrailAvailability(
   availability: StudyAvailability,
   startDate = new Date(),
 ): LearningTrail {
-  const normalized: StudyAvailability = {
-    weekdays: [...new Set(availability.weekdays)].sort() as Weekday[],
-    minutesPerSession: Math.max(10, Math.min(240, availability.minutesPerSession)),
-  };
+  const normalized = normalizeAvailability(availability);
   return {
     ...trail,
     availability: normalized,
+    // Rotina redeclarada: o que o motor tinha adaptado sozinho perde a validade.
     adaptiveMinutesPerSession: undefined,
+    missedSessions: 0,
     items: schedulePendingItems(trail.items, normalized, startDate),
     replannedAt: Date.now(),
   };
+}
+
+/**
+ * Conteúdo concluído fora da agenda — na sala de aula, num link externo — não
+ * pode continuar pendente na trilha. Sem isso, a pessoa via de novo, no plano de
+ * hoje, uma aula que já tinha assistido ontem por conta própria.
+ */
+export function syncTrailCompletion(
+  trail: LearningTrail,
+  completedContentIds: Iterable<string>,
+  now = new Date(),
+): { trail: LearningTrail; changed: boolean; completed: number } {
+  const completedIds = new Set(completedContentIds);
+  const pendingDone = trail.items.filter(
+    (item) => item.status === 'pending' && completedIds.has(item.id),
+  );
+  if (pendingDone.length === 0) return { trail, changed: false, completed: 0 };
+
+  const completedAt = now.toISOString();
+  const items = trail.items.map((item) => (
+    item.status === 'pending' && completedIds.has(item.id)
+      ? {
+        ...item,
+        status: 'completed' as const,
+        completedAt: item.completedAt || completedAt,
+        scheduledDate: item.scheduledDate || toLocalDateKey(now),
+      }
+      : item
+  ));
+
+  return { trail: { ...trail, items }, changed: true, completed: pendingDone.length };
 }
 
 export function applySessionFeedback(
@@ -467,9 +708,10 @@ export function applySessionFeedback(
   now = new Date(),
 ): LearningTrail {
   const sessionItems = trail.items.filter((item) => item.sessionId === sessionId);
-  const previousTarget = trail.adaptiveMinutesPerSession || trail.availability.minutesPerSession;
+  const declared = normalizeAvailability(trail.availability);
+  const previousTarget = trail.adaptiveMinutesPerSession || declared.minutesPerSession;
   const delta = rating === 'light' ? 10 : rating === 'heavy' ? -10 : 0;
-  const nextTarget = Math.max(10, Math.min(240, previousTarget + delta));
+  const nextTarget = clampSessionMinutes(previousTarget + delta);
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const feedback = {
@@ -485,8 +727,10 @@ export function applySessionFeedback(
   return {
     ...trail,
     adaptiveMinutesPerSession: nextTarget,
+    // Quem avalia a sessão está de volta ao ritmo: o histórico de dias em branco zera.
+    missedSessions: 0,
     feedbackHistory: [...(trail.feedbackHistory || []).filter((item) => item.sessionId !== sessionId), feedback],
-    items: schedulePendingItems(trail.items, { ...trail.availability, minutesPerSession: nextTarget }, tomorrow),
+    items: schedulePendingItems(trail.items, adaptedRoutine(declared, nextTarget), tomorrow),
     replannedAt: Date.now(),
   };
 }
@@ -537,22 +781,65 @@ export function restoreTrailItem(trail: LearningTrail, contentId: string, startD
   };
 }
 
-export function replanLearningTrail(trail: LearningTrail, startDate = new Date()): { trail: LearningTrail; changed: boolean } {
-  const today = toLocalDateKey(startDate);
-  const overdueIds = new Set(trail.items.filter((item) => item.status === 'pending' && item.scheduledDate < today).map((item) => item.id));
-  const hasOverdue = overdueIds.size > 0;
-  if (!hasOverdue) return { trail, changed: false };
+export type TrailReplanResult = {
+  trail: LearningTrail;
+  changed: boolean;
+  /** Dias de rotina que passaram em branco e entraram nesta rodada de ajuste. */
+  missedSessions: number;
+  /** Nova meta diária quando o motor aliviou a carga; `null` quando não mexeu nela. */
+  easedMinutes: number | null;
+};
 
-  const replannedItems = schedulePendingItems(trail.items, effectiveAvailability(trail), startDate).map((item) => ({
-    ...item,
-    rescheduled: overdueIds.has(item.id) || item.rescheduled,
-  }));
+/**
+ * Ajusta a trilha de quem não fez o conteúdo do dia.
+ *
+ * Reagendar o atrasado já existia. O que faltava era ler o que o atraso diz: um
+ * dia planejado que passou sem nenhuma conclusão é um dia em branco, e dois dias
+ * em branco significam que a meta declarada não cabe na semana real dessa pessoa.
+ * Aí o motor encolhe a meta em 20% — a mesma tolerância que ele usa para montar
+ * o dia — em vez de empilhar para sempre uma carga que ela já mostrou não dar
+ * conta. Quem retoma o ritmo (avalia uma sessão ou redeclara a rotina) zera o
+ * contador e volta para a meta escolhida.
+ */
+export function replanLearningTrail(trail: LearningTrail, startDate = new Date()): TrailReplanResult {
+  const today = toLocalDateKey(startDate);
+  const overdue = trail.items.filter(
+    (item) => item.status === 'pending' && item.scheduledDate && item.scheduledDate < today,
+  );
+  if (overdue.length === 0) return { trail, changed: false, missedSessions: 0, easedMinutes: null };
+
+  const overdueIds = new Set(overdue.map((item) => item.id));
+  const studiedDays = new Set(
+    trail.items
+      .filter((item) => item.status === 'completed')
+      .map((item) => (item.completedAt ? toLocalDateKey(new Date(item.completedAt)) : item.scheduledDate)),
+  );
+  const missedSessions = [...new Set(overdue.map((item) => item.scheduledDate))]
+    .filter((date) => !studiedDays.has(date)).length;
+
+  const previousMissed = trail.missedSessions ?? 0;
+  const totalMissed = previousMissed + missedSessions;
+  const declared = normalizeAvailability(trail.availability);
+  const currentTarget = trail.adaptiveMinutesPerSession || declared.minutesPerSession;
+
+  // A cada dois dias em branco acumulados, um alívio — não um por visita.
+  const shouldEase = Math.floor(totalMissed / 2) > Math.floor(previousMissed / 2)
+    && currentTarget > MIN_SESSION_MINUTES;
+  const easedMinutes = shouldEase ? clampSessionMinutes(currentTarget * (1 - BUDGET_TOLERANCE)) : null;
+  const nextTarget = easedMinutes ?? trail.adaptiveMinutesPerSession;
+
+  const items = schedulePendingItems(trail.items, adaptedRoutine(declared, nextTarget), startDate)
+    .map((item) => ({ ...item, rescheduled: overdueIds.has(item.id) || item.rescheduled }));
 
   return {
     changed: true,
+    missedSessions,
+    easedMinutes,
     trail: {
       ...trail,
-      items: replannedItems,
+      items,
+      adaptiveMinutesPerSession: nextTarget,
+      missedSessions: totalMissed,
       replannedAt: Date.now(),
     },
   };

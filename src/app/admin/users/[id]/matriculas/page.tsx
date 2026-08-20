@@ -116,6 +116,7 @@ export default async function AdminUserMatriculasPage({
       progress: `${progress}%`,
       rawProgress: progress,
       status: displayStatus,
+      rawStatus: enrollment.status || "active",
       statusTone,
       enrolledAt: enrolledAtStr,
       expiresAt: expiresAt || null,

@@ -109,8 +109,15 @@ export function useTrailStore(): TrailStoreValue {
               const remoteTrail = data.trail_data as LearningTrail;
               const localTrail = parsed.data;
               
-              // Only overwrite local if remote is newer or local is missing
-              if (!localTrail || (remoteTrail.generatedAt > localTrail.generatedAt)) {
+              /*
+               * O servidor também replaneja (ver `refreshTrail`), e replanejar
+               * não regenera: comparar só `generatedAt` deixava a home presa
+               * numa agenda antiga depois de um ajuste feito em /minha-trilha.
+               */
+              const freshness = (candidate: LearningTrail) =>
+                Math.max(candidate.generatedAt || 0, candidate.replannedAt || 0);
+
+              if (!localTrail || freshness(remoteTrail) > freshness(localTrail)) {
                 saveLearningTrail(remoteTrail);
               }
             }

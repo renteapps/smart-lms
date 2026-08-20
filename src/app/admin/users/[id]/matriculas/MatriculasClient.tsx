@@ -43,14 +43,119 @@ export function MatriculasClient({
   userId,
   userName,
   userEmail,
-  matriculas,
+  matriculas: initialMatriculas,
   availableCourses,
 }: MatriculasClientProps) {
   const router = useRouter();
+  const [matriculas, setMatriculas] = useState<EnrollmentItem[]>(initialMatriculas);
   const [search, setSearch] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingEnrollment, setEditingEnrollment] = useState<EnrollmentItem | null>(null);
   const [deletingEnrollment, setDeletingEnrollment] = useState<EnrollmentItem | null>(null);
+
+  // Sincroniza estado com a prop recebida do Server Component
+  React.useEffect(() => {
+    setMatriculas(initialMatriculas);
+  }, [initialMatriculas]);
+
+  const handleCreateSuccess = (data?: {
+    enrollmentData: { id: string; user_id: string; course_id: string; enrolled_at: string; expires_at: string | null; status: string };
+    course: AvailableCourse;
+    expiresAt: string | null;
+  }) => {
+    if (data) {
+      const nowMs = Date.now();
+      const expiresAt = data.expiresAt;
+      const isExpired = expiresAt ? new Date(expiresAt).getTime() < nowMs : false;
+      let expirationLabel = "Vitalício";
+      if (expiresAt) {
+        const expDate = new Date(expiresAt);
+        const formatted = expDate.toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
+        expirationLabel = isExpired ? `Expirou em ${formatted}` : `Expira em ${formatted}`;
+      }
+
+      const enrolledAtStr = new Date(data.enrollmentData.enrolled_at || Date.now()).toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+
+      const newItem: EnrollmentItem = {
+        id: data.enrollmentData.id,
+        enrollmentId: data.enrollmentData.id,
+        courseId: data.course.id,
+        courseName: data.course.title,
+        category: data.course.category,
+        progress: "0%",
+        rawProgress: 0,
+        status: isExpired ? "Expirado" : "Em andamento",
+        rawStatus: data.enrollmentData.status || "active",
+        statusTone: isExpired ? "negative" : "primary",
+        enrolledAt: enrolledAtStr,
+        expiresAt: expiresAt,
+        expirationLabel,
+        isExpired,
+      };
+
+      setMatriculas((prev) => {
+        const filtered = prev.filter((m) => m.courseId !== data.course.id);
+        return [newItem, ...filtered];
+      });
+    }
+    setIsCreateModalOpen(false);
+    router.refresh();
+  };
+
+  const handleEditSuccess = (enrollmentId: string, newExpiresAt: string | null, newStatus: string) => {
+    const nowMs = Date.now();
+    const isExpired = newExpiresAt ? new Date(newExpiresAt).getTime() < nowMs : false;
+    let expirationLabel = "Vitalício";
+    if (newExpiresAt) {
+      const expDate = new Date(newExpiresAt);
+      const formatted = expDate.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
+      expirationLabel = isExpired ? `Expirou em ${formatted}` : `Expira em ${formatted}`;
+    }
+
+    setMatriculas((prev) =>
+      prev.map((m) => {
+        if (m.id === enrollmentId || m.enrollmentId === enrollmentId) {
+          const displayStatus = isExpired
+            ? "Expirado"
+            : newStatus === "completed" || m.rawProgress === 100
+            ? "Concluído"
+            : "Em andamento";
+          const statusTone = isExpired ? "negative" : newStatus === "completed" || m.rawProgress === 100 ? "positive" : "primary";
+
+          return {
+            ...m,
+            expiresAt: newExpiresAt,
+            expirationLabel,
+            isExpired,
+            status: displayStatus,
+            rawStatus: newStatus,
+            statusTone,
+          };
+        }
+        return m;
+      })
+    );
+    setEditingEnrollment(null);
+    router.refresh();
+  };
+
+  const handleDeleteSuccess = (enrollmentId: string) => {
+    setMatriculas((prev) => prev.filter((m) => m.id !== enrollmentId && m.enrollmentId !== enrollmentId));
+    setDeletingEnrollment(null);
+    router.refresh();
+  };
 
   const existingCourseIds = matriculas.map((m) => m.courseId);
 
@@ -344,7 +449,7 @@ export function MatriculasClient({
         userName={userName}
         availableCourses={availableCourses}
         existingCourseIds={existingCourseIds}
-        onSuccess={() => router.refresh()}
+        onSuccess={handleCreateSuccess}
       />
 
       <EditEnrollmentModal
@@ -353,10 +458,7 @@ export function MatriculasClient({
         enrollment={editingEnrollment}
         userId={userId}
         userName={userName}
-        onSuccess={() => {
-          setEditingEnrollment(null);
-          router.refresh();
-        }}
+        onSuccess={handleEditSuccess}
       />
 
       <DeleteEnrollmentModal
@@ -365,10 +467,7 @@ export function MatriculasClient({
         enrollment={deletingEnrollment}
         userId={userId}
         userName={userName}
-        onSuccess={() => {
-          setDeletingEnrollment(null);
-          router.refresh();
-        }}
+        onSuccess={handleDeleteSuccess}
       />
     </div>
   );

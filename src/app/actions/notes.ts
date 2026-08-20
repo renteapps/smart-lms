@@ -19,19 +19,42 @@ export async function saveLessonNote(
   try {
     const { supabase, user } = await requireUser();
 
-    const { error } = await supabase.from("student_notes").upsert(
-      {
-        user_id: user.id,
-        lesson_id: lessonId,
-        lesson_title: lessonTitle,
-        content,
-        kind: "lesson",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,lesson_id" },
-    );
+    // Como o índice de anotações é parcial (WHERE kind = 'lesson'),
+    // o upsert do PostgREST pelo onConflict de colunas não encontra a constraint.
+    // Fazemos um select + update/insert manual para contornar isso.
+    const { data: existing } = await supabase
+      .from("student_notes")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("lesson_id", lessonId)
+      .eq("kind", "lesson")
+      .maybeSingle();
 
-    if (error) return { success: false, message: error.message };
+    if (existing) {
+      const { error } = await supabase
+        .from("student_notes")
+        .update({
+          content,
+          lesson_title: lessonTitle,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+
+      if (error) return { success: false, message: error.message };
+    } else {
+      const { error } = await supabase
+        .from("student_notes")
+        .insert({
+          user_id: user.id,
+          lesson_id: lessonId,
+          lesson_title: lessonTitle,
+          content,
+          kind: "lesson",
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) return { success: false, message: error.message };
+    }
 
     revalidatePath("/notas");
     return { success: true };

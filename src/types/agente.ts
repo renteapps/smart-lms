@@ -37,6 +37,10 @@ export interface AgentFile {
   id: string;
   name: string;
   url: string;
+  /** Tamanho em bytes, exibido no card do arquivo. */
+  sizeBytes?: number;
+  /** Caminho dentro do bucket de storage — necessário para apagar o objeto. */
+  storagePath?: string;
 }
 
 export interface Agent {

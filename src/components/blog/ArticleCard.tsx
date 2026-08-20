@@ -4,12 +4,17 @@ import { Clock, Headphones, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
+const FALLBACK_BLOG_COVER =
+  "https://images.unsplash.com/photo-1521737711867-e3b97375f902?q=85&w=1400&auto=format&fit=crop";
+
 interface ArticleCardProps {
   article: Article;
   className?: string;
 }
 
 export function ArticleCard({ article, className }: ArticleCardProps) {
+  const coverSrc = article.cover && article.cover.trim() !== "" ? article.cover : FALLBACK_BLOG_COVER;
+
   return (
     <Link 
       href={`/blog/${article.slug}`}
@@ -20,7 +25,7 @@ export function ArticleCard({ article, className }: ArticleCardProps) {
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-background-secondary">
         <Image
-          src={article.cover}
+          src={coverSrc}
           alt={article.title}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"

@@ -7,12 +7,12 @@ import {
   ExternalLink, LayoutList, RefreshCw, RotateCcw, Route, Settings2, Sparkles, Target, Trash2,
 } from 'lucide-react';
 import {
-  Alert, Button, buttonVariants, Card, Chip, Description, Drawer, EmptyState, Fieldset,
+  Alert, AlertDialog, Button, buttonVariants, Card, Chip, Description, Drawer, EmptyState, Fieldset,
   Label, NumberField, ProgressBar, Skeleton, Tabs, ToggleButton, ToggleButtonGroup,
 } from '@heroui/react';
-import { LearningRole, LearningTrail, LearningTrailItem, SessionLoadRating, StudyAvailability, Weekday } from '@/types/trilha';
-import { getMyTrail, saveTrail } from '@/app/actions/trail';
-import { applySessionFeedback, postponeTrailSession, removeTrailItem, replanLearningTrail, restoreTrailItem, toLocalDateKey, updateTrailAvailability } from '@/lib/matching';
+import { AvailabilityMode, LearningRole, LearningTrail, LearningTrailItem, SessionLoadRating, StudyAvailability, Weekday } from '@/types/trilha';
+import { refreshTrail, saveTrail } from '@/app/actions/trail';
+import { applySessionFeedback, clampSessionMinutes, effectiveAvailability, minutesForWeekday, postponeTrailSession, removeTrailItem, restoreTrailItem, toLocalDateKey, updateTrailAvailability, weeklyMinutes } from '@/lib/matching';
 import { contentHref } from '@/lib/studentHome';
 import { recordTrailEvent, TrailAnalyticsEvent, TrailAnalyticsEventType } from '@/lib/trailAnalytics';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -206,6 +206,7 @@ export default function MinhaTrilhaPage() {
   const [replanned, setReplanned] = useState(false);
   const [viewMode, setViewMode] = useState<'timeline' | 'calendar'>('timeline');
   const [adjustOpen, setAdjustOpen] = useState(false);
+  const [sessionToPostpone, setSessionToPostpone] = useState<string | null>(null);
   const [draftAvailability, setDraftAvailability] = useState<StudyAvailability>({ weekdays: [1, 3, 5], minutesPerSession: 30 });
   const [adaptationMessage, setAdaptationMessage] = useState('');
   const { addNotification } = useNotifications();
@@ -215,23 +216,27 @@ export default function MinhaTrilhaPage() {
    * Sem requestAnimationFrame: rAF não dispara em aba oculta, e a trilha
    * ficaria presa no esqueleto até a aba receber foco.
    */
+  /*
+   * `refreshTrail` faz no servidor as três coisas que mudam entre uma visita e
+   * outra: tira da agenda o que já foi concluído fora dela, traz o conteúdo que
+   * o admin mapeou depois e redistribui o que ficou para trás. A tela só exibe
+   * o resultado — nada de replanejar por aqui e gravar de volta.
+   */
   useEffect(() => {
     async function loadTrail() {
       try {
-        const res = await getMyTrail();
+        const res = await refreshTrail();
         if (res.success && res.trail) {
-          const next = replanLearningTrail(res.trail);
-          setTrail(next.trail);
-          setDraftAvailability(next.trail.availability);
-          setReplanned(next.changed);
-          if (next.changed) await saveTrail(next.trail);
-          if (next.changed) recordTrailEvent('trail_replanned', { reason: 'overdue' });
+          setTrail(res.trail);
+          setDraftAvailability(res.trail.availability);
+          setReplanned((res.notice?.missedSessions || 0) > 0);
+          if (res.notice?.summary) setAdaptationMessage(res.notice.summary);
         } else if (!res.success) {
           setStorageError(true);
         } else {
           setTrail(null);
         }
-      } catch (err) {
+      } catch {
         setStorageError(true);
       } finally {
         setIsLoaded(true);
@@ -240,9 +245,18 @@ export default function MinhaTrilhaPage() {
     loadTrail();
   }, []);
 
+  /*
+   * A agenda mostra o que falta.
+   *
+   * Conteúdo concluído continua na trilha — ele é o histórico que alimenta
+   * progresso, sequência e minutos estudados — mas não volta a ocupar espaço nos
+   * cards: reencontrar na quinta-feira a aula que se assistiu na terça faz a
+   * tela parecer uma cobrança, e escondia o que ainda importa fazer.
+   */
   const sessions = useMemo(() => {
     if (!trail) return [];
     const groups = trail.items.reduce<Record<string, LearningTrailItem[]>>((result, item) => {
+      if (item.status !== 'pending') return result;
       result[item.sessionId] = [...(result[item.sessionId] || []), item];
       return result;
     }, {});
@@ -253,9 +267,12 @@ export default function MinhaTrilhaPage() {
   const todayPending = todayItems.filter((item) => item.status === 'pending');
   const completed = trail?.items.filter((item) => item.status === 'completed').length || 0;
   const completion = trail?.items.length ? Math.round((completed / trail.items.length) * 100) : 0;
-  const weeklyMinutes = trail ? trail.availability.weekdays.length * trail.availability.minutesPerSession : 0;
+  const weeklyGoal = trail ? weeklyMinutes(effectiveAvailability(trail)) : 0;
   const focus = trail ? Object.values(trail.answers).flat()[0] || 'Seu desenvolvimento' : 'Seu desenvolvimento';
   const todaySessionId = todayItems[0]?.sessionId;
+  const todayBudget = trail
+    ? minutesForWeekday(effectiveAvailability(trail), new Date().getDay() as Weekday)
+    : 0;
   const todayFeedback = trail?.feedbackHistory?.find((item) => item.sessionId === todaySessionId);
 
   /** No modo exemplo os ajustes valem para a sessão atual, mas nada é gravado. */
@@ -282,11 +299,46 @@ export default function MinhaTrilhaPage() {
     setAdaptationMessage(rating === 'light' ? 'Ótimo ritmo. As próximas sessões ganharam até 10 minutos.' : rating === 'heavy' ? 'Carga reduzida. Reorganizamos as próximas sessões para ficarem mais leves.' : 'Ritmo mantido. As próximas sessões continuam com a mesma meta.');
   };
 
+  /** Minutos do dia no rascunho: o valor próprio no modo por dia, a meta única no uniforme. */
+  const draftMinutesFor = (weekday: Weekday) =>
+    draftAvailability.mode === 'per_day'
+      ? draftAvailability.minutesByWeekday?.[weekday] ?? draftAvailability.minutesPerSession
+      : draftAvailability.minutesPerSession;
+
+  const changeDraftMode = (mode: AvailabilityMode) => {
+    setDraftAvailability((current) => ({
+      ...current,
+      mode,
+      // Entrar no modo por dia parte do que já estava valendo, nunca do zero.
+      minutesByWeekday: mode === 'per_day'
+        ? Object.fromEntries(current.weekdays.map((day) => [
+          day,
+          current.minutesByWeekday?.[day] ?? current.minutesPerSession,
+        ]))
+        : current.minutesByWeekday,
+    }));
+  };
+
+  const setDraftDayMinutes = (weekday: Weekday, minutes: number) => {
+    setDraftAvailability((current) => ({
+      ...current,
+      minutesByWeekday: {
+        ...current.minutesByWeekday,
+        [weekday]: clampSessionMinutes(Number.isNaN(minutes) ? current.minutesPerSession : minutes),
+      },
+    }));
+  };
+
   const handleSaveRoutine = () => {
     if (!trail || draftAvailability.weekdays.length === 0) return;
     const updated = updateTrailAvailability(trail, draftAvailability);
     commitTrail(updated);
-    trackTrailEvent('routine_adjusted', { weekdays: draftAvailability.weekdays.length, minutesPerSession: draftAvailability.minutesPerSession });
+    trackTrailEvent('routine_adjusted', {
+      weekdays: draftAvailability.weekdays.length,
+      minutesPerSession: draftAvailability.minutesPerSession,
+      mode: draftAvailability.mode ?? 'uniform',
+      weeklyMinutes: weeklyMinutes(draftAvailability),
+    });
     setAdaptationMessage('Rotina atualizada. Apenas os conteúdos pendentes foram reorganizados.');
     setAdjustOpen(false);
   };
@@ -297,6 +349,7 @@ export default function MinhaTrilhaPage() {
     commitTrail(updated);
     trackTrailEvent('session_postponed', { sessionId });
     setAdaptationMessage('Sessão adiada. As próximas datas foram ajustadas sem alterar o que você já concluiu.');
+    setSessionToPostpone(null);
   };
 
   const handleRemove = (item: LearningTrailItem) => {
@@ -413,7 +466,7 @@ export default function MinhaTrilhaPage() {
               </div>
               <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-hairline" />
               {canPostpone && (
-                <Button variant="tertiary" size="sm" onClick={() => handlePostpone(sessionId)}>
+                <Button variant="tertiary" size="sm" onClick={() => setSessionToPostpone(sessionId)}>
                   Adiar sessão
                 </Button>
               )}
@@ -471,7 +524,7 @@ export default function MinhaTrilhaPage() {
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-numeric>
             <StatCard label="Progresso real" value={`${completion}%`} icon={Route} tone="primary" />
             <StatCard label="Concluídos" value={`${completed}/${trail.items.length}`} icon={CheckCircle2} tone="sage" />
-            <StatCard label="Meta semanal" value={`${weeklyMinutes} min`} icon={Clock3} tone="terracotta" />
+            <StatCard label="Meta semanal" value={`${weeklyGoal} min`} icon={Clock3} tone="terracotta" />
             <StatCard label="Foco principal" value={focus} icon={Target} tone="neutral" />
           </div>
 
@@ -551,8 +604,8 @@ export default function MinhaTrilhaPage() {
                   {todayPending.reduce((sum, item) => sum + item.durationMin, 0)} min pendentes
                 </p>
                 <p className="mt-2 max-w-xl text-sm leading-6 text-muted" data-numeric>
-                  O plano reservou {trail.adaptiveMinutesPerSession || trail.availability.minutesPerSession} minutos
-                  para esta sessão. Seu próximo passo fica no painel.
+                  O plano reservou {todayBudget} minutos para hoje, com folga de 20% para não cortar
+                  uma aula ao meio. Seu próximo passo fica no painel.
                 </p>
               </div>
               <Link href="/" className={cn(buttonVariants({ variant: 'primary' }), 'shrink-0')}>
@@ -618,6 +671,47 @@ export default function MinhaTrilhaPage() {
         </Tabs.Root>
       </main>
 
+      <AlertDialog.Root
+        isOpen={sessionToPostpone !== null}
+        onOpenChange={(open) => {
+          if (!open) setSessionToPostpone(null);
+        }}
+      >
+        <AlertDialog.Backdrop>
+          <AlertDialog.Container size="md">
+            <AlertDialog.Dialog>
+              <AlertDialog.Header>
+                <AlertDialog.Icon status="warning">
+                  <CalendarDays className="size-5" aria-hidden="true" />
+                </AlertDialog.Icon>
+                <AlertDialog.Heading>Adiar esta sessão?</AlertDialog.Heading>
+              </AlertDialog.Header>
+
+              <AlertDialog.Body>
+                <p>
+                  Deseja realmente adiar esta sessão? As próximas datas serão reorganizadas automaticamente,
+                  sem alterar o que você já concluiu.
+                </p>
+              </AlertDialog.Body>
+
+              <AlertDialog.Footer>
+                <Button variant="tertiary" onClick={() => setSessionToPostpone(null)}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    if (sessionToPostpone) handlePostpone(sessionToPostpone);
+                  }}
+                >
+                  Sim, adiar sessão
+                </Button>
+              </AlertDialog.Footer>
+            </AlertDialog.Dialog>
+          </AlertDialog.Container>
+        </AlertDialog.Backdrop>
+      </AlertDialog.Root>
+
       <Drawer.Root isOpen={adjustOpen} onOpenChange={setAdjustOpen}>
         <Drawer.Backdrop>
           <Drawer.Content placement="right">
@@ -666,45 +760,88 @@ export default function MinhaTrilhaPage() {
                   <Fieldset.Legend>Tempo por sessão</Fieldset.Legend>
                   <Fieldset.Group className="mt-3 gap-4">
                     <ToggleButtonGroup
-                      aria-label="Tempo por sessão"
+                      aria-label="Como distribuir o tempo"
                       selectionMode="single"
                       isDetached
-                      selectedKeys={[String(draftAvailability.minutesPerSession)]}
+                      selectedKeys={[draftAvailability.mode ?? 'uniform']}
                       onSelectionChange={(keys) => {
                         const [next] = Array.from(keys);
-                        if (next !== undefined) {
-                          setDraftAvailability((current) => ({ ...current, minutesPerSession: Number(next) }));
-                        }
+                        if (next !== undefined) changeDraftMode(String(next) as AvailabilityMode);
                       }}
                       className="flex flex-wrap gap-2"
                     >
-                      {minutePresets.map((minutes) => (
-                        <ToggleButton key={minutes} id={String(minutes)}>
-                          {minutes} min
-                        </ToggleButton>
-                      ))}
+                      <ToggleButton id="uniform">Mesmo tempo todo dia</ToggleButton>
+                      <ToggleButton id="per_day">Tempo por dia</ToggleButton>
                     </ToggleButtonGroup>
 
-                    <NumberField
-                      value={draftAvailability.minutesPerSession}
-                      minValue={10}
-                      maxValue={240}
-                      step={5}
-                      onChange={(value) =>
-                        setDraftAvailability((current) => ({
-                          ...current,
-                          minutesPerSession: Math.max(10, Math.min(240, Number.isNaN(value) ? 10 : value)),
-                        }))
-                      }
-                    >
-                      <Label>Outro valor</Label>
-                      <NumberField.Group>
-                        <NumberField.DecrementButton />
-                        <NumberField.Input />
-                        <NumberField.IncrementButton />
-                      </NumberField.Group>
-                      <Description>Entre 10 e 240 minutos por sessão.</Description>
-                    </NumberField>
+                    {draftAvailability.mode === 'per_day' ? (
+                      weekdays
+                        .filter((day) => draftAvailability.weekdays.includes(day.value))
+                        .map((day) => (
+                          <NumberField
+                            key={day.value}
+                            value={draftMinutesFor(day.value)}
+                            minValue={10}
+                            maxValue={240}
+                            step={5}
+                            onChange={(value) => setDraftDayMinutes(day.value, value)}
+                          >
+                            <Label>{day.label}</Label>
+                            <NumberField.Group>
+                              <NumberField.DecrementButton />
+                              <NumberField.Input />
+                              <NumberField.IncrementButton />
+                            </NumberField.Group>
+                          </NumberField>
+                        ))
+                    ) : (
+                      <>
+                        <ToggleButtonGroup
+                          aria-label="Tempo por sessão"
+                          selectionMode="single"
+                          isDetached
+                          selectedKeys={[String(draftAvailability.minutesPerSession)]}
+                          onSelectionChange={(keys) => {
+                            const [next] = Array.from(keys);
+                            if (next !== undefined) {
+                              setDraftAvailability((current) => ({ ...current, minutesPerSession: Number(next) }));
+                            }
+                          }}
+                          className="flex flex-wrap gap-2"
+                        >
+                          {minutePresets.map((minutes) => (
+                            <ToggleButton key={minutes} id={String(minutes)}>
+                              {minutes} min
+                            </ToggleButton>
+                          ))}
+                        </ToggleButtonGroup>
+
+                        <NumberField
+                          value={draftAvailability.minutesPerSession}
+                          minValue={10}
+                          maxValue={240}
+                          step={5}
+                          onChange={(value) =>
+                            setDraftAvailability((current) => ({
+                              ...current,
+                              minutesPerSession: clampSessionMinutes(value),
+                            }))
+                          }
+                        >
+                          <Label>Outro valor</Label>
+                          <NumberField.Group>
+                            <NumberField.DecrementButton />
+                            <NumberField.Input />
+                            <NumberField.IncrementButton />
+                          </NumberField.Group>
+                          <Description>Entre 10 e 240 minutos por sessão.</Description>
+                        </NumberField>
+                      </>
+                    )}
+
+                    <p className="text-xs font-semibold text-muted" data-numeric>
+                      Meta semanal: {weeklyMinutes(draftAvailability)} minutos · folga de 20% em cada dia.
+                    </p>
                   </Fieldset.Group>
                 </Fieldset>
 

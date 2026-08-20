@@ -50,7 +50,8 @@ export default function CourseOverviewClient({ course, totalLessons, completedLe
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>(() => Object.fromEntries(course.modules.map((courseModule) => [courseModule.id, true])));
   const totalMinutes = course.modules.reduce((total, courseModule) => total + courseModule.lessons.reduce((moduleTotal, lesson) => moduleTotal + lesson.durationInMinutes, 0), 0);
   const durationLabel = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}min`;
-  const courseCover = course.coverUrl || FALLBACK_COVER;
+  const initialCover = (course.coverUrl && course.coverUrl.trim() !== "") ? course.coverUrl : FALLBACK_COVER;
+  const [heroCover, setHeroCover] = useState(initialCover);
 
   const handleNextLessonClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (!nextLesson) return;
@@ -77,7 +78,7 @@ export default function CourseOverviewClient({ course, totalLessons, completedLe
       },
       metadata: {
         title: nextLesson.title,
-        cover: courseCover,
+        cover: heroCover,
         category: LESSON_KIND[nextLesson.type] ?? "Aula",
         duration: `${nextLesson.durationInMinutes} min`,
         type: "lesson",
@@ -110,7 +111,7 @@ export default function CourseOverviewClient({ course, totalLessons, completedLe
       },
       metadata: {
         title: lesson.title,
-        cover: courseCover,
+        cover: heroCover,
         category: LESSON_KIND[lesson.type] ?? "Aula",
         duration: `${lesson.durationInMinutes} min`,
         type: "lesson",
@@ -124,11 +125,17 @@ export default function CourseOverviewClient({ course, totalLessons, completedLe
       <section className="editorial-container py-8 sm:py-12">
         <div className="relative isolate overflow-hidden rounded-2xl bg-foreground shadow-elev-4">
           <Image
-            src={courseCover}
+            src={heroCover}
             alt={`Capa do curso ${course.title}`}
             fill
+            unoptimized
             priority
             sizes="(max-width: 1280px) 100vw, 1280px"
+            onError={() => {
+              if (heroCover !== FALLBACK_COVER) {
+                setHeroCover(FALLBACK_COVER);
+              }
+            }}
             className="object-cover opacity-55"
           />
           <div

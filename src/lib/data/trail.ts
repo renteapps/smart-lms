@@ -101,6 +101,36 @@ export async function saveLearningTrail(db: DB, userId: string, trail: LearningT
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Conteúdo que a pessoa já concluiu, esteja ou não agendado na trilha.
+ *
+ * Quem assistiu uma aula por conta própria não deve recebê-la de volta como
+ * "próximo passo" — nem ao refazer os objetivos, nem quando o admin mapeia
+ * aquele conteúdo numa resposta nova.
+ */
+export async function getCompletedContentIds(db: DB, userId: string): Promise<string[]> {
+  const { data, error } = await db
+    .from("lesson_progress")
+    .select("lesson_id")
+    .eq("user_id", userId)
+    .eq("is_completed", true);
+
+  logQueryError("getCompletedContentIds", error);
+  return (data ?? []).map((row: Row) => row.lesson_id).filter(Boolean);
+}
+
+/**
+ * Carimbo do catálogo publicado (ver `trail_catalog_stamp()` na migração
+ * 20260820230000). Muda quando o admin publica questionário, cria, edita ou
+ * remove curso, módulo, aula ou artigo.
+ */
+export async function getCatalogStamp(db: DB): Promise<string | null> {
+  const { data, error } = await db.rpc("trail_catalog_stamp");
+
+  logQueryError("getCatalogStamp", error);
+  return typeof data === "string" ? data : null;
+}
+
 export async function deleteLearningTrail(db: DB, userId: string): Promise<void> {
   const { error } = await db.from("student_trails").delete().eq("user_id", userId);
   if (error) throw new Error(error.message);

@@ -79,6 +79,7 @@ export default function LessonCard({
           src={cover}
           alt={`Capa da aula ${title}`}
           fill
+          unoptimized
           sizes="(max-width: 768px) 38vw, 180px"
           className={cn(
             "object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.04]",

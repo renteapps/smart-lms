@@ -18,6 +18,15 @@ export type Plan = {
   orderIndex: number;
   createdAt: string;
   updatedAt: string;
+  gateway?: string;
+  producerId?: string;
+  offerId?: string;
+  checkoutUrl?: string;
+  accessTimeDays?: number;
+  courseAccessType?: "all" | "specific";
+  specificCourses?: string[];
+  aiTokensUnlimited?: boolean;
+  aiTokensWeekly?: number;
 };
 
 export type Subscription = {
@@ -45,7 +54,16 @@ const PLAN_SELECT = `
 `;
 
 export function mapPlan(row: Row): Plan {
-  const features = row.features;
+  const rawFeatures = row.features;
+  const isStructured = rawFeatures && typeof rawFeatures === "object" && !Array.isArray(rawFeatures);
+  const featureItems: string[] = Array.isArray(rawFeatures)
+    ? rawFeatures
+    : Array.isArray(rawFeatures?.items)
+      ? rawFeatures.items
+      : [];
+
+  const extra = isStructured ? (rawFeatures as Record<string, unknown>) : {};
+
   return {
     id: row.id,
     slug: row.slug ?? undefined,
@@ -53,15 +71,24 @@ export function mapPlan(row: Row): Plan {
     description: row.description ?? undefined,
     price: row.price != null ? Number(row.price) : 0,
     frequency: (row.frequency ?? "monthly") as PlanFrequency,
-    seats: row.seats ?? undefined,
-    features: Array.isArray(features) ? features : (features?.items ?? []),
+    seats: row.seats != null ? Number(row.seats) : undefined,
+    features: featureItems,
     isB2B: row.is_b2b ?? false,
     isActive: row.is_active ?? true,
     isHighlighted: row.is_highlighted ?? false,
-    gatewayProductId: row.gateway_product_id ?? undefined,
+    gatewayProductId: row.gateway_product_id ?? (extra.productId as string | undefined) ?? undefined,
     orderIndex: row.order_index ?? 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    gateway: (extra.gateway as string | undefined) ?? undefined,
+    producerId: (extra.producerId as string | undefined) ?? undefined,
+    offerId: (extra.offerId as string | undefined) ?? undefined,
+    checkoutUrl: (extra.checkoutUrl as string | undefined) ?? undefined,
+    accessTimeDays: extra.accessTimeDays != null ? Number(extra.accessTimeDays) : undefined,
+    courseAccessType: (extra.courseAccessType as "all" | "specific" | undefined) ?? (Array.isArray(extra.specificCourses) && extra.specificCourses.length > 0 ? "specific" : "all"),
+    specificCourses: Array.isArray(extra.specificCourses) ? (extra.specificCourses as string[]) : [],
+    aiTokensUnlimited: extra.aiTokensUnlimited !== undefined ? Boolean(extra.aiTokensUnlimited) : true,
+    aiTokensWeekly: extra.aiTokensWeekly != null ? Number(extra.aiTokensWeekly) : undefined,
   };
 }
 

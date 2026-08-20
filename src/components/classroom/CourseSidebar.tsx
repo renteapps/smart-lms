@@ -125,8 +125,11 @@ export default function CourseSidebar({ course }: { course: CourseOutline }) {
     </>
   );
 
-  if (isZenMode) return null;
-
+  /*
+   * O modo foco recolhe apenas a coluna do desktop. O cabeçalho e o Drawer do
+   * mobile continuam de pé: lá o índice já nasce fechado, e escondê-lo deixaria
+   * a aula sem nenhuma saída para o resto do curso.
+   */
   return (
     <>
       <header className="material fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between gap-3 rounded-none border-x-0 border-t-0 px-3 lg:hidden">
@@ -158,7 +161,12 @@ export default function CourseSidebar({ course }: { course: CourseOutline }) {
         </Drawer.Backdrop>
       </Drawer.Root>
 
-      <aside className="hidden h-screen w-80 shrink-0 flex-col border-r border-separator bg-surface lg:flex">
+      <aside
+        className={cn(
+          "hidden h-screen w-80 shrink-0 flex-col border-r border-separator bg-surface lg:flex",
+          isZenMode && "lg:hidden",
+        )}
+      >
         {sidebarContent}
       </aside>
     </>

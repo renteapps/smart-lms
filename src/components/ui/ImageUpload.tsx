@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from "react";
 import { ChevronDown, ImagePlus, Link2, Trash2, Upload } from "lucide-react";
 import { Button, Input, Label, TextField, toast } from "@heroui/react";
 import { createClient } from "@/lib/supabase/client";
@@ -101,6 +101,10 @@ export function ImageUpload({
   const [urlDraft, setUrlDraft] = useState("");
   const [hasPreviewError, setHasPreviewError] = useState(false);
   const [isUrlOpen, setIsUrlOpen] = useState(false);
+
+  useEffect(() => {
+    setHasPreviewError(false);
+  }, [value]);
 
   const isBusy = phase !== null;
   const isLocked = isDisabled || isBusy;

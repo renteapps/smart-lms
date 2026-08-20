@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -75,6 +75,7 @@ import {
 } from "@/lib/data/agentAccess";
 import { createClient } from "@/lib/supabase/client";
 import { getAgentConversations } from "@/lib/data/agents";
+import { deleteAgentFile, fileExtensionLabel, formatFileSize, uploadAgentFile } from "@/lib/agentFileUpload";
 import type {
   Agent,
   AgentAvatarKey,
@@ -353,6 +354,8 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
   const [aiModel, setAiModel] = useState("google/gemini-2.0-flash-001");
   const [context, setContext] = useState("");
   const [files, setFiles] = useState<AgentFile[]>([]);
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Experiência & Gatilhos
   const [greeting, setGreeting] = useState("");
@@ -599,6 +602,39 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
   const applyPromptTemplate = (tpl: (typeof PROMPT_TEMPLATES)[0]) => {
     setSystemPrompt(tpl.prompt);
     toast.success(`Template "${tpl.title}" aplicado!`);
+  };
+
+  const handleFilesSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (selected.length === 0) return;
+
+    setIsUploadingFiles(true);
+    const supabase = createClient();
+    const uploaded: AgentFile[] = [];
+    const errors: string[] = [];
+
+    for (const file of selected) {
+      try {
+        uploaded.push(await uploadAgentFile(supabase, file));
+      } catch (err) {
+        errors.push(err instanceof Error ? err.message : `Falha ao enviar "${file.name}".`);
+      }
+    }
+
+    if (uploaded.length > 0) {
+      setFiles((current) => [...current, ...uploaded]);
+      toast.success(
+        uploaded.length === 1 ? "Arquivo enviado com sucesso!" : `${uploaded.length} arquivos enviados com sucesso!`,
+      );
+    }
+    errors.forEach((message) => toast.danger(message));
+    setIsUploadingFiles(false);
+  };
+
+  const handleRemoveFile = (file: AgentFile) => {
+    setFiles((current) => current.filter((f) => f.id !== file.id));
+    void deleteAgentFile(createClient(), file);
   };
 
   const handleCopyTranscript = () => {
@@ -1503,20 +1539,32 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                       <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent-soft-foreground">
                         <UploadCloud className="size-6" />
                       </div>
-                      <h4 className="mt-3 text-sm font-bold text-foreground">Documentos de Apoio (RAG)</h4>
+                      <h4 className="mt-3 text-sm font-bold text-foreground">Documentos de Apoio</h4>
                       <p className="mt-1 text-xs text-muted max-w-md mx-auto">
-                        Anexe PDFs, cartilhas e manuais (PDF, DOCX ou TXT até 10MB) para a IA ler em tempo real.
+                        Anexe PDFs, cartilhas e manuais (PDF, DOC, DOCX ou TXT até 10MB) para consulta da equipe. A IA
+                        ainda não lê o conteúdo destes arquivos automaticamente — cole os trechos relevantes no
+                        campo de Contexto Textual acima para que ela os use nas respostas.
                       </p>
+
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.doc,.docx,.txt"
+                        multiple
+                        hidden
+                        onChange={handleFilesSelected}
+                      />
 
                       <div className="mt-4 flex justify-center">
                         <Button
                           variant="secondary"
                           size="sm"
                           type="button"
-                          onClick={() => toast.info("Upload de novos arquivos habilitado para a versão de produção.")}
+                          isDisabled={isUploadingFiles}
+                          onClick={() => fileInputRef.current?.click()}
                         >
                           <Plus className="size-4 mr-1.5" />
-                          Selecionar Arquivos
+                          {isUploadingFiles ? "Enviando..." : "Selecionar Arquivos"}
                         </Button>
                       </div>
 
@@ -1529,11 +1577,12 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                                 key={file.id}
                                 className="flex items-center justify-between rounded-xl border border-border bg-background-secondary p-3 text-left text-xs"
                               >
-                                <div className="flex items-center gap-2.5">
-                                  <FileText className="size-4 text-accent" />
-                                  <span className="font-medium text-foreground">{file.name}</span>
-                                  <Chip color="default" variant="soft" size="sm" className="text-[10px]">
-                                    PDF • 2.4 MB
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <FileText className="size-4 text-accent shrink-0" />
+                                  <span className="font-medium text-foreground truncate">{file.name}</span>
+                                  <Chip color="default" variant="soft" size="sm" className="text-[10px] shrink-0">
+                                    {fileExtensionLabel(file.name)}
+                                    {formatFileSize(file.sizeBytes) ? ` • ${formatFileSize(file.sizeBytes)}` : ""}
                                   </Chip>
                                 </div>
                                 <Button
@@ -1541,7 +1590,7 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                                   variant="ghost"
                                   size="sm"
                                   aria-label="Remover arquivo"
-                                  onClick={() => setFiles(files.filter((f) => f.id !== file.id))}
+                                  onClick={() => handleRemoveFile(file)}
                                 >
                                   <Trash2 className="size-3.5 text-muted hover:text-danger" />
                                 </Button>

@@ -21,8 +21,9 @@ export async function addLessonComment(
 
     if (error) return { success: false, message: error.message };
 
-    // Revalida a página da aula para atualizar os comentários
-    revalidatePath(`/courses/[id]/lessons/${lessonId}`, "page");
+    // Revalida a página da aula para atualizar os comentários. O caminho é o
+    // padrão da rota (com os segmentos dinâmicos literais), não a URL concreta.
+    revalidatePath("/courses/[id]/lessons/[lessonId]", "page");
     return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };

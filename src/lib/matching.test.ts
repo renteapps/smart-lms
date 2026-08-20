@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applySessionFeedback, generateLearningTrail, postponeTrailSession, removeTrailItem, replanLearningTrail, restoreTrailItem, schedulePendingItems, updateTrailAvailability, validateQuestionnaire } from './matching';
+import { applySessionFeedback, generateLearningTrail, postponeTrailSession, removeTrailItem, replanLearningTrail, restoreTrailItem, schedulePendingItems, syncTrailCompletion, updateTrailAvailability, validateQuestionnaire, weeklyMinutes } from './matching';
 import { mockQuestionnaire, TRAIL_CONTENT_INDEX } from './seed/questionnaire';
 import { ContentMapping, LearningTrailItem, Questionnaire } from '@/types/trilha';
 
@@ -21,21 +21,64 @@ describe('adaptive learning trail', () => {
     expect(trail.items.findIndex((item) => item.id === 'l3')).toBeLessThan(trail.items.findIndex((item) => item.id === 'l4'));
   });
 
-  it('packs atomic content into preferred study days and isolates over-budget items', () => {
-    const base = (id: string, durationMin: number): LearningTrailItem => ({
-      id, type: 'lesson', title: id, durationMin, order: 1, reason: 'test', score: 1,
-      learningRole: 'essential', status: 'pending', scheduledDate: '', sessionId: '',
-    });
+  const pending = (
+    id: string,
+    durationMin: number,
+    extra: Partial<LearningTrailItem> = {},
+  ): LearningTrailItem => ({
+    id, type: 'lesson', title: id, durationMin, order: 1, reason: 'test', score: 1,
+    learningRole: 'essential', status: 'pending', scheduledDate: '', sessionId: '', ...extra,
+  });
+
+  it('fills each day inside the ±20% tolerance and isolates content no day can hold', () => {
     const result = schedulePendingItems(
-      [base('a', 12), base('b', 8), base('c', 25), base('d', 5)],
+      [pending('a', 12), pending('b', 8), pending('c', 25), pending('d', 5)],
       { weekdays: [1, 3], minutesPerSession: 20 },
       new Date(2026, 7, 10),
     );
 
-    expect(result.slice(0, 2).map((item) => item.scheduledDate)).toEqual(['2026-08-10', '2026-08-10']);
-    expect(result[2].scheduledDate).toBe('2026-08-12');
-    expect(result[2].overBudget).toBe(true);
-    expect(result[3].scheduledDate).toBe('2026-08-17');
+    // Meta de 20 min: o dia fecha assim que passa de 16 e aceita até 24.
+    expect(result.map((item) => [item.id, item.scheduledDate])).toEqual([
+      ['a', '2026-08-10'], ['b', '2026-08-10'], ['d', '2026-08-12'], ['c', '2026-08-17'],
+    ]);
+    // `d` foi antecipado porque `c` não cabia em dia nenhum da rotina.
+    expect(result.find((item) => item.id === 'd')?.movedForFit).toBe(true);
+    expect(result.find((item) => item.id === 'c')?.overBudget).toBe(true);
+  });
+
+  it('sends longer content to the day with more time', () => {
+    const result = schedulePendingItems(
+      [
+        pending('longa', 80, { courseId: 'c1', sequence: 1 }),
+        pending('media', 20, { courseId: 'c2', sequence: 1 }),
+        pending('curta', 10, { courseId: 'c2', sequence: 2 }),
+      ],
+      { weekdays: [1, 6], minutesPerSession: 30, mode: 'per_day', minutesByWeekday: { 1: 30, 6: 90 } },
+      new Date(2026, 7, 10),
+    );
+
+    const scheduledFor = (id: string) => result.find((item) => item.id === id)?.scheduledDate;
+    expect(scheduledFor('media')).toBe('2026-08-10');
+    expect(scheduledFor('curta')).toBe('2026-08-10');
+    // Sábado tem 90 minutos declarados: é lá que a aula longa cabe sem estourar.
+    expect(scheduledFor('longa')).toBe('2026-08-15');
+    expect(result.find((item) => item.id === 'longa')?.overBudget).toBeFalsy();
+    expect(weeklyMinutes({ weekdays: [1, 6], minutesPerSession: 30, mode: 'per_day', minutesByWeekday: { 1: 30, 6: 90 } })).toBe(120);
+  });
+
+  it('reorders across courses to fill a day but never inside a course', () => {
+    const result = schedulePendingItems(
+      [
+        pending('c1-aula1', 50, { courseId: 'c1', sequence: 1 }),
+        pending('c1-aula2', 5, { courseId: 'c1', sequence: 2 }),
+        pending('artigo', 5, { type: 'article' }),
+      ],
+      { weekdays: [1, 3], minutesPerSession: 20 },
+      new Date(2026, 7, 10),
+    );
+
+    // O artigo é antecipado; a aula 2 continua depois da aula 1 do mesmo curso.
+    expect(result.map((item) => item.id)).toEqual(['artigo', 'c1-aula1', 'c1-aula2']);
   });
 
   it('starts on the next selected weekday when today is not selected', () => {
@@ -221,5 +264,52 @@ describe('adaptive learning trail', () => {
     const restored = restoreTrailItem(removed, target.id, new Date(2026, 7, 10));
     expect(restored.items.some((item) => item.id === target.id)).toBe(true);
     expect(restored.excludedItems).toEqual([]);
+  });
+  it('never schedules content the person already finished elsewhere', () => {
+    const trail = generateLearningTrail('u1', {
+      q_formato: ['Teoria Profunda (Conceitos base)'],
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX, ['l1', 'l2']);
+
+    expect(trail.items.map((item) => item.id)).toEqual(['l-profile-1']);
+  });
+
+  it('marks trail content completed outside the agenda instead of replanning it', () => {
+    const trail = generateLearningTrail('u1', {
+      q_formato: ['Teoria Profunda (Conceitos base)'],
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
+
+    const synced = syncTrailCompletion(trail, ['l1'], new Date(2026, 7, 11));
+    expect(synced.changed).toBe(true);
+    expect(synced.trail.items.find((item) => item.id === 'l1')?.status).toBe('completed');
+    expect(syncTrailCompletion(synced.trail, ['l1']).changed).toBe(false);
+  });
+
+  it('eases the daily target after two blank days', () => {
+    const trail = generateLearningTrail('u1', {
+      q_formato: ['Teoria Profunda (Conceitos base)'], q_objetivo: ['Sair do zero com segurança'],
+    }, mockQuestionnaire, { weekdays: [1, 3, 5], minutesPerSession: 30 }, undefined, new Date(2026, 7, 3), TRAIL_CONTENT_INDEX);
+
+    const result = replanLearningTrail(trail, new Date(2026, 7, 10));
+    expect(result.missedSessions).toBe(2);
+    expect(result.easedMinutes).toBe(24);
+    expect(result.trail.adaptiveMinutesPerSession).toBe(24);
+    expect(result.trail.missedSessions).toBe(2);
+
+    // Um único dia em branco a mais não dispara outro alívio.
+    const again = replanLearningTrail(
+      { ...result.trail, items: result.trail.items.map((item) => ({ ...item, scheduledDate: '2026-08-10' })) },
+      new Date(2026, 7, 12),
+    );
+    expect(again.easedMinutes).toBeNull();
+    expect(again.trail.adaptiveMinutesPerSession).toBe(24);
+  });
+
+  it('resets the blank-day counter when the person rates a session again', () => {
+    const trail = generateLearningTrail('u1', {
+      q_formato: ['Teoria Profunda (Conceitos base)'],
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
+    const withMisses = { ...trail, missedSessions: 3 };
+    const rated = applySessionFeedback(withMisses, trail.items[0].sessionId, 'right', new Date(2026, 7, 10));
+    expect(rated.missedSessions).toBe(0);
   });
 });

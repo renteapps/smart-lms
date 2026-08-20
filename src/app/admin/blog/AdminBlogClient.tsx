@@ -27,6 +27,7 @@ export type AdminArticleRow = {
   title: string;
   slug: string;
   category: string;
+  cover?: string | null;
   format: string;
   isPublished: boolean;
   featured: boolean;
@@ -172,9 +173,16 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
                                   href={`/admin/blog/${article.id}`}
                                   className="flex items-center gap-3 font-semibold text-foreground hover:text-accent"
                                 >
-                                  <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground">
-                                    <Newspaper className="size-4" aria-hidden="true" />
-                                  </span>
+                                  {article.cover ? (
+                                    <div className="relative size-9 shrink-0 overflow-hidden rounded-lg bg-background-secondary">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={article.cover} alt="" className="size-full object-cover" />
+                                    </div>
+                                  ) : (
+                                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground">
+                                      <Newspaper className="size-4" aria-hidden="true" />
+                                    </span>
+                                  )}
                                   <span className="line-clamp-2">{article.title}</span>
                                 </Link>
                               </Table.Cell>
@@ -245,9 +253,16 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
                   return (
                     <li key={article.id} className="p-4">
                       <div className="flex items-start gap-3">
-                        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground">
-                          <Newspaper className="size-4" aria-hidden="true" />
-                        </span>
+                        {article.cover ? (
+                          <div className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-background-secondary">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={article.cover} alt="" className="size-full object-cover" />
+                          </div>
+                        ) : (
+                          <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground">
+                            <Newspaper className="size-4" aria-hidden="true" />
+                          </span>
+                        )}
                         <div className="min-w-0 flex-1">
                           <Link href={`/admin/blog/${article.id}`} className="block font-semibold leading-5 text-foreground">
                             {article.title}

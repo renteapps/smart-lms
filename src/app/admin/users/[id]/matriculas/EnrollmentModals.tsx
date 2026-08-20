@@ -44,6 +44,7 @@ export interface EnrollmentItem {
   progress: string;
   rawProgress: number;
   status: string;
+  rawStatus?: string;
   statusTone: "positive" | "primary" | "neutral" | "negative";
   enrolledAt: string;
   expiresAt: string | null;
@@ -62,7 +63,11 @@ interface CreateEnrollmentModalProps {
   userName: string;
   availableCourses: AvailableCourse[];
   existingCourseIds: string[];
-  onSuccess: () => void;
+  onSuccess: (created?: {
+    enrollmentData: { id: string; user_id: string; course_id: string; enrolled_at: string; expires_at: string | null; status: string };
+    course: AvailableCourse;
+    expiresAt: string | null;
+  }) => void;
 }
 
 export function CreateEnrollmentModal({
@@ -96,6 +101,7 @@ export function CreateEnrollmentModal({
       setSelectedCourseId("");
       setExpirationType("indefinite");
       setSearch("");
+      setIsSubmitting(false);
     }
   }, [isOpen]);
 
@@ -125,6 +131,8 @@ export function CreateEnrollmentModal({
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isSubmitting) return;
+
     if (!selectedCourseId) {
       toast.error("Selecione um curso para realizar a matrícula.");
       return;
@@ -146,7 +154,17 @@ export function CreateEnrollmentModal({
 
       if (res.success) {
         toast.success(`Matrícula criada com sucesso para ${userName}!`);
-        onSuccess();
+        const course = availableCourses.find((c) => c.id === selectedCourseId);
+        const calculatedExpiresAt = calculateExpiresAt(expirationType, customDate);
+        if (course && res.data) {
+          onSuccess({
+            enrollmentData: res.data as { id: string; user_id: string; course_id: string; enrolled_at: string; expires_at: string | null; status: string },
+            course,
+            expiresAt: calculatedExpiresAt,
+          });
+        } else {
+          onSuccess();
+        }
         router.refresh();
         onClose();
       } else {
@@ -408,7 +426,6 @@ export function CreateEnrollmentModal({
                   variant="primary"
                   isDisabled={!selectedCourseId || isSubmitting}
                   className="gap-2"
-                  onPress={() => handleSubmit()}
                 >
                   <BookOpen className="size-4" />
                   {isSubmitting ? "Matriculando..." : "Confirmar Matrícula"}
@@ -432,7 +449,7 @@ interface EditEnrollmentModalProps {
   enrollment: EnrollmentItem | null;
   userId: string;
   userName: string;
-  onSuccess: () => void;
+  onSuccess: (enrollmentId: string, expiresAt: string | null, status: string) => void;
 }
 
 export function EditEnrollmentModal({
@@ -444,7 +461,6 @@ export function EditEnrollmentModal({
   onSuccess,
 }: EditEnrollmentModalProps) {
   const router = useRouter();
-  const [activeEnrollment, setActiveEnrollment] = useState<EnrollmentItem | null>(enrollment);
   const [expirationType, setExpirationType] = useState<ExpirationOption>("indefinite");
   const [customDate, setCustomDate] = useState<string>("");
   const [status, setStatus] = useState<"active" | "inactive" | "completed">("active");
@@ -452,7 +468,6 @@ export function EditEnrollmentModal({
 
   useEffect(() => {
     if (enrollment) {
-      setActiveEnrollment(enrollment);
       if (enrollment.expiresAt) {
         setExpirationType("custom");
         const d = new Date(enrollment.expiresAt);
@@ -463,11 +478,16 @@ export function EditEnrollmentModal({
         defaultDate.setDate(defaultDate.getDate() + 30);
         setCustomDate(defaultDate.toISOString().split("T")[0]);
       }
-      setStatus(enrollment.status === "completed" ? "completed" : "active");
+      setStatus(
+        enrollment.rawStatus === "completed" || enrollment.status === "Concluído"
+          ? "completed"
+          : "active"
+      );
+      setIsSubmitting(false);
     }
   }, [enrollment, isOpen]);
 
-  if (!activeEnrollment) return null;
+  if (!enrollment) return null;
 
   let previewDateText = "";
   try {
@@ -488,6 +508,8 @@ export function EditEnrollmentModal({
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isSubmitting) return;
+
     if (expirationType === "custom" && !customDate) {
       toast.error("Informe a nova data limite de acesso.");
       return;
@@ -496,7 +518,7 @@ export function EditEnrollmentModal({
     setIsSubmitting(true);
     try {
       const res = await updateEnrollmentExpiration({
-        enrollmentId: activeEnrollment.enrollmentId,
+        enrollmentId: enrollment.enrollmentId || enrollment.id,
         userId,
         expirationType,
         customDate: expirationType === "custom" ? customDate : null,
@@ -504,8 +526,9 @@ export function EditEnrollmentModal({
       });
 
       if (res.success) {
-        toast.success(`Validade da matrícula de ${activeEnrollment.courseName} atualizada com sucesso!`);
-        onSuccess();
+        toast.success(`Validade da matrícula de ${enrollment.courseName} atualizada com sucesso!`);
+        const calculatedExpiresAt = calculateExpiresAt(expirationType, customDate);
+        onSuccess(enrollment.id, calculatedExpiresAt, status);
         router.refresh();
         onClose();
       } else {
@@ -532,7 +555,7 @@ export function EditEnrollmentModal({
                   <div>
                     <Modal.Heading className="text-lg font-bold">Editar Validade da Matrícula</Modal.Heading>
                     <p className="text-xs text-muted">
-                      Ajuste o prazo de vigência do curso <strong>{activeEnrollment.courseName}</strong> para <strong>{userName}</strong>.
+                      Ajuste o prazo de vigência do curso <strong>{enrollment.courseName}</strong> para <strong>{userName}</strong>.
                     </p>
                   </div>
                 </div>
@@ -542,11 +565,11 @@ export function EditEnrollmentModal({
                 {/* Info do Curso */}
                 <div className="rounded-xl border border-border bg-surface-secondary/30 p-3.5">
                   <p className="text-xs text-muted">Curso</p>
-                  <p className="text-sm font-bold text-foreground mt-0.5">{activeEnrollment.courseName}</p>
+                  <p className="text-sm font-bold text-foreground mt-0.5">{enrollment.courseName}</p>
                   <div className="flex items-center gap-3 mt-2 text-xs text-muted">
-                    <span>Matriculado em: <strong>{activeEnrollment.enrolledAt}</strong></span>
+                    <span>Matriculado em: <strong>{enrollment.enrolledAt}</strong></span>
                     <span>•</span>
-                    <span>Vigência atual: <strong className={activeEnrollment.isExpired ? "text-danger" : ""}>{activeEnrollment.expirationLabel}</strong></span>
+                    <span>Vigência atual: <strong className={enrollment.isExpired ? "text-danger" : ""}>{enrollment.expirationLabel}</strong></span>
                   </div>
                 </div>
 
@@ -693,7 +716,6 @@ export function EditEnrollmentModal({
                   variant="primary"
                   isDisabled={isSubmitting}
                   className="gap-2"
-                  onPress={() => handleSubmit()}
                 >
                   <Calendar className="size-4" />
                   {isSubmitting ? "Salvando..." : "Salvar Alterações"}
@@ -717,7 +739,7 @@ interface DeleteEnrollmentModalProps {
   enrollment: EnrollmentItem | null;
   userId: string;
   userName: string;
-  onSuccess: () => void;
+  onSuccess: (enrollmentId: string) => void;
 }
 
 export function DeleteEnrollmentModal({
@@ -729,29 +751,29 @@ export function DeleteEnrollmentModal({
   onSuccess,
 }: DeleteEnrollmentModalProps) {
   const router = useRouter();
-  const [activeEnrollment, setActiveEnrollment] = useState<EnrollmentItem | null>(enrollment);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (enrollment) {
-      setActiveEnrollment(enrollment);
+    if (isOpen) {
+      setIsSubmitting(false);
     }
-  }, [enrollment]);
+  }, [isOpen]);
 
-  if (!activeEnrollment) return null;
+  if (!enrollment) return null;
 
   const handleConfirm = async () => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     try {
       const res = await deleteEnrollment({
-        enrollmentId: activeEnrollment.enrollmentId,
+        enrollmentId: enrollment.enrollmentId || enrollment.id,
         userId,
-        courseId: activeEnrollment.courseId,
+        courseId: enrollment.courseId,
       });
 
       if (res.success) {
-        toast.success(`Matrícula no curso "${activeEnrollment.courseName}" revogada com sucesso.`);
-        onSuccess();
+        toast.success(`Matrícula no curso "${enrollment.courseName}" revogada com sucesso.`);
+        onSuccess(enrollment.id);
         router.refresh();
         onClose();
       } else {
@@ -785,7 +807,7 @@ export function DeleteEnrollmentModal({
 
             <Modal.Body className="py-3 text-sm text-foreground space-y-2">
               <p>
-                Tem certeza que deseja remover a matrícula de <strong>{userName}</strong> no curso <strong>{activeEnrollment.courseName}</strong>?
+                Tem certeza que deseja remover a matrícula de <strong>{userName}</strong> no curso <strong>{enrollment.courseName}</strong>?
               </p>
               <p className="text-xs text-muted">
                 O aluno perderá imediatamente o acesso às aulas e materiais deste curso.
@@ -798,10 +820,10 @@ export function DeleteEnrollmentModal({
               </Button>
               <Button
                 type="button"
-                variant="danger"
+                variant="primary"
+                className="bg-danger hover:bg-danger/90 text-white gap-2"
                 onPress={handleConfirm}
                 isDisabled={isSubmitting}
-                className="gap-2"
               >
                 <Trash2 className="size-4" />
                 {isSubmitting ? "Revogando..." : "Sim, revogar matrícula"}

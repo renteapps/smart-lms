@@ -5,8 +5,9 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
 import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock3, LoaderCircle, Sparkles } from 'lucide-react';
-import { LearningTrail, Questionnaire, StudyAvailability, Weekday } from '@/types/trilha';
+import { AvailabilityMode, LearningTrail, Questionnaire, StudyAvailability, Weekday } from '@/types/trilha';
 import { getOnboardingData, generateTrail, trackTrailEvent } from '@/app/actions/trail';
+import { clampSessionMinutes, weeklyMinutes } from '@/lib/matching';
 import { cn } from '@/lib/utils';
 
 const PhysicsKeywordSelector = dynamic(
@@ -31,7 +32,7 @@ export default function OnboardingPage() {
   const [direction, setDirection] = useState(1);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [questionnaire, setQuestionnaire] = useState<Questionnaire | null>(null);
-  const [availability, setAvailability] = useState<StudyAvailability>({ weekdays: [1, 3, 5], minutesPerSession: 30 });
+  const [availability, setAvailability] = useState<StudyAvailability>({ weekdays: [1, 3, 5], minutesPerSession: 30, mode: 'uniform' });
   const [existingTrail, setExistingTrail] = useState<LearningTrail | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -95,6 +96,33 @@ export default function OnboardingPage() {
       weekdays: current.weekdays.includes(weekday)
         ? current.weekdays.filter((item) => item !== weekday)
         : [...current.weekdays, weekday],
+    }));
+  };
+
+  /** Minutos de um dia: o valor próprio dele no modo por dia, a meta única no uniforme. */
+  const minutesFor = (weekday: Weekday) =>
+    availability.mode === 'per_day'
+      ? availability.minutesByWeekday?.[weekday] ?? availability.minutesPerSession
+      : availability.minutesPerSession;
+
+  const changeMode = (mode: AvailabilityMode) => {
+    setAvailability((current) => ({
+      ...current,
+      mode,
+      // Entrar no modo por dia parte do que ela já escolheu: nada de zerar.
+      minutesByWeekday: mode === 'per_day'
+        ? Object.fromEntries(current.weekdays.map((day) => [
+          day,
+          current.minutesByWeekday?.[day] ?? current.minutesPerSession,
+        ]))
+        : current.minutesByWeekday,
+    }));
+  };
+
+  const setDayMinutes = (weekday: Weekday, minutes: number) => {
+    setAvailability((current) => ({
+      ...current,
+      minutesByWeekday: { ...current.minutesByWeekday, [weekday]: clampSessionMinutes(minutes) },
     }));
   };
 
@@ -239,26 +267,71 @@ export default function OnboardingPage() {
 
                   <fieldset className="border-t border-border pt-7">
                     <legend className="flex items-center gap-2 text-base font-extrabold text-ink"><Clock3 className="h-5 w-5 text-primary" /> Quanto tempo por sessão?</legend>
-                    <p className="mt-2 text-sm text-text-soft">Usaremos esse limite para montar sessões possíveis, sem cortar uma aula ao meio.</p>
-                    <div className="mt-5 flex flex-wrap gap-2">
-                      {(question.availabilityConfig?.minutePresets || [15, 30, 45, 60, 90]).map((minutes) => (
-                        <button key={minutes} type="button" aria-pressed={availability.minutesPerSession === minutes} onClick={() => setAvailability((current) => ({ ...current, minutesPerSession: minutes }))} className={cn('min-h-11 rounded-[9px] border px-4 text-sm font-bold outline-none focus-visible:ring-3 focus-visible:ring-primary/25', availability.minutesPerSession === minutes ? 'border-primary bg-primary-pale text-primary-active' : 'border-border bg-surface text-text-soft hover:border-primary/35')}>{minutes} min</button>
-                      ))}
-                      <label className="flex min-h-11 items-center gap-2 rounded-[9px] border border-border bg-surface px-3 text-sm font-semibold text-text-soft focus-within:border-primary">
-                        Outro
-                        <input
-                          type="number"
-                          aria-label="Minutos personalizados por sessão"
-                          min={question.availabilityConfig?.minMinutes || 10}
-                          max={question.availabilityConfig?.maxMinutes || 240}
-                          value={availability.minutesPerSession}
-                          onChange={(event) => setAvailability((current) => ({ ...current, minutesPerSession: Math.max(10, Math.min(240, Number(event.target.value) || 10)) }))}
-                          className="w-14 bg-transparent text-right font-bold text-ink outline-none"
-                        /> min
-                      </label>
-                    </div>
+                    <p className="mt-2 text-sm text-text-soft">Montamos cada dia com esse limite e uma folga de 20% — para não cortar uma aula ao meio nem deixar o dia pela metade.</p>
+
+                    {question.availabilityConfig?.allowPerDayMinutes !== false && (
+                      <div className="mt-5 inline-flex flex-wrap gap-1 rounded-[10px] border border-border bg-canvas-soft p-1" role="group" aria-label="Como distribuir o tempo">
+                        {([['uniform', 'Mesmo tempo todos os dias'], ['per_day', 'Tempo diferente por dia']] as const).map(([value, label]) => (
+                          <button
+                            key={value}
+                            type="button"
+                            aria-pressed={(availability.mode ?? 'uniform') === value}
+                            onClick={() => changeMode(value)}
+                            className={cn(
+                              'min-h-10 rounded-[8px] px-4 text-sm font-bold outline-none focus-visible:ring-3 focus-visible:ring-primary/25',
+                              (availability.mode ?? 'uniform') === value ? 'bg-surface text-primary-active shadow-sm' : 'text-text-soft hover:text-ink',
+                            )}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {availability.mode === 'per_day' ? (
+                      <div className="mt-5 space-y-2">
+                        {availability.weekdays.length === 0 ? (
+                          <p className="text-sm text-text-mute">Escolha os dias acima para definir o tempo de cada um.</p>
+                        ) : WEEKDAYS.filter((day) => availability.weekdays.includes(day.value)).map((day) => (
+                          <div key={day.value} className="flex items-center justify-between gap-4 rounded-[10px] border border-border bg-surface px-4 py-2.5">
+                            <span className="text-sm font-bold text-ink">{day.label}</span>
+                            <label className="flex items-center gap-2 text-sm font-semibold text-text-soft">
+                              <input
+                                type="number"
+                                aria-label={`Minutos de estudo na ${day.label}`}
+                                min={question.availabilityConfig?.minMinutes || 10}
+                                max={question.availabilityConfig?.maxMinutes || 240}
+                                step={5}
+                                value={minutesFor(day.value)}
+                                onChange={(event) => setDayMinutes(day.value, Number(event.target.value))}
+                                className="w-16 rounded-[8px] border border-border bg-canvas-soft px-2 py-1 text-right font-bold text-ink outline-none focus:border-primary"
+                              /> min
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-5 flex flex-wrap gap-2">
+                        {(question.availabilityConfig?.minutePresets || [15, 30, 45, 60, 90]).map((minutes) => (
+                          <button key={minutes} type="button" aria-pressed={availability.minutesPerSession === minutes} onClick={() => setAvailability((current) => ({ ...current, minutesPerSession: minutes }))} className={cn('min-h-11 rounded-[9px] border px-4 text-sm font-bold outline-none focus-visible:ring-3 focus-visible:ring-primary/25', availability.minutesPerSession === minutes ? 'border-primary bg-primary-pale text-primary-active' : 'border-border bg-surface text-text-soft hover:border-primary/35')}>{minutes} min</button>
+                        ))}
+                        <label className="flex min-h-11 items-center gap-2 rounded-[9px] border border-border bg-surface px-3 text-sm font-semibold text-text-soft focus-within:border-primary">
+                          Outro
+                          <input
+                            type="number"
+                            aria-label="Minutos personalizados por sessão"
+                            min={question.availabilityConfig?.minMinutes || 10}
+                            max={question.availabilityConfig?.maxMinutes || 240}
+                            value={availability.minutesPerSession}
+                            onChange={(event) => setAvailability((current) => ({ ...current, minutesPerSession: clampSessionMinutes(Number(event.target.value)) }))}
+                            className="w-14 bg-transparent text-right font-bold text-ink outline-none"
+                          /> min
+                        </label>
+                      </div>
+                    )}
+
                     <div className="mt-6 rounded-[10px] border border-primary/20 bg-primary-pale/45 p-4 text-sm text-primary-active">
-                      Sua meta será de <strong>{availability.weekdays.length * availability.minutesPerSession} minutos por semana</strong>, divididos em {availability.weekdays.length} {availability.weekdays.length === 1 ? 'sessão' : 'sessões'}.
+                      Sua meta será de <strong>{weeklyMinutes(availability)} minutos por semana</strong>, divididos em {availability.weekdays.length} {availability.weekdays.length === 1 ? 'sessão' : 'sessões'}.
                     </div>
                   </fieldset>
                 </div>
@@ -329,7 +402,7 @@ export default function OnboardingPage() {
               <button onClick={handlePrevious} disabled={currentStep === 0} className="inline-flex min-h-11 items-center gap-2 rounded-[8px] px-3 text-sm font-bold text-text-soft hover:bg-surface hover:text-ink disabled:invisible"><ArrowLeft className="h-4 w-4" /> Voltar</button>
               <p className="order-first w-full text-center text-xs font-semibold text-text-mute sm:order-none sm:w-auto">
                 {question.type === 'availability'
-                  ? availability.weekdays.length > 0 ? `${availability.weekdays.length} ${availability.weekdays.length === 1 ? 'dia escolhido' : 'dias escolhidos'} · ${availability.minutesPerSession} min` : 'Escolha ao menos um dia'
+                  ? availability.weekdays.length > 0 ? `${availability.weekdays.length} ${availability.weekdays.length === 1 ? 'dia escolhido' : 'dias escolhidos'} · ${weeklyMinutes(availability)} min por semana` : 'Escolha ao menos um dia'
                   : currentAnswers.length > 0 ? `${currentAnswers.length} ${currentAnswers.length === 1 ? 'resposta selecionada' : 'respostas selecionadas'}` : 'Selecione uma resposta para continuar'}
               </p>
               <motion.button

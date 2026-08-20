@@ -18,7 +18,9 @@ type CourseCardProps = {
   slug?: string;
   title: string;
   category: string;
-  cover: string;
+  cover?: string;
+  coverUrl?: string;
+  cover_url?: string;
   progress?: number;
   href?: string;
   description?: string;
@@ -36,6 +38,8 @@ export default function CourseCard({
   title,
   category,
   cover,
+  coverUrl,
+  cover_url,
   progress,
   href,
   description,
@@ -50,12 +54,14 @@ export default function CourseCard({
   const linkUrl = href || (id ? `/courses/${id}` : "#");
   const hasMeta = Boolean(duration) || lessonCount !== undefined || Boolean(level);
 
-  const initialCover = cover && cover.trim() !== "" ? cover : FALLBACK_COVER;
+  const rawCover = cover || coverUrl || cover_url || "";
+  const initialCover = rawCover.trim() !== "" ? rawCover : FALLBACK_COVER;
   const [imgSrc, setImgSrc] = useState(initialCover);
 
   useEffect(() => {
-    setImgSrc(cover && cover.trim() !== "" ? cover : FALLBACK_COVER);
-  }, [cover]);
+    const nextCover = cover || coverUrl || cover_url || "";
+    setImgSrc(nextCover.trim() !== "" ? nextCover : FALLBACK_COVER);
+  }, [cover, coverUrl, cover_url]);
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (
@@ -110,9 +116,14 @@ export default function CourseCard({
               src={imgSrc}
               alt={`Capa do curso ${title}`}
               fill
+              unoptimized
               loading={eager ? "eager" : "lazy"}
               sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-              onError={() => setImgSrc(FALLBACK_COVER)}
+              onError={() => {
+                if (imgSrc !== FALLBACK_COVER) {
+                  setImgSrc(FALLBACK_COVER);
+                }
+              }}
               className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.035]"
             />
             {/*

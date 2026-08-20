@@ -8,6 +8,9 @@ import { articleMeta, longDate } from "./articleMeta";
 import type { Article } from "@/types/blog";
 import { cn } from "@/lib/utils";
 
+const FALLBACK_BLOG_COVER =
+  "https://images.unsplash.com/photo-1521737711867-e3b97375f902?q=85&w=1400&auto=format&fit=crop";
+
 type ArticleSpotlightProps = {
   article: Article;
   className?: string;
@@ -21,6 +24,7 @@ type ArticleSpotlightProps = {
  */
 export default function ArticleSpotlight({ article, className }: ArticleSpotlightProps) {
   const meta = articleMeta(article);
+  const coverSrc = article.cover && article.cover.trim() !== "" ? article.cover : FALLBACK_BLOG_COVER;
 
   return (
     <Link
@@ -36,7 +40,7 @@ export default function ArticleSpotlight({ article, className }: ArticleSpotligh
         <Card className="lift h-full gap-0 overflow-hidden border-hairline p-0">
           <div className="relative flex min-h-[26rem] flex-col justify-end p-7 sm:p-9 lg:min-h-[clamp(26rem,36vw,32rem)]">
             <Image
-              src={article.cover}
+              src={coverSrc}
               alt=""
               fill
               sizes="(max-width: 1024px) 100vw, 55vw"
