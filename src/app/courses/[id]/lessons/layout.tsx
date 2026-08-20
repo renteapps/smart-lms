@@ -1,7 +1,7 @@
 import CourseSidebar from "@/components/classroom/CourseSidebar";
 import { ZenModeProvider } from "@/contexts/ZenModeContext";
 import { getSessionUser } from "@/lib/supabase/auth";
-import { getCourse } from "@/lib/data/courses";
+import { getCourseOutline } from "@/lib/data/courses";
 
 /**
  * Shell da sala de aula.
@@ -22,7 +22,7 @@ export default async function CourseLayout({
 }) {
   const { id } = await params;
   const { supabase, user } = await getSessionUser();
-  const course = await getCourse(supabase, id, user?.id);
+  const course = await getCourseOutline(supabase, id, user?.id);
 
   return (
     <ZenModeProvider>

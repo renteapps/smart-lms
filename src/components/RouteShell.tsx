@@ -1,12 +1,14 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
-import ChatSticker from "@/components/ChatSticker";
 import { ProfileBanner } from "@/components/profile/ProfileBanner";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+
+const ChatSticker = dynamic(() => import("@/components/ChatSticker"), { ssr: false });
 
 export function RouteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

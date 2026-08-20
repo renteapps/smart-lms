@@ -1,15 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { PanelLeft, SquarePen, Wrench } from "lucide-react";
 import { Button, Drawer } from "@heroui/react";
 import { AgentAvatar } from "@/components/agentes/AgentAvatar";
 import { AgentConversationList } from "@/components/agentes/AgentConversationList";
 import { AgentThread } from "@/components/agentes/AgentThread";
 import { useAgentChat } from "@/contexts/AgentChatContext";
-import { getAiCredits, decrementAiCredits } from "@/app/actions/agents";
 import type { Agent } from "@/types/agente";
-import { toast } from "@heroui/react";
 
 /**
  * `auto` mostra a conversa mais recente ao chegar pela grade; `new` é o "novo
@@ -20,14 +18,19 @@ import { toast } from "@heroui/react";
 type ThreadSelection = { mode: "auto" } | { mode: "new" } | { mode: "thread"; id: string };
 
 export function AgentWorkspace({ agent }: { agent: Agent }) {
-  const { conversationsForAgent, isLoaded, sendMessage, deleteConversation, typingConversationId } = useAgentChat();
+  const {
+    conversationsForAgent,
+    isLoaded,
+    sendMessage,
+    deleteConversation,
+    typingConversationId,
+    credits,
+    loadConversation,
+    nextCursor,
+    loadMoreConversations,
+  } = useAgentChat();
   const [selection, setSelection] = useState<ThreadSelection>({ mode: "auto" });
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const [credits, setCredits] = useState<number | null>(null);
-
-  useEffect(() => {
-    getAiCredits().then(setCredits);
-  }, []);
 
   const conversations = conversationsForAgent(agent.id);
   const activeConversation =
@@ -39,23 +42,13 @@ export function AgentWorkspace({ agent }: { agent: Agent }) {
 
   const isUnavailable = agent.status === "Em manutenção";
 
-  const handleSend = async (text: string) => {
-    if (credits !== null && credits <= 0) {
-      toast.danger("Créditos insuficientes", { description: "Você não tem mais Créditos de IA para usar agentes." });
-      return;
+  useEffect(() => {
+    if (activeConversation?.messagesLoaded === false) {
+      void loadConversation(activeConversation.id);
     }
+  }, [activeConversation?.id, activeConversation?.messagesLoaded, loadConversation]);
 
-    // Optimistic UI update
-    setCredits((prev) => (prev ? prev - 1 : 0));
-    const res = await decrementAiCredits();
-
-    if (!res.success) {
-      toast.danger("Erro ao usar agente", { description: "Não foi possível debitar seu crédito de IA." });
-      getAiCredits().then(setCredits); // rollback
-      return;
-    }
-
-    setCredits(res.creditsRemaining);
+  const handleSend = (text: string) => {
     const conversationId = sendMessage(agent, activeConversation?.id ?? null, text);
     setSelection({ mode: "thread", id: conversationId });
   };
@@ -78,6 +71,8 @@ export function AgentWorkspace({ agent }: { agent: Agent }) {
     onSelect: handleSelect,
     onNewConversation: handleNewConversation,
     onDelete: deleteConversation,
+    hasMore: Boolean(nextCursor),
+    onLoadMore: () => { void loadMoreConversations(); },
   };
 
   return (

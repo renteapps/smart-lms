@@ -30,6 +30,10 @@ function errorResponse(error: unknown) {
 export async function GET(request: NextRequest) {
   try {
     const { supabase, user } = await requireUser();
+    if (request.nextUrl.searchParams.get("mode") === "config") {
+      const settings = await getPlatformAssistantSettings(createAdminClient());
+      return NextResponse.json({ config: publicAssistantConfig(settings) });
+    }
     const kind = request.nextUrl.searchParams.get("kind") || "platform";
     const scope = parseAssistantScope(
       kind === "course"

@@ -12,6 +12,7 @@ import type { Agent, AgentFormPayload } from "@/types/agente";
 import type { Pilula } from "@/types/pilula";
 import type { ProfileTest } from "@/types/profileTest";
 import type { Question, QuestionnaireVersion } from "@/types/trilha";
+import type { LessonContentBlock } from "@/types/course";
 import type { ActionResult } from "../progress";
 
 type Saved<T> = { success: boolean; message?: string; data?: T };
@@ -333,7 +334,7 @@ export async function getQuestionnaireVersions(): Promise<Saved<{ versions: Ques
 
 export type ArticleInput = {
   id?: string;
-  slug: string;
+  slug?: string;
   title: string;
   excerpt?: string;
   cover?: string;
@@ -342,7 +343,11 @@ export type ArticleInput = {
   publishedAt?: string;
   readingTime?: number;
   format?: string;
-  body?: string;
+  blocks?: LessonContentBlock[];
+  audioUrl?: string;
+  audioDuration?: number;
+  audioTranscript?: string;
+  relatedCourseId?: string | null;
   featured?: boolean;
   premium?: boolean;
   isPublished?: boolean;
@@ -352,8 +357,17 @@ export async function saveArticle(input: ArticleInput): Promise<Saved<{ id: stri
   try {
     const { adminClient } = await requireAdmin();
 
+    // Slug só é recalculado na criação: mudar a URL de um artigo publicado
+    // quebraria os links que os leitores já têm.
+    let slug = input.slug;
+    if (!input.id) {
+      const { data: existing } = await adminClient.from("articles").select("slug");
+      const taken = (existing ?? []).map((row: { slug: string }) => row.slug);
+      slug = ensureUniqueSlug(slugifyAgentName(input.slug || input.title), taken);
+    }
+
     const row: Record<string, unknown> = {
-      slug: input.slug,
+      slug,
       title: input.title,
       excerpt: input.excerpt ?? "",
       cover: input.cover ?? null,
@@ -361,7 +375,11 @@ export async function saveArticle(input: ArticleInput): Promise<Saved<{ id: stri
       author: input.author ?? "Equipe",
       reading_time: input.readingTime ?? null,
       format: input.format ?? "text",
-      body: input.body ?? "",
+      blocks: input.blocks ?? [],
+      audio_url: input.audioUrl ?? null,
+      audio_duration: input.audioDuration ?? null,
+      audio_transcript: input.audioTranscript ?? null,
+      related_course_id: input.relatedCourseId ?? null,
       featured: input.featured ?? false,
       premium: input.premium ?? false,
       is_published: input.isPublished ?? true,
@@ -376,7 +394,22 @@ export async function saveArticle(input: ArticleInput): Promise<Saved<{ id: stri
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/blog");
+    revalidatePath("/admin/blog");
     return { success: true, data: { id: data.id } };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+export async function deleteArticle(id: string): Promise<ActionResult> {
+  try {
+    const { adminClient } = await requireAdmin();
+    const { error } = await adminClient.from("articles").delete().eq("id", id);
+    if (error) return { success: false, message: error.message };
+
+    revalidatePath("/blog");
+    revalidatePath("/admin/blog");
+    return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };
   }

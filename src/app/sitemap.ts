@@ -1,11 +1,13 @@
 import { MetadataRoute } from 'next';
-import { getArticleSlugs } from '@/lib/blog';
+import { getArticleSlugs } from '@/lib/data/blog';
+import { createClient } from '@/lib/supabase/server';
 
 const URL = 'https://seusite.com.br'; // TODO: Replace with actual domain
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const blogSlugs = getArticleSlugs().map((slug) => slug.replace(/\.mdx$/, ''));
-  
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const supabase = await createClient();
+  const blogSlugs = await getArticleSlugs(supabase);
+
   const blogUrls = blogSlugs.map((slug) => ({
     url: `${URL}/blog/${slug}`,
     lastModified: new Date(),

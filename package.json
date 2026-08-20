@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack -p 3888",
     "build": "next build",
+    "perf:bundles": "node scripts/measure-client-bundles.mjs",
     "start": "next start -p 3888",
     "lint": "eslint",
     "test": "vitest run"

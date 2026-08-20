@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Eye, Filter } from "lucide-react";
+import { Eye, Filter } from "lucide-react";
 import {
   Button,
   Card,
@@ -10,7 +10,6 @@ import {
   SearchField,
 } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
-import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getSubscriptions, type Subscription as DbSubscription } from "@/lib/data/plans";
@@ -19,24 +18,21 @@ export default function AssinaturasPage() {
   const router = useRouter();
   const [subscriptions, setSubscriptions] = useState<DbSubscription[]>([]);
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
 
-  import("react").then(React => {
-    React.useEffect(() => {
-      async function loadData() {
-        setLoading(true);
-        const supabase = createClient();
-        try {
-          const subs = await getSubscriptions(supabase);
-          setSubscriptions(subs);
-        } catch (e) {
-          console.error(e);
-        }
-        setLoading(false);
+  useEffect(() => {
+    let active = true;
+    async function loadData() {
+      const supabase = createClient();
+      try {
+        const subs = await getSubscriptions(supabase);
+        if (active) setSubscriptions(subs);
+      } catch (error) {
+        console.error(error);
       }
-      loadData();
-    }, []);
-  });
+    }
+    void loadData();
+    return () => { active = false; };
+  }, []);
 
   const filteredSubs = subscriptions.filter(sub => 
     (sub.userName?.toLowerCase().includes(search.toLowerCase()) || 

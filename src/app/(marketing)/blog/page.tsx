@@ -1,4 +1,5 @@
-import { getAllArticles } from '@/lib/blog';
+import { getAllArticles } from '@/lib/data/blog';
+import { createClient } from '@/lib/supabase/server';
 import { FeaturedArticle } from '@/components/blog/FeaturedArticle';
 import { ArticleCard } from '@/components/blog/ArticleCard';
 
@@ -7,8 +8,9 @@ export const metadata = {
   description: 'Artigos, áudios e reflexões para você acelerar seu crescimento profissional.',
 };
 
-export default function BlogIndexPage() {
-  const articles = getAllArticles();
+export default async function BlogIndexPage() {
+  const supabase = await createClient();
+  const articles = await getAllArticles(supabase);
   
   if (articles.length === 0) {
     return (

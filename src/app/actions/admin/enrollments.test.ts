@@ -52,3 +52,60 @@ describe("calculateExpiresAt", () => {
     );
   });
 });
+
+describe("Enrollment Action Inputs", () => {
+  it("valida parâmetros de entrada para createEnrollment", async () => {
+    const { createEnrollment } = await import("./enrollments");
+    
+    // Sem userId e courseId
+    const res1 = await createEnrollment({
+      userId: "",
+      courseId: "",
+      expirationType: "indefinite",
+    });
+    expect(res1.success).toBe(false);
+    expect(res1.message).toBe("Usuário e curso são obrigatórios.");
+
+    // Sem courseId
+    const res2 = await createEnrollment({
+      userId: "user-123",
+      courseId: "",
+      expirationType: "indefinite",
+    });
+    expect(res2.success).toBe(false);
+    expect(res2.message).toBe("Usuário e curso são obrigatórios.");
+  });
+
+  it("valida parâmetros de entrada para updateEnrollmentExpiration", async () => {
+    const { updateEnrollmentExpiration } = await import("./enrollments");
+    
+    const res = await updateEnrollmentExpiration({
+      enrollmentId: "",
+      userId: "user-123",
+      expirationType: "indefinite",
+    });
+    expect(res.success).toBe(false);
+    expect(res.message).toBe("ID da matrícula é obrigatório.");
+  });
+
+  it("valida parâmetros de entrada para deleteEnrollment", async () => {
+    const { deleteEnrollment } = await import("./enrollments");
+    
+    // Sem enrollmentId e sem courseId
+    const res = await deleteEnrollment({
+      enrollmentId: "",
+      userId: "user-123",
+    });
+    expect(res.success).toBe(false);
+    expect(res.message).toBe("ID da matrícula é obrigatório.");
+
+    // Sem enrollmentId, userId e courseId
+    const res2 = await deleteEnrollment({
+      enrollmentId: "",
+      userId: "",
+      courseId: "",
+    });
+    expect(res2.success).toBe(false);
+    expect(res2.message).toBe("ID da matrícula é obrigatório.");
+  });
+});

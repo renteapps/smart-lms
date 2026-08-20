@@ -1,12 +1,12 @@
 import "server-only";
 
 import type { User } from "@supabase/supabase-js";
-import { getAllArticles } from "@/lib/blog";
+import { getAllArticles } from "@/lib/data/blog";
 import { getCatalogCourses, getCourse, isEnrolled } from "@/lib/data/courses";
 import { getPlans } from "@/lib/data/plans";
 import type { DB, Row } from "@/lib/data/types";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CURATED_OPENROUTER_MODELS, getOpenRouterConfig, sendOpenRouterChatCompletion } from "@/lib/openrouterService";
+import { CURATED_OPENROUTER_MODELS, getOpenRouterServerConfig, sendOpenRouterChatCompletion } from "@/lib/openrouterService";
 import {
   ASSISTANT_CONTEXT_BUDGET,
   ASSISTANT_RATE_LIMIT_PER_MINUTE,
@@ -270,13 +270,13 @@ async function releaseConversation(db: DB, conversationId: string): Promise<void
 async function platformAutomaticSources(db: DB): Promise<AssistantContextSource[]> {
   const [courses, plans] = await Promise.all([getCatalogCourses(db), getPlans(db, true)]);
   const now = Date.now();
-  const articles: AssistantContextSource[] = getAllArticles()
+  const articles: AssistantContextSource[] = (await getAllArticles(db))
     .filter((article) => Number(article.publishedAt) <= now)
     .map((article) => ({
       id: article.slug,
       kind: "article",
       title: `Artigo — ${article.title}`,
-      content: [article.excerpt, article.body, article.audio?.transcript].filter(Boolean).join("\n\n"),
+      content: [article.excerpt, article.audio?.transcript].filter(Boolean).join("\n\n"),
     }));
   const courseSources: AssistantContextSource[] = courses.map((course) => ({
     id: course.id,
@@ -335,7 +335,7 @@ export async function sendPlatformAssistantMessage(
   const adminDb = createAdminClient();
   const settings = await getPlatformAssistantSettings(adminDb);
   if (!settings.enabled) throw new PlatformAssistantError("O assistente está desativado no momento.", 503, "disabled");
-  const openRouter = getOpenRouterConfig();
+  const openRouter = await getOpenRouterServerConfig();
   if (!openRouter.enabled || !openRouter.apiKey?.trim()) {
     throw new PlatformAssistantError("O assistente está indisponível porque a integração de IA não foi configurada.", 503, "provider_unavailable");
   }
@@ -370,15 +370,18 @@ export async function sendPlatformAssistantMessage(
     if (historyError) throw new PlatformAssistantError("Não foi possível carregar o histórico.", 503, "history_unavailable");
     const recent = trimAssistantHistory((rows ?? []).map(mapMessage));
 
-    const response = await sendOpenRouterChatCompletion({
-      model: settings.model,
-      temperature: 0.25,
-      maxTokens: 1_500,
-      messages: [
-        { role: "system", content: systemMessage(settings, scope, context.text) },
-        ...recent.map((message) => ({ role: message.author, content: message.content })),
-      ],
-    });
+    const response = await sendOpenRouterChatCompletion(
+      {
+        model: settings.model,
+        temperature: 0.25,
+        maxTokens: 1_500,
+        messages: [
+          { role: "system", content: systemMessage(settings, scope, context.text) },
+          ...recent.map((message) => ({ role: message.author, content: message.content })),
+        ],
+      },
+      openRouter,
+    );
     if (!response.success || response.simulated || !response.text?.trim()) {
       throw new PlatformAssistantError(
         "A IA não conseguiu responder agora. Sua mensagem foi salva; tente novamente em instantes.",

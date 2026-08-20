@@ -9,15 +9,15 @@ import { CourseIcon } from "@/components/ui/AnimatedIcon";
 import { Reveal } from "@/components/ui/Reveal";
 import { Rise } from "@/components/ui/Rise";
 import { useCardTransition } from "@/contexts/CardTransitionContext";
-import type { Course, Lesson } from "@/types/course";
+import type { CourseOverviewData, CourseOutlineLesson } from "@/types/course";
 import { cn } from "@/lib/utils";
 
 type CourseOverviewClientProps = {
-  course: Course;
+  course: CourseOverviewData;
   totalLessons: number;
   completedLessons: number;
   progressPercentage: number;
-  nextLesson: Lesson | null;
+  nextLesson: CourseOutlineLesson | null;
 };
 
 const LESSON_KIND: Record<string, string> = {
@@ -27,7 +27,7 @@ const LESSON_KIND: Record<string, string> = {
   text: "Leitura",
 };
 
-function lessonIcon(lesson: Lesson) {
+function lessonIcon(lesson: CourseOutlineLesson) {
   if (lesson.isCompleted) return <CheckCircle2 className="size-4" aria-hidden="true" />;
   if (lesson.type === "profile_test") return <Brain className="size-4" aria-hidden="true" />;
   if (lesson.type === "video") return <PlayCircle className="size-4" aria-hidden="true" />;
@@ -42,11 +42,15 @@ function lessonIcon(lesson: Lesson) {
  * achar. O painel de progresso acompanha a rolagem porque é a resposta que a
  * pessoa volta a procurar enquanto navega pelo plano.
  */
+const FALLBACK_COVER =
+  "https://images.unsplash.com/photo-1552664730-d307ca884978?q=90&w=1800&auto=format&fit=crop";
+
 export default function CourseOverviewClient({ course, totalLessons, completedLessons, progressPercentage, nextLesson }: CourseOverviewClientProps) {
   const { triggerTransition } = useCardTransition();
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>(() => Object.fromEntries(course.modules.map((courseModule) => [courseModule.id, true])));
   const totalMinutes = course.modules.reduce((total, courseModule) => total + courseModule.lessons.reduce((moduleTotal, lesson) => moduleTotal + lesson.durationInMinutes, 0), 0);
   const durationLabel = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}min`;
+  const courseCover = course.coverUrl || FALLBACK_COVER;
 
   const handleNextLessonClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (!nextLesson) return;
@@ -73,7 +77,7 @@ export default function CourseOverviewClient({ course, totalLessons, completedLe
       },
       metadata: {
         title: nextLesson.title,
-        cover: "https://images.unsplash.com/photo-1552664730-d307ca884978?q=90&w=1800&auto=format&fit=crop",
+        cover: courseCover,
         category: LESSON_KIND[nextLesson.type] ?? "Aula",
         duration: `${nextLesson.durationInMinutes} min`,
         type: "lesson",
@@ -82,7 +86,7 @@ export default function CourseOverviewClient({ course, totalLessons, completedLe
     });
   };
 
-  const handleLessonRowClick = (lesson: Lesson, e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleLessonRowClick = (lesson: CourseOutlineLesson, e: React.MouseEvent<HTMLAnchorElement>) => {
     if (
       e.defaultPrevented ||
       e.button !== 0 ||
@@ -106,7 +110,7 @@ export default function CourseOverviewClient({ course, totalLessons, completedLe
       },
       metadata: {
         title: lesson.title,
-        cover: "https://images.unsplash.com/photo-1552664730-d307ca884978?q=90&w=1800&auto=format&fit=crop",
+        cover: courseCover,
         category: LESSON_KIND[lesson.type] ?? "Aula",
         duration: `${lesson.durationInMinutes} min`,
         type: "lesson",
@@ -120,8 +124,8 @@ export default function CourseOverviewClient({ course, totalLessons, completedLe
       <section className="editorial-container py-8 sm:py-12">
         <div className="relative isolate overflow-hidden rounded-2xl bg-foreground shadow-elev-4">
           <Image
-            src="https://images.unsplash.com/photo-1552664730-d307ca884978?q=90&w=1800&auto=format&fit=crop"
-            alt="Grupo participando de uma dinâmica de aprendizagem"
+            src={courseCover}
+            alt={`Capa do curso ${course.title}`}
             fill
             priority
             sizes="(max-width: 1280px) 100vw, 1280px"
@@ -133,7 +137,9 @@ export default function CourseOverviewClient({ course, totalLessons, completedLe
           />
 
           <div className="relative z-10 max-w-3xl px-6 py-14 sm:px-10 sm:py-20 lg:px-16">
-            <p className="eyebrow text-background/70">Comunicação · Curso essencial</p>
+            <p className="eyebrow text-background/70">
+              {course.category || "Geral"} · Curso {course.level ? course.level.toLowerCase() : "essencial"}
+            </p>
             <h1 className="display-1 mt-4 text-background">{course.title}</h1>
             <p className="lede mt-5 text-background/75">{course.description}</p>
 

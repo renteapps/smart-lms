@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   fetchOpenRouterModels,
+  getOpenRouterServerConfig,
   sendOpenRouterChatCompletion,
   validateOpenRouterKey,
 } from "@/lib/openrouterService";
@@ -51,7 +52,10 @@ export async function POST(req: NextRequest) {
           temperature: typeof temperature === "number" ? temperature : 0.7,
           maxTokens: typeof maxTokens === "number" ? maxTokens : 1000,
         },
-        apiKey ? { apiKey } : undefined
+        // Sem chave digitada nesta chamada: testa com a chave já salva no
+        // servidor, não com o modo simulado — é o que o admin espera ao
+        // clicar em "Testar" sem reabrir o campo de credencial.
+        apiKey ? { apiKey } : await getOpenRouterServerConfig(),
       );
 
       if (result.success) {

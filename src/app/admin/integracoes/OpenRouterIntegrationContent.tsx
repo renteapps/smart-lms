@@ -46,6 +46,7 @@ import {
   getOpenRouterLogs,
   clearOpenRouterLogs,
 } from "@/lib/openrouterService";
+import { getOpenRouterAdminConfig, saveIntegration } from "@/app/actions/admin/platform";
 
 const SYSTEM_PROMPT_PRESETS = [
   {
@@ -119,12 +120,32 @@ export function OpenRouterIntegrationContent() {
     refreshLogs();
   }, []);
 
-  const loadConfig = () => {
-    const current = getOpenRouterConfig();
-    setConfig(current);
-    setApiKeyInput(current.apiKey || "");
-    if (current.defaultModel) {
-      setSandboxModel(current.defaultModel);
+  /**
+   * A chave em si nunca volta do servidor (mesma regra do Resend): só o
+   * `hasApiKey`. Por isso o valor local (localStorage, digitado nesta sessão)
+   * segue alimentando `apiKeyInput`; o resto — modelo padrão, parâmetros,
+   * status real — vem do Supabase, que é quem o backend de fato consulta.
+   */
+  const loadConfig = async () => {
+    const local = getOpenRouterConfig();
+    setConfig(local);
+    setApiKeyInput(local.apiKey || "");
+    if (local.defaultModel) {
+      setSandboxModel(local.defaultModel);
+    }
+
+    const remote = await getOpenRouterAdminConfig();
+    if (remote.success && remote.data) {
+      const remoteConfig = remote.data.config as Partial<OpenRouterConfig>;
+      setConfig((prev) => ({
+        ...prev,
+        ...remoteConfig,
+        enabled: remote.data!.enabled,
+        status: (remote.data!.status as OpenRouterConfig["status"]) ?? prev.status,
+      }));
+      if (remoteConfig.defaultModel) {
+        setSandboxModel(remoteConfig.defaultModel);
+      }
     }
   };
 
@@ -149,6 +170,13 @@ export function OpenRouterIntegrationContent() {
         keyInfo: undefined,
       });
       setConfig(updated);
+      // Chave vazia é explícita: limpa também no servidor, senão o chat dos
+      // alunos continuaria usando a última chave salva.
+      await saveIntegration("openrouter", {
+        enabled: false,
+        status: "disconnected",
+        secrets: { apiKey: "" },
+      });
       toast.info("Chave removida. A integração está no modo de simulação.");
       return;
     }
@@ -173,8 +201,23 @@ export function OpenRouterIntegrationContent() {
           keyInfo: data.keyInfo,
         });
         setConfig(updated);
+        // A chave só passa a valer para os alunos quando fica salva aqui —
+        // o localStorage acima é só um cache local desta tela.
+        await saveIntegration("openrouter", {
+          name: "OpenRouter",
+          enabled: true,
+          status: "connected",
+          config: {
+            defaultModel: updated.defaultModel,
+            temperature: updated.temperature,
+            maxTokens: updated.maxTokens,
+            siteUrl: updated.siteUrl,
+            siteName: updated.siteName,
+          },
+          secrets: { apiKey: keyToValidate },
+        });
         toast.success("Autenticação com o OpenRouter realizada com sucesso!", {
-          description: `Chave conectada (${data.keyInfo?.label || "OpenRouter"}).`,
+          description: `Chave conectada (${data.keyInfo?.label || "OpenRouter"}) e salva para uso real nos agentes.`,
         });
       } else {
         const updated = saveOpenRouterConfig({
@@ -194,7 +237,7 @@ export function OpenRouterIntegrationContent() {
     }
   };
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
       const updated = saveOpenRouterConfig({
@@ -206,6 +249,18 @@ export function OpenRouterIntegrationContent() {
         enabled: config.enabled,
       });
       setConfig(updated);
+      // Sem `secrets`: a chave já salva permanece intacta.
+      await saveIntegration("openrouter", {
+        name: "OpenRouter",
+        enabled: updated.enabled,
+        config: {
+          defaultModel: updated.defaultModel,
+          temperature: updated.temperature,
+          maxTokens: updated.maxTokens,
+          siteUrl: updated.siteUrl,
+          siteName: updated.siteName,
+        },
+      });
       toast.success("Configurações salvas com sucesso!");
     } finally {
       setIsSaving(false);
@@ -236,10 +291,20 @@ export function OpenRouterIntegrationContent() {
     }
   };
 
-  const handleSetDefaultModel = (modelId: string) => {
+  const handleSetDefaultModel = async (modelId: string) => {
     const updated = saveOpenRouterConfig({ defaultModel: modelId });
     setConfig(updated);
     setSandboxModel(modelId);
+    await saveIntegration("openrouter", {
+      name: "OpenRouter",
+      config: {
+        defaultModel: updated.defaultModel,
+        temperature: updated.temperature,
+        maxTokens: updated.maxTokens,
+        siteUrl: updated.siteUrl,
+        siteName: updated.siteName,
+      },
+    });
     toast.success("Modelo padrão atualizado!", {
       description: `${modelId} será usado como padrão para novos Agentes e Tutores.`,
     });

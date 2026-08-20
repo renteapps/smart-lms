@@ -5,7 +5,9 @@ import {
   OpenRouterModel,
   OpenRouterChatPayload,
   OpenRouterChatResponse,
+  OpenRouterStatus,
 } from "@/types/openrouter";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const OPENROUTER_CONFIG_KEY = "@smartlms:openrouter_config";
 const OPENROUTER_LOGS_KEY = "@smartlms:openrouter_logs";
@@ -171,6 +173,43 @@ export function getOpenRouterConfig(): OpenRouterConfig {
   }
 
   return serverConfig;
+}
+
+/**
+ * Configuração real para o backend atender alunos: a chave nunca mora só no
+ * localStorage do navegador do admin (isso nunca chegaria ao servidor). Ela
+ * vem da tabela `integrations` (RLS restrita a admin, lida aqui com o client
+ * de serviço) e cai para a env var como último recurso.
+ */
+export async function getOpenRouterServerConfig(): Promise<OpenRouterConfig> {
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("integrations")
+      .select("enabled, config, secrets, status")
+      .eq("slug", "openrouter")
+      .maybeSingle();
+
+    const storedConfig = (data?.config ?? {}) as Partial<OpenRouterConfig>;
+    const apiKey = ((data?.secrets as { apiKey?: string } | null)?.apiKey ?? "").trim();
+
+    return {
+      ...DEFAULT_OPENROUTER_CONFIG,
+      ...storedConfig,
+      apiKey: apiKey || process.env.OPENROUTER_API_KEY || "",
+      enabled: data ? Boolean(data.enabled) : Boolean(process.env.OPENROUTER_API_KEY),
+      status:
+        (data?.status as OpenRouterStatus | undefined) ??
+        (process.env.OPENROUTER_API_KEY ? "connected" : "disconnected"),
+    };
+  } catch (e) {
+    console.error("Erro ao carregar configuração do OpenRouter do Supabase:", e);
+    return {
+      ...DEFAULT_OPENROUTER_CONFIG,
+      apiKey: process.env.OPENROUTER_API_KEY || "",
+      enabled: Boolean(process.env.OPENROUTER_API_KEY),
+    };
+  }
 }
 
 export function saveOpenRouterConfig(config: Partial<OpenRouterConfig>): OpenRouterConfig {

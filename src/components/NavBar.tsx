@@ -14,7 +14,7 @@ import {
   PROFILE_SAVED_EVENT,
   PROFILE_STORAGE_KEY,
   type ProfilePreferences,
-} from "@/components/profile/ProfileEditor";
+} from "@/lib/profilePreferences";
 
 export default function NavBar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -34,13 +34,22 @@ export default function NavBar() {
   ];
 
   useEffect(() => {
+    let frame: number | null = null;
     const handleScroll = () => {
-      const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
-      setIsScrolled(scrollY > 12);
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+        const next = scrollY > 12;
+        setIsScrolled((current) => current === next ? current : next);
+      });
     };
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (frame !== null) window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   useEffect(() => {

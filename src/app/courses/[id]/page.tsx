@@ -3,7 +3,7 @@ import { buttonVariants } from "@heroui/styles";
 import { EmptyState } from "@heroui/react/empty-state";
 import CourseOverviewClient from "@/components/classroom/CourseOverviewClient";
 import { getSessionUser } from "@/lib/supabase/auth";
-import { getCourse } from "@/lib/data/courses";
+import { getCourseOutline } from "@/lib/data/courses";
 
 /**
  * Capa do curso. Todo o cálculo (progresso, próxima aula) acontece no servidor;
@@ -13,9 +13,9 @@ export default async function CourseOverviewPage({ params }: { params: Promise<{
   const { id } = await params;
   const { supabase, user } = await getSessionUser();
 
-  const course = await getCourse(supabase, id, user?.id);
+  const course = await getCourseOutline(supabase, id, user?.id);
 
-  if (!course) {
+  if (!course || course.status === "Arquivado") {
     return (
       <div className="flex min-h-full items-center justify-center px-4 py-24">
         <EmptyState>

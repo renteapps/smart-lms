@@ -9,7 +9,7 @@ import {
   PROFILE_SAVED_EVENT,
   PROFILE_STORAGE_KEY,
   type ProfilePreferences,
-} from "@/components/profile/ProfileEditor";
+} from "@/lib/profilePreferences";
 import { createClient } from "@/lib/supabase/client";
 
 function getInitials(name: string) {

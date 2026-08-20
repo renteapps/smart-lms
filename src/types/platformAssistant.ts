@@ -71,6 +71,10 @@ export type PlatformAssistantGetResponse = {
   conversation: AssistantConversation | null;
 };
 
+export type PlatformAssistantConfigResponse = {
+  config: PlatformAssistantPublicConfig;
+};
+
 export type PlatformAssistantPostResponse = {
   conversationId: string;
   userMessage: AssistantMessage;

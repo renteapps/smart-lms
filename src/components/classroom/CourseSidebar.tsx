@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Brain, CheckCircle2, FileText, Menu, PlayCircle } from "lucide-react";
 import { Button, Disclosure, Drawer, ProgressBar, buttonVariants } from "@heroui/react";
-import type { Course, Lesson } from "@/types/course";
+import type { CourseOutline, CourseOutlineLesson } from "@/types/course";
 import { useZenMode } from "@/contexts/ZenModeContext";
 import { BrandMark } from "@/components/BrandMark";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
  * a mesma ordem de prioridade. O cabeçalho móvel é acrílico porque a aula rola
  * por baixo dele; a coluna do desktop é superfície opaca, já que nada passa atrás.
  */
-export default function CourseSidebar({ course }: { course: Course }) {
+export default function CourseSidebar({ course }: { course: CourseOutline }) {
   const params = useParams();
   const courseId = params.id as string;
   const currentLessonId = params.lessonId as string;
@@ -29,7 +29,7 @@ export default function CourseSidebar({ course }: { course: Course }) {
   const completedLessons = course.modules.reduce((total, courseModule) => total + courseModule.lessons.filter((lesson) => lesson.isCompleted).length, 0);
   const progressPercentage = Math.round((completedLessons / Math.max(totalLessons, 1)) * 100);
 
-  const lessonIcon = (lesson: Lesson) => {
+  const lessonIcon = (lesson: CourseOutlineLesson) => {
     if (lesson.isCompleted) return <CheckCircle2 className="size-4 text-success" aria-hidden="true" />;
     if (lesson.type === "profile_test") return <Brain className="size-4 text-accent" aria-hidden="true" />;
     if (lesson.type === "text") return <FileText className="size-4 text-muted" aria-hidden="true" />;

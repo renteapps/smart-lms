@@ -7,9 +7,13 @@ import { Button, Chip, Separator, Tooltip, buttonVariants } from "@heroui/react"
 import VideoPlayer from "./VideoPlayer";
 import LessonTabs from "./LessonTabs";
 import ProfileTestRunner from "./ProfileTestRunner";
-import type { Course, Lesson } from "@/types/course";
+import QuizRunner from "./QuizRunner";
+import type { CourseOutline, Lesson } from "@/types/course";
 import type { ProfileTest } from "@/types/profileTest";
+import type { Quiz } from "@/types/quiz";
 import type { StudentNote } from "@/lib/data/notes";
+import type { Comment } from "@/lib/data/comments";
+import type { User } from "@supabase/supabase-js";
 import { useZenMode } from "@/contexts/ZenModeContext";
 import { rateLesson, setLessonCompletion } from "@/app/actions/progress";
 import { setTrailItemCompletion } from "@/app/actions/trail";
@@ -17,10 +21,13 @@ import { cn } from "@/lib/utils";
 
 interface LessonClientWrapperProps {
   lesson: Lesson;
-  course: Course;
+  course: CourseOutline;
   courseId: string;
   profileTests: ProfileTest[];
   initialNote: StudentNote | null;
+  quiz?: Quiz | null;
+  initialComments?: Comment[];
+  currentUser?: User | null;
 }
 
 /**
@@ -37,6 +44,9 @@ export default function LessonClientWrapper({
   courseId,
   profileTests,
   initialNote,
+  quiz,
+  initialComments = [],
+  currentUser = null,
 }: LessonClientWrapperProps) {
   /*
    * O estado local é otimista: a marcação aparece na hora e a Server Action
@@ -245,19 +255,30 @@ export default function LessonClientWrapper({
         <Separator className="mt-8" />
       </header>
 
-      {/* Main Content: Profile Test Runner vs Video Player */}
+      {/* Main Content: Profile Test Runner vs Video Player vs Quiz Runner */}
       {isProfileTest && targetProfileTest ? (
         <ProfileTestRunner
           test={targetProfileTest}
           config={lesson.profileTestConfig}
           onComplete={handleMarkComplete}
         />
+      ) : lesson.type === 'quiz' && quiz ? (
+        <QuizRunner 
+          quiz={quiz} 
+          lessonId={lesson.id} 
+          onComplete={handleMarkComplete} 
+        />
       ) : (
         <VideoPlayer lesson={lesson} onEnded={handleVideoEnded} />
       )}
 
       {/* Tabs */}
-      <LessonTabs lesson={lesson} initialNote={initialNote} />
+      <LessonTabs
+        lesson={lesson}
+        initialNote={initialNote}
+        initialComments={initialComments}
+        currentUser={currentUser}
+      />
     </div>
   );
 }

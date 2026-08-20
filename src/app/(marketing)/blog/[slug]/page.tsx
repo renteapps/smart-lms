@@ -1,22 +1,18 @@
 import { notFound } from 'next/navigation';
-import { getArticleBySlug, getArticleSlugs } from '@/lib/blog';
-import { MDXRemote } from 'next-mdx-remote/rsc';
+import { getArticleBySlug } from '@/lib/data/blog';
+import { createClient } from '@/lib/supabase/server';
+import BlockViewer from '@/components/classroom/BlockViewer';
 import { Clock, Headphones, BookOpen, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { PlayArticleButton } from '@/components/audio/PlayArticleButton';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import type { ComponentPropsWithoutRef } from 'react';
-
-export async function generateStaticParams() {
-  const slugs = getArticleSlugs();
-  return slugs.map((slug) => ({ slug: slug.replace(/\.mdx$/, '') }));
-}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
-  const article = getArticleBySlug(resolvedParams.slug);
+  const supabase = await createClient();
+  const article = await getArticleBySlug(supabase, resolvedParams.slug);
   if (!article) return { title: 'Artigo não encontrado' };
   return {
     title: `${article.title} | Blog`,
@@ -26,24 +22,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
-  const article = getArticleBySlug(resolvedParams.slug);
-  
+  const supabase = await createClient();
+  const article = await getArticleBySlug(supabase, resolvedParams.slug);
+
   if (!article) {
     notFound();
   }
-
-  // Define components for MDX replacement (could be expanded)
-  const components = {
-    h2: (props: ComponentPropsWithoutRef<'h2'>) => <h2 className="mb-6 mt-12 text-3xl font-extrabold tracking-[-0.035em] text-ink" {...props} />,
-    h3: (props: ComponentPropsWithoutRef<'h3'>) => <h3 className="mb-4 mt-8 text-2xl font-extrabold text-ink" {...props} />,
-    p: (props: ComponentPropsWithoutRef<'p'>) => <p className="mb-6 text-lg leading-8 text-text-soft" {...props} />,
-    ul: (props: ComponentPropsWithoutRef<'ul'>) => <ul className="mb-6 list-inside list-disc space-y-2 text-lg text-text-soft" {...props} />,
-    li: (props: ComponentPropsWithoutRef<'li'>) => <li className="text-text-soft" {...props} />,
-    blockquote: (props: ComponentPropsWithoutRef<'blockquote'>) => (
-      <blockquote className="border-l-4 border-primary pl-6 my-8 italic text-xl text-muted-foreground" {...props} />
-    ),
-    strong: (props: ComponentPropsWithoutRef<'strong'>) => <strong className="font-bold text-ink" {...props} />,
-  };
 
   return (
     <article className="pb-24 pt-[120px] sm:pt-36">
@@ -137,7 +121,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         )}
 
         <div className="max-w-none">
-          <MDXRemote source={article.body} components={components} />
+          <BlockViewer blocks={article.blocks ?? []} />
         </div>
         
         {/* Course CTA */}

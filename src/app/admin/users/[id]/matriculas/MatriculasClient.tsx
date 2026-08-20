@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   BookOpen,
@@ -45,6 +46,7 @@ export function MatriculasClient({
   matriculas,
   availableCourses,
 }: MatriculasClientProps) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingEnrollment, setEditingEnrollment] = useState<EnrollmentItem | null>(null);
@@ -342,7 +344,7 @@ export function MatriculasClient({
         userName={userName}
         availableCourses={availableCourses}
         existingCourseIds={existingCourseIds}
-        onSuccess={() => {}}
+        onSuccess={() => router.refresh()}
       />
 
       <EditEnrollmentModal
@@ -351,7 +353,10 @@ export function MatriculasClient({
         enrollment={editingEnrollment}
         userId={userId}
         userName={userName}
-        onSuccess={() => setEditingEnrollment(null)}
+        onSuccess={() => {
+          setEditingEnrollment(null);
+          router.refresh();
+        }}
       />
 
       <DeleteEnrollmentModal
@@ -360,7 +365,10 @@ export function MatriculasClient({
         enrollment={deletingEnrollment}
         userId={userId}
         userName={userName}
-        onSuccess={() => setDeletingEnrollment(null)}
+        onSuccess={() => {
+          setDeletingEnrollment(null);
+          router.refresh();
+        }}
       />
     </div>
   );

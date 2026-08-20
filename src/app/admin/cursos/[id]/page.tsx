@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Edit3, List, Settings, ShoppingBag } from "lucide-react";
-import { Card } from "@heroui/react";
-import { PageHeader } from "@/components/ui/editorial";
+import { ArrowLeft, ArrowRight, BookOpen, Edit3, Eye, List, Settings, ShoppingBag } from "lucide-react";
+import { Card, buttonVariants } from "@heroui/react";
+import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 import { getCourseById } from "@/lib/data/courses";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 export default async function AdminCursoDashboard({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -63,6 +64,56 @@ export default async function AdminCursoDashboard({ params }: { params: Promise<
           title={`Gerenciar: ${course.title}`}
           description="Selecione uma área abaixo para gerenciar este curso."
         />
+      </div>
+
+      {/* Banner de resumo do curso com capa */}
+      <div className="flex flex-col gap-6 rounded-2xl border border-border bg-surface p-5 sm:flex-row sm:items-center sm:p-6 shadow-sm">
+        {course.coverUrl ? (
+          <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-xl bg-background-secondary sm:w-56">
+            <img src={course.coverUrl} alt={course.title} className="size-full object-cover" />
+          </div>
+        ) : (
+          <div className="flex aspect-video w-full shrink-0 items-center justify-center rounded-xl bg-background-secondary sm:w-56">
+            <BookOpen className="size-8 text-muted" aria-hidden="true" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-accent">{course.category}</span>
+            <StatusBadge
+              tone={
+                course.status === "Publicado"
+                  ? "positive"
+                  : course.status === "Rascunho"
+                    ? "warning"
+                    : "neutral"
+              }
+            >
+              {course.status || (course.isPublished ? "Publicado" : "Rascunho")}
+            </StatusBadge>
+          </div>
+          <h2 className="font-display text-xl font-bold text-foreground sm:text-2xl">{course.title}</h2>
+          {course.shortDescription && (
+            <p className="line-clamp-2 text-sm text-muted">{course.shortDescription}</p>
+          )}
+        </div>
+        <div className="flex shrink-0 gap-2 sm:self-center">
+          <Link
+            href={`/courses/${course.id}`}
+            target="_blank"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
+          >
+            <Eye className="size-4" aria-hidden="true" />
+            Visualizar
+          </Link>
+          <Link
+            href={`/admin/cursos/${id}/editar`}
+            className={cn(buttonVariants({ variant: "primary", size: "sm" }), "gap-1.5")}
+          >
+            <Edit3 className="size-4" aria-hidden="true" />
+            Editar
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">

@@ -6,9 +6,7 @@ import { buttonVariants } from "@heroui/styles";
 import { Separator } from "@heroui/react/separator";
 import { BrandMark } from "./BrandMark";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
-import { useCompanyManager } from "@/hooks/useCompanyManager";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface FooterLink {
   label: string;
@@ -43,26 +41,8 @@ const footerGroups: FooterGroup[] = [
 ];
 
 export default function Footer() {
-  const [isAdmin, setIsAdmin] = useState(false);
-  const { isManager } = useCompanyManager();
-
-  useEffect(() => {
-    const checkAdmin = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-        if (data?.role === "admin") {
-          setIsAdmin(true);
-        }
-      }
-    };
-    checkAdmin();
-  }, []);
+  const { profileRole, isManager } = useAuth();
+  const isAdmin = profileRole === "admin";
 
   const visibleGroups = footerGroups.map((group) => ({
     ...group,

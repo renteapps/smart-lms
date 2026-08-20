@@ -38,71 +38,17 @@ import {
   COUNTRIES,
   getCitiesForState,
 } from "@/lib/locationData";
+import {
+  defaultProfile,
+  PROFILE_SAVED_EVENT,
+  PROFILE_STORAGE_KEY,
+  CAREER_ROLES,
+  GENDER_OPTIONS,
+  type ProfilePreferences,
+} from "@/lib/profilePreferences";
 import { PhoneInputField } from "@/components/ui/PhoneInputField";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { composeFullPhone, parseStoredPhone } from "@/lib/phoneUtils";
-
-export const CAREER_ROLES = [
-  "Estudante",
-  "Estagiário / Trainee",
-  "Júnior / Assistente (Início de carreira)",
-  "Pleno / Analista",
-  "Sênior / Especialista",
-  "Liderança (Coordenador, Gerente, Diretor, C-Level)",
-  "Empreendedor / Autônomo",
-  "Em transição de carreira",
-] as const;
-
-export const GENDER_OPTIONS = [
-  "Feminino",
-  "Masculino",
-  "Não-binário",
-  "Prefiro não informar",
-  "Outro",
-] as const;
-
-export type ProfilePreferences = {
-  name: string;
-  username: string;
-  avatarUrl: string | null;
-  email: string;
-  role: string;
-  company: string;
-  phone: string;
-  birthDate: string;
-  gender: string;
-  country: string;
-  state: string;
-  city: string;
-  bio: string;
-  weeklyGoal: number;
-  lessonReminders: boolean;
-  emailDigest: boolean;
-  achievementAlerts: boolean;
-};
-
-export const PROFILE_STORAGE_KEY = "@smartlms:profile";
-export const PROFILE_SAVED_EVENT = "smartlms:profile-saved";
-
-export const defaultProfile: ProfilePreferences = {
-  name: "Mariana Costa",
-  username: "mariana_costa",
-  avatarUrl: null,
-  email: "mariana.costa@acme.com",
-  role: "Liderança (Coordenador, Gerente, Diretor, C-Level)",
-  company: "Acme Brasil",
-  phone: "(11) 98765-4321",
-  birthDate: "1990-05-15",
-  gender: "Feminino",
-  country: "Brasil",
-  state: "SP",
-  city: "São Paulo",
-  bio: "Líder de pessoas apaixonada por cultura, desenvolvimento e conversas que geram transformação.",
-  weeklyGoal: 4,
-  lessonReminders: true,
-  emailDigest: true,
-  achievementAlerts: false,
-};
 
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);

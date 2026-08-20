@@ -3,7 +3,7 @@ import { logQueryError, type DB, type Row } from "./types";
 
 const ARTICLE_SELECT = `
   id, slug, title, excerpt, cover, category, author, published_at, reading_time,
-  format, body, audio_url, audio_duration, audio_transcript, related_course_id,
+  format, body, blocks, audio_url, audio_duration, audio_transcript, related_course_id,
   featured, premium, courses:related_course_id ( slug )
 `;
 
@@ -19,6 +19,7 @@ export function mapArticle(row: Row): Article {
     readingTime: row.reading_time ?? undefined,
     format: (row.format ?? "text") as ArticleFormat,
     body: row.body ?? "",
+    blocks: row.blocks ?? [],
     audio: row.audio_url
       ? {
           url: row.audio_url,

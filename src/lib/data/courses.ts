@@ -2,6 +2,8 @@ import type {
   CatalogCourse,
   ContinueLesson,
   Course,
+  CourseOutline,
+  CourseOutlineModule,
   Lesson,
   LessonContentBlock,
   Module,
@@ -63,10 +65,20 @@ export function mapCourse(row: Row, modules: Module[] = []): Course {
     price: row.price != null ? Number(row.price) : 0,
     tags: row.tags ?? [],
     isPublished: row.is_published ?? true,
+    status: row.status ?? (row.is_published ? "Publicado" : "Rascunho"),
     isFeatured: row.is_featured ?? false,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     modules,
+    enableCertificates: row.enable_certificates ?? true,
+    dripContent: row.drip_content ?? false,
+    enableComments: row.enable_comments ?? true,
+    requireSequentialProgress: row.require_sequential_progress ?? true,
+    accessExpirationDays: row.access_expiration_days ?? null,
+    maxStudents: row.max_students ?? null,
+    salesUrl: row.sales_url ?? null,
+    salesPageUrl: row.sales_page_url ?? null,
+    salesConfig: row.sales_config ?? null,
   };
 }
 
@@ -94,44 +106,74 @@ export async function getCatalogCourses(db: DB, userId?: string | null): Promise
   const { data, error } = await db
     .from("courses")
     .select(
-      "id, slug, title, category, description, short_description, cover_url, duration, level, order_index, created_at, modules(id, lessons(id, duration_in_minutes, is_published))",
+      "id, slug, title, category, description, short_description, cover_url, duration, level, order_index, created_at, status, is_published, modules(id, lessons(id, duration_in_minutes, is_published))",
     )
     .eq("is_published", true)
+    .neq("status", "Arquivado")
     .order("order_index", { ascending: true })
     .order("created_at", { ascending: false });
 
   logQueryError("getCatalogCourses", error);
   if (!data) return [];
 
-  const courses = data.map((row: Row) => {
-    const lessons = (row.modules ?? []).flatMap((mod: Row) =>
-      (mod.lessons ?? []).filter((lesson: Row) => lesson.is_published !== false),
-    );
-    const totalMinutes = lessons.reduce(
-      (sum: number, lesson: Row) => sum + (lesson.duration_in_minutes ?? 0),
-      0,
-    );
+  const lessonIdsByCourse = new Map<string, string[]>();
+  const courses = data
+    .map((row: Row) => {
+      const lessons = (row.modules ?? []).flatMap((mod: Row) =>
+        (mod.lessons ?? []).filter((lesson: Row) => lesson.is_published !== false),
+      );
+      const totalMinutes = lessons.reduce(
+        (sum: number, lesson: Row) => sum + (lesson.duration_in_minutes ?? 0),
+        0,
+      );
+      lessonIdsByCourse.set(row.id, lessons.map((lesson: Row) => lesson.id));
 
-    return {
-      id: row.id,
-      slug: row.slug,
-      title: row.title,
-      category: row.category ?? "Geral",
-      description: row.short_description || row.description || "",
-      cover: row.cover_url || FALLBACK_COVER,
-      duration: row.duration || formatDuration(totalMinutes),
-      lessonCount: lessons.length,
-      level: row.level ?? "Essencial",
-    } satisfies CatalogCourse;
-  });
+      return {
+        id: row.id,
+        slug: row.slug,
+        title: row.title,
+        category: row.category ?? "Geral",
+        description: row.short_description || row.description || "",
+        cover: row.cover_url || FALLBACK_COVER,
+        duration: row.duration || formatDuration(totalMinutes),
+        lessonCount: lessons.length,
+        level: row.level ?? "Essencial",
+      } satisfies CatalogCourse;
+    })
+    .filter((course) => course.lessonCount > 0);
 
   if (!userId) return courses;
 
-  const progressByCourse = await getProgressByCourse(db, userId);
+  const progressByCourse = await getProgressForLessonSets(db, userId, lessonIdsByCourse);
   return courses.map((course) => ({
     ...course,
     progress: progressByCourse.get(course.id),
   }));
+}
+
+async function getProgressForLessonSets(
+  db: DB,
+  userId: string,
+  lessonIdsByCourse: Map<string, string[]>,
+): Promise<Map<string, number>> {
+  const allLessonIds = Array.from(lessonIdsByCourse.values()).flat();
+  if (allLessonIds.length === 0) return new Map();
+
+  const { data, error } = await db
+    .from("lesson_progress")
+    .select("lesson_id")
+    .eq("user_id", userId)
+    .eq("is_completed", true)
+    .in("lesson_id", allLessonIds);
+
+  logQueryError("getProgressForLessonSets", error);
+  const completed = new Set((data ?? []).map((row: Row) => row.lesson_id));
+  const result = new Map<string, number>();
+  lessonIdsByCourse.forEach((lessonIds, courseId) => {
+    const done = lessonIds.reduce((total, lessonId) => total + Number(completed.has(lessonId)), 0);
+    result.set(courseId, lessonIds.length ? Math.round((done / lessonIds.length) * 100) : 0);
+  });
+  return result;
 }
 
 /** courseId -> porcentagem concluída, para o aluno da sessão. */
@@ -169,9 +211,24 @@ export async function getProgressByCourse(db: DB, userId: string): Promise<Map<s
 }
 
 export async function getCourseCategories(db: DB): Promise<string[]> {
-  const { data, error } = await db.from("courses").select("category").eq("is_published", true);
+  const { data, error } = await db
+    .from("courses")
+    .select("category, modules(lessons(id, is_published))")
+    .eq("is_published", true)
+    .neq("status", "Arquivado");
   logQueryError("getCourseCategories", error);
-  return Array.from(new Set((data ?? []).map((row: Row) => row.category).filter(Boolean))).sort();
+
+  const validCategories = (data ?? [])
+    .filter((row: Row) => {
+      const lessons = (row.modules ?? []).flatMap((mod: Row) =>
+        (mod.lessons ?? []).filter((l: Row) => l.is_published !== false),
+      );
+      return lessons.length > 0;
+    })
+    .map((row: Row) => row.category)
+    .filter(Boolean);
+
+  return Array.from(new Set(validCategories)).sort();
 }
 
 // ---------------------------------------------------------------------------
@@ -180,7 +237,9 @@ export async function getCourseCategories(db: DB): Promise<string[]> {
 
 const COURSE_TREE_SELECT = `
   id, slug, title, description, short_description, category, cover_url, duration,
-  level, price, tags, is_published, is_featured, created_at, updated_at,
+  level, price, tags, status, is_published, is_featured, created_at, updated_at,
+  enable_certificates, drip_content, enable_comments, require_sequential_progress,
+  access_expiration_days, max_students, sales_url, sales_page_url, sales_config,
   modules (
     id, course_id, title, slug, description, cover_url, order_index,
     lessons (
@@ -191,6 +250,27 @@ const COURSE_TREE_SELECT = `
       attachments ( id, name, url )
     )
   )
+`;
+
+const COURSE_OUTLINE_SELECT = `
+  id, slug, title, description, short_description, category, cover_url, duration,
+  level, price, tags, status, is_published, is_featured, created_at, updated_at,
+  sales_url, sales_page_url, sales_config,
+  modules (
+    id, course_id, title, slug, description, cover_url, order_index,
+    lessons (
+      id, module_id, title, type, duration_in_minutes, order_index,
+      is_published, slug
+    )
+  )
+`;
+
+const LESSON_DETAIL_SELECT = `
+  id, module_id, title, type, video_url, pandavideo_id, content, blocks,
+  duration_in_minutes, order_index, is_published, slug, transcription,
+  short_description, profile_test_id, profile_test_ref, profile_test_config,
+  topics, solves, level, objective, audience, prerequisites,
+  is_eligible_for_trail, attachments ( id, name, url )
 `;
 
 function assembleCourse(row: Row, progressByLesson: Map<string, Row>): Course {
@@ -212,6 +292,42 @@ function assembleCourse(row: Row, progressByLesson: Map<string, Row>): Course {
     }));
 
   return mapCourse(row, modules);
+}
+
+function assembleCourseOutline(row: Row, progressByLesson: Map<string, Row>): CourseOutline {
+  const modules: CourseOutlineModule[] = (row.modules ?? [])
+    .slice()
+    .sort((a: Row, b: Row) => (a.order_index ?? 0) - (b.order_index ?? 0))
+    .map((mod: Row) => ({
+      id: mod.id,
+      courseId: mod.course_id,
+      title: mod.title,
+      slug: mod.slug ?? undefined,
+      description: mod.description ?? undefined,
+      coverUrl: mod.cover_url ?? undefined,
+      order: mod.order_index ?? 0,
+      lessons: (mod.lessons ?? [])
+        .slice()
+        .sort((a: Row, b: Row) => (a.order_index ?? 0) - (b.order_index ?? 0))
+        .map((lesson: Row) => {
+          const progress = progressByLesson.get(lesson.id);
+          return {
+            id: lesson.id,
+            moduleId: lesson.module_id ?? undefined,
+            title: lesson.title,
+            type: (lesson.type ?? "video") as Lesson["type"],
+            durationInMinutes: lesson.duration_in_minutes ?? 0,
+            order: lesson.order_index ?? 0,
+            isPublished: lesson.is_published ?? true,
+            isCompleted: progress?.is_completed ?? false,
+            userRating: progress?.user_rating ?? undefined,
+            lastWatchedSecond: progress?.last_watched_second ?? 0,
+            slug: lesson.slug ?? undefined,
+          };
+        }),
+    }));
+
+  return { ...mapCourse(row), modules };
 }
 
 /** Aceita id (uuid) ou slug — a URL pública usa slug, o admin usa id. */
@@ -243,11 +359,48 @@ export async function getCourse(
   return assembleCourse(data, progressByLesson);
 }
 
-export async function getLessonProgressMap(db: DB, userId: string): Promise<Map<string, Row>> {
+/** Curso sem conteúdo, blocos, transcrições ou anexos das aulas. */
+export async function getCourseOutline(
+  db: DB,
+  idOrSlug: string,
+  userId?: string | null,
+): Promise<CourseOutline | null> {
+  const column = isUuid(idOrSlug) ? "id" : "slug";
   const { data, error } = await db
+    .from("courses")
+    .select(COURSE_OUTLINE_SELECT)
+    .eq(column, idOrSlug)
+    .maybeSingle();
+
+  logQueryError("getCourseOutline", error);
+  if (error) throw new Error(`Não foi possível carregar o curso ${idOrSlug}: ${error.message}`);
+  if (!data) return null;
+
+  const lessonIds = (data.modules ?? []).flatMap((mod: Row) =>
+    (mod.lessons ?? []).map((lesson: Row) => lesson.id),
+  );
+  const progressByLesson = userId
+    ? await getLessonProgressMap(db, userId, lessonIds)
+    : new Map<string, Row>();
+  return assembleCourseOutline(data, progressByLesson);
+}
+
+export async function getLessonProgressMap(
+  db: DB,
+  userId: string,
+  lessonIds?: string[],
+): Promise<Map<string, Row>> {
+  let query = db
     .from("lesson_progress")
     .select("lesson_id, is_completed, user_rating, last_watched_second, completed_at")
     .eq("user_id", userId);
+
+  if (lessonIds) {
+    if (lessonIds.length === 0) return new Map();
+    query = query.in("lesson_id", lessonIds);
+  }
+
+  const { data, error } = await query;
 
   logQueryError("getLessonProgressMap", error);
   return new Map((data ?? []).map((row: Row) => [row.lesson_id, row]));
@@ -259,12 +412,27 @@ export async function getLessonWithCourse(
   courseIdOrSlug: string,
   lessonId: string,
   userId?: string | null,
-): Promise<{ course: Course; lesson: Lesson } | null> {
-  const course = await getCourse(db, courseIdOrSlug, userId);
+): Promise<{ course: CourseOutline; lesson: Lesson } | null> {
+  const [course, lessonResult] = await Promise.all([
+    getCourseOutline(db, courseIdOrSlug, userId),
+    db.from("lessons").select(LESSON_DETAIL_SELECT).eq("id", lessonId).maybeSingle(),
+  ]);
   if (!course) return null;
 
-  const lesson = course.modules.flatMap((mod) => mod.lessons).find((item) => item.id === lessonId);
-  return lesson ? { course, lesson } : null;
+  logQueryError("getLessonWithCourse:lesson", lessonResult.error);
+  if (lessonResult.error) {
+    throw new Error(`Não foi possível carregar a aula ${lessonId}: ${lessonResult.error.message}`);
+  }
+
+  const outlineLesson = course.modules.flatMap((mod) => mod.lessons).find((item) => item.id === lessonId);
+  if (!outlineLesson || !lessonResult.data) return null;
+
+  const lesson = mapLesson(lessonResult.data, {
+    is_completed: outlineLesson.isCompleted,
+    user_rating: outlineLesson.userRating,
+    last_watched_second: outlineLesson.lastWatchedSecond,
+  });
+  return { course, lesson };
 }
 
 export async function getCourseById(db: DB, id: string): Promise<Course | null> {
@@ -305,7 +473,7 @@ export async function getEnrolledCourses(db: DB, userId: string): Promise<Catalo
   const { data, error } = await db
     .from("enrollments")
     .select(
-      "course_id, expires_at, courses!inner(id, slug, title, category, description, short_description, cover_url, duration, level, modules(id, lessons(id, duration_in_minutes, is_published)))",
+      "course_id, expires_at, courses!inner(id, slug, title, category, description, short_description, cover_url, duration, level, status, is_published, modules(id, lessons(id, duration_in_minutes, is_published)))",
     )
     .eq("user_id", userId)
     .eq("status", "active")
@@ -314,11 +482,26 @@ export async function getEnrolledCourses(db: DB, userId: string): Promise<Catalo
   logQueryError("getEnrolledCourses", error);
   if (!data) return [];
 
-  const progressByCourse = await getProgressByCourse(db, userId);
+  // Filter out any archived courses for students
+  const activeEntries = data.filter((entry: Row) => entry.courses?.status !== "Arquivado");
 
-  return data.map((entry: Row) => {
+  const lessonIdsByCourse = new Map<string, string[]>();
+  for (const entry of activeEntries) {
+    const course = (entry as Row).courses;
+    const lessonIds = (course.modules ?? []).flatMap((mod: Row) =>
+      (mod.lessons ?? [])
+        .filter((lesson: Row) => lesson.is_published !== false)
+        .map((lesson: Row) => lesson.id),
+    );
+    lessonIdsByCourse.set(course.id, lessonIds);
+  }
+  const progressByCourse = await getProgressForLessonSets(db, userId, lessonIdsByCourse);
+
+  return activeEntries.map((entry: Row) => {
     const row = entry.courses;
-    const lessons = (row.modules ?? []).flatMap((mod: Row) => mod.lessons ?? []);
+    const lessons = (row.modules ?? []).flatMap((mod: Row) =>
+      (mod.lessons ?? []).filter((lesson: Row) => lesson.is_published !== false),
+    );
     const totalMinutes = lessons.reduce(
       (sum: number, lesson: Row) => sum + (lesson.duration_in_minutes ?? 0),
       0,
@@ -343,7 +526,7 @@ export async function getContinueLessons(db: DB, userId: string, limit = 4): Pro
   const { data, error } = await db
     .from("lesson_progress")
     .select(
-      "lesson_id, last_watched_second, lessons!inner(id, title, duration_in_minutes, modules!inner(id, title, course_id, courses!inner(id, slug, title, cover_url)))",
+      "lesson_id, last_watched_second, lessons!inner(id, title, duration_in_minutes, modules!inner(id, title, course_id, courses!inner(id, slug, title, cover_url, status)))",
     )
     .eq("user_id", userId)
     .eq("is_completed", false)
@@ -352,23 +535,25 @@ export async function getContinueLessons(db: DB, userId: string, limit = 4): Pro
 
   logQueryError("getContinueLessons", error);
 
-  return (data ?? []).map((row: Row) => {
-    const lesson = row.lessons;
-    const mod = lesson.modules;
-    const course = mod.courses;
-    const totalSeconds = (lesson.duration_in_minutes ?? 0) * 60;
-    return {
-      id: lesson.id,
-      courseId: course.id,
-      title: lesson.title,
-      moduleName: `${course.title} · ${mod.title}`,
-      duration: `${lesson.duration_in_minutes ?? 0} min`,
-      cover: course.cover_url || FALLBACK_COVER,
-      progress: totalSeconds
-        ? Math.min(100, Math.round(((row.last_watched_second ?? 0) / totalSeconds) * 100))
-        : 0,
-    } satisfies ContinueLesson;
-  });
+  return (data ?? [])
+    .filter((row: Row) => row.lessons?.modules?.courses?.status !== "Arquivado")
+    .map((row: Row) => {
+      const lesson = row.lessons;
+      const mod = lesson.modules;
+      const course = mod.courses;
+      const totalSeconds = (lesson.duration_in_minutes ?? 0) * 60;
+      return {
+        id: lesson.id,
+        courseId: course.id,
+        title: lesson.title,
+        moduleName: `${course.title} · ${mod.title}`,
+        duration: `${lesson.duration_in_minutes ?? 0} min`,
+        cover: course.cover_url || FALLBACK_COVER,
+        progress: totalSeconds
+          ? Math.min(100, Math.round(((row.last_watched_second ?? 0) / totalSeconds) * 100))
+          : 0,
+      } satisfies ContinueLesson;
+    });
 }
 
 export async function isEnrolled(db: DB, userId: string, courseId: string): Promise<boolean> {

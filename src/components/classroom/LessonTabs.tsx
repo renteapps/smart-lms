@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   Avatar,
   Button,
@@ -16,24 +18,36 @@ import {
 import { Check, Download, FileText, MessageSquare, Save, Send, StickyNote } from "lucide-react";
 import { Lesson } from "@/types/course";
 import type { StudentNote } from "@/lib/data/notes";
+import type { Comment } from "@/lib/data/comments";
+import type { User } from "@supabase/supabase-js";
 import { saveLessonNote } from "@/app/actions/notes";
+import { addLessonComment } from "@/app/actions/comments";
 import { NoteIcon } from "@/components/ui/AnimatedIcon";
 import BlockViewer from "./BlockViewer";
 
 interface LessonTabsProps {
   lesson: Lesson;
-  /** Anotação já gravada para esta aula, vinda do servidor. */
   initialNote?: StudentNote | null;
+  initialComments?: Comment[];
+  currentUser?: User | null;
 }
 
 type TabKey = "overview" | "materials" | "comments" | "notes";
 
-export default function LessonTabs({ lesson, initialNote = null }: LessonTabsProps) {
+export default function LessonTabs({ 
+  lesson, 
+  initialNote = null, 
+  initialComments = [],
+  currentUser = null
+}: LessonTabsProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [note, setNote] = useState(initialNote?.content ?? "");
   const [isSaving, startSaving] = useTransition();
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  
+  const [newComment, setNewComment] = useState("");
+  const [isSubmittingComment, startSubmittingComment] = useTransition();
 
   const handleSaveNote = () => {
     setSaveError(null);
@@ -44,6 +58,17 @@ export default function LessonTabs({ lesson, initialNote = null }: LessonTabsPro
         window.setTimeout(() => setSaveSuccess(false), 3000);
       } else {
         setSaveError(result.message ?? "Não foi possível salvar.");
+      }
+    });
+  };
+
+  const handleSubmitComment = () => {
+    if (!newComment.trim()) return;
+    
+    startSubmittingComment(async () => {
+      const result = await addLessonComment(lesson.id, newComment);
+      if (result.success) {
+        setNewComment("");
       }
     });
   };
@@ -87,6 +112,8 @@ export default function LessonTabs({ lesson, initialNote = null }: LessonTabsPro
                 <li key={idx}>
                   <a
                     href={attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="lift group flex min-h-16 items-center justify-between gap-4 rounded-xl border border-hairline bg-surface px-4 py-3 shadow-elev-1"
                   >
                     <span className="flex min-w-0 items-center gap-3">
@@ -120,12 +147,17 @@ export default function LessonTabs({ lesson, initialNote = null }: LessonTabsPro
 
           <div className="flex max-w-[68ch] gap-4">
             <Avatar size="md" color="accent" className="mt-1 shrink-0">
-              <Avatar.Fallback>VC</Avatar.Fallback>
+              <Avatar.Fallback>{currentUser?.email?.substring(0, 2).toUpperCase() || "VC"}</Avatar.Fallback>
             </Avatar>
             <div className="relative flex-1">
-              <TextField>
+              <TextField value={newComment} onChange={setNewComment}>
                 <Label className="sr-only">Escrever um comentário</Label>
-                <TextArea rows={4} placeholder="Adicione um comentário..." className="pr-14" />
+                <TextArea 
+                  rows={4} 
+                  placeholder="Adicione um comentário..." 
+                  className="pr-14" 
+                  disabled={isSubmittingComment}
+                />
               </TextField>
               <Button
                 isIconOnly
@@ -133,37 +165,84 @@ export default function LessonTabs({ lesson, initialNote = null }: LessonTabsPro
                 size="sm"
                 aria-label="Enviar comentário"
                 className="absolute bottom-3 right-3 rounded-lg"
+                onClick={handleSubmitComment}
+                isDisabled={isSubmittingComment || !newComment.trim()}
               >
-                <Send className="size-4" aria-hidden="true" />
+                {isSubmittingComment ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <Send className="size-4" aria-hidden="true" />
+                )}
               </Button>
             </div>
           </div>
 
           <ul className="mt-10 flex max-w-[68ch] flex-col gap-6">
-            {/* Mock comment */}
-            <li className="flex gap-4">
-              <Avatar size="md" className="mt-1 shrink-0">
-                <Avatar.Fallback>AB</Avatar.Fallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <div className="rounded-xl border border-hairline bg-background-secondary p-4">
-                  <div className="mb-1.5 flex items-center justify-between gap-3">
-                    <span className="text-sm font-bold text-foreground">Ana Beatriz</span>
-                    <span className="text-xs text-muted">Há 2 horas</span>
+            {initialComments.length === 0 ? (
+              <li className="text-center text-sm text-muted">Seja o primeiro a comentar!</li>
+            ) : (
+              initialComments.map((comment) => (
+                <li key={comment.id} className="flex gap-4">
+                  <Avatar size="md" className="mt-1 shrink-0">
+                    {comment.user.avatarUrl ? (
+                      <Avatar.Image src={comment.user.avatarUrl} alt={comment.user.name} />
+                    ) : (
+                      <Avatar.Fallback>{comment.user.name.substring(0, 2).toUpperCase()}</Avatar.Fallback>
+                    )}
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <div className="rounded-xl border border-hairline bg-background-secondary p-4">
+                      <div className="mb-1.5 flex items-center justify-between gap-3">
+                        <span className="text-sm font-bold text-foreground">{comment.user.name}</span>
+                        <span className="text-xs text-muted">
+                          {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: ptBR })}
+                        </span>
+                      </div>
+                      <p className="text-sm leading-6 text-muted">
+                        {comment.content}
+                      </p>
+                    </div>
+                    <div className="mt-2 flex items-center gap-1">
+                      <Button variant="ghost" size="sm">Responder</Button>
+                      <Button variant="ghost" size="sm" className="gap-1.5 text-muted">
+                        <MessageSquare className="size-3.5" aria-hidden="true" />
+                        {comment.replies?.length || 0} respostas
+                      </Button>
+                    </div>
+                    
+                    {/* Replies */}
+                    {comment.replies && comment.replies.length > 0 && (
+                      <ul className="mt-4 flex flex-col gap-4">
+                        {comment.replies.map((reply) => (
+                          <li key={reply.id} className="flex gap-4">
+                            <Avatar size="sm" className="mt-1 shrink-0">
+                              {reply.user.avatarUrl ? (
+                                <Avatar.Image src={reply.user.avatarUrl} alt={reply.user.name} />
+                              ) : (
+                                <Avatar.Fallback>{reply.user.name.substring(0, 2).toUpperCase()}</Avatar.Fallback>
+                              )}
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <div className="rounded-xl border border-hairline bg-background-secondary p-4">
+                                <div className="mb-1.5 flex items-center justify-between gap-3">
+                                  <span className="text-sm font-bold text-foreground">{reply.user.name}</span>
+                                  <span className="text-xs text-muted">
+                                    {formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true, locale: ptBR })}
+                                  </span>
+                                </div>
+                                <p className="text-sm leading-6 text-muted">
+                                  {reply.content}
+                                </p>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-                  <p className="text-sm leading-6 text-muted">
-                    Excelente aula! Consegui entender perfeitamente o conceito explicado.
-                  </p>
-                </div>
-                <div className="mt-2 flex items-center gap-1">
-                  <Button variant="ghost" size="sm">Responder</Button>
-                  <Button variant="ghost" size="sm" className="gap-1.5 text-muted">
-                    <MessageSquare className="size-3.5" aria-hidden="true" />
-                    0 respostas
-                  </Button>
-                </div>
-              </div>
-            </li>
+                </li>
+              ))
+            )}
           </ul>
         </Tabs.Panel>
 
@@ -196,9 +275,17 @@ export default function LessonTabs({ lesson, initialNote = null }: LessonTabsPro
           <TextField value={note} onChange={setNote}>
             <Label className="sr-only">Anotações desta aula</Label>
             <TextArea
-              rows={12}
+              rows={16}
               placeholder="Escreva seus maiores insights sobre a aula aqui..."
-              className="min-h-72 resize-y leading-8"
+              style={{
+                backgroundImage: 'repeating-linear-gradient(transparent, transparent 31px, hsl(var(--border)) 31px, hsl(var(--border)) 32px)',
+                backgroundAttachment: 'local',
+                lineHeight: '32px',
+                padding: '8px 16px',
+                fontFamily: 'var(--font-mono), monospace',
+                backgroundColor: 'hsl(var(--surface))'
+              }}
+              className="min-h-[400px] resize-y rounded-xl border border-hairline"
             />
           </TextField>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Clock3, Layers3 } from "lucide-react";
@@ -8,6 +9,9 @@ import { ArrowIcon } from "@/components/ui/AnimatedIcon";
 import { Reveal } from "@/components/ui/Reveal";
 import { useCardTransition } from "@/contexts/CardTransitionContext";
 import { cn } from "@/lib/utils";
+
+const FALLBACK_COVER =
+  "https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=85&w=1200&auto=format&fit=crop";
 
 type CourseCardProps = {
   id?: string;
@@ -46,6 +50,13 @@ export default function CourseCard({
   const linkUrl = href || (id ? `/courses/${id}` : "#");
   const hasMeta = Boolean(duration) || lessonCount !== undefined || Boolean(level);
 
+  const initialCover = cover && cover.trim() !== "" ? cover : FALLBACK_COVER;
+  const [imgSrc, setImgSrc] = useState(initialCover);
+
+  useEffect(() => {
+    setImgSrc(cover && cover.trim() !== "" ? cover : FALLBACK_COVER);
+  }, [cover]);
+
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (
       e.defaultPrevented ||
@@ -73,7 +84,7 @@ export default function CourseCard({
       },
       metadata: {
         title,
-        cover,
+        cover: imgSrc,
         category,
         duration,
         type: "course",
@@ -96,11 +107,12 @@ export default function CourseCard({
         <Card className="lift h-full gap-0 overflow-hidden p-0">
           <div className="relative aspect-[16/9] overflow-hidden bg-background-secondary">
             <Image
-              src={cover}
+              src={imgSrc}
               alt={`Capa do curso ${title}`}
               fill
               loading={eager ? "eager" : "lazy"}
               sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+              onError={() => setImgSrc(FALLBACK_COVER)}
               className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.035]"
             />
             {/*

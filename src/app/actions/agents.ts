@@ -23,21 +23,10 @@ export async function decrementAiCredits(): Promise<{ success: boolean; creditsR
 
   if (!user) return { success: false, creditsRemaining: 0 };
 
-  const currentCredits = await getAiCredits();
-  if (currentCredits <= 0) {
+  const { data, error } = await supabase.rpc("consume_ai_credit");
+  const creditsRemaining = typeof data === "number" ? data : Number(data);
+  if (error || !Number.isFinite(creditsRemaining) || creditsRemaining < 0) {
     return { success: false, creditsRemaining: 0 };
   }
-
-  const { data: updatedProfile, error } = await supabase
-    .from("profiles")
-    .update({ ai_credits: currentCredits - 1 })
-    .eq("id", user.id)
-    .select("ai_credits")
-    .single();
-
-  if (error || !updatedProfile) {
-    return { success: false, creditsRemaining: currentCredits };
-  }
-
-  return { success: true, creditsRemaining: updatedProfile.ai_credits };
+  return { success: true, creditsRemaining };
 }

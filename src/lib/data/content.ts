@@ -19,9 +19,10 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
     db
       .from("courses")
       .select(
-        "id, slug, title, cover_url, modules(id, title, order_index, cover_url, lessons(id, title, duration_in_minutes, order_index, is_published, is_eligible_for_trail, topics, solves, level, objective, audience, prerequisites, content, slug))",
+        "id, slug, title, cover_url, status, modules(id, title, order_index, cover_url, lessons(id, title, duration_in_minutes, order_index, is_published, is_eligible_for_trail, topics, solves, level, objective, audience, prerequisites, content, slug))",
       )
       .eq("is_published", true)
+      .neq("status", "Arquivado")
       .order("order_index", { ascending: true }),
     db
       .from("articles")

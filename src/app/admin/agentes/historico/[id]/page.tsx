@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -106,26 +106,32 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
 
-  import("react").then(React => {
-    React.useEffect(() => {
-      async function loadConversations() {
-        if (!agent) return;
-        setIsLoadingConversations(true);
-        const supabase = createClient();
-        try {
-          const data = await getAgentConversations(supabase, agent.id);
-          setConversations(data);
-          if (data.length > 0 && !selectedId) {
-            setSelectedId(data[0].id);
-          }
-        } catch (e) {
-          console.error("Erro ao buscar conversas", e);
+  useEffect(() => {
+    if (!agent) return;
+    let active = true;
+
+    async function loadConversations() {
+      setIsLoadingConversations(true);
+      const supabase = createClient();
+      try {
+        const data = await getAgentConversations(supabase, agent!.id);
+        if (!active) return;
+        setConversations(data);
+        if (data.length > 0) {
+          setSelectedId((current) => current || data[0].id);
         }
-        setIsLoadingConversations(false);
+      } catch (e) {
+        console.error("Erro ao buscar conversas", e);
+      } finally {
+        if (active) setIsLoadingConversations(false);
       }
-      loadConversations();
-    }, [agent, selectedId]);
-  });
+    }
+
+    loadConversations();
+    return () => {
+      active = false;
+    };
+  }, [agent]);
 
   // Filtragem
   const filteredConversations = useMemo(() => {
@@ -158,9 +164,71 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
         if ((conv.rating ?? 0) < minRating) return false;
       }
 
+      // Período
+      if (periodFilter !== "tudo") {
+        const created = new Date(conv.createdAt);
+        const now = new Date();
+        if (periodFilter === "hoje") {
+          if (created.toDateString() !== now.toDateString()) return false;
+        } else if (periodFilter === "7dias") {
+          const sevenDaysAgo = new Date(now);
+          sevenDaysAgo.setDate(now.getDate() - 7);
+          if (created < sevenDaysAgo) return false;
+        } else if (periodFilter === "mes") {
+          if (created.getMonth() !== now.getMonth() || created.getFullYear() !== now.getFullYear()) return false;
+        }
+      }
+
       return true;
     });
-  }, [searchQuery, statusFilter, sentimentFilter, ratingFilter]);
+  }, [conversations, searchQuery, statusFilter, sentimentFilter, ratingFilter, periodFilter]);
+
+  /** Métricas reais derivadas das conversas carregadas — nada fabricado. */
+  const kpis = useMemo(() => {
+    const now = new Date();
+    const thisMonth = conversations.filter((c) => {
+      const d = new Date(c.createdAt);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonth = conversations.filter((c) => {
+      const d = new Date(c.createdAt);
+      return d.getMonth() === lastMonthDate.getMonth() && d.getFullYear() === lastMonthDate.getFullYear();
+    });
+    const monthGrowthPct =
+      lastMonth.length > 0 ? Math.round(((thisMonth.length - lastMonth.length) / lastMonth.length) * 100) : null;
+
+    const withStatus = conversations.filter((c) => c.status);
+    const resolvedPct =
+      withStatus.length > 0
+        ? Math.round((withStatus.filter((c) => c.status === "resolvida").length / withStatus.length) * 100)
+        : null;
+
+    const rated = conversations.filter((c) => typeof c.rating === "number");
+    const avgRating =
+      rated.length > 0 ? rated.reduce((sum, c) => sum + (c.rating ?? 0), 0) / rated.length : null;
+
+    const timed = conversations.filter((c) => typeof c.durationSeconds === "number");
+    const avgMinutes =
+      timed.length > 0
+        ? timed.reduce((sum, c) => sum + (c.durationSeconds ?? 0), 0) / timed.length / 60
+        : null;
+    const avgMessages =
+      conversations.length > 0
+        ? conversations.reduce((sum, c) => sum + (c.messageCount ?? c.messages.length), 0) / conversations.length
+        : null;
+
+    return {
+      totalCount: conversations.length,
+      monthCount: thisMonth.length,
+      monthGrowthPct,
+      resolvedPct,
+      avgRating,
+      ratedCount: rated.length,
+      avgMinutes,
+      avgMessages,
+    };
+  }, [conversations]);
 
   // Paginação aplicada
   const totalPages = Math.max(1, Math.ceil(filteredConversations.length / ITEMS_PER_PAGE));
@@ -185,7 +253,34 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
   };
 
   const handleExportCSV = () => {
-    toast.success("Exportação iniciada! O arquivo CSV com as sessões filtradas será baixado.");
+    if (filteredConversations.length === 0) {
+      toast.danger("Nenhuma sessão para exportar com os filtros atuais.");
+      return;
+    }
+
+    const header = ["Data", "Aluno", "E-mail", "Título", "Status", "Sentimento", "Nota", "Mensagens"];
+    const rows = filteredConversations.map((conv) => [
+      new Date(conv.createdAt).toLocaleString("pt-BR"),
+      conv.studentName ?? "",
+      conv.studentEmail ?? "",
+      conv.title,
+      conv.status ?? "",
+      conv.sentiment ?? "",
+      conv.rating != null ? String(conv.rating) : "",
+      String(conv.messageCount ?? conv.messages.length),
+    ]);
+    const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
+    const csv = [header, ...rows].map((row) => row.map(escape).join(",")).join("\n");
+
+    const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `historico-${agent?.slug || id}-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast.success(`${filteredConversations.length} sessões exportadas em CSV.`);
   };
 
   if (!isLoaded) return null;
@@ -227,7 +322,7 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
                 {agent && <StatusBadge tone={agent.status === "Disponível" ? "positive" : "warning"}>{agent.status}</StatusBadge>}
                 <Chip color="default" variant="soft" size="sm" className="hidden sm:inline-flex">
                   <Brain className="mr-1 size-3 text-accent" />
-                  {agent?.aiModel || "GPT-4o Mini"}
+                  {agent?.aiModel || "Modelo não definido"}
                 </Chip>
               </div>
               <p className="mt-1 text-sm text-muted">
@@ -256,9 +351,22 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-muted">Volume Mensal</p>
               <p className="mt-2 font-display text-3xl font-bold text-foreground" data-numeric>
-                1.284
+                {kpis.monthCount.toLocaleString("pt-BR")}
               </p>
-              <p className="mt-1 text-[11px] text-success font-medium">↑ 14% vs mês anterior</p>
+              <p
+                className={cn(
+                  "mt-1 text-[11px] font-medium",
+                  kpis.monthGrowthPct === null
+                    ? "text-muted"
+                    : kpis.monthGrowthPct >= 0
+                      ? "text-success"
+                      : "text-danger",
+                )}
+              >
+                {kpis.monthGrowthPct === null
+                  ? `${kpis.totalCount} conversas no total`
+                  : `${kpis.monthGrowthPct >= 0 ? "↑" : "↓"} ${Math.abs(kpis.monthGrowthPct)}% vs mês anterior`}
+              </p>
             </div>
             <span className="grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground">
               <MessagesSquare className="size-6" />
@@ -271,9 +379,11 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-muted">Taxa de Resolução</p>
               <p className="mt-2 font-display text-3xl font-bold text-foreground" data-numeric>
-                96.4%
+                {kpis.resolvedPct === null ? "—" : `${kpis.resolvedPct}%`}
               </p>
-              <p className="mt-1 text-[11px] text-muted">Sem transbordo pedagógico</p>
+              <p className="mt-1 text-[11px] text-muted">
+                {kpis.resolvedPct === null ? "Nenhuma sessão classificada ainda" : "Marcadas como resolvida"}
+              </p>
             </div>
             <span className="grid size-12 place-items-center rounded-2xl bg-success-soft text-success-soft-foreground">
               <CheckCircle2 className="size-6" />
@@ -286,9 +396,11 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-muted">CSAT / Nota Média</p>
               <p className="mt-2 font-display text-3xl font-bold text-foreground" data-numeric>
-                4.8 / 5.0
+                {kpis.avgRating === null ? "—" : `${kpis.avgRating.toFixed(1)} / 5.0`}
               </p>
-              <p className="mt-1 text-[11px] text-muted">842 avaliações no período</p>
+              <p className="mt-1 text-[11px] text-muted">
+                {kpis.ratedCount > 0 ? `${kpis.ratedCount} avaliações no período` : "Nenhuma avaliação ainda"}
+              </p>
             </div>
             <span className="grid size-12 place-items-center rounded-2xl bg-warning-soft text-warning-soft-foreground">
               <Star className="size-6 fill-warning" />
@@ -301,9 +413,11 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-muted">Tempo Médio</p>
               <p className="mt-2 font-display text-3xl font-bold text-foreground" data-numeric>
-                5.2 min
+                {kpis.avgMinutes === null ? "—" : `${kpis.avgMinutes.toFixed(1)} min`}
               </p>
-              <p className="mt-1 text-[11px] text-muted">~4.2 mensagens por sessão</p>
+              <p className="mt-1 text-[11px] text-muted">
+                {kpis.avgMessages === null ? "Sem sessões registradas" : `~${kpis.avgMessages.toFixed(1)} mensagens por sessão`}
+              </p>
             </div>
             <span className="grid size-12 place-items-center rounded-2xl bg-default text-default-foreground">
               <Timer className="size-6" />
@@ -637,12 +751,17 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
                   <div className="flex items-center gap-4">
                     <span className="inline-flex items-center gap-1">
                       <Cpu className="size-3.5 text-accent" />
-                      <strong className="text-foreground">{selectedConversation.tokensUsed || 1100}</strong> tokens (~$0.003)
+                      <strong className="text-foreground">
+                        {selectedConversation.tokensUsed ? selectedConversation.tokensUsed.toLocaleString("pt-BR") : "—"}
+                      </strong>{" "}
+                      tokens
                     </span>
                     <span>•</span>
                     <span className="inline-flex items-center gap-1">
                       <Timer className="size-3.5" />
-                      {Math.round((selectedConversation.durationSeconds || 300) / 60)} min de conversa
+                      {selectedConversation.durationSeconds
+                        ? `${Math.round(selectedConversation.durationSeconds / 60)} min de conversa`
+                        : "Duração não registrada"}
                     </span>
                   </div>
 

@@ -63,6 +63,7 @@ export interface CourseSalesConfig {
   primaryPlatform?: PlataformaCheckout;
   integracoes: IntegracaoOferta[];
   updatedAt?: string;
+  [key: string]: unknown;
 }
 
 export const DYNAMIC_VARIABLES: DynamicVariable[] = [

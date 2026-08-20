@@ -1,14 +1,9 @@
 import { notFound } from 'next/navigation';
-import { getArticlesByCategory, getAllArticles } from '@/lib/blog';
+import { getArticlesByCategory } from '@/lib/data/blog';
+import { createClient } from '@/lib/supabase/server';
 import { ArticleCard } from '@/components/blog/ArticleCard';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-
-export async function generateStaticParams() {
-  const articles = getAllArticles();
-  const categories = Array.from(new Set(articles.map((a) => a.category.toLowerCase())));
-  return categories.map((cat) => ({ cat }));
-}
 
 export async function generateMetadata({ params }: { params: Promise<{ cat: string }> }) {
   const resolvedParams = await params;
@@ -25,9 +20,10 @@ export default async function CategoryPage({ params }: { params: Promise<{ cat: 
   const resolvedParams = await params;
   const decodedCat = decodeURIComponent(resolvedParams.cat);
   const formattedCat = decodedCat.charAt(0).toUpperCase() + decodedCat.slice(1);
-  
-  const articles = getArticlesByCategory(decodedCat);
-  
+
+  const supabase = await createClient();
+  const articles = await getArticlesByCategory(supabase, decodedCat);
+
   if (articles.length === 0) {
     notFound();
   }

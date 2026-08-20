@@ -22,7 +22,7 @@ import { AuthLayoutShell } from "@/components/auth/AuthLayoutShell";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 import { PhoneInputField } from "@/components/ui/PhoneInputField";
-import { CAREER_ROLES, GENDER_OPTIONS } from "@/components/profile/ProfileEditor";
+import { CAREER_ROLES, GENDER_OPTIONS } from "@/lib/profilePreferences";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { composeFullPhone } from "@/lib/phoneUtils";

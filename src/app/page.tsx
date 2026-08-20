@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import StudentHomeClient from "@/components/home/StudentHomeClient";
+import { StudentShell } from "@/components/shells/StudentShell";
 
 export const metadata: Metadata = {
   title: "Início | Smart LMS",
@@ -17,5 +18,5 @@ export const metadata: Metadata = {
  * então quem lê é o cliente — uma vez, no orquestrador.
  */
 export default function Home() {
-  return <StudentHomeClient />;
+  return <StudentShell><StudentHomeClient /></StudentShell>;
 }

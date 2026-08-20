@@ -10,13 +10,16 @@ import {
   PROFILE_SAVED_EVENT,
   PROFILE_STORAGE_KEY,
   type ProfilePreferences,
-} from "@/components/profile/ProfileEditor";
+} from "@/lib/profilePreferences";
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  profileRole: string | null;
+  isManager: boolean;
+  isCapabilitiesLoading: boolean;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
 }
@@ -27,6 +30,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [profileRole, setProfileRole] = useState<string | null>(null);
+  const [isManager, setIsManager] = useState(false);
+  const [isCapabilitiesLoading, setIsCapabilitiesLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const supabase = createClient();
@@ -46,6 +52,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(initialSession?.user ?? null);
           if (initialSession?.user) {
             syncUserProfile(initialSession.user);
+          } else {
+            setIsCapabilitiesLoading(false);
           }
         }
       } catch (err) {
@@ -86,7 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [router, supabase]);
 
-  const syncUserProfile = async (currentUser: User) => {
+  async function syncUserProfile(currentUser: User) {
+    setIsCapabilitiesLoading(true);
     try {
       const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
       let profile: ProfilePreferences = defaultProfile;
@@ -101,12 +110,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Tenta buscar dados mais recentes da tabela profiles
       let dbProfile: Record<string, unknown> | null = null;
       try {
-        const { data } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", currentUser.id)
-          .maybeSingle();
+        const [{ data }, { data: memberships }] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("full_name, username, avatar_url, email, phone, birth_date, gender, career_role, role, company, country, state, city, bio, weekly_goal, lesson_reminders, email_digest, achievement_alerts")
+            .eq("id", currentUser.id)
+            .maybeSingle(),
+          supabase
+            .from("organization_members")
+            .select("organization_id")
+            .eq("user_id", currentUser.id)
+            .in("role", ["owner", "admin", "manager"])
+            .neq("status", "disabled")
+            .limit(1),
+        ]);
         dbProfile = (data as Record<string, unknown>) || null;
+        setProfileRole(
+          (dbProfile?.role as string) ||
+          (currentUser.app_metadata?.role as string) ||
+          null,
+        );
+        setIsManager(Boolean(memberships?.length));
       } catch {
         // ignore
       }
@@ -154,8 +178,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.dispatchEvent(new CustomEvent(PROFILE_SAVED_EVENT, { detail: updatedProfile }));
     } catch {
       // Ignora erro em ambientes sem localStorage
+    } finally {
+      setIsCapabilitiesLoading(false);
     }
-  };
+  }
 
   const refreshSession = async () => {
     try {
@@ -176,6 +202,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);
+      setProfileRole(null);
+      setIsManager(false);
+      setIsCapabilitiesLoading(false);
       toast.success("Sessão encerrada com sucesso.");
       router.push("/acessar");
       router.refresh();
@@ -193,6 +222,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         isLoading,
         isAuthenticated: !!user,
+        profileRole,
+        isManager,
+        isCapabilitiesLoading,
         signOut,
         refreshSession,
       }}

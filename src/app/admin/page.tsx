@@ -14,34 +14,28 @@ const quickActions = [
 export default async function AdminDashboard() {
   const supabase = await createClient();
 
-  // 1. Buscar métricas de Usuários Ativos
-  const { count: activeUsersCount } = await supabase
-    .from("profiles")
-    .select("*", { count: "exact", head: true })
-    .eq("status", "active");
+  const [activeUsers, published, drafts, recentActivity] = await Promise.all([
+    supabase.from("profiles").select("id", { count: "exact", head: true }).eq("status", "active"),
+    supabase.from("courses").select("id", { count: "exact", head: true }).eq("is_published", true),
+    supabase.from("courses").select("id", { count: "exact", head: true }).eq("is_published", false),
+    supabase
+      .from("audit_logs")
+      .select(`
+        id,
+        action,
+        resource_type,
+        resource_id,
+        created_at,
+        profiles ( full_name )
+      `)
+      .order("created_at", { ascending: false })
+      .limit(5),
+  ]);
 
-  // 2. Buscar métricas de Cursos Publicados e Rascunhos
-  const { data: courses } = await supabase
-    .from("courses")
-    .select("is_published");
-    
-  const publishedCourses = courses?.filter(c => c.is_published).length || 0;
-  const draftCourses = (courses?.length || 0) - publishedCourses;
-
-  // 3. Buscar Atividades Recentes
-  // Limitar as 5 ações mais recentes. Pegamos também os nomes dos perfis
-  const { data: recentActivityData } = await supabase
-    .from("audit_logs")
-    .select(`
-      id,
-      action,
-      resource_type,
-      resource_id,
-      created_at,
-      profiles ( full_name )
-    `)
-    .order("created_at", { ascending: false })
-    .limit(5);
+  const activeUsersCount = activeUsers.count ?? 0;
+  const publishedCourses = published.count ?? 0;
+  const draftCourses = drafts.count ?? 0;
+  const recentActivityData = recentActivity.data;
 
   const activity = (recentActivityData || []).map((log) => {
     // Calculando o tempo relativo

@@ -1,3 +1,5 @@
+import type { LessonContentBlock } from './course';
+
 export type ArticleFormat = 'text' | 'audio' | 'both';
 
 export type Article = {
@@ -11,6 +13,7 @@ export type Article = {
   readingTime?: number; // In minutes, for text or both formats
   format: ArticleFormat;
   body?: any; // MDXContent representation (could be raw string or compiled source depending on the MDX solution)
+  blocks?: LessonContentBlock[]; // Editor de blocos (BlockNote) — fonte de verdade do conteúdo
   audio?: {
     url: string; // Bunny CDN URL
     duration: number; // In seconds

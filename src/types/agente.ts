@@ -83,6 +83,12 @@ export interface Agent {
   files?: AgentFile[];
 }
 
+/** Dados seguros e suficientes para catálogo/workspace no navegador. */
+export type AgentCatalogItem = Omit<
+  Agent,
+  'replies' | 'fallbacks' | 'files' | 'systemPrompt' | 'aiModel' | 'context'
+>;
+
 /**
  * O que o admin escreve no formulário. As métricas de uso ficam de fora: quem
  * as move é a conversa do aluno, nunca o formulário. Sem `id`, é uma criação.
@@ -121,4 +127,18 @@ export interface AgentConversation {
   courseTitle?: string;
   lessonContext?: string;
   aiSummary?: string;
+  /** Distingue um resumo paginado de uma thread cujo histórico já foi aberto. */
+  messagesLoaded?: boolean;
+  messageCount?: number;
 }
+
+export type AgentConversationSummary = Omit<AgentConversation, 'messages'> & {
+  messages: [];
+  messagesLoaded: false;
+  messageCount: number;
+};
+
+export type AgentConversationPage = {
+  items: AgentConversationSummary[];
+  nextCursor: string | null;
+};

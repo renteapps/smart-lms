@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/supabase/auth";
 import type { Course, Lesson, Module } from "@/types/course";
+import type { CourseSalesConfig } from "@/lib/salesUrlHelper";
 import type { ActionResult } from "../progress";
 
 type Saved<T> = { success: boolean; message?: string; data?: T };
@@ -26,8 +27,18 @@ export type CourseInput = Partial<
     | "level"
     | "price"
     | "tags"
+    | "status"
     | "isPublished"
     | "isFeatured"
+    | "enableCertificates"
+    | "dripContent"
+    | "enableComments"
+    | "requireSequentialProgress"
+    | "accessExpirationDays"
+    | "maxStudents"
+    | "salesUrl"
+    | "salesPageUrl"
+    | "salesConfig"
   >
 >;
 
@@ -42,13 +53,36 @@ function courseToRow(input: CourseInput): Record<string, unknown> {
   set("category", input.category);
   set("description", input.description);
   set("short_description", input.shortDescription);
-  set("cover_url", input.coverUrl);
+  if (input.coverUrl !== undefined) {
+    row.cover_url = input.coverUrl || null;
+  }
   set("duration", input.duration);
   set("level", input.level);
   set("price", input.price);
   set("tags", input.tags);
-  set("is_published", input.isPublished);
+  if (input.status !== undefined) {
+    row.status = input.status;
+    row.is_published = input.status === "Publicado";
+  } else if (input.isPublished !== undefined) {
+    row.is_published = input.isPublished;
+    row.status = input.isPublished ? "Publicado" : "Rascunho";
+  }
   set("is_featured", input.isFeatured);
+  set("enable_certificates", input.enableCertificates);
+  set("drip_content", input.dripContent);
+  set("enable_comments", input.enableComments);
+  set("require_sequential_progress", input.requireSequentialProgress);
+  set("access_expiration_days", input.accessExpirationDays);
+  set("max_students", input.maxStudents);
+  if (input.salesUrl !== undefined) {
+    row.sales_url = input.salesUrl || null;
+  }
+  if (input.salesPageUrl !== undefined) {
+    row.sales_page_url = input.salesPageUrl || null;
+  }
+  if (input.salesConfig !== undefined) {
+    row.sales_config = input.salesConfig || {};
+  }
   return row;
 }
 
@@ -68,11 +102,35 @@ export async function saveCourse(input: CourseInput & { id?: string }): Promise<
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/admin/cursos");
+    revalidatePath(`/admin/cursos/${data.id}`);
+    revalidatePath(`/admin/cursos/${data.id}/vendas`);
+    revalidatePath(`/admin/cursos/${data.id}/editar`);
+    revalidatePath(`/admin/cursos/${data.id}/configuracoes`);
     revalidatePath("/cursos");
+    revalidatePath("/courses");
+    revalidatePath(`/courses/${data.id}`);
+    revalidatePath("/");
+    revalidatePath("/minha-trilha");
     return { success: true, data: { id: data.id } };
   } catch (error) {
     return { success: false, message: (error as Error).message };
   }
+}
+
+export async function saveCourseSales(
+  courseId: string,
+  data: {
+    salesUrl: string;
+    salesPageUrl?: string;
+    salesConfig?: CourseSalesConfig | Record<string, unknown>;
+  }
+): Promise<Saved<{ id: string }>> {
+  return saveCourse({
+    id: courseId,
+    salesUrl: data.salesUrl,
+    salesPageUrl: data.salesPageUrl,
+    salesConfig: data.salesConfig,
+  });
 }
 
 export async function deleteCourse(id: string): Promise<ActionResult> {
@@ -195,6 +253,7 @@ export async function saveLesson(
     set("is_published", input.isPublished);
     set("slug", input.slug);
     set("short_description", input.shortDescription);
+    set("quiz_id", input.quizId ?? null);
     set("profile_test_ref", input.profileTestId ?? null);
     set("profile_test_config", input.profileTestConfig);
     set("topics", input.topics);
@@ -269,6 +328,38 @@ export async function reorderLessons(moduleId: string, orderedIds: string[]): Pr
 
     revalidatePath("/admin/cursos");
     return { success: true };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+export async function saveQuiz(
+  input: { id?: string; title: string; description?: string; questions: unknown[]; passingScore: number }
+): Promise<Saved<{ id: string }>> {
+  try {
+    const { adminClient } = await requireAdmin();
+
+    const row: Record<string, unknown> = {
+      title: input.title,
+      description: input.description,
+      questions: input.questions,
+      passing_score: input.passingScore,
+      updated_at: new Date().toISOString()
+    };
+
+    if (!input.id) {
+      row.created_at = new Date().toISOString();
+    }
+
+    const query = input.id
+      ? adminClient.from("quizzes").update(row).eq("id", input.id).select("id").single()
+      : adminClient.from("quizzes").insert(row).select("id").single();
+
+    const { data, error } = await query;
+    if (error) return { success: false, message: error.message };
+
+    revalidatePath("/admin/cursos/[id]/modulos", "page");
+    return { success: true, data: { id: data.id } };
   } catch (error) {
     return { success: false, message: (error as Error).message };
   }

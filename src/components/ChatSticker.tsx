@@ -12,6 +12,7 @@ import type {
   AssistantMessage,
   AssistantScope,
   PlatformAssistantGetResponse,
+  PlatformAssistantConfigResponse,
   PlatformAssistantPostResponse,
   PlatformAssistantPublicConfig,
 } from "@/types/platformAssistant";
@@ -95,18 +96,45 @@ export default function ChatSticker() {
     }
   };
 
+  const loadConfig = async (signal?: AbortSignal) => {
+    try {
+      const response = await fetch("/api/ai/platform-assistant?mode=config", {
+        cache: "no-store",
+        signal,
+      });
+      const body = (await response.json()) as PlatformAssistantConfigResponse & { error?: string };
+      if (!response.ok) throw new Error(body.error || "Não foi possível carregar o assistente.");
+      setConfig(body.config);
+    } catch (loadError) {
+      if (loadError instanceof DOMException && loadError.name === "AbortError") return;
+      setConfig(FALLBACK_CONFIG);
+    } finally {
+      if (!signal?.aborted) setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (isAuthLoading || !isAuthenticated) {
       return;
     }
     const controller = new AbortController();
-    // A troca de rota inicia uma nova sincronização com o histórico persistido desse escopo.
+    // A chamada é assíncrona; o primeiro setState só ocorre após a resposta HTTP.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadConfig(controller.signal);
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, isAuthLoading]);
+
+  useEffect(() => {
+    if (!isOpen || isAuthLoading || !isAuthenticated) return;
+    const controller = new AbortController();
+    // O histórico só é necessário depois que o aluno abre o popover.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadConversation(controller.signal);
     return () => controller.abort();
-    // contextKey representa curso/aula e evita que uma resposta de outro escopo seja exibida.
+    // contextKey representa curso/aula e invalida somente uma conversa aberta.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contextKey, isAuthenticated, isAuthLoading]);
+  }, [contextKey, isOpen, isAuthenticated, isAuthLoading]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });

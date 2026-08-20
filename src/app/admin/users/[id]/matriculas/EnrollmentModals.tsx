@@ -123,8 +123,8 @@ export function CreateEnrollmentModal({
     previewDateText = "Data inválida selecionada";
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!selectedCourseId) {
       toast.error("Selecione um curso para realizar a matrícula.");
       return;
@@ -400,7 +400,7 @@ export function CreateEnrollmentModal({
               </Modal.Body>
 
               <Modal.Footer className="justify-between">
-                <Button type="button" variant="tertiary" onClick={onClose} isDisabled={isSubmitting}>
+                <Button type="button" variant="tertiary" onPress={onClose} isDisabled={isSubmitting}>
                   Cancelar
                 </Button>
                 <Button
@@ -408,6 +408,7 @@ export function CreateEnrollmentModal({
                   variant="primary"
                   isDisabled={!selectedCourseId || isSubmitting}
                   className="gap-2"
+                  onPress={() => handleSubmit()}
                 >
                   <BookOpen className="size-4" />
                   {isSubmitting ? "Matriculando..." : "Confirmar Matrícula"}
@@ -443,6 +444,7 @@ export function EditEnrollmentModal({
   onSuccess,
 }: EditEnrollmentModalProps) {
   const router = useRouter();
+  const [activeEnrollment, setActiveEnrollment] = useState<EnrollmentItem | null>(enrollment);
   const [expirationType, setExpirationType] = useState<ExpirationOption>("indefinite");
   const [customDate, setCustomDate] = useState<string>("");
   const [status, setStatus] = useState<"active" | "inactive" | "completed">("active");
@@ -450,6 +452,7 @@ export function EditEnrollmentModal({
 
   useEffect(() => {
     if (enrollment) {
+      setActiveEnrollment(enrollment);
       if (enrollment.expiresAt) {
         setExpirationType("custom");
         const d = new Date(enrollment.expiresAt);
@@ -464,7 +467,7 @@ export function EditEnrollmentModal({
     }
   }, [enrollment, isOpen]);
 
-  if (!enrollment) return null;
+  if (!activeEnrollment) return null;
 
   let previewDateText = "";
   try {
@@ -483,8 +486,8 @@ export function EditEnrollmentModal({
     previewDateText = "Data inválida selecionada";
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (expirationType === "custom" && !customDate) {
       toast.error("Informe a nova data limite de acesso.");
       return;
@@ -493,7 +496,7 @@ export function EditEnrollmentModal({
     setIsSubmitting(true);
     try {
       const res = await updateEnrollmentExpiration({
-        enrollmentId: enrollment.enrollmentId,
+        enrollmentId: activeEnrollment.enrollmentId,
         userId,
         expirationType,
         customDate: expirationType === "custom" ? customDate : null,
@@ -501,7 +504,7 @@ export function EditEnrollmentModal({
       });
 
       if (res.success) {
-        toast.success(`Validade da matrícula de ${enrollment.courseName} atualizada!`);
+        toast.success(`Validade da matrícula de ${activeEnrollment.courseName} atualizada com sucesso!`);
         onSuccess();
         router.refresh();
         onClose();
@@ -529,7 +532,7 @@ export function EditEnrollmentModal({
                   <div>
                     <Modal.Heading className="text-lg font-bold">Editar Validade da Matrícula</Modal.Heading>
                     <p className="text-xs text-muted">
-                      Ajuste o prazo de vigência do curso <strong>{enrollment.courseName}</strong> para <strong>{userName}</strong>.
+                      Ajuste o prazo de vigência do curso <strong>{activeEnrollment.courseName}</strong> para <strong>{userName}</strong>.
                     </p>
                   </div>
                 </div>
@@ -539,11 +542,11 @@ export function EditEnrollmentModal({
                 {/* Info do Curso */}
                 <div className="rounded-xl border border-border bg-surface-secondary/30 p-3.5">
                   <p className="text-xs text-muted">Curso</p>
-                  <p className="text-sm font-bold text-foreground mt-0.5">{enrollment.courseName}</p>
+                  <p className="text-sm font-bold text-foreground mt-0.5">{activeEnrollment.courseName}</p>
                   <div className="flex items-center gap-3 mt-2 text-xs text-muted">
-                    <span>Matriculado em: <strong>{enrollment.enrolledAt}</strong></span>
+                    <span>Matriculado em: <strong>{activeEnrollment.enrolledAt}</strong></span>
                     <span>•</span>
-                    <span>Vigência atual: <strong className={enrollment.isExpired ? "text-danger" : ""}>{enrollment.expirationLabel}</strong></span>
+                    <span>Vigência atual: <strong className={activeEnrollment.isExpired ? "text-danger" : ""}>{activeEnrollment.expirationLabel}</strong></span>
                   </div>
                 </div>
 
@@ -682,10 +685,16 @@ export function EditEnrollmentModal({
               </Modal.Body>
 
               <Modal.Footer className="justify-between">
-                <Button type="button" variant="tertiary" onClick={onClose} isDisabled={isSubmitting}>
+                <Button type="button" variant="tertiary" onPress={onClose} isDisabled={isSubmitting}>
                   Cancelar
                 </Button>
-                <Button type="submit" variant="primary" isDisabled={isSubmitting} className="gap-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  isDisabled={isSubmitting}
+                  className="gap-2"
+                  onPress={() => handleSubmit()}
+                >
                   <Calendar className="size-4" />
                   {isSubmitting ? "Salvando..." : "Salvar Alterações"}
                 </Button>
@@ -720,20 +729,28 @@ export function DeleteEnrollmentModal({
   onSuccess,
 }: DeleteEnrollmentModalProps) {
   const router = useRouter();
+  const [activeEnrollment, setActiveEnrollment] = useState<EnrollmentItem | null>(enrollment);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!enrollment) return null;
+  useEffect(() => {
+    if (enrollment) {
+      setActiveEnrollment(enrollment);
+    }
+  }, [enrollment]);
+
+  if (!activeEnrollment) return null;
 
   const handleConfirm = async () => {
     setIsSubmitting(true);
     try {
       const res = await deleteEnrollment({
-        enrollmentId: enrollment.enrollmentId,
+        enrollmentId: activeEnrollment.enrollmentId,
         userId,
+        courseId: activeEnrollment.courseId,
       });
 
       if (res.success) {
-        toast.success(`Matrícula no curso "${enrollment.courseName}" revogada.`);
+        toast.success(`Matrícula no curso "${activeEnrollment.courseName}" revogada com sucesso.`);
         onSuccess();
         router.refresh();
         onClose();
@@ -768,7 +785,7 @@ export function DeleteEnrollmentModal({
 
             <Modal.Body className="py-3 text-sm text-foreground space-y-2">
               <p>
-                Tem certeza que deseja remover a matrícula de <strong>{userName}</strong> no curso <strong>{enrollment.courseName}</strong>?
+                Tem certeza que deseja remover a matrícula de <strong>{userName}</strong> no curso <strong>{activeEnrollment.courseName}</strong>?
               </p>
               <p className="text-xs text-muted">
                 O aluno perderá imediatamente o acesso às aulas e materiais deste curso.
@@ -776,13 +793,13 @@ export function DeleteEnrollmentModal({
             </Modal.Body>
 
             <Modal.Footer className="justify-between">
-              <Button type="button" variant="tertiary" onClick={onClose} isDisabled={isSubmitting}>
+              <Button type="button" variant="tertiary" onPress={onClose} isDisabled={isSubmitting}>
                 Cancelar
               </Button>
               <Button
                 type="button"
                 variant="danger"
-                onClick={handleConfirm}
+                onPress={handleConfirm}
                 isDisabled={isSubmitting}
                 className="gap-2"
               >

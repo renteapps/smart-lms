@@ -26,7 +26,7 @@ export function useSupabaseData() {
             title: c.title,
             category: c.category,
             description: c.description || c.short_description || "",
-            cover: c.cover_url || "",
+            cover: c.cover_url || "https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=85&w=1200&auto=format&fit=crop",
             duration: c.duration || "0h 0min",
             lessonCount: 0, // Should be fetched from related lessons table ideally
             level: c.level as any,

@@ -316,9 +316,12 @@ function AulaAdminFormContent() {
         {/* Editor de blocos */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-foreground">
-            Conteúdo da Aula (Blocos)
+            Conteúdo da Aula
           </label>
-          <div className="rounded-lg border border-border bg-surface focus-within:border-accent transition-colors">
+          <p className="text-xs text-muted">
+            Digite <kbd className="rounded border border-border bg-background px-1 font-sans">/</kbd> para inserir vídeo, quiz, destaque, imagem, tabela e mais.
+          </p>
+          <div className="rounded-lg border border-border bg-surface py-2 transition-colors focus-within:border-accent">
             <LessonBlockEditor
               key={aulaId}
               initialBlocks={formData.blocks}

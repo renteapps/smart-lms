@@ -3,14 +3,14 @@ import { getAnalyticsOverview, getCoursesAnalytics, getSalesAnalytics, getAgents
 import { MOCK_ANALYTICS_CARDS } from "@/lib/mocks/analyticsMocks";
 
 export default async function AdminAnalyticsPage() {
-  const overviewData = await getAnalyticsOverview();
-  
-  // We fetch specific data to populate the cards
-  const coursesData = await getCoursesAnalytics();
-  const salesData = await getSalesAnalytics();
-  const agentsData = await getAgentsAnalytics();
-  const subsData = await getSubscriptionsAnalytics();
-  const studentsData = await getStudentsAnalytics();
+  const [overviewData, coursesData, salesData, agentsData, subsData, studentsData] = await Promise.all([
+    getAnalyticsOverview(),
+    getCoursesAnalytics(),
+    getSalesAnalytics(),
+    getAgentsAnalytics(),
+    getSubscriptionsAnalytics(),
+    getStudentsAnalytics(),
+  ]);
 
   const cardsData = MOCK_ANALYTICS_CARDS.map(card => {
     // Clone para evitar mutação

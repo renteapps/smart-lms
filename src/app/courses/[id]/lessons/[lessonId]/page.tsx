@@ -6,6 +6,7 @@ import { getSessionUser } from "@/lib/supabase/auth";
 import { getLessonWithCourse } from "@/lib/data/courses";
 import { getLessonNote } from "@/lib/data/notes";
 import { getProfileTests } from "@/lib/data/profileTests";
+import { getLessonComments } from "@/lib/data/comments";
 
 export default async function AulaPage({
   params,
@@ -17,7 +18,7 @@ export default async function AulaPage({
 
   const result = await getLessonWithCourse(supabase, id, lessonId, user?.id);
 
-  if (!result) {
+  if (!result || result.course.status === "Arquivado") {
     return (
       <div className="flex min-h-full items-center justify-center px-4 py-24">
         <EmptyState>
@@ -39,6 +40,25 @@ export default async function AulaPage({
   // Só a aula de diagnóstico precisa do catálogo de testes.
   const profileTests =
     lesson.type === "profile_test" ? await getProfileTests(supabase, true) : [];
+    
+  let quiz = null;
+  if (lesson.type === "quiz" && lesson.quizId) {
+    const { data } = await supabase
+      .from("quizzes")
+      .select("*")
+      .eq("id", lesson.quizId)
+      .single();
+    if (data) {
+      quiz = {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        questions: data.questions,
+        passingScore: data.passing_score
+      };
+    }
+  }
+
   const note = user ? await getLessonNote(supabase, user.id, lesson.id) : null;
 
   return (
@@ -48,6 +68,7 @@ export default async function AulaPage({
       courseId={course.id}
       profileTests={profileTests}
       initialNote={note}
+      quiz={quiz}
     />
   );
 }

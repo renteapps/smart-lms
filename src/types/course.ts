@@ -5,6 +5,8 @@
  * tipos: quem os preenche é `lib/data/courses.ts`, lendo do Supabase.
  */
 
+import type { CourseSalesConfig } from "@/lib/salesUrlHelper";
+
 /** Formato do editor de blocos antigo (pré-BlockNote). Mantido só para migrar aulas já salvas — ver `lib/editor/legacyBlocks.ts`. */
 export type ContentBlock = {
   id: string;
@@ -56,6 +58,7 @@ export type Lesson = {
   lastWatchedSecond?: number;
   slug?: string;
   shortDescription?: string;
+  quizId?: string;
   profileTestId?: string;
   profileTestConfig?: {
     allowSkipIfCompleted?: boolean;
@@ -82,6 +85,8 @@ export type Module = {
   lessons: Lesson[];
 };
 
+export type CourseStatus = 'Publicado' | 'Rascunho' | 'Arquivado';
+
 export type Course = {
   id: string;
   slug: string;
@@ -95,11 +100,56 @@ export type Course = {
   price?: number;
   tags?: string[];
   isPublished: boolean;
+  status?: CourseStatus;
   isFeatured?: boolean;
   createdAt?: string;
   updatedAt?: string;
   modules: Module[];
+  /** Emite certificado automático ao concluir 100% das aulas. */
+  enableCertificates?: boolean;
+  /** Libera os módulos gradualmente após a compra, em vez de tudo de uma vez. */
+  dripContent?: boolean;
+  enableComments?: boolean;
+  /** O aluno só pode assistir a próxima aula após concluir a anterior. */
+  requireSequentialProgress?: boolean;
+  /** Dias de acesso após a matrícula. Vazio/nulo = acesso vitalício. */
+  accessExpirationDays?: number | null;
+  /** Máximo de matriculados. Vazio/nulo = ilimitado. */
+  maxStudents?: number | null;
+  /** Link de checkout ou venda principal com suporte a tags dinâmicas. */
+  salesUrl?: string | null;
+  /** URL da landing page descritiva do curso. */
+  salesPageUrl?: string | null;
+  /** Configurações de ofertas, plataforma e checkouts dinâmicos. */
+  salesConfig?: CourseSalesConfig | Record<string, unknown> | null;
 };
+
+/** Contrato leve usado na capa, sidebar e navegação entre aulas. */
+export type CourseOutlineLesson = Pick<
+  Lesson,
+  | 'id'
+  | 'moduleId'
+  | 'title'
+  | 'type'
+  | 'durationInMinutes'
+  | 'order'
+  | 'isPublished'
+  | 'isCompleted'
+  | 'userRating'
+  | 'lastWatchedSecond'
+  | 'slug'
+>;
+
+export type CourseOutlineModule = Omit<Module, 'lessons'> & {
+  lessons: CourseOutlineLesson[];
+};
+
+export type CourseOutline = Omit<Course, 'modules'> & {
+  modules: CourseOutlineModule[];
+};
+
+export type CourseOverviewData = CourseOutline;
+export type LessonDetail = Lesson;
 
 /**
  * Cartão do catálogo: o suficiente para a vitrine, sem carregar módulos e aulas.

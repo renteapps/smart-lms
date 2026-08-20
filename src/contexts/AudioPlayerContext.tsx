@@ -27,6 +27,17 @@ const AudioPlayerContext = createContext<AudioPlayerContextType | undefined>(und
 
 const STORAGE_KEY = 'smart_lms_audio_progress';
 
+function saveProgress(slug: string, time: number) {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY) || '{}';
+    const parsed = JSON.parse(stored);
+    parsed[slug] = time;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+  } catch (error) {
+    console.error('Failed to save audio progress', error);
+  }
+}
+
 export function AudioPlayerProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AudioState>({
     article: null,
@@ -38,6 +49,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   });
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastRenderedSecondRef = useRef(-1);
+  const lastSavedBucketRef = useRef(-1);
 
   // Initialize audio element once
   useEffect(() => {
@@ -46,12 +59,17 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     const audio = audioRef.current;
 
     const handleTimeUpdate = () => {
+      const wholeSecond = Math.floor(audio.currentTime);
+      if (wholeSecond === lastRenderedSecondRef.current) return;
+      lastRenderedSecondRef.current = wholeSecond;
+
       setState(prev => {
         const newTime = audio.currentTime;
         const progress = audio.duration ? newTime / audio.duration : 0;
         
-        // Save progress to local storage periodically (every 5 seconds)
-        if (Math.floor(newTime) % 5 === 0 && prev.article) {
+        const saveBucket = Math.floor(newTime / 5);
+        if (wholeSecond % 5 === 0 && saveBucket !== lastSavedBucketRef.current && prev.article) {
+          lastSavedBucketRef.current = saveBucket;
           saveProgress(prev.article.slug, newTime);
         }
 
@@ -90,17 +108,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     };
   }, []);
 
-  const saveProgress = (slug: string, time: number) => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY) || '{}';
-      const parsed = JSON.parse(stored);
-      parsed[slug] = time;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-    } catch (e) {
-      console.error('Failed to save audio progress', e);
-    }
-  };
-
   const getSavedProgress = (slug: string): number => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -124,6 +131,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
 
     const savedTime = getSavedProgress(article.slug);
+    lastRenderedSecondRef.current = Math.floor(savedTime);
+    lastSavedBucketRef.current = Math.floor(savedTime / 5);
     
     if (audioRef.current) {
       audioRef.current.src = article.audio.url;

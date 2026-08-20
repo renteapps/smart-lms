@@ -7,18 +7,21 @@ import type { DB, Row } from "./types";
  * (`from().select().eq()` para artigos e `...eq().order()` para cursos).
  */
 function fakeDb(courses: Row[], articles: Row[] = []): DB {
-  const result = (data: Row[]) => ({
-    data,
-    error: null,
-    order: () => Promise.resolve({ data, error: null }),
-    then: (resolve: (value: { data: Row[]; error: null }) => unknown) => resolve({ data, error: null }),
-  });
+  const queryBuilder = (data: Row[]) => {
+    const obj = {
+      data,
+      error: null,
+      eq: () => obj,
+      neq: () => obj,
+      order: () => Promise.resolve({ data, error: null }),
+      then: (resolve: (value: { data: Row[]; error: null }) => unknown) => resolve({ data, error: null }),
+    };
+    return obj;
+  };
 
   return {
     from: (table: string) => ({
-      select: () => ({
-        eq: () => result(table === "courses" ? courses : articles),
-      }),
+      select: () => queryBuilder(table === "courses" ? courses : articles),
     }),
   } as unknown as DB;
 }

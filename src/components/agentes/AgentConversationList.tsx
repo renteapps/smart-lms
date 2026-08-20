@@ -19,6 +19,8 @@ type AgentConversationListProps = {
   onSelect: (conversationId: string) => void;
   onNewConversation: () => void;
   onDelete: (conversationId: string) => void;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
 };
 
 export function AgentConversationList({
@@ -29,6 +31,8 @@ export function AgentConversationList({
   onSelect,
   onNewConversation,
   onDelete,
+  hasMore = false,
+  onLoadMore,
 }: AgentConversationListProps) {
   const router = useRouter();
   const { agents } = useAgentCatalog();
@@ -113,6 +117,12 @@ export function AgentConversationList({
               );
             })}
           </ul>
+        )}
+
+        {hasMore && onLoadMore && (
+          <Button variant="ghost" size="sm" fullWidth onClick={onLoadMore} className="mt-3">
+            Carregar conversas anteriores
+          </Button>
         )}
       </nav>
 

@@ -74,6 +74,7 @@ import {
   type OptionItem,
 } from "@/lib/data/agentAccess";
 import { createClient } from "@/lib/supabase/client";
+import { getAgentConversations } from "@/lib/data/agents";
 import type {
   Agent,
   AgentAvatarKey,
@@ -223,34 +224,6 @@ Fazer o aluno chegar às conclusões por conta própria por meio de perguntas re
   },
 ];
 
-const MOCK_HISTORY: AgentConversation[] = [
-  {
-    id: "conv-1",
-    agentId: "any",
-    title: "Como lidar com gestor microgerenciador",
-    createdAt: "2026-08-10T10:30:00Z",
-    updatedAt: "2026-08-10T11:00:00Z",
-    messages: [
-      { id: "m1", author: "agent", text: "Oi! Sou a mentora de feedback do seu curso. Me conta o que está acontecendo e como posso te apoiar hoje?" },
-      { id: "m2", author: "student", text: "Meu gestor pede atualizações de 2 em 2 horas e não me deixa trabalhar com autonomia." },
-      { id: "m3", author: "agent", text: "Entendo o quanto isso pode gerar ansiedade e tirar seu foco. Vamos estruturar uma conversa franca com ele? Antes de mais nada: qual foi o último episódio específico em que isso aconteceu?" },
-      { id: "m4", author: "student", text: "Ontem, durante o fechamento do sprint, ele interrompeu 4 vezes no Slack pedindo prints." },
-      { id: "m5", author: "agent", text: "Perfeito, esse é um fato claro e mensurável (4 mensagens pedindo prints no dia do fechamento). Como você acha que podemos propor um alinhamento diário único para dar visibilidade a ele sem quebrar seu ritmo?" },
-    ],
-  },
-  {
-    id: "conv-2",
-    agentId: "any",
-    title: "Feedback de atrasos recorrentes para colega de par",
-    createdAt: "2026-08-12T14:15:00Z",
-    updatedAt: "2026-08-12T14:45:00Z",
-    messages: [
-      { id: "m1", author: "agent", text: "Oi! Sou a mentora de feedback do seu curso. Me conta o que está acontecendo e como posso te apoiar hoje?" },
-      { id: "m2", author: "student", text: "Preciso dar um feedback para um colega do mesmo nível que sempre entrega as tarefas com atraso." },
-      { id: "m3", author: "agent", text: "Dar feedback para pares exige cuidado para não soar como cobrança de chefia, mas sim colaboração. Qual o impacto direto desses atrasos no seu trabalho?" },
-    ],
-  },
-];
 
 function slugify(value: string): string {
   return value
@@ -377,17 +350,17 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
 
   // Inteligência & IA
   const [systemPrompt, setSystemPrompt] = useState("");
-  const [aiModel, setAiModel] = useState("gpt-4o-mini");
+  const [aiModel, setAiModel] = useState("google/gemini-2.0-flash-001");
   const [context, setContext] = useState("");
-  const [files, setFiles] = useState<AgentFile[]>([
-    { id: "f-1", name: "ementa_curso_comunicacao.pdf", url: "#" },
-  ]);
+  const [files, setFiles] = useState<AgentFile[]>([]);
 
   // Experiência & Gatilhos
   const [greeting, setGreeting] = useState("");
   const [starters, setStarters] = useState<AgentStarter[]>([]);
 
   // Histórico
+  const [conversations, setConversations] = useState<AgentConversation[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [selectedConversation, setSelectedConversation] = useState<AgentConversation | null>(null);
   const [copiedTranscript, setCopiedTranscript] = useState(false);
 
@@ -413,6 +386,30 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!agentToEdit?.id) {
+      setConversations([]);
+      return;
+    }
+    let active = true;
+    async function loadHistory() {
+      setIsLoadingHistory(true);
+      try {
+        const supabase = createClient();
+        const data = await getAgentConversations(supabase, agentToEdit!.id);
+        if (active) setConversations(data);
+      } catch (err) {
+        console.error("Erro ao carregar histórico de conversas:", err);
+      } finally {
+        if (active) setIsLoadingHistory(false);
+      }
+    }
+    loadHistory();
+    return () => {
+      active = false;
+    };
+  }, [agentToEdit?.id]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -442,9 +439,9 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
       setSelectedPlanIds(agentToEdit.planIds || []);
 
       setSystemPrompt(agentToEdit.systemPrompt ?? "");
-      setAiModel(agentToEdit.aiModel ?? "gpt-4o-mini");
+      setAiModel(agentToEdit.aiModel ?? "google/gemini-2.0-flash-001");
       setContext(agentToEdit.context ?? "");
-      setFiles(agentToEdit.files ?? [{ id: "f-1", name: "ementa_e_diretrizes.pdf", url: "#" }]);
+      setFiles(agentToEdit.files ?? []);
 
       setGreeting(agentToEdit.greeting);
       setStarters(agentToEdit.starters);
@@ -492,8 +489,8 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
       planIds: selectedPlanIds,
       planNames: mappedPlanNames,
       skills,
-      conversationsCount: agentToEdit?.conversationsCount ?? 14,
-      rating: agentToEdit?.rating ?? 4.9,
+      conversationsCount: agentToEdit?.conversationsCount ?? 0,
+      rating: agentToEdit?.rating ?? 0,
       avgMinutes: Number(avgMinutes) || 5,
 
       systemPrompt: systemPrompt.trim(),
@@ -726,9 +723,11 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                 <Tabs.Tab id="historico" className="gap-2 font-medium">
                   <History className="size-4" aria-hidden="true" />
                   <span>Histórico & Métricas</span>
-                  <span className="ml-1 text-xs font-semibold text-muted" data-numeric>
-                    {MOCK_HISTORY.length}
-                  </span>
+                  {conversations.length > 0 && (
+                    <span className="ml-1 text-xs font-semibold text-muted" data-numeric>
+                      {conversations.length}
+                    </span>
+                  )}
                 </Tabs.Tab>
               </Tabs.List>
             </div>
@@ -1758,7 +1757,9 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                           <p className="mt-2 font-display text-3xl font-bold text-foreground" data-numeric>
                             {draftAgent.conversationsCount}
                           </p>
-                          <p className="mt-1 text-[11px] text-success">↑ 18% este mês</p>
+                          <p className="mt-1 text-[11px] text-muted">
+                            {isNew ? "Agente ainda não publicado" : "Desde a criação do agente"}
+                          </p>
                         </div>
                         <span className="grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground">
                           <MessagesSquare className="size-6" />
@@ -1771,9 +1772,14 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                         <div>
                           <p className="text-xs font-semibold uppercase text-muted tracking-wider">Avaliação Média</p>
                           <p className="mt-2 font-display text-3xl font-bold text-foreground" data-numeric>
-                            {draftAgent.rating.toFixed(1)} / 5.0
+                            {draftAgent.rating > 0 ? `${draftAgent.rating.toFixed(1)} / 5.0` : "—"}
                           </p>
-                          <p className="mt-1 text-[11px] text-muted">Baseado em 84 avaliações</p>
+                          <p className="mt-1 text-[11px] text-muted">
+                            {(() => {
+                              const ratedCount = conversations.filter((c) => typeof c.rating === "number").length;
+                              return ratedCount > 0 ? `Baseado em ${ratedCount} avaliações` : "Nenhuma avaliação ainda";
+                            })()}
+                          </p>
                         </div>
                         <span className="grid size-12 place-items-center rounded-2xl bg-warning-soft text-warning-soft-foreground">
                           <Star className="size-6 fill-warning" />
@@ -1788,7 +1794,7 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                           <p className="mt-2 font-display text-3xl font-bold text-foreground" data-numeric>
                             {draftAgent.avgMinutes} min
                           </p>
-                          <p className="mt-1 text-[11px] text-muted">Por sessão de mentoria</p>
+                          <p className="mt-1 text-[11px] text-muted">Estimativa configurada para este agente</p>
                         </div>
                         <span className="grid size-12 place-items-center rounded-2xl bg-success-soft text-success-soft-foreground">
                           <Timer className="size-6" />
@@ -1801,48 +1807,85 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="font-display text-base font-bold text-foreground">Sessões Recentes</h3>
-                      <Chip color="default" variant="soft" size="sm">
-                        {MOCK_HISTORY.length} conversas salvas
-                      </Chip>
+                      {conversations.length > 0 && (
+                        <Chip color="default" variant="soft" size="sm">
+                          {conversations.length} conversas salvas
+                        </Chip>
+                      )}
                     </div>
 
-                    <ul className="space-y-3">
-                      {MOCK_HISTORY.map((conv) => (
-                        <li
-                          key={conv.id}
-                          onClick={() => setSelectedConversation(conv)}
-                          className="group flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4.5 transition-all hover:border-accent hover:shadow-md sm:flex-row sm:items-center sm:justify-between cursor-pointer"
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2.5">
-                              <h4 className="text-sm font-bold text-foreground group-hover:text-accent transition-colors">
-                                {conv.title}
-                              </h4>
-                              <Chip color="success" variant="soft" size="sm" className="text-[10px]">
-                                Concluída
-                              </Chip>
+                    {isNew ? (
+                      <div className="rounded-2xl border border-dashed border-border p-8 text-center bg-background-secondary/20">
+                        <History className="mx-auto size-8 text-muted/50 mb-2" />
+                        <p className="text-sm font-semibold text-foreground">Publique o agente para começar a coletar histórico</p>
+                        <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
+                          As conversas reais dos alunos aparecem aqui assim que o agente estiver salvo e em uso.
+                        </p>
+                      </div>
+                    ) : isLoadingHistory ? (
+                      <div className="rounded-2xl border border-border p-8 text-center text-sm text-muted">
+                        Carregando conversas…
+                      </div>
+                    ) : conversations.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-border p-8 text-center bg-background-secondary/20">
+                        <History className="mx-auto size-8 text-muted/50 mb-2" />
+                        <p className="text-sm font-semibold text-foreground">Nenhuma conversa registrada ainda</p>
+                        <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
+                          Assim que um aluno conversar com este agente, as sessões aparecem aqui.
+                        </p>
+                      </div>
+                    ) : (
+                      <ul className="space-y-3">
+                        {conversations.slice(0, 5).map((conv) => (
+                          <li
+                            key={conv.id}
+                            onClick={() => setSelectedConversation(conv)}
+                            className="group flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4.5 transition-all hover:border-accent hover:shadow-md sm:flex-row sm:items-center sm:justify-between cursor-pointer"
+                          >
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2.5">
+                                <h4 className="text-sm font-bold text-foreground group-hover:text-accent transition-colors">
+                                  {conv.title}
+                                </h4>
+                                {conv.status && (
+                                  <Chip
+                                    color={conv.status === "resolvida" ? "success" : conv.status === "atencao" ? "danger" : "accent"}
+                                    variant="soft"
+                                    size="sm"
+                                    className="text-[10px]"
+                                  >
+                                    {conv.status === "resolvida"
+                                      ? "Resolvida"
+                                      : conv.status === "em_andamento"
+                                        ? "Em andamento"
+                                        : conv.status === "atencao"
+                                          ? "Atenção"
+                                          : "Dúvida de conteúdo"}
+                                  </Chip>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-muted">
+                                <span>
+                                  {new Date(conv.createdAt).toLocaleString("pt-BR", {
+                                    dateStyle: "short",
+                                    timeStyle: "short",
+                                  })}
+                                </span>
+                                <span>•</span>
+                                <span data-numeric>{conv.messageCount ?? conv.messages.length} mensagens trocadas</span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3 text-xs text-muted">
-                              <span>
-                                {new Date(conv.createdAt).toLocaleString("pt-BR", {
-                                  dateStyle: "short",
-                                  timeStyle: "short",
-                                })}
-                              </span>
-                              <span>•</span>
-                              <span data-numeric>{conv.messages.length} mensagens trocadas</span>
-                            </div>
-                          </div>
 
-                          <div className="flex items-center gap-2">
-                            <Button size="sm" variant="secondary" onClick={() => setSelectedConversation(conv)}>
-                              <MessageSquare className="size-3.5 mr-1.5" />
-                              Ler Transcrição
-                            </Button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" variant="secondary" onClick={() => setSelectedConversation(conv)}>
+                                <MessageSquare className="size-3.5 mr-1.5" />
+                                Ler Transcrição
+                              </Button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 </div>
               </Tabs.Panel>

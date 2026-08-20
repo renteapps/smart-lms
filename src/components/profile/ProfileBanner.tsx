@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AlertCircle, ChevronRight, X } from "lucide-react";
 import { Alert, Button, buttonVariants } from "@heroui/react";
-import { defaultProfile, PROFILE_SAVED_EVENT, PROFILE_STORAGE_KEY, type ProfilePreferences } from "@/components/profile/ProfileEditor";
+import { defaultProfile, PROFILE_SAVED_EVENT, PROFILE_STORAGE_KEY, type ProfilePreferences } from "@/lib/profilePreferences";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function ProfileBanner() {

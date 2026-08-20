@@ -3,6 +3,8 @@ import type {
   AgentAvatarKey,
   AgentCategory,
   AgentConversation,
+  AgentConversationPage,
+  AgentConversationSummary,
   AgentFile,
   AgentMessage,
   AgentScriptedReply,
@@ -17,10 +19,17 @@ const AGENT_SELECT = `
   id, slug, name, role, description, category, status, avatar, created_by,
   course_id, course_title, course_ids, plan_ids, skills, rating, avg_minutes, greeting, starters,
   replies, fallbacks, files, unavailable_note, system_prompt, ai_model, context,
-  is_published, order_index, created_at, updated_at
+  is_published, order_index, created_at, updated_at, agent_conversations(count)
 `;
 
-export function mapAgent(row: Row, conversationsCount = 0): Agent {
+const AGENT_CATALOG_SELECT = `
+  id, slug, name, role, description, category, status, avatar, created_by,
+  course_id, course_title, course_ids, plan_ids, skills, rating, avg_minutes,
+  greeting, starters, unavailable_note, is_published, order_index, created_at,
+  agent_conversations(count)
+`;
+
+export function mapAgent(row: Row, conversationsCount?: number): Agent {
   const courseIds: string[] = Array.isArray(row.course_ids)
     ? row.course_ids
     : row.course_id
@@ -45,7 +54,7 @@ export function mapAgent(row: Row, conversationsCount = 0): Agent {
     planIds,
     planNames: Array.isArray(row.plan_names) ? row.plan_names : [],
     skills: row.skills ?? [],
-    conversationsCount,
+    conversationsCount: conversationsCount ?? Number(row.agent_conversations?.[0]?.count ?? 0),
     rating: row.rating != null ? Number(row.rating) : 0,
     avgMinutes: row.avg_minutes ?? 0,
     greeting: row.greeting ?? "",
@@ -97,16 +106,49 @@ export function agentToRow(agent: Partial<Agent> & { courseId?: string | null })
 // Catálogo
 // ---------------------------------------------------------------------------
 
-/** Quantas conversas cada agente já sustentou — o contador da vitrine. */
-async function getConversationCounts(db: DB): Promise<Map<string, number>> {
-  const { data, error } = await db.from("agent_conversations").select("agent_id");
-  logQueryError("getConversationCounts", error);
+/**
+ * Preenche `courseTitles`/`planNames` a partir dos IDs vinculados.
+ *
+ * Essas colunas não existem na tabela `agents` (só `course_ids`/`plan_ids`) —
+ * um agente com vários cursos vinculados perderia os nomes dos demais sem
+ * este join, e a listagem mostraria "+N" sem dizer quais são.
+ */
+async function enrichCourseAndPlanNames(db: DB, agents: Agent[]): Promise<Agent[]> {
+  const courseIds = Array.from(new Set(agents.flatMap((a) => a.courseIds ?? [])));
+  const planIds = Array.from(new Set(agents.flatMap((a) => a.planIds ?? [])));
 
-  const counts = new Map<string, number>();
-  (data ?? []).forEach((row: Row) => {
-    counts.set(row.agent_id, (counts.get(row.agent_id) ?? 0) + 1);
+  if (courseIds.length === 0 && planIds.length === 0) return agents;
+
+  const [coursesResult, plansResult] = await Promise.all([
+    courseIds.length > 0
+      ? db.from("courses").select("id, title").in("id", courseIds)
+      : Promise.resolve({ data: [], error: null }),
+    planIds.length > 0
+      ? db.from("plans").select("id, name").in("id", planIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  logQueryError("enrichCourseAndPlanNames:courses", coursesResult.error);
+  logQueryError("enrichCourseAndPlanNames:plans", plansResult.error);
+
+  const courseTitleById = new Map(
+    (coursesResult.data ?? []).map((c: { id: string; title: string }) => [c.id, c.title]),
+  );
+  const planNameById = new Map((plansResult.data ?? []).map((p: { id: string; name: string }) => [p.id, p.name]));
+
+  return agents.map((agent) => {
+    const resolvedCourseTitles = (agent.courseIds ?? [])
+      .map((cId) => courseTitleById.get(cId))
+      .filter((title): title is string => Boolean(title));
+    const resolvedPlanNames = (agent.planIds ?? [])
+      .map((pId) => planNameById.get(pId))
+      .filter((name): name is string => Boolean(name));
+
+    return {
+      ...agent,
+      courseTitles: resolvedCourseTitles.length > 0 ? resolvedCourseTitles : agent.courseTitles,
+      planNames: resolvedPlanNames.length > 0 ? resolvedPlanNames : agent.planNames,
+    };
   });
-  return counts;
 }
 
 export async function getAgents(db: DB, includeUnpublished = false): Promise<Agent[]> {
@@ -118,10 +160,22 @@ export async function getAgents(db: DB, includeUnpublished = false): Promise<Age
 
   if (!includeUnpublished) query = query.eq("is_published", true);
 
-  const [{ data, error }, counts] = await Promise.all([query, getConversationCounts(db)]);
+  const { data, error } = await query;
   logQueryError("getAgents", error);
 
-  return (data ?? []).map((row: Row) => mapAgent(row, counts.get(row.id) ?? 0));
+  return enrichCourseAndPlanNames(db, (data ?? []).map((row: Row) => mapAgent(row)));
+}
+
+/** Catálogo público sem prompt, contexto, arquivos ou roteiro interno. */
+export async function getAgentCatalog(db: DB): Promise<Agent[]> {
+  const { data, error } = await db
+    .from("agents")
+    .select(AGENT_CATALOG_SELECT)
+    .eq("is_published", true)
+    .order("order_index", { ascending: true })
+    .order("created_at", { ascending: true });
+  logQueryError("getAgentCatalog", error);
+  return enrichCourseAndPlanNames(db, (data ?? []).map((row: Row) => mapAgent(row)));
 }
 
 export async function getAgentBySlug(db: DB, slug: string): Promise<Agent | null> {
@@ -134,9 +188,14 @@ export async function getAgentBySlug(db: DB, slug: string): Promise<Agent | null
     .select("id", { count: "exact", head: true })
     .eq("agent_id", data.id);
 
-  return mapAgent(data, count ?? 0);
+  const [agent] = await enrichCourseAndPlanNames(db, [mapAgent(data, count ?? 0)]);
+  return agent;
 }
 
+/**
+ * Só para o backend de chat (via `agentId`): nunca exibida, então não vale o
+ * join extra de nomes de curso/plano que `getAgentBySlug`/`getAgents` fazem.
+ */
 export async function getAgentById(db: DB, id: string): Promise<Agent | null> {
   const { data, error } = await db.from("agents").select(AGENT_SELECT).eq("id", id).maybeSingle();
   logQueryError("getAgentById", error);
@@ -197,6 +256,27 @@ function mapConversation(row: Row): AgentConversation {
     courseTitle: row.course_title ?? undefined,
     lessonContext: row.lesson_context ?? undefined,
     aiSummary: row.ai_summary ?? undefined,
+    messagesLoaded: true,
+    messageCount: messages.length,
+  };
+}
+
+function mapConversationSummary(row: Row): AgentConversationSummary {
+  const countValue = Array.isArray(row.agent_messages) ? row.agent_messages[0]?.count : 0;
+  return {
+    id: row.id,
+    agentId: row.agent_id,
+    title: row.title,
+    messages: [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    rating: row.rating ?? undefined,
+    status: (row.status ?? undefined) as ConversationStatus | undefined,
+    sentiment: (row.sentiment ?? undefined) as ConversationSentiment | undefined,
+    courseTitle: row.course_title ?? undefined,
+    aiSummary: row.ai_summary ?? undefined,
+    messagesLoaded: false,
+    messageCount: Number(countValue ?? 0),
   };
 }
 
@@ -216,6 +296,72 @@ export async function getMyConversations(db: DB, userId: string): Promise<AgentC
 
   logQueryError("getMyConversations", error);
   return (data ?? []).map(mapConversation);
+}
+
+function encodeConversationCursor(row: Row): string {
+  return Buffer.from(JSON.stringify({ updatedAt: row.updated_at, id: row.id })).toString("base64url");
+}
+
+function decodeConversationCursor(cursor?: string | null): { updatedAt: string; id: string } | null {
+  if (!cursor) return null;
+  try {
+    const value = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
+    return typeof value.updatedAt === "string" && typeof value.id === "string" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Resumos por cursor; mensagens são buscadas somente ao abrir a thread. */
+export async function getMyConversationSummaries(
+  db: DB,
+  userId: string,
+  cursor?: string | null,
+  limit = 30,
+): Promise<AgentConversationPage> {
+  const safeLimit = Math.min(50, Math.max(1, limit));
+  let query = db
+    .from("agent_conversations")
+    .select(`
+      id, agent_id, title, rating, status, sentiment, course_title, ai_summary,
+      created_at, updated_at, agent_messages(count)
+    `)
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(safeLimit + 1);
+
+  const decoded = decodeConversationCursor(cursor);
+  if (decoded) {
+    query = query.or(
+      `updated_at.lt.${decoded.updatedAt},and(updated_at.eq.${decoded.updatedAt},id.lt.${decoded.id})`,
+    );
+  }
+
+  const { data, error } = await query;
+  logQueryError("getMyConversationSummaries", error);
+  const rows = data ?? [];
+  const hasMore = rows.length > safeLimit;
+  const pageRows = rows.slice(0, safeLimit);
+  return {
+    items: pageRows.map(mapConversationSummary),
+    nextCursor: hasMore && pageRows.length ? encodeConversationCursor(pageRows[pageRows.length - 1]) : null,
+  };
+}
+
+export async function getMyConversation(
+  db: DB,
+  userId: string,
+  conversationId: string,
+): Promise<AgentConversation | null> {
+  const { data, error } = await db
+    .from("agent_conversations")
+    .select(CONVERSATION_SELECT)
+    .eq("id", conversationId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  logQueryError("getMyConversation", error);
+  return data ? mapConversation(data) : null;
 }
 
 /** Histórico completo de um agente — tela de admin. */

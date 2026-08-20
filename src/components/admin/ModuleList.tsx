@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { GripVertical, Plus, Edit2, Trash2, ChevronDown, ChevronUp, PlayCircle, FileText, CheckCircle, Brain, SkipForward, RotateCcw, Image as ImageIcon } from "lucide-react";
+import { GripVertical, Plus, Edit2, Trash2, ChevronDown, ChevronUp, PlayCircle, FileText, CheckCircle, Brain, SkipForward, RotateCcw, Image as ImageIcon, HelpCircle } from "lucide-react";
 import { Course, Module, Lesson } from "@/types/course";
 import Link from "next/link";
 import { Button } from "@heroui/react";
@@ -193,6 +193,7 @@ export default function ModuleList({ courseId, initialCourse }: ModuleListProps)
   };
 
   const getLessonIcon = (type: string) => {
+    if (type === 'quiz') return <HelpCircle className="size-4 text-warning" aria-hidden="true" />;
     if (type === 'profile_test') return <Brain className="size-4 text-accent" aria-hidden="true" />;
     if (type === 'video') return <PlayCircle className="size-4 text-accent" aria-hidden="true" />;
     if (type === 'text') return <FileText className="size-4 text-muted" aria-hidden="true" />;
@@ -370,7 +371,7 @@ export default function ModuleList({ courseId, initialCourse }: ModuleListProps)
                               </Button>
                             ) : (
                               <Link
-                                href={`/admin/cursos/${courseId}/aulas/${lesson.id}`}
+                                href={lesson.type === 'quiz' ? `/admin/cursos/${courseId}/aulas/quiz/${lesson.id}` : `/admin/cursos/${courseId}/aulas/${lesson.id}`}
                                 aria-label="Editar aula"
                                 className="grid size-8 place-items-center rounded-md text-muted transition-colors hover:bg-accent-soft hover:text-accent"
                               >
@@ -402,7 +403,14 @@ export default function ModuleList({ courseId, initialCourse }: ModuleListProps)
                     className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-2.5 text-sm font-bold text-muted transition-colors hover:border-accent hover:bg-accent-soft hover:text-accent"
                   >
                     <Plus className="size-4" aria-hidden="true" />
-                    Adicionar Aula
+                    Nova Aula
+                  </Link>
+                  <Link
+                    href={`/admin/cursos/${courseId}/aulas/quiz/nova?module=${module.id}`}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-2.5 text-sm font-bold text-muted transition-colors hover:border-warning hover:bg-warning-soft hover:text-warning"
+                  >
+                    <HelpCircle className="size-4" aria-hidden="true" />
+                    Novo Quiz
                   </Link>
                   <button
                     type="button"
@@ -410,7 +418,7 @@ export default function ModuleList({ courseId, initialCourse }: ModuleListProps)
                     className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-accent/30 p-2.5 text-sm font-bold text-accent transition-colors hover:border-accent hover:bg-accent-soft"
                   >
                     <Brain className="size-4" aria-hidden="true" />
-                    Adicionar Teste de Perfil
+                    Teste de Perfil
                   </button>
                 </div>
               </div>

@@ -5,13 +5,11 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "images.unsplash.com",
+        hostname: "**",
       },
-      // Imagens enviadas pelo componente ImageUpload (buckets públicos do Supabase).
       {
-        protocol: "https",
-        hostname: "**.supabase.co",
-        pathname: "/storage/v1/object/public/**",
+        protocol: "http",
+        hostname: "**",
       },
     ],
   },

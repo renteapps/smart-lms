@@ -13,6 +13,19 @@
 
 @custom-variant dark (&:is(.dark *, [data-theme="dark"] *));
 
+@keyframes route-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.route-fade {
+  animation: route-fade-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-fade { animation: none; }
+}
+
 :root {
   --radius: 0.625rem;
 
@@ -886,4 +899,27 @@
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ---------------------------------------------------------------------------
+ * Editor de conteúdo da aula (BlockNote)
+ *
+ * O BlockNote traz o próprio CSS; aqui só encaixamos a caixa de edição no
+ * formulário do admin — altura mínima para não nascer como uma linha só, e a
+ * tipografia do produto no lugar da fonte padrão do editor.
+ * ------------------------------------------------------------------------- */
+.lesson-editor .bn-editor {
+  min-height: 18rem;
+  padding-inline: 3.5rem;
+}
+
+.lesson-editor,
+.lesson-editor .bn-editor {
+  font-family: var(--font-sans);
+  background: transparent;
+}
+
+/* O placeholder do bloco vazio compete com o texto real se vier em cinza forte. */
+.lesson-editor .bn-inline-content:has(> .bn-block-content)::before {
+  color: var(--muted);
 }

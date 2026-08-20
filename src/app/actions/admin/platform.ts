@@ -482,6 +482,40 @@ export async function saveIntegration(
   }
 }
 
+/**
+ * Estado atual da integração OpenRouter para hidratar a tela de admin.
+ *
+ * Nunca devolve a chave em claro — só se ela existe (`hasApiKey`) — pelo
+ * mesmo motivo de `getResendConfig`: a tela não precisa do segredo, só de
+ * saber se ele está configurado.
+ */
+export async function getOpenRouterAdminConfig(): Promise<
+  Saved<{ enabled: boolean; config: Record<string, unknown>; status: string; hasApiKey: boolean }>
+> {
+  try {
+    const { adminClient } = await requireAdmin();
+    const { data, error } = await adminClient
+      .from("integrations")
+      .select("enabled, config, secrets, status")
+      .eq("slug", "openrouter")
+      .maybeSingle();
+
+    if (error) return { success: false, message: error.message };
+
+    return {
+      success: true,
+      data: {
+        enabled: data?.enabled ?? false,
+        config: (data?.config ?? {}) as Record<string, unknown>,
+        status: data?.status ?? "disconnected",
+        hasApiKey: !!(data?.secrets as { apiKey?: string } | undefined)?.apiKey,
+      },
+    };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
 export async function saveEmailTemplate(
   type: string,
   input: { name: string; description?: string; category?: string; subject: string; previewText: string; html: string },

@@ -1,15 +1,16 @@
 import { createClient } from "@supabase/supabase-js";
-import { getSupabaseUrl, getSupabaseServiceRoleKey } from "./env";
+import { getSupabaseUrl, getSupabaseServiceRoleKey, getSupabaseAnonKey } from "./env";
 
 export function createAdminClient() {
   const supabaseUrl = getSupabaseUrl();
-  const supabaseServiceRoleKey = getSupabaseServiceRoleKey();
+  const serviceRoleKey = getSupabaseServiceRoleKey();
+  const apiKey = serviceRoleKey || getSupabaseAnonKey();
 
-  if (!supabaseServiceRoleKey) {
-    console.warn("SUPABASE_SERVICE_ROLE_KEY is not set. Admin client will fail.");
+  if (!serviceRoleKey) {
+    console.warn("SUPABASE_SERVICE_ROLE_KEY is not set. Admin client falling back to anon key.");
   }
 
-  return createClient(supabaseUrl, supabaseServiceRoleKey, {
+  return createClient(supabaseUrl, apiKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

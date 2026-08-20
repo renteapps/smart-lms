@@ -3,8 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/auth";
 import { getAgentReply } from "@/lib/agentChat";
-import { deriveConversationTitle, getAgentById, getMyConversations } from "@/lib/data/agents";
-import type { AgentConversation } from "@/types/agente";
+import {
+  deriveConversationTitle,
+  getAgentById,
+  getMyConversation,
+  getMyConversationSummaries,
+  getMyConversations,
+} from "@/lib/data/agents";
+import type { AgentConversation, AgentConversationPage } from "@/types/agente";
 import type { ActionResult } from "./progress";
 
 /**
@@ -191,5 +197,25 @@ export async function listMyConversations(): Promise<AgentConversation[]> {
     return await getMyConversations(supabase, user.id);
   } catch {
     return [];
+  }
+}
+
+export async function listMyConversationSummaries(
+  cursor?: string | null,
+): Promise<AgentConversationPage> {
+  try {
+    const { supabase, user } = await requireUser();
+    return await getMyConversationSummaries(supabase, user.id, cursor, 30);
+  } catch {
+    return { items: [], nextCursor: null };
+  }
+}
+
+export async function loadMyConversation(conversationId: string): Promise<AgentConversation | null> {
+  try {
+    const { supabase, user } = await requireUser();
+    return await getMyConversation(supabase, user.id, conversationId);
+  } catch {
+    return null;
   }
 }

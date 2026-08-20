@@ -85,3 +85,73 @@ export async function enrollInCourse(courseId: string): Promise<ActionResult> {
     return { success: false, message: (error as Error).message };
   }
 }
+
+export async function submitQuizResult(
+  quizId: string,
+  lessonId: string,
+  answers: Record<string, unknown>
+): Promise<{ success: boolean; data?: { score: number; passed: boolean }; message?: string }> {
+  try {
+    const { supabase, user } = await requireUser();
+
+    // Fetch quiz to calculate score
+    const { data: quiz } = await supabase
+      .from("quizzes")
+      .select("*")
+      .eq("id", quizId)
+      .single();
+
+    if (!quiz) {
+      return { success: false, message: "Quiz não encontrado." };
+    }
+
+    let correctCount = 0;
+    const totalQuestions = quiz.questions.length;
+
+    quiz.questions.forEach((q: any) => {
+      const studentAnswer = answers[q.id];
+      if (q.type === 'open_ended') {
+        if (studentAnswer && (studentAnswer as string).trim().length > 0) {
+          correctCount++;
+        }
+        return;
+      }
+
+      if (q.type === 'multiple_select') {
+        const correctOptions = q.options.filter((opt: any) => opt.isCorrect).map((opt: any) => opt.id);
+        const studentAnswersArr = Array.isArray(studentAnswer) ? studentAnswer : [];
+        const isExactMatch = 
+          correctOptions.length === studentAnswersArr.length &&
+          correctOptions.every((val: string) => studentAnswersArr.includes(val));
+        
+        if (isExactMatch) correctCount++;
+        return;
+      }
+
+      const correctOption = q.options.find((opt: any) => opt.isCorrect);
+      if (correctOption && studentAnswer === correctOption.id) {
+        correctCount++;
+      }
+    });
+
+    const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 100;
+    const passed = score >= quiz.passing_score;
+
+    const { error } = await supabase.from("quiz_results").insert({
+      quiz_id: quizId,
+      user_id: user.id,
+      lesson_id: lessonId,
+      score,
+      answers,
+      passed
+    });
+
+    if (error) {
+      return { success: false, message: error.message };
+    }
+
+    return { success: true, data: { score, passed } };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}

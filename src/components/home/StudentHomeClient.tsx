@@ -24,7 +24,7 @@ import RecalibrationSlot from "@/components/home/RecalibrationSlot";
 import type { SessionLoadRating } from "@/types/trilha";
 import type { CatalogCourse } from "@/types/course";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
-import { PROFILE_STORAGE_KEY, PROFILE_SAVED_EVENT } from "@/components/profile/ProfileEditor";
+import { PROFILE_STORAGE_KEY, PROFILE_SAVED_EVENT } from "@/lib/profilePreferences";
 import DailyPill from "@/components/DailyPill";
 import DayCompleteHero from "@/components/home/DayCompleteHero";
 import DiscoverySection from "@/components/home/DiscoverySection";
