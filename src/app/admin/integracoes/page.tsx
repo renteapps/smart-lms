@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, Chip } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
 import { createClient } from "@/lib/supabase/server";
+import { IntegrationLogo } from "./IntegrationLogo";
 
 export default async function IntegracoesPage() {
   const supabase = await createClient();
@@ -72,17 +73,11 @@ export default async function IntegracoesPage() {
           const integrationCard = (
             <Card className={`h-full transition-all hover:-translate-y-1 hover:shadow-lg ${isActive ? "border-accent" : ""}`}>
               <CardHeader className="flex flex-row items-center gap-4">
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-background-secondary border border-border">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={integration.logo}
-                    alt={`${integration.name} logo`}
-                    className={`size-6 object-contain ${!isActive && "grayscale opacity-70"}`}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "https://via.placeholder.com/24";
-                    }}
-                  />
-                </div>
+                <IntegrationLogo
+                  name={integration.name}
+                  src={integration.logo}
+                  inactive={!isActive}
+                />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <CardTitle className="text-base">{integration.name}</CardTitle>

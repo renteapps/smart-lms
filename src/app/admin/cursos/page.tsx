@@ -70,9 +70,14 @@ export default async function AdminCursosList({
         title="Cursos"
         description="Crie, organize e acompanhe todo o catálogo de aprendizagem."
         actions={
-          <Link href="/admin/cursos/novo" className={cn(buttonVariants({ variant: "primary" }), "gap-2")}>
-            <Plus className="size-4" aria-hidden="true" /> Novo curso
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/admin/cursos/categorias" className={buttonVariants({ variant: "secondary" })}>
+              Gerenciar Categorias
+            </Link>
+            <Link href="/admin/cursos/novo" className={cn(buttonVariants({ variant: "primary" }), "gap-2")}>
+              <Plus className="size-4" aria-hidden="true" /> Novo curso
+            </Link>
+          </div>
         }
       />
 

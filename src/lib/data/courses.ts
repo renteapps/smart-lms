@@ -224,6 +224,19 @@ export async function getCourse(
   const { data, error } = await db.from("courses").select(COURSE_TREE_SELECT).eq(column, idOrSlug).maybeSingle();
 
   logQueryError("getCourse", error);
+
+  /*
+   * Falha de query não é "curso não existe".
+   *
+   * Enquanto os dois casos voltavam `null`, uma coluna faltando no banco
+   * (migration não aplicada) chegava na tela como 404 — a página dizia que o
+   * curso não existia enquanto ele estava lá, e o log do erro real ficava só
+   * no servidor. Erro sobe e vira tela de erro; ausência de linha (inclusive
+   * bloqueio por RLS, que devolve `data` vazio sem `error`) continua `null`.
+   */
+  if (error) {
+    throw new Error(`Não foi possível carregar o curso ${idOrSlug}: ${error.message}`);
+  }
   if (!data) return null;
 
   const progressByLesson = userId ? await getLessonProgressMap(db, userId) : new Map<string, Row>();

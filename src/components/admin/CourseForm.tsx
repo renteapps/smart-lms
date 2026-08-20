@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, FileText, Image as ImageIcon, Save, Tag, Type } from "lucide-react";
+import { ArrowLeft, FileText, Image as ImageIcon, Save, Tag as TagIcon, Type } from "lucide-react";
 import {
   Button,
   Card,
@@ -16,17 +16,13 @@ import {
   TextArea,
   TextField,
   toast,
+  CheckboxGroup,
+  Checkbox,
 } from "@heroui/react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { saveCourse } from "@/app/actions/admin/catalog";
 import type { Course } from "@/types/course";
-
-const categorias = [
-  { id: "Comportamental", label: "Comportamental" },
-  { id: "Liderança", label: "Liderança" },
-  { id: "Produtividade", label: "Produtividade" },
-  { id: "Técnico", label: "Técnico" },
-];
+import type { CategoryRow, TagRow } from "@/app/actions/admin/categories";
 
 const statusOptions = [
   { id: "Rascunho", label: "Rascunho" },
@@ -40,14 +36,22 @@ const acessoOptions = [
   { id: "Assinantes", label: "Somente assinantes" },
 ];
 
-
-export function CourseForm({ course }: { course?: Course }) {
+export function CourseForm({ 
+  course, 
+  categories = [], 
+  tagsOptions = [] 
+}: { 
+  course?: Course;
+  categories?: CategoryRow[];
+  tagsOptions?: TagRow[];
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [coverUrl, setCoverUrl] = useState(course?.coverUrl || "");
   const [status, setStatus] = useState(course?.isPublished ? "Publicado" : "Rascunho");
   const [access, setAccess] = useState("Pago");
   const [category, setCategory] = useState(course?.category || "");
+  const [selectedTags, setSelectedTags] = useState<string[]>(course?.tags || []);
 
   const isEditing = Boolean(course);
   const backHref = isEditing ? `/admin/cursos/${course!.id}` : "/admin/cursos";
@@ -66,15 +70,16 @@ export function CourseForm({ course }: { course?: Course }) {
         coverUrl: coverUrl || undefined,
         category: category || "Geral",
         isPublished: status === "Publicado",
-        tags: (formData.get("tags") as string)
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean),
+        tags: selectedTags,
       });
 
       if (res.success) {
         toast.success(isEditing ? "Curso atualizado" : "Curso criado");
-        router.push(`/admin/cursos/${isEditing ? course!.id : res.data?.id}`);
+        // Sem id não dá para abrir o painel do curso: navegar assim montaria
+        // `/admin/cursos/undefined`, que a rota resolve como 404 e faz parecer
+        // que o curso não foi criado — quando ele foi. Volta para a lista.
+        const targetId = isEditing ? course!.id : res.data?.id;
+        router.push(targetId ? `/admin/cursos/${targetId}` : "/admin/cursos");
         router.refresh();
       } else {
         toast.danger("Não foi possível salvar o curso", { description: res.message });
@@ -216,7 +221,7 @@ export function CourseForm({ course }: { course?: Course }) {
           <Card>
             <Card.Header>
               <Card.Title className="flex items-center gap-2">
-                <Tag className="size-5 text-accent" aria-hidden="true" />
+                <TagIcon className="size-5 text-accent" aria-hidden="true" />
                 Categorização
               </Card.Title>
             </Card.Header>
@@ -234,19 +239,34 @@ export function CourseForm({ course }: { course?: Course }) {
                 </Select.Trigger>
                 <Select.Popover>
                   <ListBox>
-                    {categorias.map((opt) => (
-                      <ListBoxItem key={opt.id} id={opt.id}>
-                        {opt.label}
+                    {categories.map((opt) => (
+                      <ListBoxItem key={opt.name} id={opt.name}>
+                        {opt.name}
                       </ListBoxItem>
                     ))}
                   </ListBox>
                 </Select.Popover>
               </Select>
 
-              <TextField name="tags" defaultValue={(course?.tags || []).join(", ")}>
-                <Label>Tags (separadas por vírgula)</Label>
-                <Input placeholder="Ex.: react, frontend, web" />
-              </TextField>
+              <div>
+                <Label className="mb-2 block">Tags</Label>
+                {tagsOptions.length > 0 ? (
+                  <div className="flex flex-col gap-2 max-h-48 overflow-y-auto rounded-lg border border-border bg-surface p-3">
+                    <CheckboxGroup 
+                      value={selectedTags} 
+                      onChange={(values) => setSelectedTags(values as string[])}
+                    >
+                      {tagsOptions.map(tag => (
+                        <Checkbox key={tag.name} value={tag.name}>
+                          {tag.name}
+                        </Checkbox>
+                      ))}
+                    </CheckboxGroup>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted italic">Nenhuma tag cadastrada.</p>
+                )}
+              </div>
             </Card.Content>
           </Card>
         </div>
