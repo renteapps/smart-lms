@@ -9,7 +9,12 @@ values
   ('30000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'chat-other@test.local', '', now(), now(), now())
 on conflict (id) do nothing;
 
-update public.profiles set ai_credits = 2 where id = '30000000-0000-0000-0000-000000000001';
+update public.profiles
+set
+  ai_credits = 2,
+  ai_weekly_credits_used = ai_weekly_credit_limit,
+  ai_monthly_credits_used = ai_monthly_credit_limit
+where id = '30000000-0000-0000-0000-000000000001';
 
 insert into public.agents (id, slug, name, role, description, category, status, avatar)
 values ('31000000-0000-0000-0000-000000000001', 'agente-teste-perf', 'Agente Teste', 'Tutor', '', 'Estudo', 'Disponível', 'tutor')
