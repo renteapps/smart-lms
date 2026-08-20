@@ -422,8 +422,9 @@ export function CreateEnrollmentModal({
                   Cancelar
                 </Button>
                 <Button
-                  type="submit"
+                  type="button"
                   variant="primary"
+                  onPress={() => void handleSubmit()}
                   isDisabled={!selectedCourseId || isSubmitting}
                   className="gap-2"
                 >
