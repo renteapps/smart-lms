@@ -13,6 +13,7 @@ import PandaVideoPlayer from "@/components/classroom/PandaVideoPlayer";
 import TagInputField from "@/components/admin/TagInputField";
 import LessonPrerequisitePicker from "@/components/admin/LessonPrerequisitePicker";
 import { extractYouTubeId, youtubeEmbedUrl } from "@/lib/editor/youtube";
+import { secondsToLessonMinutes } from "@/lib/pandavideo";
 import { cn } from "@/lib/utils";
 
 const LessonBlockEditor = dynamic(() => import("@/components/admin/editor/LessonBlockEditor"), {
@@ -255,7 +256,16 @@ export default function AulaAdminForm({
                 <div className="space-y-3">
                   <PandaVideoSelector
                     value={formData.pandavideoId}
-                    onChange={(id, url) => setFormData((prev) => ({ ...prev, pandavideoId: id, videoUrl: url }))}
+                    currentVideoUrl={formData.videoUrl}
+                    onChange={(video) => setFormData((prev) => video
+                      ? {
+                          ...prev,
+                          pandavideoId: video.id,
+                          videoUrl: video.videoPlayer,
+                          durationInMinutes: secondsToLessonMinutes(video.length),
+                        }
+                      : { ...prev, pandavideoId: undefined, videoUrl: "" }
+                    )}
                   />
                   {formData.videoUrl && (
                     <PandaVideoPlayer

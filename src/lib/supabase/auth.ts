@@ -24,7 +24,8 @@ export async function requireAdmin() {
   const { supabase, user } = await requireUser();
 
   const { data } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
-  if (data?.role !== "admin" && user.user_metadata?.role !== "admin") {
+  // user_metadata e editável pelo próprio usuário e nunca pode conceder privilégios.
+  if (data?.role !== "admin") {
     throw new Error("Acesso restrito a administradores.");
   }
 

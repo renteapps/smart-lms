@@ -74,7 +74,11 @@ export const LessonVideoBlock = createReactBlockSpec(lessonVideoBlockConfig, {
             )}
 
             {provider === "panda" && (
-              <PandaVideoSelector value={videoId} onChange={(id, resolvedUrl) => update({ videoId: id, url: resolvedUrl })} />
+              <PandaVideoSelector
+                value={videoId}
+                currentVideoUrl={url}
+                onChange={(video) => update({ videoId: video?.id ?? "", url: video?.videoPlayer ?? "" })}
+              />
             )}
 
             {provider === "url" && (
