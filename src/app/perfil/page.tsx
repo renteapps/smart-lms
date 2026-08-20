@@ -9,6 +9,9 @@ import { ProgressBar } from "@heroui/react/progress-bar";
 import { Rise } from "@/components/ui/Rise";
 import { ProfileEditor } from "@/components/profile/ProfileEditor";
 import { ProfileSummary } from "@/components/profile/ProfileSummary";
+import { AiCreditsCard } from "@/components/profile/AiCreditsCard";
+import { getAiCreditBalance } from "@/lib/aiCredits";
+import { createClient } from "@/lib/supabase/server";
 import { LearningStats } from "./LearningStats";
 
 export const metadata: Metadata = {
@@ -18,7 +21,10 @@ export const metadata: Metadata = {
 
 const CURRENT_STAGE_PROGRESS = 68;
 
-export default function PerfilPage() {
+export default async function PerfilPage() {
+  const supabase = await createClient();
+  const aiCreditBalance = await getAiCreditBalance(supabase);
+
   return (
     <div className="pt-[76px]">
       <section className="border-b border-hairline">
@@ -60,6 +66,8 @@ export default function PerfilPage() {
         <div className="mt-12 grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
           <aside className="space-y-5 lg:sticky lg:top-[100px]" aria-label="Resumo do perfil">
             <ProfileSummary />
+
+            <AiCreditsCard balance={aiCreditBalance} />
 
             <Card className="border-hairline">
               <Card.Content className="gap-4">

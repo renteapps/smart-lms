@@ -55,8 +55,9 @@ interface PlanFormState {
   customFeatures: string[];
   courseAccessType: "all" | "specific";
   specificCourses: string[];
-  aiTokensUnlimited: boolean;
-  aiTokensWeekly?: string | number;
+  aiDailyCredits: string | number;
+  aiWeeklyCredits: string | number;
+  aiMonthlyCredits: string | number;
   gateway?: "Eduzz" | "Hotmart" | "Kiwify" | "Stripe" | "Manual" | "";
   producerId?: string;
   productId?: string;
@@ -135,8 +136,9 @@ export default function EditPlanPage() {
     customFeatures: [],
     courseAccessType: "all",
     specificCourses: [],
-    aiTokensUnlimited: true,
-    aiTokensWeekly: 50000,
+    aiDailyCredits: 25,
+    aiWeeklyCredits: 100,
+    aiMonthlyCredits: 400,
     gateway: "Eduzz",
     producerId: "",
     productId: "",
@@ -195,8 +197,9 @@ export default function EditPlanPage() {
               customFeatures: customFeats,
               courseAccessType: plan.courseAccessType || (plan.specificCourses?.length ? "specific" : "all"),
               specificCourses: plan.specificCourses || [],
-              aiTokensUnlimited: plan.aiTokensUnlimited ?? true,
-              aiTokensWeekly: plan.aiTokensWeekly || 50000,
+              aiDailyCredits: plan.aiDailyCredits ?? 25,
+              aiWeeklyCredits: plan.aiWeeklyCredits ?? 100,
+              aiMonthlyCredits: plan.aiMonthlyCredits ?? 400,
               gateway: (plan.gateway as PlanFormState["gateway"]) || (plan.gatewayProductId ? "Eduzz" : ""),
               producerId: plan.producerId || "",
               productId: plan.gatewayProductId || "",
@@ -338,8 +341,9 @@ export default function EditPlanPage() {
         features: allFeatures,
         courseAccessType: formData.courseAccessType,
         specificCourses: formData.courseAccessType === "specific" ? formData.specificCourses : [],
-        aiTokensUnlimited: formData.aiTokensUnlimited,
-        aiTokensWeekly: !formData.aiTokensUnlimited && formData.aiTokensWeekly ? Number(formData.aiTokensWeekly) : undefined,
+        aiDailyCredits: Number(formData.aiDailyCredits),
+        aiWeeklyCredits: Number(formData.aiWeeklyCredits),
+        aiMonthlyCredits: Number(formData.aiMonthlyCredits),
         gateway: formData.gateway || undefined,
         productId: formData.productId?.trim() || undefined,
         gatewayProductId: formData.productId?.trim() || undefined,
@@ -718,27 +722,22 @@ export default function EditPlanPage() {
                     {/* Configurações específicas para Agentes de IA */}
                     {feature.id === "agentes" && isSelected && (
                       <div className="mt-4 rounded-xl border border-border/80 bg-background-secondary p-4 space-y-4">
-                        <ToggleSwitch
-                          isSelected={formData.aiTokensUnlimited}
-                          onChange={(val) => setFormData((prev) => ({ ...prev, aiTokensUnlimited: val }))}
-                          label="Tokens de IA Ilimitados"
-                          description="Permite uso livre dos tutores de IA sem restrição semanal de cota."
-                        />
-
-                        {!formData.aiTokensUnlimited && (
-                          <div className="pt-2 border-t border-border">
-                            <TextField
-                              value={formData.aiTokensWeekly?.toString() || ""}
-                              onChange={(val) => setFormData((prev) => ({ ...prev, aiTokensWeekly: val }))}
-                            >
-                              <Label className="text-xs font-semibold">Limite de Tokens de IA (Por Semana)</Label>
-                              <Input type="number" min="1000" step="1000" placeholder="Ex: 50000" />
-                              <p className="text-xs text-muted mt-1">
-                                Cota de tokens renovada automaticamente a cada 7 dias para os alunos deste plano.
-                              </p>
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">Franquia de créditos de IA</p>
+                          <p className="mt-1 text-xs text-muted">Limites de segurança renovados automaticamente. Uso ilimitado não é permitido.</p>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          {([
+                            ["aiDailyCredits", "Por dia"],
+                            ["aiWeeklyCredits", "Por semana"],
+                            ["aiMonthlyCredits", "Por mês"],
+                          ] as const).map(([field, label]) => (
+                            <TextField key={field} value={formData[field].toString()} onChange={(value) => setFormData((prev) => ({ ...prev, [field]: value }))}>
+                              <Label className="text-xs font-semibold">{label}</Label>
+                              <Input type="number" min="1" step="1" />
                             </TextField>
-                          </div>
-                        )}
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>

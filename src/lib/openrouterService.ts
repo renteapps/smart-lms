@@ -552,6 +552,12 @@ export async function sendOpenRouterChatCompletion(
       promptTokens: data.usage?.prompt_tokens || 0,
       completionTokens: data.usage?.completion_tokens || 0,
       totalTokens: data.usage?.total_tokens || 0,
+      costUsd: typeof data.usage?.cost === "number" ? data.usage.cost : undefined,
+      upstreamCostUsd: typeof data.usage?.cost_details?.upstream_inference_cost === "number"
+        ? data.usage.cost_details.upstream_inference_cost
+        : undefined,
+      reasoningTokens: data.usage?.completion_tokens_details?.reasoning_tokens || 0,
+      cachedTokens: data.usage?.prompt_tokens_details?.cached_tokens || 0,
     };
 
     addOpenRouterLog({
@@ -572,6 +578,7 @@ export async function sendOpenRouterChatCompletion(
       success: true,
       text: messageContent,
       model: data.model || model,
+      generationId: typeof data.id === "string" ? data.id : undefined,
       usage,
       latencyMs,
     };

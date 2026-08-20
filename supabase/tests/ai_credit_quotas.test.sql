@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(8);
+select plan(9);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
 values
@@ -19,23 +19,30 @@ select set_config('request.jwt.claim.sub', '33000000-0000-0000-0000-000000000001
 
 select extensions.is(
   (public.get_ai_credit_balance()->>'weekly_remaining')::integer,
-  10,
+  100,
   'saldo semanal começa completo'
 );
 select extensions.is(
   (public.get_ai_credit_balance()->>'monthly_remaining')::integer,
-  40,
+  400,
   'saldo mensal começa completo'
 );
-select extensions.is(public.consume_ai_credit(), 9, 'débito reduz o saldo disponível');
 select extensions.is(
-  (public.get_ai_credit_balance()->>'monthly_remaining')::integer,
-  39,
-  'débito também reduz a franquia mensal'
+  (public.get_ai_credit_balance()->>'daily_remaining')::integer,
+  25,
+  'saldo diário começa completo'
+);
+select extensions.throws_ok(
+  $$select public.consume_ai_credit()$$,
+  '42501', null, 'RPC legado de débito por mensagem não é mais acessível'
 );
 select extensions.throws_ok(
   $$update public.profiles set ai_credits = 999 where id = '33000000-0000-0000-0000-000000000001'$$,
   '42501', null, 'aluno não adultera o próprio saldo'
+);
+select extensions.throws_ok(
+  $$update public.profiles set role = 'admin' where id = '33000000-0000-0000-0000-000000000001'$$,
+  '42501', null, 'aluno não eleva o próprio papel para administrador'
 );
 select extensions.throws_ok(
   $$select public.get_ai_credit_balance('33000000-0000-0000-0000-000000000002')$$,
@@ -50,8 +57,8 @@ select extensions.is(
 );
 select extensions.is(
   (public.get_ai_credit_balance('33000000-0000-0000-0000-000000000002')->>'available_credits')::integer,
-  35,
-  'créditos extras somam ao saldo recorrente disponível'
+  25,
+  'créditos extras não burlam o limite diário'
 );
 
 select * from extensions.finish();

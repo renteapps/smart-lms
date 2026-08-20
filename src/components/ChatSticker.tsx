@@ -66,6 +66,7 @@ export default function ChatSticker() {
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [failedMessage, setFailedMessage] = useState<string | null>(null);
+  const [lastCharge, setLastCharge] = useState<{ charged: number; remaining: number } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentContextRef = useRef(contextKey);
 
@@ -170,6 +171,7 @@ export default function ChatSticker() {
         body.userMessage,
         body.assistantMessage,
       ]);
+      setLastCharge({ charged: body.creditsCharged, remaining: body.creditsRemaining });
     } catch (sendError) {
       setError(sendError instanceof Error ? sendError.message : "O assistente está indisponível.");
       setFailedMessage(message);
@@ -346,9 +348,14 @@ export default function ChatSticker() {
                   <Send className="size-4" aria-hidden="true" />
                 </Button>
               </div>
-              <p className="mt-3 text-center text-[11px] leading-4 text-muted">
-                A IA pode cometer erros. As conversas ficam armazenadas e podem ser revisadas pelo administrador.
-              </p>
+              <div className="mt-3 text-center text-[11px] leading-4 text-muted">
+                {lastCharge && (
+                  <p className="mb-1 font-semibold text-foreground">
+                    Última resposta: {lastCharge.charged} créditos · saldo {lastCharge.remaining}
+                  </p>
+                )}
+                <p>A IA pode cometer erros. As conversas ficam armazenadas e podem ser revisadas pelo administrador.</p>
+              </div>
             </footer>
           </Popover.Dialog>
         </Popover.Content>

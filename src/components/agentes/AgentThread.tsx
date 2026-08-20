@@ -17,9 +17,10 @@ type AgentThreadProps = {
   isTyping: boolean;
   onSend: (text: string) => void;
   credits: number | null;
+  lastCreditsCharged: number | null;
 };
 
-export function AgentThread({ agent, conversation, isTyping, onSend, credits }: AgentThreadProps) {
+export function AgentThread({ agent, conversation, isTyping, onSend, credits, lastCreditsCharged }: AgentThreadProps) {
   const [draft, setDraft] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
@@ -185,6 +186,9 @@ export function AgentThread({ agent, conversation, isTyping, onSend, credits }: 
                 <span className={cn("font-semibold", credits > 0 ? "text-accent" : "text-danger")}>
                   {credits} {credits === 1 ? "crédito" : "créditos"} de IA
                 </span>
+              )}
+              {lastCreditsCharged !== null && (
+                <span>Última resposta: {lastCreditsCharged} {lastCreditsCharged === 1 ? "crédito" : "créditos"}</span>
               )}
               <span>Respostas seguem o roteiro do curso.</span>
             </div>

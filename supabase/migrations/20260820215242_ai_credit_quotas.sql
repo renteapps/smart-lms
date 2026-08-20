@@ -27,9 +27,9 @@ alter table public.profiles
   add constraint profiles_ai_weekly_credits_used_nonnegative check (ai_weekly_credits_used >= 0),
   add constraint profiles_ai_monthly_credits_used_nonnegative check (ai_monthly_credits_used >= 0);
 
--- Bloqueia adulteração direta do saldo pelo próprio aluno. As funções abaixo
--- rodam como o proprietário da função e os administradores continuam podendo
--- gerenciar os campos de crédito.
+-- Bloqueia adulteração direta de permissões e saldo pelo próprio aluno. As
+-- funções abaixo rodam como o proprietário da função e os administradores
+-- continuam podendo gerenciar os campos protegidos.
 create or replace function public.protect_ai_credit_columns()
 returns trigger
 language plpgsql
@@ -38,7 +38,9 @@ set search_path = ''
 as $$
 begin
   if (
-    old.ai_credits is distinct from new.ai_credits
+    old.role is distinct from new.role
+    or old.status is distinct from new.status
+    or old.ai_credits is distinct from new.ai_credits
     or old.ai_weekly_credit_limit is distinct from new.ai_weekly_credit_limit
     or old.ai_monthly_credit_limit is distinct from new.ai_monthly_credit_limit
     or old.ai_weekly_credits_used is distinct from new.ai_weekly_credits_used
@@ -48,7 +50,7 @@ begin
   )
   and current_user not in ('postgres', 'supabase_admin', 'service_role')
   and not (select public.is_admin()) then
-    raise insufficient_privilege using message = 'Somente administradores podem alterar créditos de IA.';
+    raise insufficient_privilege using message = 'Somente administradores podem alterar permissões ou créditos de IA.';
   end if;
 
   return new;
@@ -101,7 +103,12 @@ begin
     end,
     ai_monthly_period_started_at = greatest(ai_monthly_period_started_at, current_month_start)
   where id = target_id
-  returning
+    and (
+      ai_weekly_period_started_at < current_week_start
+      or ai_monthly_period_started_at < current_month_start
+    );
+
+  select
     ai_credits,
     ai_weekly_credit_limit,
     ai_monthly_credit_limit,
@@ -109,7 +116,9 @@ begin
     ai_monthly_credits_used,
     ai_weekly_period_started_at,
     ai_monthly_period_started_at
-  into balance;
+  into balance
+  from public.profiles
+  where id = target_id;
 
   if not found then
     raise no_data_found using message = 'Perfil não encontrado.';
@@ -168,22 +177,14 @@ begin
       when ai_monthly_period_started_at < current_month_start then 0
       else ai_monthly_credits_used
     end as monthly_used
+  into balance
   from public.profiles
   where id = caller_id
-  for update
-  into balance;
+  for update;
 
   if not found then
     return -1;
   end if;
-
-  update public.profiles
-  set
-    ai_weekly_credits_used = balance.weekly_used,
-    ai_weekly_period_started_at = greatest(ai_weekly_period_started_at, current_week_start),
-    ai_monthly_credits_used = balance.monthly_used,
-    ai_monthly_period_started_at = greatest(ai_monthly_period_started_at, current_month_start)
-  where id = caller_id;
 
   if balance.weekly_used < balance.ai_weekly_credit_limit
     and balance.monthly_used < balance.ai_monthly_credit_limit then
@@ -193,13 +194,20 @@ begin
     update public.profiles
     set
       ai_weekly_credits_used = balance.weekly_used,
-      ai_monthly_credits_used = balance.monthly_used
+      ai_weekly_period_started_at = greatest(ai_weekly_period_started_at, current_week_start),
+      ai_monthly_credits_used = balance.monthly_used,
+      ai_monthly_period_started_at = greatest(ai_monthly_period_started_at, current_month_start)
     where id = caller_id;
   elsif balance.ai_credits > 0 then
     balance.ai_credits := balance.ai_credits - 1;
 
     update public.profiles
-    set ai_credits = balance.ai_credits
+    set
+      ai_credits = balance.ai_credits,
+      ai_weekly_credits_used = balance.weekly_used,
+      ai_weekly_period_started_at = greatest(ai_weekly_period_started_at, current_week_start),
+      ai_monthly_credits_used = balance.monthly_used,
+      ai_monthly_period_started_at = greatest(ai_monthly_period_started_at, current_month_start)
     where id = caller_id;
   else
     return -1;

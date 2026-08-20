@@ -441,8 +441,6 @@ export async function savePlan(input: Partial<Plan> & { id?: string; productId?:
       items: Array.isArray(input.features) ? input.features : [],
       courseAccessType: input.courseAccessType || "all",
       specificCourses: Array.isArray(input.specificCourses) ? input.specificCourses : [],
-      aiTokensUnlimited: input.aiTokensUnlimited !== undefined ? Boolean(input.aiTokensUnlimited) : true,
-      aiTokensWeekly: input.aiTokensWeekly != null ? Number(input.aiTokensWeekly) : undefined,
       accessTimeDays: input.accessTimeDays != null ? Number(input.accessTimeDays) : undefined,
       gateway: input.gateway?.trim() || undefined,
       producerId: input.producerId?.trim() || undefined,
@@ -465,6 +463,9 @@ export async function savePlan(input: Partial<Plan> & { id?: string; productId?:
       gateway_product_id: gatewayProductId,
       order_index: input.orderIndex != null ? Number(input.orderIndex) : 0,
       updated_at: new Date().toISOString(),
+      ai_daily_credits: Math.max(1, Number(input.aiDailyCredits) || 25),
+      ai_weekly_credits: Math.max(1, Number(input.aiWeeklyCredits) || 100),
+      ai_monthly_credits: Math.max(1, Number(input.aiMonthlyCredits) || 400),
     };
 
     // Remove undefined values

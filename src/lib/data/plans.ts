@@ -27,6 +27,9 @@ export type Plan = {
   specificCourses?: string[];
   aiTokensUnlimited?: boolean;
   aiTokensWeekly?: number;
+  aiDailyCredits: number;
+  aiWeeklyCredits: number;
+  aiMonthlyCredits: number;
 };
 
 export type Subscription = {
@@ -50,7 +53,8 @@ export type Subscription = {
 
 const PLAN_SELECT = `
   id, slug, name, description, price, frequency, seats, features, is_b2b,
-  is_active, is_highlighted, gateway_product_id, order_index, created_at, updated_at
+  is_active, is_highlighted, gateway_product_id, order_index, created_at, updated_at,
+  ai_daily_credits, ai_weekly_credits, ai_monthly_credits
 `;
 
 export function mapPlan(row: Row): Plan {
@@ -89,6 +93,11 @@ export function mapPlan(row: Row): Plan {
     specificCourses: Array.isArray(extra.specificCourses) ? (extra.specificCourses as string[]) : [],
     aiTokensUnlimited: extra.aiTokensUnlimited !== undefined ? Boolean(extra.aiTokensUnlimited) : true,
     aiTokensWeekly: extra.aiTokensWeekly != null ? Number(extra.aiTokensWeekly) : undefined,
+    aiDailyCredits: row.ai_daily_credits != null ? Number(row.ai_daily_credits) : 25,
+    aiWeeklyCredits: row.ai_weekly_credits != null
+      ? Number(row.ai_weekly_credits)
+      : (extra.aiTokensWeekly != null ? Number(extra.aiTokensWeekly) : 100),
+    aiMonthlyCredits: row.ai_monthly_credits != null ? Number(row.ai_monthly_credits) : 400,
   };
 }
 

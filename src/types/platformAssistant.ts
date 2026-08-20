@@ -79,4 +79,6 @@ export type PlatformAssistantPostResponse = {
   conversationId: string;
   userMessage: AssistantMessage;
   assistantMessage: AssistantMessage;
+  creditsCharged: number;
+  creditsRemaining: number;
 };

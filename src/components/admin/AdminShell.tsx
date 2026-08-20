@@ -104,6 +104,7 @@ const segmentLabels: Record<string, string> = {
   "testes-perfil": "Testes de Perfil",
   ajustes: "Ajustes",
   chat: "Assistente IA",
+  credits: "Créditos de IA",
   menu: "Menu",
   editar: "Editar",
   modulos: "Módulos",

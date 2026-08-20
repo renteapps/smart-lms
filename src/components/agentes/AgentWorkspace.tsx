@@ -25,6 +25,7 @@ export function AgentWorkspace({ agent }: { agent: Agent }) {
     deleteConversation,
     typingConversationId,
     credits,
+    lastCreditsCharged,
     loadConversation,
     nextCursor,
     loadMoreConversations,
@@ -156,6 +157,7 @@ export function AgentWorkspace({ agent }: { agent: Agent }) {
           isTyping={activeConversation ? typingConversationId === activeConversation.id : false}
           onSend={handleSend}
           credits={credits}
+          lastCreditsCharged={lastCreditsCharged}
         />
       </div>
     </div>

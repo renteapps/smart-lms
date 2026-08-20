@@ -8,12 +8,21 @@ import {
   sendOpenRouterChatCompletion,
 } from "@/lib/openrouterService";
 import { requireUser } from "@/lib/supabase/auth";
-import type { OpenRouterChatMessage } from "@/types/openrouter";
+import type { OpenRouterChatMessage, OpenRouterChatResponse } from "@/types/openrouter";
+import {
+  AiBillingError,
+  cancelAiUsage,
+  reserveAiUsage,
+  settleAiUsage,
+  type AiUsageReservation,
+} from "@/lib/aiBilling";
 
 const AI_UNAVAILABLE_MESSAGE =
   "A IA deste agente está temporariamente indisponível. Avise um administrador para revisar a integração com o OpenRouter.";
 
 export async function POST(req: NextRequest) {
+  let reservation: AiUsageReservation | null = null;
+  let providerResponse: OpenRouterChatResponse | null = null;
   try {
     const body = parseAgentChatRequest(await req.json());
     const { agentId, message } = body;
@@ -48,17 +57,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // A função SQL faz UPDATE condicional e devolve o saldo em uma operação.
-    const { data: creditsData, error: creditsError } = await supabase.rpc("consume_ai_credit");
-    if (creditsError) {
-      console.error("[agent-chat:credits]", creditsError.message);
-      return NextResponse.json({ success: false, error: "Não foi possível debitar o crédito de IA." }, { status: 503 });
-    }
-    const creditsRemaining = typeof creditsData === "number" ? creditsData : Number(creditsData);
-    if (!Number.isFinite(creditsRemaining) || creditsRemaining < 0) {
-      return NextResponse.json({ success: false, error: "Créditos de IA insuficientes.", creditsRemaining: 0 }, { status: 402 });
-    }
-
     if (!conversationId) {
       const { data: created, error } = await supabase
         .from("agent_conversations")
@@ -74,13 +72,6 @@ export async function POST(req: NextRequest) {
       if (error || !created) throw new Error(error?.message || "Falha ao abrir a conversa.");
       conversationId = created.id;
     }
-
-    const { data: userMessage, error: userMessageError } = await supabase
-      .from("agent_messages")
-      .insert({ conversation_id: conversationId, author: "student", text: message })
-      .select("id, author, text")
-      .single();
-    if (userMessageError || !userMessage) throw new Error(userMessageError?.message || "Falha ao salvar a mensagem.");
 
     const { data: history, error: historyError } = await supabase
       .from("agent_messages")
@@ -105,18 +96,36 @@ export async function POST(req: NextRequest) {
       role: item.author === "agent" ? "assistant" as const : "user" as const,
       content: item.text,
     })));
+    formattedMessages.push({ role: "user", content: message });
+
+    const selectedModel = agent.aiModel || config.defaultModel || "google/gemini-2.0-flash-001";
+    reservation = await reserveAiUsage({
+      userId: user.id,
+      feature: "agent_chat",
+      model: selectedModel,
+      messages: formattedMessages,
+      maxOutputTokens: config.maxTokens ?? 1500,
+    });
+
+    const { data: userMessage, error: userMessageError } = await supabase
+      .from("agent_messages")
+      .insert({ conversation_id: conversationId, author: "student", text: message })
+      .select("id, author, text")
+      .single();
+    if (userMessageError || !userMessage) throw new Error(userMessageError?.message || "Falha ao salvar a mensagem.");
 
     const aiResult = await sendOpenRouterChatCompletion(
       {
-        model: agent.aiModel || config.defaultModel || "google/gemini-2.0-flash-001",
+        model: selectedModel,
         messages: formattedMessages,
         temperature: config.temperature ?? 0.7,
-        maxTokens: config.maxTokens ?? 1500,
+        maxTokens: reservation.maxOutputTokens,
         agentId: agent.id,
         agentName: agent.name,
       },
       config,
     );
+    providerResponse = aiResult;
 
     const reply = getOpenRouterResponseText(aiResult);
     if (!reply) {
@@ -129,12 +138,13 @@ export async function POST(req: NextRequest) {
         .from("agent_conversations")
         .update({ updated_at: new Date().toISOString() })
         .eq("id", conversationId);
+      await cancelAiUsage(reservation, aiResult.error ? "provider_error" : "empty_response", aiResult);
+      reservation = null;
       return NextResponse.json({
         success: false,
         error: "O agente não conseguiu gerar uma resposta agora. Tente novamente em instantes.",
         conversationId,
         userMessage,
-        creditsRemaining,
       }, { status: 502 });
     }
 
@@ -151,6 +161,13 @@ export async function POST(req: NextRequest) {
     ]);
     if (assistantError || !assistantMessage) throw new Error(assistantError?.message || "Falha ao salvar a resposta.");
 
+    const settlement = await settleAiUsage(reservation, aiResult, {
+      conversationId,
+      agentId: agent.id,
+      assistantMessageId: assistantMessage.id,
+    });
+    reservation = null;
+
     return NextResponse.json({
       success: true,
       conversationId,
@@ -158,12 +175,17 @@ export async function POST(req: NextRequest) {
       assistantMessage,
       text: reply,
       source: "ai",
-      creditsRemaining,
+      creditsRemaining: settlement.creditsRemaining,
+      creditsCharged: settlement.creditsCharged,
       model: aiResult.model,
       usage: aiResult.usage,
       latencyMs: aiResult.latencyMs,
     });
   } catch (error: unknown) {
+    await cancelAiUsage(reservation, error instanceof AiBillingError ? error.code : "application_error", providerResponse);
+    if (error instanceof AiBillingError) {
+      return NextResponse.json({ success: false, error: error.message, code: error.code }, { status: error.status });
+    }
     const message = error instanceof Error ? error.message : "Erro interno no processamento de IA.";
     const status = message.includes("Sessão")
       ? 401

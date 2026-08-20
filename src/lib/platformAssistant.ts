@@ -18,7 +18,15 @@ import {
   type PackedAssistantContext,
 } from "@/lib/platformAssistantContext";
 import { PlatformAssistantError } from "@/lib/platformAssistantRequest";
+import {
+  AiBillingError,
+  cancelAiUsage,
+  reserveAiUsage,
+  settleAiUsage,
+  type AiUsageReservation,
+} from "@/lib/aiBilling";
 import type { Course } from "@/types/course";
+import type { OpenRouterChatResponse } from "@/types/openrouter";
 import {
   ASSISTANT_ICON_KEYS,
   type AssistantConversation,
@@ -331,7 +339,13 @@ export async function sendPlatformAssistantMessage(
   sessionDb: DB,
   user: User,
   input: { message: string; scope: AssistantScope },
-): Promise<{ conversationId: string; userMessage: AssistantMessage; assistantMessage: AssistantMessage }> {
+): Promise<{
+  conversationId: string;
+  userMessage: AssistantMessage;
+  assistantMessage: AssistantMessage;
+  creditsCharged: number;
+  creditsRemaining: number;
+}> {
   const adminDb = createAdminClient();
   const settings = await getPlatformAssistantSettings(adminDb);
   if (!settings.enabled) throw new PlatformAssistantError("O assistente está desativado no momento.", 503, "disabled");
@@ -344,6 +358,8 @@ export async function sendPlatformAssistantMessage(
   await enforceRateLimit(adminDb, user.id);
   const conversation = await findOrCreateConversation(adminDb, user.id, scope, input.message);
   await acquireConversation(adminDb, conversation.id);
+  let reservation: AiUsageReservation | null = null;
+  let providerResponse: OpenRouterChatResponse | null = null;
 
   try {
     const { data: userRow, error: userError } = await adminDb
@@ -370,18 +386,28 @@ export async function sendPlatformAssistantMessage(
     if (historyError) throw new PlatformAssistantError("Não foi possível carregar o histórico.", 503, "history_unavailable");
     const recent = trimAssistantHistory((rows ?? []).map(mapMessage));
 
+    const providerMessages = [
+      { role: "system" as const, content: systemMessage(settings, scope, context.text) },
+      ...recent.map((message) => ({ role: message.author, content: message.content })),
+    ];
+    reservation = await reserveAiUsage({
+      userId: user.id,
+      feature: "platform_assistant",
+      model: settings.model,
+      messages: providerMessages,
+      maxOutputTokens: 1_500,
+    });
+
     const response = await sendOpenRouterChatCompletion(
       {
         model: settings.model,
         temperature: 0.25,
-        maxTokens: 1_500,
-        messages: [
-          { role: "system", content: systemMessage(settings, scope, context.text) },
-          ...recent.map((message) => ({ role: message.author, content: message.content })),
-        ],
+        maxTokens: reservation.maxOutputTokens,
+        messages: providerMessages,
       },
       openRouter,
     );
+    providerResponse = response;
     if (!response.success || response.simulated || !response.text?.trim()) {
       throw new PlatformAssistantError(
         "A IA não conseguiu responder agora. Sua mensagem foi salva; tente novamente em instantes.",
@@ -412,11 +438,26 @@ export async function sendPlatformAssistantMessage(
       .update({ updated_at: new Date().toISOString(), last_lesson_id: scope.lessonId ?? null })
       .eq("id", conversation.id);
 
+    const settlement = await settleAiUsage(reservation, response, {
+      conversationId: conversation.id,
+      scope: scope.kind,
+      assistantMessageId: assistantRow.id,
+    });
+    reservation = null;
+
     return {
       conversationId: conversation.id,
       userMessage: mapMessage(userRow),
       assistantMessage: mapMessage(assistantRow),
+      creditsCharged: settlement.creditsCharged,
+      creditsRemaining: settlement.creditsRemaining,
     };
+  } catch (error) {
+    await cancelAiUsage(reservation, error instanceof AiBillingError ? error.code : "application_error", providerResponse);
+    if (error instanceof AiBillingError) {
+      throw new PlatformAssistantError(error.message, error.status, error.code);
+    }
+    throw error;
   } finally {
     await releaseConversation(adminDb, conversation.id);
   }

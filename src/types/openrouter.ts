@@ -61,10 +61,15 @@ export interface OpenRouterChatResponse {
   success: boolean;
   text?: string;
   model?: string;
+  generationId?: string;
   usage?: {
     promptTokens: number;
     completionTokens: number;
     totalTokens: number;
+    costUsd?: number;
+    upstreamCostUsd?: number;
+    reasoningTokens?: number;
+    cachedTokens?: number;
   };
   latencyMs?: number;
   error?: string;

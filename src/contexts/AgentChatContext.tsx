@@ -17,6 +17,7 @@ interface AgentChatContextData {
   conversations: AgentConversation[];
   typingConversationId: string | null;
   credits: number | null;
+  lastCreditsCharged: number | null;
   nextCursor: string | null;
   conversationsForAgent: (agentId: string) => AgentConversation[];
   loadConversation: (conversationId: string) => Promise<void>;
@@ -31,6 +32,7 @@ type AgentChatResponse = {
   conversationId?: string;
   text?: string;
   creditsRemaining?: number;
+  creditsCharged?: number;
   userMessage?: { id: string; author: "student"; text: string };
   assistantMessage?: { id: string; author: "agent"; text: string };
 };
@@ -42,6 +44,7 @@ export function AgentChatProvider({ children }: { children: React.ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [typingConversationId, setTypingConversationId] = useState<string | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
+  const [lastCreditsCharged, setLastCreditsCharged] = useState<number | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const timers = useRef(new Map<string, Set<number>>());
   // Mantém o id otimista estável na UI enquanto registra o UUID real no banco.
@@ -155,6 +158,7 @@ export function AgentChatProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (typeof body.creditsRemaining === "number") setCredits(body.creditsRemaining);
+      if (typeof body.creditsCharged === "number") setLastCreditsCharged(body.creditsCharged);
 
       const remainingDelay = Math.max(0, typingDelay(message) - (Date.now() - startedAt));
       const timer = window.setTimeout(() => {
@@ -202,6 +206,7 @@ export function AgentChatProvider({ children }: { children: React.ReactNode }) {
     conversations,
     typingConversationId,
     credits,
+    lastCreditsCharged,
     nextCursor,
     conversationsForAgent,
     loadConversation,
@@ -209,7 +214,7 @@ export function AgentChatProvider({ children }: { children: React.ReactNode }) {
     sendMessage,
     deleteConversation,
   }), [
-    isLoaded, conversations, typingConversationId, credits, nextCursor,
+    isLoaded, conversations, typingConversationId, credits, lastCreditsCharged, nextCursor,
     conversationsForAgent, loadConversation, loadMoreConversations, sendMessage, deleteConversation,
   ]);
 
