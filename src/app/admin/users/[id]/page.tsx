@@ -19,7 +19,9 @@ import {
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@heroui/react";
 import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
 import { getProfile } from "@/lib/data/profiles";
+import { getAiCreditBalance } from "@/lib/aiCredits";
 import { createClient } from "@/lib/supabase/server";
+import { AiCreditAdminCard } from "./AiCreditAdminCard";
 
 export default async function AdminUserDashboard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,6 +31,8 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
   if (!profile) {
     notFound();
   }
+
+  const aiCreditBalance = await getAiCreditBalance(supabase, id);
 
   // Busca matrículas ativas do usuário
   const nowIso = new Date().toISOString();
@@ -114,6 +118,12 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
         />
         <StatCard label="Matrículas" value={(enrollments ?? 0).toString()} icon={List} tone="terracotta" />
       </div>
+
+      <AiCreditAdminCard
+        userId={id}
+        userName={profile.fullName}
+        initialBalance={aiCreditBalance}
+      />
 
       <div className="grid grid-cols-1 gap-6 pt-2 lg:grid-cols-3">
         <Card className="lg:col-span-2">
