@@ -200,21 +200,21 @@ export default function ResendOverviewPage() {
             <button
               type="button"
               onClick={() => setIsTestModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2 text-xs font-bold text-text hover:bg-canvas-soft transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2 text-xs font-bold text-foreground hover:bg-background-secondary transition-colors"
             >
-              <Send className="size-3.5 text-primary" /> Testar Disparo
+              <Send className="size-3.5 text-accent" /> Testar Disparo
             </button>
 
             <Link
               href="/admin/integracoes/resend/logs"
-              className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2 text-xs font-bold text-text hover:bg-canvas-soft transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2 text-xs font-bold text-foreground hover:bg-background-secondary transition-colors"
             >
               <FileText className="size-3.5" /> Histórico ({totalLogsCount})
             </Link>
 
             <Link
               href="/admin/integracoes/resend/modelos"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-active transition-all shadow-sm"
+              className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-accent-hover transition-all shadow-sm"
             >
               <FileCode className="size-3.5" /> Modelos & HTML
               <span className="bg-white/20 text-primary-foreground px-1.5 py-0.5 rounded-full text-[10px]">
@@ -241,14 +241,14 @@ export default function ResendOverviewPage() {
             <Mail className="size-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-text-mute">Status do Serviço</p>
+            <p className="text-xs font-medium text-muted">Status do Serviço</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span
                 className={`size-2.5 rounded-full ${
                   !config.enabled ? "bg-muted" : isConnected ? "bg-success animate-pulse" : "bg-warning"
                 }`}
               />
-              <p className="font-bold text-sm text-text">
+              <p className="font-bold text-sm text-foreground">
                 {!config.enabled
                   ? "Desativado"
                   : isConnected
@@ -256,7 +256,7 @@ export default function ResendOverviewPage() {
                   : "Modo Sandbox (Simulado)"}
               </p>
             </div>
-            <p className="text-[11px] text-text-mute mt-0.5">
+            <p className="text-[11px] text-muted mt-0.5">
               {isConnected ? "Pronto para envios em produção" : "Ambiente de desenvolvimento seguro"}
             </p>
           </div>
@@ -268,34 +268,34 @@ export default function ResendOverviewPage() {
             <ShieldCheck className="size-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-text-mute">Remetente Padrão (From)</p>
-            <p className="font-bold text-sm text-text truncate max-w-[200px]">
+            <p className="text-xs font-medium text-muted">Remetente Padrão (From)</p>
+            <p className="font-bold text-sm text-foreground truncate max-w-[200px]">
               {config.fromEmail || "onboarding@resend.dev"}
             </p>
-            <p className="text-[11px] text-text-mute">{config.fromName || "Smart LMS"}</p>
+            <p className="text-[11px] text-muted">{config.fromName || "Smart LMS"}</p>
           </div>
         </div>
 
         {/* Templates Callout Card */}
         <Link
           href="/admin/integracoes/resend/modelos"
-          className="editorial-card p-5 flex items-center justify-between gap-4 group hover:border-primary/50 transition-all cursor-pointer"
+          className="editorial-card p-5 flex items-center justify-between gap-4 group hover:border-accent/50 transition-all cursor-pointer"
         >
           <div className="flex items-center gap-4">
-            <div className="size-12 rounded-2xl bg-primary-soft text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <div className="size-12 rounded-2xl bg-primary-soft text-accent flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
               <FileCode className="size-6" />
             </div>
             <div>
-              <p className="text-xs font-medium text-text-mute">Studio de Modelos</p>
-              <p className="font-bold text-sm text-text">
+              <p className="text-xs font-medium text-muted">Studio de Modelos</p>
+              <p className="font-bold text-sm text-foreground">
                 {customizedCount} de 7 personalizados
               </p>
-              <p className="text-[11px] text-primary font-semibold flex items-center gap-1 mt-0.5">
+              <p className="text-[11px] text-accent font-semibold flex items-center gap-1 mt-0.5">
                 Editar HTML & tags →
               </p>
             </div>
           </div>
-          <ArrowRight className="size-4 text-text-mute group-hover:text-primary group-hover:translate-x-1 transition-all" />
+          <ArrowRight className="size-4 text-muted group-hover:text-accent group-hover:translate-x-1 transition-all" />
         </Link>
       </div>
 
@@ -307,27 +307,27 @@ export default function ResendOverviewPage() {
           <div className="editorial-card p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-border/60 pb-4">
               <div>
-                <h2 className="text-base font-bold text-ink flex items-center gap-2">
-                  <Key className="size-4 text-primary" /> Credenciais da API (Resend)
+                <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+                  <Key className="size-4 text-accent" /> Credenciais da API (Resend)
                 </h2>
-                <p className="text-xs text-text-mute mt-0.5">
+                <p className="text-xs text-muted mt-0.5">
                   Informe sua chave secreta com permissão de envio (Sending Access).
                 </p>
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
-                <span className="text-xs font-semibold text-text">Ativar Resend</span>
+                <span className="text-xs font-semibold text-foreground">Ativar Resend</span>
                 <input
                   type="checkbox"
                   checked={config.enabled}
                   onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
-                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  className="w-4 h-4 rounded border-border text-accent focus:ring-primary"
                 />
               </label>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                   Resend API Key
                 </label>
                 <div className="relative flex items-center">
@@ -336,27 +336,27 @@ export default function ResendOverviewPage() {
                     value={apiKeyInput}
                     onChange={(e) => setApiKeyInput(e.target.value)}
                     placeholder="re_123456789_abcdefghijklmnopqrstuvwxyz"
-                    className="w-full min-h-11 rounded-xl border border-border bg-canvas-soft pl-4 pr-24 font-mono text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                    className="w-full min-h-11 rounded-xl border border-border bg-background-secondary pl-4 pr-24 font-mono text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                   />
                   <div className="absolute right-2 flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => setShowApiKey(!showApiKey)}
-                      className="p-1.5 text-text-mute hover:text-text transition-colors rounded-md"
+                      className="p-1.5 text-muted hover:text-foreground transition-colors rounded-md"
                       title={showApiKey ? "Ocultar" : "Mostrar"}
                     >
                       {showApiKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </button>
                   </div>
                 </div>
-                <div className="flex items-center justify-between text-[11px] text-text-mute mt-2">
+                <div className="flex items-center justify-between text-[11px] text-muted mt-2">
                   <span className="flex items-center gap-1">
                     Não tem uma chave?{" "}
                     <a
                       href="https://resend.com/api-keys"
                       target="_blank"
                       rel="noreferrer"
-                      className="text-primary hover:underline font-semibold"
+                      className="text-accent hover:underline font-semibold"
                     >
                       Criar API Key no Resend →
                     </a>
@@ -374,7 +374,7 @@ export default function ResendOverviewPage() {
                   type="button"
                   onClick={handleValidateKey}
                   disabled={isValidatingKey}
-                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-xs font-semibold text-text hover:bg-canvas-soft transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground hover:bg-background-secondary transition-colors disabled:opacity-50"
                 >
                   {isValidatingKey ? (
                     <RefreshCw className="size-3.5 animate-spin" />
@@ -388,7 +388,7 @@ export default function ResendOverviewPage() {
                   type="button"
                   onClick={handleSaveConfig}
                   disabled={isSaving}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-active transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-accent-hover transition-colors disabled:opacity-50"
                 >
                   {isSaving ? <RefreshCw className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
                   Salvar Credenciais
@@ -400,17 +400,17 @@ export default function ResendOverviewPage() {
           {/* Card 2: Sender Information */}
           <div className="editorial-card p-6 space-y-6">
             <div className="border-b border-border/60 pb-4">
-              <h2 className="text-base font-bold text-ink flex items-center gap-2">
-                <Mail className="size-4 text-primary" /> Identidade do Remetente
+              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+                <Mail className="size-4 text-accent" /> Identidade do Remetente
               </h2>
-              <p className="text-xs text-text-mute mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 Configure como a plataforma se apresenta nos e-mails recebidos pelos alunos.
               </p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                   Nome do Remetente (From Name)
                 </label>
                 <input
@@ -418,15 +418,15 @@ export default function ResendOverviewPage() {
                   value={config.fromName}
                   onChange={(e) => setConfig({ ...config, fromName: e.target.value })}
                   placeholder="Ex: Smart LMS ou Academia Digital"
-                  className="w-full min-h-11 rounded-xl border border-border bg-canvas-soft px-4 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                  className="w-full min-h-11 rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                 />
-                <p className="text-[11px] text-text-mute mt-1">
+                <p className="text-[11px] text-muted mt-1">
                   Exibido como remetente na caixa de entrada.
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                   E-mail de Envio (From Email)
                 </label>
                 <input
@@ -434,26 +434,26 @@ export default function ResendOverviewPage() {
                   value={config.fromEmail}
                   onChange={(e) => setConfig({ ...config, fromEmail: e.target.value })}
                   placeholder="Ex: notificacoes@seudominio.com"
-                  className="w-full min-h-11 rounded-xl border border-border bg-canvas-soft px-4 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                  className="w-full min-h-11 rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                 />
-                <p className="text-[11px] text-text-mute mt-1">
+                <p className="text-[11px] text-muted mt-1">
                   Use <code>onboarding@resend.dev</code> para testes rápidos.
                 </p>
               </div>
 
               <div className="sm:col-span-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                   E-mail de Resposta (Reply-To){" "}
-                  <span className="text-text-mute/60 font-normal">(Opcional)</span>
+                  <span className="text-muted/60 font-normal">(Opcional)</span>
                 </label>
                 <input
                   type="email"
                   value={config.replyTo || ""}
                   onChange={(e) => setConfig({ ...config, replyTo: e.target.value })}
                   placeholder="Ex: suporte@seudominio.com"
-                  className="w-full min-h-11 rounded-xl border border-border bg-canvas-soft px-4 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                  className="w-full min-h-11 rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                 />
-                <p className="text-[11px] text-text-mute mt-1">
+                <p className="text-[11px] text-muted mt-1">
                   Para onde vão as respostas caso o aluno clique em responder.
                 </p>
               </div>
@@ -464,7 +464,7 @@ export default function ResendOverviewPage() {
                 type="button"
                 onClick={handleSaveConfig}
                 disabled={isSaving}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground hover:bg-primary-active transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-xs font-bold text-primary-foreground hover:bg-accent-hover transition-colors disabled:opacity-50"
               >
                 {isSaving ? <RefreshCw className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
                 Salvar Remetente
@@ -479,25 +479,25 @@ export default function ResendOverviewPage() {
           <div className="editorial-card p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <div>
-                <h2 className="text-base font-bold text-ink flex items-center gap-2">
-                  <Sliders className="size-4 text-primary" /> Regras de Disparo Ativas
+                <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+                  <Sliders className="size-4 text-accent" /> Regras de Disparo Ativas
                 </h2>
-                <p className="text-xs text-text-mute mt-0.5">
+                <p className="text-xs text-muted mt-0.5">
                   Ligue ou desligue o envio de e-mail por evento.
                 </p>
               </div>
             </div>
 
             <div className="space-y-3">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-text-mute">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted">
                 E-mails da Plataforma
               </p>
 
               <div className="space-y-2">
-                <label className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-canvas-soft hover:bg-surface transition-colors cursor-pointer text-xs">
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-background-secondary hover:bg-surface transition-colors cursor-pointer text-xs">
                   <div>
-                    <p className="font-bold text-text">Boas-vindas ao Aluno</p>
-                    <p className="text-text-mute text-[10px]">Ao criar conta ou primeiro acesso</p>
+                    <p className="font-bold text-foreground">Boas-vindas ao Aluno</p>
+                    <p className="text-muted text-[10px]">Ao criar conta ou primeiro acesso</p>
                   </div>
                   <input
                     type="checkbox"
@@ -511,14 +511,14 @@ export default function ResendOverviewPage() {
                         },
                       })
                     }
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                    className="w-4 h-4 rounded border-border text-accent focus:ring-primary"
                   />
                 </label>
 
-                <label className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-canvas-soft hover:bg-surface transition-colors cursor-pointer text-xs">
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-background-secondary hover:bg-surface transition-colors cursor-pointer text-xs">
                   <div>
-                    <p className="font-bold text-text">Recuperação de Senha</p>
-                    <p className="text-text-mute text-[10px]">Link temporário seguro</p>
+                    <p className="font-bold text-foreground">Recuperação de Senha</p>
+                    <p className="text-muted text-[10px]">Link temporário seguro</p>
                   </div>
                   <input
                     type="checkbox"
@@ -532,14 +532,14 @@ export default function ResendOverviewPage() {
                         },
                       })
                     }
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                    className="w-4 h-4 rounded border-border text-accent focus:ring-primary"
                   />
                 </label>
 
-                <label className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-canvas-soft hover:bg-surface transition-colors cursor-pointer text-xs">
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-background-secondary hover:bg-surface transition-colors cursor-pointer text-xs">
                   <div>
-                    <p className="font-bold text-text">Matrícula em Curso</p>
-                    <p className="text-text-mute text-[10px]">Liberação de sala de aula</p>
+                    <p className="font-bold text-foreground">Matrícula em Curso</p>
+                    <p className="text-muted text-[10px]">Liberação de sala de aula</p>
                   </div>
                   <input
                     type="checkbox"
@@ -553,14 +553,14 @@ export default function ResendOverviewPage() {
                         },
                       })
                     }
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                    className="w-4 h-4 rounded border-border text-accent focus:ring-primary"
                   />
                 </label>
 
-                <label className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-canvas-soft hover:bg-surface transition-colors cursor-pointer text-xs">
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-background-secondary hover:bg-surface transition-colors cursor-pointer text-xs">
                   <div>
-                    <p className="font-bold text-text">Certificado Emitido</p>
-                    <p className="text-text-mute text-[10px]">Conclusão de curso</p>
+                    <p className="font-bold text-foreground">Certificado Emitido</p>
+                    <p className="text-muted text-[10px]">Conclusão de curso</p>
                   </div>
                   <input
                     type="checkbox"
@@ -574,20 +574,20 @@ export default function ResendOverviewPage() {
                         },
                       })
                     }
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                    className="w-4 h-4 rounded border-border text-accent focus:ring-primary"
                   />
                 </label>
               </div>
 
-              <p className="text-[11px] font-bold uppercase tracking-wider text-text-mute pt-2">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted pt-2">
                 Notificações & Engajamento
               </p>
 
               <div className="space-y-2">
-                <label className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-canvas-soft hover:bg-surface transition-colors cursor-pointer text-xs">
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-background-secondary hover:bg-surface transition-colors cursor-pointer text-xs">
                   <div>
-                    <p className="font-bold text-text">Novos Módulos & Aulas</p>
-                    <p className="text-text-mute text-[10px]">Aviso aos alunos matriculados</p>
+                    <p className="font-bold text-foreground">Novos Módulos & Aulas</p>
+                    <p className="text-muted text-[10px]">Aviso aos alunos matriculados</p>
                   </div>
                   <input
                     type="checkbox"
@@ -601,14 +601,14 @@ export default function ResendOverviewPage() {
                         },
                       })
                     }
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                    className="w-4 h-4 rounded border-border text-accent focus:ring-primary"
                   />
                 </label>
 
-                <label className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-canvas-soft hover:bg-surface transition-colors cursor-pointer text-xs">
+                <label className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-background-secondary hover:bg-surface transition-colors cursor-pointer text-xs">
                   <div>
-                    <p className="font-bold text-text">Comunicados Gerais (Admin)</p>
-                    <p className="text-text-mute text-[10px]">Envios pelo painel de Notificações</p>
+                    <p className="font-bold text-foreground">Comunicados Gerais (Admin)</p>
+                    <p className="text-muted text-[10px]">Envios pelo painel de Notificações</p>
                   </div>
                   <input
                     type="checkbox"
@@ -622,7 +622,7 @@ export default function ResendOverviewPage() {
                         },
                       })
                     }
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                    className="w-4 h-4 rounded border-border text-accent focus:ring-primary"
                   />
                 </label>
               </div>
@@ -633,7 +633,7 @@ export default function ResendOverviewPage() {
                 type="button"
                 onClick={handleSaveConfig}
                 disabled={isSaving}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-active transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3.5 py-2 text-xs font-bold text-primary-foreground hover:bg-accent-hover transition-colors disabled:opacity-50"
               >
                 Salvar Gatilhos
               </button>
@@ -643,52 +643,52 @@ export default function ResendOverviewPage() {
           {/* Card 4: DNS Verification Guide */}
           <div className="editorial-card p-6 space-y-4">
             <div className="border-b border-border/60 pb-3">
-              <h2 className="text-base font-bold text-ink flex items-center gap-2">
-                <Globe className="size-4 text-primary" /> Registros DNS Recomendados
+              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+                <Globe className="size-4 text-accent" /> Registros DNS Recomendados
               </h2>
-              <p className="text-xs text-text-mute mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 Para autenticar seu domínio no Resend e evitar a caixa de spam:
               </p>
             </div>
 
             <div className="space-y-2.5 text-xs font-mono">
-              <div className="p-3 rounded-xl border border-border/70 bg-canvas-soft flex items-center justify-between">
+              <div className="p-3 rounded-xl border border-border/70 bg-background-secondary flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-bold text-primary uppercase font-sans">SPF (TXT)</span>
-                  <p className="text-text font-bold mt-0.5 truncate max-w-[200px]">v=spf1 include:amazonses.com ~all</p>
+                  <span className="text-[10px] font-bold text-accent uppercase font-sans">SPF (TXT)</span>
+                  <p className="text-foreground font-bold mt-0.5 truncate max-w-[200px]">v=spf1 include:amazonses.com ~all</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => copyToClipboard("v=spf1 include:amazonses.com ~all", "spf")}
-                  className="p-1.5 text-text-mute hover:text-text rounded-lg"
+                  className="p-1.5 text-muted hover:text-foreground rounded-lg"
                 >
                   {copiedField === "spf" ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
                 </button>
               </div>
 
-              <div className="p-3 rounded-xl border border-border/70 bg-canvas-soft flex items-center justify-between">
+              <div className="p-3 rounded-xl border border-border/70 bg-background-secondary flex items-center justify-between">
                 <div>
                   <span className="text-[10px] font-bold text-success uppercase font-sans">DKIM (CNAME)</span>
-                  <p className="text-text font-bold mt-0.5 truncate max-w-[200px]">resend._domainkey.resend.com</p>
+                  <p className="text-foreground font-bold mt-0.5 truncate max-w-[200px]">resend._domainkey.resend.com</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => copyToClipboard("resend._domainkey.resend.com", "dkim")}
-                  className="p-1.5 text-text-mute hover:text-text rounded-lg"
+                  className="p-1.5 text-muted hover:text-foreground rounded-lg"
                 >
                   {copiedField === "dkim" ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
                 </button>
               </div>
 
-              <div className="p-3 rounded-xl border border-border/70 bg-canvas-soft flex items-center justify-between">
+              <div className="p-3 rounded-xl border border-border/70 bg-background-secondary flex items-center justify-between">
                 <div>
                   <span className="text-[10px] font-bold text-warning uppercase font-sans">DMARC (TXT)</span>
-                  <p className="text-text font-bold mt-0.5 truncate max-w-[200px]">v=DMARC1; p=none;</p>
+                  <p className="text-foreground font-bold mt-0.5 truncate max-w-[200px]">v=DMARC1; p=none;</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => copyToClipboard("v=DMARC1; p=none;", "dmarc")}
-                  className="p-1.5 text-text-mute hover:text-text rounded-lg"
+                  className="p-1.5 text-muted hover:text-foreground rounded-lg"
                 >
                   {copiedField === "dmarc" ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
                 </button>
@@ -700,7 +700,7 @@ export default function ResendOverviewPage() {
                 href="https://resend.com/domains"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-accent hover:underline"
               >
                 Gerenciar Domínios no Console do Resend <ExternalLink className="size-3.5" />
               </a>
@@ -715,15 +715,15 @@ export default function ResendOverviewPage() {
           <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <div className="flex items-center gap-2">
-                <div className="size-8 rounded-lg bg-primary-soft text-primary grid place-items-center">
+                <div className="size-8 rounded-lg bg-primary-soft text-accent grid place-items-center">
                   <Send className="size-4" />
                 </div>
-                <h3 className="font-bold text-sm text-ink">Disparo de E-mail de Teste</h3>
+                <h3 className="font-bold text-sm text-foreground">Disparo de E-mail de Teste</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsTestModalOpen(false)}
-                className="p-1.5 text-text-mute hover:text-text rounded-lg"
+                className="p-1.5 text-muted hover:text-foreground rounded-lg"
               >
                 <X className="size-4" />
               </button>
@@ -731,23 +731,23 @@ export default function ResendOverviewPage() {
 
             <form onSubmit={handleQuickTest} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-bold text-text mb-1">E-mail de Destino</label>
+                <label className="block font-bold text-foreground mb-1">E-mail de Destino</label>
                 <input
                   type="email"
                   value={testEmail}
                   onChange={(e) => setTestEmail(e.target.value)}
                   placeholder="seu-email@teste.com"
                   required
-                  className="w-full min-h-10 rounded-xl border border-border bg-canvas-soft px-3 text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                  className="w-full min-h-10 rounded-xl border border-border bg-background-secondary px-3 text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-text mb-1">Modelo de E-mail</label>
+                <label className="block font-bold text-foreground mb-1">Modelo de E-mail</label>
                 <select
                   value={testTemplate}
                   onChange={(e) => setTestTemplate(e.target.value as EmailTemplateType)}
-                  className="w-full min-h-10 rounded-xl border border-border bg-canvas-soft px-3 text-text focus:border-primary focus:bg-surface focus:outline-none"
+                  className="w-full min-h-10 rounded-xl border border-border bg-background-secondary px-3 text-foreground focus:border-accent focus:bg-surface focus:outline-none"
                 >
                   <option value="welcome">🎉 Boas-vindas (Cadastro)</option>
                   <option value="password_reset">🔒 Recuperação de Senha</option>
@@ -764,7 +764,7 @@ export default function ResendOverviewPage() {
                   className={`p-3 rounded-xl border text-[11px] ${
                     testResult.success
                       ? "bg-success-soft border-success/20 text-success-soft-foreground"
-                      : "bg-negative-soft border-negative/20 text-negative-soft-foreground"
+                      : "bg-danger-soft border-danger/20 text-danger-soft-foreground"
                   }`}
                 >
                   {testResult.message}
@@ -775,14 +775,14 @@ export default function ResendOverviewPage() {
                 <button
                   type="button"
                   onClick={() => setIsTestModalOpen(false)}
-                  className="flex-1 rounded-xl border border-border py-2.5 font-semibold text-text hover:bg-canvas-soft transition-colors"
+                  className="flex-1 rounded-xl border border-border py-2.5 font-semibold text-foreground hover:bg-background-secondary transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSendingTest}
-                  className="flex-1 rounded-xl bg-primary py-2.5 font-bold text-primary-foreground hover:bg-primary-active transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  className="flex-1 rounded-xl bg-accent py-2.5 font-bold text-primary-foreground hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {isSendingTest ? <RefreshCw className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
                   Disparar Teste

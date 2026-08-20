@@ -1,6 +1,6 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Clock, LogIn, Monitor, FileEdit, Info } from "lucide-react";
+import { Card, EmptyState, Table } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
 import { createClient } from "@/lib/supabase/server";
 
@@ -25,27 +25,27 @@ export default async function AdminUserHistoricoPage({ params }: { params: Promi
     let acao = log.action || "Ação genérica";
     let detalhe = "Nenhum detalhe disponível";
     let icon = Info;
-    let cor = "text-neutral";
-    let bg = "bg-neutral/10";
+    let cor = "text-muted";
+    let bg = "bg-background-secondary";
 
     if (log.action === "login") {
       acao = "Login";
       detalhe = "Acesso à plataforma";
       icon = LogIn;
-      cor = "text-positive";
-      bg = "bg-positive/10";
+      cor = "text-success-soft-foreground";
+      bg = "bg-success-soft";
     } else if (log.action === "update_profile") {
       acao = "Atualização de Perfil";
       detalhe = "Alterou dados do perfil";
       icon = FileEdit;
-      cor = "text-primary";
-      bg = "bg-primary-pale";
+      cor = "text-accent-soft-foreground";
+      bg = "bg-accent-soft";
     } else if (log.action === "course_access") {
       acao = "Acesso a Curso";
       detalhe = log.metadata?.course_name ? `Acessou: ${log.metadata.course_name}` : "Acessou um curso";
       icon = Monitor;
-      cor = "text-accent-orange";
-      bg = "bg-accent-orange/14";
+      cor = "text-warning-soft-foreground";
+      bg = "bg-warning-soft";
     }
 
     return {
@@ -63,7 +63,7 @@ export default async function AdminUserHistoricoPage({ params }: { params: Promi
   return (
     <div className="space-y-7 pb-16">
       <div>
-        <Link href={`/admin/users/${id}`} className="inline-flex items-center gap-2 text-text-soft hover:text-primary transition-colors text-sm font-medium mb-4">
+        <Link href={`/admin/users/${id}`} className="inline-flex items-center gap-2 text-muted hover:text-accent transition-colors text-sm font-medium mb-4">
           <ArrowLeft className="w-4 h-4" />
           Voltar para o Perfil
         </Link>
@@ -74,79 +74,83 @@ export default async function AdminUserHistoricoPage({ params }: { params: Promi
         />
       </div>
 
-      <section className="editorial-card overflow-hidden">
-        <div className="flex flex-col gap-4 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-          <h2 className="font-bold text-ink text-lg">Últimas Atividades</h2>
-        </div>
+      <Card>
+        <Card.Header>
+          <Card.Title>Últimas atividades</Card.Title>
+        </Card.Header>
 
-        <div className="hidden md:block">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-canvas-soft/75 text-[11px] font-bold uppercase tracking-[0.09em] text-text-mute">
-                <th className="px-5 py-3.5">Ação</th>
-                <th className="px-5 py-3.5">Detalhe</th>
-                <th className="px-5 py-3.5">Data e Hora</th>
-                <th className="px-5 py-3.5">Endereço IP</th>
-              </tr>
-            </thead>
-            <tbody>
-              {historico.map((log) => {
-                const Icon = log.icon;
-                return (
-                  <tr key={log.id} className="border-t border-border/70 hover:bg-primary-pale/20">
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <span className={`grid h-9 w-9 place-items-center rounded-[11px] ${log.bg} ${log.cor}`}>
-                          <Icon className="h-4 w-4" />
+        <Card.Content className="px-0 pb-0">
+          {historico.length === 0 ? (
+            <EmptyState className="flex flex-col items-center gap-2 px-6 py-14 text-center">
+              <span className="grid size-11 place-items-center rounded-xl bg-background-secondary">
+                <Clock className="size-5 text-muted" aria-hidden="true" />
+              </span>
+              <p className="font-semibold text-foreground">Nenhuma atividade registrada</p>
+              <p className="text-sm text-muted">As ações deste usuário aparecerão aqui assim que acontecerem.</p>
+            </EmptyState>
+          ) : (
+            <>
+              <div className="hidden md:block">
+                <Table.Root>
+                  <Table.ScrollContainer>
+                    <Table.Content aria-label="Histórico de acesso do usuário">
+                      <Table.Header>
+                        <Table.Column isRowHeader>Ação</Table.Column>
+                        <Table.Column>Detalhe</Table.Column>
+                        <Table.Column>Data e hora</Table.Column>
+                        <Table.Column>Endereço IP</Table.Column>
+                      </Table.Header>
+                      <Table.Body items={historico}>
+                        {(log) => {
+                          const Icon = log.icon;
+                          return (
+                            <Table.Row id={log.id}>
+                              <Table.Cell>
+                                <div className="flex items-center gap-3">
+                                  <span className={`grid h-9 w-9 place-items-center rounded-xl ${log.bg} ${log.cor}`}>
+                                    <Icon className="size-4" aria-hidden="true" />
+                                  </span>
+                                  <span className="font-semibold text-foreground">{log.acao}</span>
+                                </div>
+                              </Table.Cell>
+                              <Table.Cell className="text-muted">{log.detalhe}</Table.Cell>
+                              <Table.Cell className="font-medium text-foreground">{log.data}</Table.Cell>
+                              <Table.Cell className="font-mono text-xs text-muted">{log.ip}</Table.Cell>
+                            </Table.Row>
+                          );
+                        }}
+                      </Table.Body>
+                    </Table.Content>
+                  </Table.ScrollContainer>
+                </Table.Root>
+              </div>
+
+              <ul className="divide-y divide-separator md:hidden">
+                {historico.map((log) => {
+                  const Icon = log.icon;
+                  return (
+                    <li key={log.id} className="p-4">
+                      <div className="flex items-start gap-3">
+                        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${log.bg} ${log.cor}`}>
+                          <Icon className="size-4" aria-hidden="true" />
                         </span>
-                        <span className="font-bold text-ink">{log.acao}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-foreground">{log.acao}</p>
+                          <p className="mt-1 text-sm text-muted">{log.detalhe}</p>
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-5 py-4 text-sm text-text-soft">{log.detalhe}</td>
-                    <td className="px-5 py-4 text-sm font-medium text-ink">{log.data}</td>
-                    <td className="px-5 py-4 text-xs font-mono text-text-mute">{log.ip}</td>
-                  </tr>
-                );
-              })}
-              {historico.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-5 py-8 text-center text-sm text-text-mute">
-                    Nenhuma atividade registrada para este usuário.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="divide-y divide-border md:hidden">
-          {historico.map((log) => {
-            const Icon = log.icon;
-            return (
-              <article key={log.id} className="p-4">
-                <div className="flex items-start gap-3">
-                  <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-[12px] ${log.bg} ${log.cor}`}>
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold text-ink">{log.acao}</p>
-                    <p className="mt-1 text-sm text-text-soft">{log.detalhe}</p>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center justify-between text-xs text-text-mute">
-                  <span className="font-medium flex items-center gap-1"><Clock className="w-3 h-3" /> {log.data}</span>
-                  <span className="font-mono">{log.ip}</span>
-                </div>
-              </article>
-            );
-          })}
-          {historico.length === 0 && (
-            <div className="p-8 text-center text-sm text-text-mute">
-              Nenhuma atividade registrada para este usuário.
-            </div>
+                      <div className="mt-4 flex items-center justify-between text-xs text-muted">
+                        <span className="flex items-center gap-1 font-medium"><Clock className="size-3" aria-hidden="true" /> {log.data}</span>
+                        <span className="font-mono">{log.ip}</span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
-        </div>
-      </section>
+        </Card.Content>
+      </Card>
     </div>
   );
 }

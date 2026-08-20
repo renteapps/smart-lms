@@ -5,12 +5,27 @@
  * tipos: quem os preenche é `lib/data/courses.ts`, lendo do Supabase.
  */
 
+/** Formato do editor de blocos antigo (pré-BlockNote). Mantido só para migrar aulas já salvas — ver `lib/editor/legacyBlocks.ts`. */
 export type ContentBlock = {
   id: string;
   type: 'paragraph' | 'h1' | 'h2' | 'video' | 'quiz' | 'reflexao' | 'citacao' | 'table';
   content: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: any;
+};
+
+/**
+ * Bloco de conteúdo no formato do BlockNote (ver `lib/editor/blockSchema.tsx`
+ * para o schema completo, incluindo os blocos próprios de vídeo/quiz/destaque).
+ * Tipado de forma solta aqui de propósito: este arquivo não deve depender do
+ * BlockNote (client-only) para poder ser importado em código de servidor.
+ */
+export type LessonContentBlock = {
+  id: string;
+  type: string;
+  props: Record<string, unknown>;
+  content?: unknown;
+  children?: LessonContentBlock[];
 };
 
 export type LessonAttachment = {
@@ -27,8 +42,10 @@ export type Lesson = {
   title: string;
   type: LessonType;
   videoUrl?: string;
+  pandavideoId?: string;
+  transcription?: string;
   content: string;
-  blocks?: ContentBlock[];
+  blocks?: LessonContentBlock[];
   attachments: LessonAttachment[];
   durationInMinutes: number;
   order?: number;
@@ -38,8 +55,7 @@ export type Lesson = {
   userRating?: number;
   lastWatchedSecond?: number;
   slug?: string;
-  metaTitle?: string;
-  metaDescription?: string;
+  shortDescription?: string;
   profileTestId?: string;
   profileTestConfig?: {
     allowSkipIfCompleted?: boolean;
@@ -59,6 +75,7 @@ export type Module = {
   id: string;
   courseId?: string;
   title: string;
+  slug?: string;
   description?: string;
   coverUrl?: string;
   order: number;

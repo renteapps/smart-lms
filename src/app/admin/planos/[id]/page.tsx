@@ -2,9 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Button, Card, Input, TextField, Label } from "@heroui/react";
+import {
+  Button,
+  Card,
+  Input,
+  Label,
+  ListBox,
+  ListBoxItem,
+  Radio,
+  RadioGroup,
+  Select,
+  Switch,
+  TextField,
+  toast,
+} from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
-import { toast } from "sonner";
 import { LinkIcon, Plug, CreditCard, ChevronLeft, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -50,34 +62,15 @@ function ToggleSwitch({
   description?: string;
 }) {
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onChange(!isSelected)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onChange(!isSelected);
-        }
-      }}
-      className="flex w-full items-center justify-between gap-4 cursor-pointer select-none text-left focus:outline-none"
-    >
-      <div className="flex-1">
+    <Switch isSelected={isSelected} onChange={onChange} className="w-full items-center justify-between gap-4">
+      <Switch.Content className="flex-1 text-left">
         <span className="block text-sm font-semibold text-foreground">{label}</span>
-        {description && <span className="block text-xs text-muted mt-0.5">{description}</span>}
-      </div>
-      <div
-        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out ${
-          isSelected ? "bg-accent" : "bg-neutral-300 dark:bg-neutral-700"
-        }`}
-      >
-        <span
-          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-            isSelected ? "translate-x-5" : "translate-x-0.5"
-          }`}
-        />
-      </div>
-    </div>
+        {description && <span className="mt-0.5 block text-xs font-normal text-muted">{description}</span>}
+      </Switch.Content>
+      <Switch.Control>
+        <Switch.Thumb />
+      </Switch.Control>
+    </Switch>
   );
 }
 
@@ -124,11 +117,11 @@ export default function EditPlanPage() {
               productId: plan.gatewayProductId,
             });
           } else {
-            toast.error("Plano não encontrado.");
+            toast.danger("Plano não encontrado.");
             router.push("/admin/planos");
           }
         } catch (e) {
-          toast.error("Erro ao carregar plano.");
+          toast.danger("Erro ao carregar plano.");
           router.push("/admin/planos");
         }
       }
@@ -141,12 +134,12 @@ export default function EditPlanPage() {
   const handleSave = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!formData.name || !formData.price) {
-      toast.error("Preencha os campos obrigatórios na aba Geral.");
+      toast.danger("Preencha os campos obrigatórios na aba Geral.");
       return;
     }
 
     if (formData.gateway && !formData.productId) {
-      toast.error("Informe o ID do Produto para salvar a integração.");
+      toast.danger("Informe o ID do Produto para salvar a integração.");
       return;
     }
 
@@ -222,23 +215,28 @@ export default function EditPlanPage() {
                   <Input type="number" step="0.01" placeholder="Ex: 99.90" />
                 </TextField>
 
-                <div className="space-y-1">
-                  <Label className="text-sm font-medium">Ciclo / Frequência</Label>
-                  <select
-                    className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                    value={formData.frequency || "mensal"}
-                    onChange={(e) => setFormData({ ...formData, frequency: e.target.value as Plan["frequency"] })}
-                  >
-                    <option value="semanal">Semanal</option>
-                    <option value="quinzenal">Quinzenal</option>
-                    <option value="mensal">Mensal</option>
-                    <option value="trimestral">Trimestral</option>
-                    <option value="semestral">Semestral</option>
-                    <option value="anual">Anual</option>
-                    <option value="vitalicio">Vitalício</option>
-                    <option value="personalizado">Personalizado (em dias)</option>
-                  </select>
-                </div>
+                <Select
+                  selectedKey={formData.frequency || "mensal"}
+                  onSelectionChange={(k) => setFormData({ ...formData, frequency: String(k) as Plan["frequency"] })}
+                >
+                  <Label>Ciclo / frequência</Label>
+                  <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      <ListBoxItem id="semanal">Semanal</ListBoxItem>
+                      <ListBoxItem id="quinzenal">Quinzenal</ListBoxItem>
+                      <ListBoxItem id="mensal">Mensal</ListBoxItem>
+                      <ListBoxItem id="trimestral">Trimestral</ListBoxItem>
+                      <ListBoxItem id="semestral">Semestral</ListBoxItem>
+                      <ListBoxItem id="anual">Anual</ListBoxItem>
+                      <ListBoxItem id="vitalicio">Vitalício</ListBoxItem>
+                      <ListBoxItem id="personalizado">Personalizado (em dias)</ListBoxItem>
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
               </div>
 
               {formData.frequency === "personalizado" && (
@@ -249,16 +247,23 @@ export default function EditPlanPage() {
                 </TextField>
               )}
 
-              <div className="space-y-1 pt-2">
-                <Label className="text-sm font-medium">Status do Plano</Label>
-                <select
-                  className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  value={formData.status || "ativo"}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as "ativo" | "inativo" })}
+              <div className="pt-2">
+                <Select
+                  selectedKey={formData.status || "ativo"}
+                  onSelectionChange={(k) => setFormData({ ...formData, status: String(k) as "ativo" | "inativo" })}
                 >
-                  <option value="ativo">Ativo</option>
-                  <option value="inativo">Inativo</option>
-                </select>
+                  <Label>Status do plano</Label>
+                  <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      <ListBoxItem id="ativo">Ativo</ListBoxItem>
+                      <ListBoxItem id="inativo">Inativo</ListBoxItem>
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
               </div>
             </div>
           </Card>
@@ -287,31 +292,31 @@ export default function EditPlanPage() {
                     {/* Opções específicas para Cursos */}
                     {feature.id === "cursos" && isSelected && (
                       <div className="mt-4 rounded-lg bg-background-secondary p-4 space-y-4">
-                        <Label className="text-xs font-semibold text-foreground">Abrangência de Acesso</Label>
-                        <div className="flex gap-4">
-                          <label className="flex items-center gap-2 text-sm cursor-pointer">
-                            <input 
-                              type="radio" 
-                              className="accent-accent"
-                              name="courseAccessType" 
-                              value="all" 
-                              checked={formData.courseAccessType !== "specific"}
-                              onChange={() => setFormData({ ...formData, courseAccessType: "all" })}
-                            />
-                            Todos os Cursos
-                          </label>
-                          <label className="flex items-center gap-2 text-sm cursor-pointer">
-                            <input 
-                              type="radio" 
-                              className="accent-accent"
-                              name="courseAccessType" 
-                              value="specific"
-                              checked={formData.courseAccessType === "specific"}
-                              onChange={() => setFormData({ ...formData, courseAccessType: "specific" })}
-                            />
-                            Cursos Específicos
-                          </label>
-                        </div>
+                        <RadioGroup
+                          value={formData.courseAccessType === "specific" ? "specific" : "all"}
+                          onChange={(value) => setFormData({ ...formData, courseAccessType: value as "all" | "specific" })}
+                          orientation="horizontal"
+                        >
+                          <Label className="text-xs font-semibold text-foreground">Abrangência de Acesso</Label>
+                          <div className="flex gap-4">
+                            <Radio value="all">
+                              <Radio.Content className="gap-2">
+                                <Radio.Control>
+                                  <Radio.Indicator />
+                                </Radio.Control>
+                                Todos os Cursos
+                              </Radio.Content>
+                            </Radio>
+                            <Radio value="specific">
+                              <Radio.Content className="gap-2">
+                                <Radio.Control>
+                                  <Radio.Indicator />
+                                </Radio.Control>
+                                Cursos Específicos
+                              </Radio.Content>
+                            </Radio>
+                          </div>
+                        </RadioGroup>
                         
                         {formData.courseAccessType === "specific" && (
                           <div className="pt-2">
@@ -373,18 +378,24 @@ export default function EditPlanPage() {
             </p>
 
             <div className="space-y-4">
-              <div className="space-y-1">
-                <Label className="text-sm font-medium">Plataforma</Label>
-                <select
-                  className="flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  value={formData.gateway || ""}
-                  onChange={(e) => setFormData({ ...formData, gateway: e.target.value as "Eduzz" | "Hotmart" | undefined })}
-                >
-                  <option value="">Nenhuma</option>
-                  <option value="Eduzz">Eduzz</option>
-                  <option value="Hotmart">Hotmart</option>
-                </select>
-              </div>
+              <Select
+                selectedKey={formData.gateway || null}
+                onSelectionChange={(k) => setFormData({ ...formData, gateway: (k ? String(k) : undefined) as "Eduzz" | "Hotmart" | undefined })}
+                placeholder="Nenhuma"
+              >
+                <Label>Plataforma</Label>
+                <Select.Trigger>
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    <ListBoxItem id="">Nenhuma</ListBoxItem>
+                    <ListBoxItem id="Eduzz">Eduzz</ListBoxItem>
+                    <ListBoxItem id="Hotmart">Hotmart</ListBoxItem>
+                  </ListBox>
+                </Select.Popover>
+              </Select>
 
               {formData.gateway && (
                 <>

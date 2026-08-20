@@ -120,13 +120,13 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-primary-pale/60 p-4 rounded-xl border border-primary/10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-accent-soft/60 p-4 rounded-xl border border-accent/10">
         <div>
-          <h3 className="font-bold text-ink-deep flex items-center gap-2 text-base">
-            <HelpCircle className="w-5 h-5 text-primary" />
+          <h3 className="font-bold text-foreground flex items-center gap-2 text-base">
+            <HelpCircle className="w-5 h-5 text-accent" />
             Perguntas & Pontuações
           </h3>
-          <p className="text-sm text-text-soft">
+          <p className="text-sm text-muted">
             Crie as perguntas do teste e atribua pontos a uma ou mais categorias para cada resposta escolhida.
           </p>
         </div>
@@ -134,14 +134,14 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
           <button
             type="button"
             onClick={expandedIds.length === 0 ? expandAll : collapseAll}
-            className="px-4 py-2.5 rounded-xl border border-border/60 font-semibold text-xs text-text hover:bg-canvas-soft transition-all shrink-0"
+            className="px-4 py-2.5 rounded-xl border border-border/60 font-semibold text-xs text-foreground hover:bg-background-secondary transition-all shrink-0"
           >
             {expandedIds.length === 0 ? 'Expandir Tudo' : 'Recolher Tudo'}
           </button>
           <button
             type="button"
             onClick={handleAddQuestion}
-            className="bg-primary text-on-primary px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-primary-active transition-all flex items-center gap-2 shadow-sm hover:shadow-md shrink-0"
+            className="bg-accent text-accent-foreground px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-accent-hover transition-all flex items-center gap-2 shadow-sm hover:shadow-md shrink-0"
           >
             <Plus className="w-4 h-4" />
             Adicionar Pergunta
@@ -156,8 +156,8 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
           return (
             <div
               key={q.id}
-              className={`bg-surface-card border rounded-2xl shadow-sm transition-all overflow-hidden ${
-                isExpanded ? 'border-border/60 hover:shadow-md' : 'border-border/30 hover:border-primary/40 opacity-90 hover:opacity-100'
+              className={`bg-surface border rounded-2xl shadow-sm transition-all overflow-hidden ${
+                isExpanded ? 'border-border/60 hover:shadow-md' : 'border-border/30 hover:border-accent/40 opacity-90 hover:opacity-100'
               }`}
             >
               {/* Header / Title (Always visible) */}
@@ -173,10 +173,10 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
                 }}
               >
                 <div className="flex items-center gap-3 flex-1">
-                  <div className="p-1 text-text-mute hover:text-text rounded-md hover:bg-canvas-soft transition-colors cursor-grab" onClick={(e) => e.stopPropagation()}>
+                  <div className="p-1 text-muted hover:text-foreground rounded-md hover:bg-background-secondary transition-colors cursor-grab" onClick={(e) => e.stopPropagation()}>
                     <GripVertical className="w-5 h-5" />
                   </div>
-                  <span className="bg-primary/10 text-primary font-black px-2.5 py-1 rounded-full text-xs shrink-0">
+                  <span className="bg-accent/10 text-accent font-black px-2.5 py-1 rounded-full text-xs shrink-0">
                     Q{qIndex + 1}
                   </span>
                   
@@ -186,10 +186,10 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
                       value={q.text}
                       onChange={(e) => handleUpdateQuestion(q.id, { text: e.target.value })}
                       placeholder="Digite o enunciado da pergunta..."
-                      className="flex-1 font-bold text-lg text-text bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none py-1 transition-colors"
+                      className="flex-1 font-bold text-lg text-foreground bg-transparent border-b border-transparent hover:border-border focus:border-accent focus:outline-none py-1 transition-colors"
                     />
                   ) : (
-                    <span className="flex-1 font-bold text-text truncate">
+                    <span className="flex-1 font-bold text-foreground truncate">
                       {q.text || 'Pergunta sem enunciado'}
                     </span>
                   )}
@@ -202,12 +202,12 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
                       e.stopPropagation();
                       handleRemoveQuestion(q.id);
                     }}
-                    className="text-text-mute hover:text-negative p-2 rounded-xl hover:bg-negative/10 transition-colors"
+                    className="text-muted hover:text-danger p-2 rounded-xl hover:bg-danger/10 transition-colors"
                     title="Excluir Pergunta"
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
-                  <div className="p-2 text-text-mute">
+                  <div className="p-2 text-muted">
                     {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                   </div>
                 </div>
@@ -215,10 +215,10 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
 
               {/* Options List (Collapsible) */}
               {isExpanded && (
-                <div className="p-4 sm:p-6 space-y-6 bg-canvas-soft/20 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="p-4 sm:p-6 space-y-6 bg-background-secondary/20 animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="flex items-center gap-2 mb-2">
-                    <Calculator className="w-4 h-4 text-text-soft" />
-                    <span className="text-xs font-bold text-text-soft uppercase tracking-wider block">
+                    <Calculator className="w-4 h-4 text-muted" />
+                    <span className="text-xs font-bold text-muted uppercase tracking-wider block">
                       Alternativas e Distribuição de Pontos
                     </span>
                   </div>
@@ -227,11 +227,11 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
                     {q.options.map((opt, oIndex) => (
                       <div
                         key={opt.id}
-                        className="bg-surface-card border border-border/60 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm"
+                        className="bg-surface border border-border/60 rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm"
                       >
                         {/* Option Text */}
                         <div className="flex items-center gap-3">
-                          <span className="w-7 h-7 rounded-full bg-primary/5 text-primary border border-primary/20 flex items-center justify-center font-bold text-sm shrink-0">
+                          <span className="w-7 h-7 rounded-full bg-accent/5 text-accent border border-accent/20 flex items-center justify-center font-bold text-sm shrink-0">
                             {String.fromCharCode(65 + oIndex)}
                           </span>
                           <input
@@ -239,23 +239,23 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
                             value={opt.text}
                             onChange={(e) => handleUpdateOption(q.id, opt.id, { text: e.target.value })}
                             placeholder="Texto da alternativa..."
-                            className="flex-1 bg-canvas-soft border border-border/50 rounded-xl px-4 py-2.5 text-sm font-medium text-text focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            className="flex-1 bg-background-secondary border border-border/50 rounded-xl px-4 py-2.5 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                           />
                           <button
                             type="button"
                             onClick={() => handleRemoveOption(q.id, opt.id)}
-                            className="text-text-mute hover:text-negative p-2 rounded-xl hover:bg-negative/10 transition-colors shrink-0"
+                            className="text-muted hover:text-danger p-2 rounded-xl hover:bg-danger/10 transition-colors shrink-0"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
 
                         {/* Point allocation grid */}
-                        <div className="pt-3 border-t border-border/30 bg-canvas-soft/30 -mx-4 sm:-mx-5 -mb-4 sm:-mb-5 p-4 sm:p-5 rounded-b-2xl">
+                        <div className="pt-3 border-t border-border/30 bg-background-secondary/30 -mx-4 sm:-mx-5 -mb-4 sm:-mb-5 p-4 sm:p-5 rounded-b-2xl">
                           <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
                             
                             <div className="flex-1 space-y-3">
-                              <span className="text-[10px] font-bold text-text-mute uppercase tracking-wider block">
+                              <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">
                                 Se o aluno escolher esta opção, ele ganha pontos em:
                               </span>
                               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
@@ -274,26 +274,26 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
                                     >
                                       <div className="flex items-center gap-2 truncate pr-2" title={cat.name}>
                                         <span className="text-base">{cat.emoji}</span>
-                                        <span className={`text-xs font-semibold truncate ${isActive ? 'text-text' : 'text-text-mute'}`}>
+                                        <span className={`text-xs font-semibold truncate ${isActive ? 'text-foreground' : 'text-muted'}`}>
                                           {cat.name}
                                         </span>
                                       </div>
                                       
-                                      <div className="flex items-center gap-1 shrink-0 bg-canvas-soft rounded-lg p-0.5 border border-border/40">
+                                      <div className="flex items-center gap-1 shrink-0 bg-background-secondary rounded-lg p-0.5 border border-border/40">
                                         <button
                                           type="button"
                                           onClick={() => handleScoreChange(q.id, opt.id, cat.id, Math.max(0, currentPoints - 1))}
-                                          className="w-6 h-6 rounded-md hover:bg-surface hover:shadow-sm text-text-soft flex items-center justify-center transition-all"
+                                          className="w-6 h-6 rounded-md hover:bg-surface hover:shadow-sm text-muted flex items-center justify-center transition-all"
                                         >
                                           -
                                         </button>
-                                        <span className={`w-5 text-center text-xs font-black ${isActive ? 'text-primary' : 'text-text-mute'}`}>
+                                        <span className={`w-5 text-center text-xs font-black ${isActive ? 'text-accent' : 'text-muted'}`}>
                                           {currentPoints}
                                         </span>
                                         <button
                                           type="button"
                                           onClick={() => handleScoreChange(q.id, opt.id, cat.id, currentPoints + 1)}
-                                          className="w-6 h-6 rounded-md hover:bg-surface hover:shadow-sm text-text-soft flex items-center justify-center transition-all"
+                                          className="w-6 h-6 rounded-md hover:bg-surface hover:shadow-sm text-muted flex items-center justify-center transition-all"
                                         >
                                           +
                                         </button>
@@ -306,7 +306,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
 
                             {/* Score Preview Bar (Mini) */}
                             <div className="w-full sm:w-1/3 min-w-[150px] border-t sm:border-t-0 sm:border-l border-border/40 pt-3 sm:pt-0 sm:pl-6 flex flex-col justify-center">
-                              <span className="text-[10px] font-bold text-text-mute uppercase tracking-wider block mb-2">
+                              <span className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-2">
                                 Distribuição
                               </span>
                               <ScoreDistributionBar categories={categories} categoryScores={opt.categoryScores} />
@@ -321,7 +321,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
                   <button
                     type="button"
                     onClick={() => handleAddOption(q.id)}
-                    className="text-xs font-bold text-primary bg-primary/5 hover:bg-primary/10 px-4 py-2.5 rounded-xl border border-primary/20 flex items-center gap-1.5 transition-colors w-fit"
+                    className="text-xs font-bold text-accent bg-accent/5 hover:bg-accent/10 px-4 py-2.5 rounded-xl border border-accent/20 flex items-center gap-1.5 transition-colors w-fit"
                   >
                     <Plus className="w-4 h-4" />
                     Adicionar Alternativa

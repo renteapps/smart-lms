@@ -133,7 +133,7 @@ export default function AddProfileTestModal({
       <Modal.Backdrop>
         <Modal.Container size="lg" scroll="inside">
           <Modal.Dialog>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
               <Modal.Header>
                 <div className="flex items-center gap-3">
                   <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground">
@@ -150,7 +150,7 @@ export default function AddProfileTestModal({
                 </div>
               </Modal.Header>
 
-              <Modal.Body className="space-y-6">
+              <Modal.Body className="space-y-6 py-4">
                 <RadioGroup
                   value={selectedTestId}
                   onChange={handleSelectTest}

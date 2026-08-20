@@ -56,11 +56,13 @@ export function useUserAccess(enabled: boolean): UserAccessState {
 
       try {
         // Verifica matrícula ativa
+        const nowIso = new Date().toISOString();
         const { data: enrollment, error: enrollErr } = await supabase
           .from("enrollments")
           .select("id")
           .eq("user_id", user!.id)
           .eq("status", "active")
+          .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
           .limit(1)
           .maybeSingle();
 

@@ -68,7 +68,7 @@ function AcessarContent() {
             error.message.includes("Failed to fetch") ||
             error.message.includes("NetworkError")
           ) {
-            message = "Falha ao conectar aos serviços de autenticação. Verifique sua conexão ou as configurações do Supabase.";
+            message = "Falha ao conectar aos serviços de autenticação. Verifique sua conexão e tente novamente.";
           } else if (error.message.includes("Email not confirmed")) {
             message = "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada e spam.";
           }
@@ -120,7 +120,7 @@ function AcessarContent() {
             error.message.includes("Failed to fetch") ||
             error.message.includes("NetworkError")
           ) {
-            message = "Falha ao conectar aos serviços de autenticação. Verifique as configurações do Supabase.";
+            message = "Falha ao conectar aos serviços de autenticação. Tente novamente mais tarde.";
           }
           setErrorMessage(message);
           return;

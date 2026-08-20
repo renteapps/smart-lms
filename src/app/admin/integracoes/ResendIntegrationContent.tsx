@@ -512,14 +512,14 @@ export function ResendIntegrationContent() {
               href="https://resend.com/docs"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-text hover:bg-canvas-soft transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground hover:bg-background-secondary transition-colors"
             >
               <ExternalLink className="size-3.5" /> Docs Resend
             </a>
             <button
               onClick={handleSaveConfig}
               disabled={isSaving}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-active transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-accent-hover transition-colors disabled:opacity-50"
             >
               {isSaving ? <RefreshCw className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
               Salvar Alterações
@@ -543,14 +543,14 @@ export function ResendIntegrationContent() {
             <Mail className="size-5" />
           </div>
           <div>
-            <p className="text-xs font-medium text-text-mute">Status da Conexão</p>
+            <p className="text-xs font-medium text-muted">Status da Conexão</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span
                 className={`size-2 rounded-full ${
                   !config.enabled ? "bg-muted" : isConnected ? "bg-success" : "bg-warning"
                 }`}
               />
-              <p className="font-bold text-sm text-text">
+              <p className="font-bold text-sm text-foreground">
                 {!config.enabled
                   ? "Desativado"
                   : isConnected
@@ -566,23 +566,23 @@ export function ResendIntegrationContent() {
             <FileCode className="size-5" />
           </div>
           <div>
-            <p className="text-xs font-medium text-text-mute">Modelos Customizados</p>
-            <p className="font-display text-xl font-bold text-text">
+            <p className="text-xs font-medium text-muted">Modelos Customizados</p>
+            <p className="font-display text-xl font-bold text-foreground">
               {Object.values(templates).filter((t) => t.isCustomized).length} de{" "}
               {Object.values(templates).length || 7}
             </p>
-            <p className="text-[11px] text-text-mute">HTML & tags editáveis</p>
+            <p className="text-[11px] text-muted">HTML & tags editáveis</p>
           </div>
         </div>
 
         <div className="editorial-card p-4 flex items-center gap-4">
-          <div className="size-11 rounded-xl bg-primary-soft text-primary flex items-center justify-center shrink-0">
+          <div className="size-11 rounded-xl bg-primary-soft text-accent flex items-center justify-center shrink-0">
             <Send className="size-5" />
           </div>
           <div>
-            <p className="text-xs font-medium text-text-mute">Total de Envios</p>
-            <p className="font-display text-xl font-bold text-text">{logs.length}</p>
-            <p className="text-[11px] text-text-mute">
+            <p className="text-xs font-medium text-muted">Total de Envios</p>
+            <p className="font-display text-xl font-bold text-foreground">{logs.length}</p>
+            <p className="text-[11px] text-muted">
               {logs.filter((l) => l.status === "sent").length} reais •{" "}
               {logs.filter((l) => l.status === "simulated").length} simulados
             </p>
@@ -596,8 +596,8 @@ export function ResendIntegrationContent() {
           onClick={() => setActiveTab("credentials")}
           className={`pb-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-2 ${
             activeTab === "credentials"
-              ? "border-primary text-primary"
-              : "border-transparent text-text-mute hover:text-text"
+              ? "border-accent text-accent"
+              : "border-transparent text-muted hover:text-foreground"
           }`}
         >
           <Key className="size-4" /> Credenciais & Remetente
@@ -607,8 +607,8 @@ export function ResendIntegrationContent() {
           onClick={() => setActiveTab("templates")}
           className={`pb-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-2 ${
             activeTab === "templates"
-              ? "border-primary text-primary"
-              : "border-transparent text-text-mute hover:text-text"
+              ? "border-accent text-accent"
+              : "border-transparent text-muted hover:text-foreground"
           }`}
         >
           <FileCode className="size-4" /> Modelos & HTML
@@ -621,8 +621,8 @@ export function ResendIntegrationContent() {
           onClick={() => setActiveTab("categories")}
           className={`pb-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-2 ${
             activeTab === "categories"
-              ? "border-primary text-primary"
-              : "border-transparent text-text-mute hover:text-text"
+              ? "border-accent text-accent"
+              : "border-transparent text-muted hover:text-foreground"
           }`}
         >
           <Bell className="size-4" /> Gatilhos Ativos
@@ -632,8 +632,8 @@ export function ResendIntegrationContent() {
           onClick={() => setActiveTab("sandbox")}
           className={`pb-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-2 ${
             activeTab === "sandbox"
-              ? "border-primary text-primary"
-              : "border-transparent text-text-mute hover:text-text"
+              ? "border-accent text-accent"
+              : "border-transparent text-muted hover:text-foreground"
           }`}
         >
           <Sparkles className="size-4" /> Sandbox de Teste
@@ -643,8 +643,8 @@ export function ResendIntegrationContent() {
           onClick={() => setActiveTab("dns")}
           className={`pb-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-2 ${
             activeTab === "dns"
-              ? "border-primary text-primary"
-              : "border-transparent text-text-mute hover:text-text"
+              ? "border-accent text-accent"
+              : "border-transparent text-muted hover:text-foreground"
           }`}
         >
           <Globe className="size-4" /> Domínio & DNS
@@ -654,13 +654,13 @@ export function ResendIntegrationContent() {
           onClick={() => setActiveTab("logs")}
           className={`pb-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap transition-colors flex items-center gap-2 ${
             activeTab === "logs"
-              ? "border-primary text-primary"
-              : "border-transparent text-text-mute hover:text-text"
+              ? "border-accent text-accent"
+              : "border-transparent text-muted hover:text-foreground"
           }`}
         >
           <FileText className="size-4" /> Histórico de Envios
           {logs.length > 0 && (
-            <span className="text-[10px] bg-canvas-alt text-text px-1.5 py-0.5 rounded-full font-mono">
+            <span className="text-[10px] bg-background-secondary text-foreground px-1.5 py-0.5 rounded-full font-mono">
               {logs.length}
             </span>
           )}
@@ -674,25 +674,25 @@ export function ResendIntegrationContent() {
             <div className="editorial-card p-6 space-y-6">
               <div className="flex items-center justify-between border-b border-border/60 pb-4">
                 <div>
-                  <h2 className="text-lg font-bold text-ink">Chave de API (Resend)</h2>
-                  <p className="text-xs text-text-mute mt-0.5">
+                  <h2 className="text-lg font-bold text-foreground">Chave de API (Resend)</h2>
+                  <p className="text-xs text-muted mt-0.5">
                     Gere sua chave com permissão de envio (Sending Access) no painel do Resend.
                   </p>
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="text-xs font-semibold text-text">Ativar Resend</span>
+                  <span className="text-xs font-semibold text-foreground">Ativar Resend</span>
                   <input
                     type="checkbox"
                     checked={config.enabled}
                     onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                    className="w-4 h-4 rounded border-border text-accent focus:ring-primary"
                   />
                 </label>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                     Resend API Key
                   </label>
                   <div className="relative flex items-center">
@@ -701,26 +701,26 @@ export function ResendIntegrationContent() {
                       value={apiKeyInput}
                       onChange={(e) => setApiKeyInput(e.target.value)}
                       placeholder="re_123456789_abcdefghijklmnopqrstuvwxyz"
-                      className="w-full min-h-11 rounded-[11px] border border-border bg-canvas-soft pl-4 pr-24 font-mono text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                      className="w-full min-h-11 rounded-xl border border-border bg-background-secondary pl-4 pr-24 font-mono text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                     />
                     <div className="absolute right-2 flex items-center gap-1">
                       <button
                         type="button"
                         onClick={() => setShowApiKey(!showApiKey)}
-                        className="p-1.5 text-text-mute hover:text-text transition-colors rounded-md"
+                        className="p-1.5 text-muted hover:text-foreground transition-colors rounded-md"
                         title={showApiKey ? "Ocultar" : "Mostrar"}
                       >
                         {showApiKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                       </button>
                     </div>
                   </div>
-                  <p className="text-[11px] text-text-mute mt-1.5 flex items-center gap-1">
+                  <p className="text-[11px] text-muted mt-1.5 flex items-center gap-1">
                     <span>Não possui uma chave?</span>
                     <a
                       href="https://resend.com/api-keys"
                       target="_blank"
                       rel="noreferrer"
-                      className="text-primary hover:underline font-semibold"
+                      className="text-accent hover:underline font-semibold"
                     >
                       Criar API Key no Resend →
                     </a>
@@ -732,7 +732,7 @@ export function ResendIntegrationContent() {
                     type="button"
                     onClick={handleValidateKey}
                     disabled={isValidatingKey}
-                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-semibold text-text hover:bg-canvas-soft transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-semibold text-foreground hover:bg-background-secondary transition-colors disabled:opacity-50"
                   >
                     {isValidatingKey ? (
                       <RefreshCw className="size-3.5 animate-spin" />
@@ -746,7 +746,7 @@ export function ResendIntegrationContent() {
                     type="button"
                     onClick={handleSaveConfig}
                     disabled={isSaving}
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-active transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-accent-hover transition-colors disabled:opacity-50"
                   >
                     {isSaving ? <RefreshCw className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
                     Salvar Credenciais
@@ -758,15 +758,15 @@ export function ResendIntegrationContent() {
             {/* Sender Info */}
             <div className="editorial-card p-6 space-y-6">
               <div className="border-b border-border/60 pb-4">
-                <h2 className="text-lg font-bold text-ink">Informações do Remetente</h2>
-                <p className="text-xs text-text-mute mt-0.5">
+                <h2 className="text-lg font-bold text-foreground">Informações do Remetente</h2>
+                <p className="text-xs text-muted mt-0.5">
                   Estes dados serão exibidos no cabeçalho dos e-mails recebidos pelos alunos.
                 </p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                     Nome do Remetente
                   </label>
                   <input
@@ -774,15 +774,15 @@ export function ResendIntegrationContent() {
                     value={config.fromName}
                     onChange={(e) => setConfig({ ...config, fromName: e.target.value })}
                     placeholder="Ex: Smart LMS ou Academia Digital"
-                    className="w-full min-h-11 rounded-[11px] border border-border bg-canvas-soft px-4 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                    className="w-full min-h-11 rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                   />
-                  <p className="text-[11px] text-text-mute mt-1">
+                  <p className="text-[11px] text-muted mt-1">
                     Nome exibido na caixa de entrada do aluno.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                     E-mail do Remetente (From)
                   </label>
                   <input
@@ -790,26 +790,26 @@ export function ResendIntegrationContent() {
                     value={config.fromEmail}
                     onChange={(e) => setConfig({ ...config, fromEmail: e.target.value })}
                     placeholder="Ex: notificacoes@seudominio.com"
-                    className="w-full min-h-11 rounded-[11px] border border-border bg-canvas-soft px-4 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                    className="w-full min-h-11 rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                   />
-                  <p className="text-[11px] text-text-mute mt-1">
+                  <p className="text-[11px] text-muted mt-1">
                     Para testes rápidos sem domínio próprio, use <code>onboarding@resend.dev</code>.
                   </p>
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                     E-mail de Resposta (Reply-To){" "}
-                    <span className="text-text-mute/60 font-normal">(Opcional)</span>
+                    <span className="text-muted/60 font-normal">(Opcional)</span>
                   </label>
                   <input
                     type="email"
                     value={config.replyTo || ""}
                     onChange={(e) => setConfig({ ...config, replyTo: e.target.value })}
                     placeholder="Ex: suporte@seudominio.com"
-                    className="w-full min-h-11 rounded-[11px] border border-border bg-canvas-soft px-4 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                    className="w-full min-h-11 rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                   />
-                  <p className="text-[11px] text-text-mute mt-1">
+                  <p className="text-[11px] text-muted mt-1">
                     Se o aluno responder à mensagem, o e-mail será entregue nesta caixa.
                   </p>
                 </div>
@@ -831,8 +831,8 @@ export function ResendIntegrationContent() {
             </div>
 
             <div className="editorial-card p-5 space-y-3">
-              <h3 className="font-bold text-sm text-ink">Como funciona o Modo Sandbox?</h3>
-              <p className="text-xs text-text-mute leading-relaxed">
+              <h3 className="font-bold text-sm text-foreground">Como funciona o Modo Sandbox?</h3>
+              <p className="text-xs text-muted leading-relaxed">
                 Se você não informar uma chave de API ou se estiver em ambiente local, o Smart LMS
                 simula os disparos gerando os templates HTML completos e gravando o histórico de
                 envios sem custos.
@@ -849,23 +849,23 @@ export function ResendIntegrationContent() {
           <div className="lg:col-span-4 space-y-4">
             <div className="editorial-card p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-text-mute">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
                   Selecione o Modelo
                 </h3>
-                <span className="text-[11px] font-semibold text-text-mute">
+                <span className="text-[11px] font-semibold text-muted">
                   {filteredTemplateList.length} disponíveis
                 </span>
               </div>
 
               {/* Category Filter */}
-              <div className="grid grid-cols-3 gap-1 bg-canvas-soft p-1 rounded-lg text-xs font-semibold">
+              <div className="grid grid-cols-3 gap-1 bg-background-secondary p-1 rounded-lg text-xs font-semibold">
                 <button
                   type="button"
                   onClick={() => setTemplateFilter("all")}
                   className={`py-1.5 rounded-md transition-all ${
                     templateFilter === "all"
-                      ? "bg-surface shadow-sm text-text font-bold"
-                      : "text-text-mute hover:text-text"
+                      ? "bg-surface shadow-sm text-foreground font-bold"
+                      : "text-muted hover:text-foreground"
                   }`}
                 >
                   Todos
@@ -875,8 +875,8 @@ export function ResendIntegrationContent() {
                   onClick={() => setTemplateFilter("platform")}
                   className={`py-1.5 rounded-md transition-all ${
                     templateFilter === "platform"
-                      ? "bg-surface shadow-sm text-text font-bold"
-                      : "text-text-mute hover:text-text"
+                      ? "bg-surface shadow-sm text-foreground font-bold"
+                      : "text-muted hover:text-foreground"
                   }`}
                 >
                   Plataforma
@@ -886,8 +886,8 @@ export function ResendIntegrationContent() {
                   onClick={() => setTemplateFilter("notification")}
                   className={`py-1.5 rounded-md transition-all ${
                     templateFilter === "notification"
-                      ? "bg-surface shadow-sm text-text font-bold"
-                      : "text-text-mute hover:text-text"
+                      ? "bg-surface shadow-sm text-foreground font-bold"
+                      : "text-muted hover:text-foreground"
                   }`}
                 >
                   Notificações
@@ -905,12 +905,12 @@ export function ResendIntegrationContent() {
                       onClick={() => handleSelectTemplate(tpl.type)}
                       className={`w-full text-left p-3.5 rounded-xl border transition-all ${
                         isSelected
-                          ? "border-primary bg-primary/5 shadow-sm"
-                          : "border-border/70 bg-canvas-soft hover:bg-surface hover:border-border"
+                          ? "border-accent bg-accent/5 shadow-sm"
+                          : "border-border/70 bg-background-secondary hover:bg-surface hover:border-border"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <p className={`font-bold text-xs ${isSelected ? "text-primary" : "text-text"}`}>
+                        <p className={`font-bold text-xs ${isSelected ? "text-accent" : "text-foreground"}`}>
                           {tpl.name}
                         </p>
                         {tpl.isCustomized ? (
@@ -918,12 +918,12 @@ export function ResendIntegrationContent() {
                             Customizado
                           </span>
                         ) : (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-canvas-alt text-text-mute whitespace-nowrap">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-background-secondary text-muted whitespace-nowrap">
                             Padrão
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-text-mute mt-1 line-clamp-2 leading-relaxed">
+                      <p className="text-[11px] text-muted mt-1 line-clamp-2 leading-relaxed">
                         {tpl.description}
                       </p>
                     </button>
@@ -933,8 +933,8 @@ export function ResendIntegrationContent() {
             </div>
 
             {/* Quick tips */}
-            <div className="rounded-xl border border-border bg-canvas-soft p-4 space-y-2 text-xs text-text-mute">
-              <p className="font-bold text-text flex items-center gap-1.5">
+            <div className="rounded-xl border border-border bg-background-secondary p-4 space-y-2 text-xs text-muted">
+              <p className="font-bold text-foreground flex items-center gap-1.5">
                 <Info className="size-3.5 text-accent" /> Sobre a Customização
               </p>
               <p className="leading-relaxed">
@@ -950,18 +950,18 @@ export function ResendIntegrationContent() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-base font-bold text-ink">{currentTemplate.name}</h2>
+                    <h2 className="text-base font-bold text-foreground">{currentTemplate.name}</h2>
                     {currentTemplate.isCustomized ? (
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent-soft text-accent">
                         HTML Customizado
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-canvas-alt text-text-mute">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-background-secondary text-muted">
                         HTML Padrão do Sistema
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-text-mute mt-0.5">{currentTemplate.description}</p>
+                  <p className="text-xs text-muted mt-0.5">{currentTemplate.description}</p>
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
@@ -977,7 +977,7 @@ export function ResendIntegrationContent() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-text hover:bg-canvas-soft transition-colors"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground hover:bg-background-secondary transition-colors"
                     title="Subir arquivo .html do seu computador"
                   >
                     <Upload className="size-3.5" /> Subir HTML (.html)
@@ -988,7 +988,7 @@ export function ResendIntegrationContent() {
                       type="button"
                       onClick={handleResetTemplate}
                       disabled={isResettingTemplate}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-text-mute hover:text-negative hover:border-negative/30 transition-colors disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-muted hover:text-danger hover:border-danger/30 transition-colors disabled:opacity-50"
                       title="Restaurar para o layout original"
                     >
                       <RotateCcw className="size-3.5" /> Restaurar Padrão
@@ -999,7 +999,7 @@ export function ResendIntegrationContent() {
                     type="button"
                     onClick={handleSaveTemplate}
                     disabled={isSavingTemplate}
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-active transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-accent-hover transition-colors disabled:opacity-50"
                   >
                     {isSavingTemplate ? (
                       <RefreshCw className="size-3.5 animate-spin" />
@@ -1014,7 +1014,7 @@ export function ResendIntegrationContent() {
               {/* Subject & Preheader Inputs */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                     Assunto do E-mail (Subject)
                   </label>
                   <input
@@ -1022,15 +1022,15 @@ export function ResendIntegrationContent() {
                     value={editedSubject}
                     onChange={(e) => setEditedSubject(e.target.value)}
                     placeholder="Ex: Boas-vindas ao {{nome_plataforma}}!"
-                    className="w-full min-h-10 rounded-[10px] border border-border bg-canvas-soft px-3 text-xs font-mono text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                    className="w-full min-h-10 rounded-lg border border-border bg-background-secondary px-3 text-xs font-mono text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                   />
-                  <p className="text-[10px] text-text-mute mt-1">
+                  <p className="text-[10px] text-muted mt-1">
                     Suporta variáveis dinâmicas como <code>{"{{nome}}"}</code> ou <code>{"{{nome_curso}}"}</code>.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                     Texto de Prévia (Preheader)
                   </label>
                   <input
@@ -1038,21 +1038,21 @@ export function ResendIntegrationContent() {
                     value={editedPreviewText}
                     onChange={(e) => setEditedPreviewText(e.target.value)}
                     placeholder="Texto curto exibido na caixa de entrada..."
-                    className="w-full min-h-10 rounded-[10px] border border-border bg-canvas-soft px-3 text-xs font-mono text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                    className="w-full min-h-10 rounded-lg border border-border bg-background-secondary px-3 text-xs font-mono text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                   />
-                  <p className="text-[10px] text-text-mute mt-1">
+                  <p className="text-[10px] text-muted mt-1">
                     Snippet exibido ao lado do assunto no Gmail / Outlook.
                   </p>
                 </div>
               </div>
 
               {/* Variable Chips Drawer */}
-              <div className="rounded-xl border border-border bg-canvas-soft p-4 space-y-2.5">
+              <div className="rounded-xl border border-border bg-background-secondary p-4 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold text-text flex items-center gap-1.5">
-                    <Tag className="size-3.5 text-primary" /> Campos Personalizados Disponíveis
+                  <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Tag className="size-3.5 text-accent" /> Campos Personalizados Disponíveis
                   </p>
-                  <span className="text-[10px] text-text-mute">
+                  <span className="text-[10px] text-muted">
                     Clique em uma tag para copiar ou inserir
                   </span>
                 </div>
@@ -1063,17 +1063,17 @@ export function ResendIntegrationContent() {
                       key={v.tag}
                       type="button"
                       onClick={() => handleInsertVariable(v.tag)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border bg-surface hover:border-primary hover:bg-primary/5 text-xs font-mono text-text transition-colors group"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border bg-surface hover:border-accent hover:bg-accent/5 text-xs font-mono text-foreground transition-colors group"
                       title={`${v.label} - ${v.description} (Ex: ${v.example})`}
                     >
-                      <span className="text-primary font-bold">{v.tag}</span>
-                      <span className="text-[10px] text-text-mute group-hover:text-text font-sans">
+                      <span className="text-accent font-bold">{v.tag}</span>
+                      <span className="text-[10px] text-muted group-hover:text-foreground font-sans">
                         {v.label}
                       </span>
                       {copiedField === v.tag ? (
                         <Check className="size-3 text-success" />
                       ) : (
-                        <Copy className="size-3 text-text-mute opacity-50 group-hover:opacity-100" />
+                        <Copy className="size-3 text-muted opacity-50 group-hover:opacity-100" />
                       )}
                     </button>
                   ))}
@@ -1082,14 +1082,14 @@ export function ResendIntegrationContent() {
 
               {/* Editor & Preview Header Controls */}
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-4">
-                <div className="flex items-center gap-1 bg-canvas-soft p-1 rounded-lg text-xs font-semibold">
+                <div className="flex items-center gap-1 bg-background-secondary p-1 rounded-lg text-xs font-semibold">
                   <button
                     type="button"
                     onClick={() => setEditorMode("code")}
                     className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all ${
                       editorMode === "code"
-                        ? "bg-surface shadow-sm text-text font-bold"
-                        : "text-text-mute hover:text-text"
+                        ? "bg-surface shadow-sm text-foreground font-bold"
+                        : "text-muted hover:text-foreground"
                     }`}
                   >
                     <Code2 className="size-3.5" /> Código HTML
@@ -1099,8 +1099,8 @@ export function ResendIntegrationContent() {
                     onClick={() => setEditorMode("preview")}
                     className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all ${
                       editorMode === "preview"
-                        ? "bg-surface shadow-sm text-text font-bold"
-                        : "text-text-mute hover:text-text"
+                        ? "bg-surface shadow-sm text-foreground font-bold"
+                        : "text-muted hover:text-foreground"
                     }`}
                   >
                     <Eye className="size-3.5" /> Prévia
@@ -1110,8 +1110,8 @@ export function ResendIntegrationContent() {
                     onClick={() => setEditorMode("split")}
                     className={`hidden md:flex px-3 py-1.5 rounded-md items-center gap-1.5 transition-all ${
                       editorMode === "split"
-                        ? "bg-surface shadow-sm text-text font-bold"
-                        : "text-text-mute hover:text-text"
+                        ? "bg-surface shadow-sm text-foreground font-bold"
+                        : "text-muted hover:text-foreground"
                     }`}
                   >
                     <Sparkles className="size-3.5" /> Lado a Lado
@@ -1119,12 +1119,12 @@ export function ResendIntegrationContent() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-text-mute hover:text-text">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-muted hover:text-foreground">
                     <input
                       type="checkbox"
                       checked={useSampleData}
                       onChange={(e) => setUseSampleData(e.target.checked)}
-                      className="w-3.5 h-3.5 rounded border-border text-primary focus:ring-primary"
+                      className="w-3.5 h-3.5 rounded border-border text-accent focus:ring-primary"
                     />
                     <span>Interpolar Dados de Exemplo</span>
                   </label>
@@ -1135,8 +1135,8 @@ export function ResendIntegrationContent() {
                       onClick={() => setPreviewDevice("desktop")}
                       className={`p-1.5 rounded-md text-xs ${
                         previewDevice === "desktop"
-                          ? "bg-primary-soft text-primary font-bold"
-                          : "text-text-mute hover:text-text"
+                          ? "bg-primary-soft text-accent font-bold"
+                          : "text-muted hover:text-foreground"
                       }`}
                       title="Visualização Desktop"
                     >
@@ -1147,8 +1147,8 @@ export function ResendIntegrationContent() {
                       onClick={() => setPreviewDevice("mobile")}
                       className={`p-1.5 rounded-md text-xs ${
                         previewDevice === "mobile"
-                          ? "bg-primary-soft text-primary font-bold"
-                          : "text-text-mute hover:text-text"
+                          ? "bg-primary-soft text-accent font-bold"
+                          : "text-muted hover:text-foreground"
                       }`}
                       title="Visualização Mobile"
                     >
@@ -1167,7 +1167,7 @@ export function ResendIntegrationContent() {
                       editorMode === "split" ? "md:col-span-6 space-y-2" : "col-span-12 space-y-2"
                     }
                   >
-                    <div className="flex items-center justify-between text-[11px] text-text-mute font-mono">
+                    <div className="flex items-center justify-between text-[11px] text-muted font-mono">
                       <span>HTML do E-mail</span>
                       <span>{editedHtml.length} caracteres</span>
                     </div>
@@ -1178,7 +1178,7 @@ export function ResendIntegrationContent() {
                         onChange={(e) => setEditedHtml(e.target.value)}
                         rows={22}
                         placeholder="Cole seu código HTML aqui ou arraste um arquivo..."
-                        className="w-full rounded-xl border border-border bg-slate-950 p-4 font-mono text-xs text-emerald-400 placeholder:text-slate-600 focus:border-primary focus:outline-none leading-relaxed resize-y selection:bg-emerald-950 selection:text-emerald-200"
+                        className="w-full rounded-xl border border-border bg-slate-950 p-4 font-mono text-xs text-emerald-400 placeholder:text-slate-600 focus:border-accent focus:outline-none leading-relaxed resize-y selection:bg-emerald-950 selection:text-emerald-200"
                         spellCheck={false}
                       />
                     </div>
@@ -1192,7 +1192,7 @@ export function ResendIntegrationContent() {
                       editorMode === "split" ? "md:col-span-6 space-y-2" : "col-span-12 space-y-2"
                     }
                   >
-                    <div className="flex items-center justify-between text-[11px] text-text-mute font-mono">
+                    <div className="flex items-center justify-between text-[11px] text-muted font-mono">
                       <span>Pré-visualização em Tempo Real</span>
                       <span className="truncate max-w-[200px]">Assunto: {previewSubject}</span>
                     </div>
@@ -1240,16 +1240,16 @@ export function ResendIntegrationContent() {
           {/* Platform Emails */}
           <div className="editorial-card p-6 space-y-4">
             <div className="border-b border-border/60 pb-3">
-              <h2 className="text-base font-bold text-ink flex items-center gap-2">
+              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                 ✉️ E-mails Transacionais da Plataforma
               </h2>
-              <p className="text-xs text-text-mute">
+              <p className="text-xs text-muted">
                 E-mails disparados por ações diretas do usuário ou eventos de ciclo de vida da conta.
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-canvas-soft hover:bg-surface transition-colors cursor-pointer">
+              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-background-secondary hover:bg-surface transition-colors cursor-pointer">
                 <input
                   type="checkbox"
                   checked={config.categories.platform.welcome}
@@ -1262,17 +1262,17 @@ export function ResendIntegrationContent() {
                       },
                     })
                   }
-                  className="w-4 h-4 mt-0.5 rounded border-border text-primary focus:ring-primary"
+                  className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-primary"
                 />
                 <div className="text-xs">
-                  <p className="font-bold text-text">Boas-vindas ao Aluno</p>
-                  <p className="text-text-mute mt-0.5">
+                  <p className="font-bold text-foreground">Boas-vindas ao Aluno</p>
+                  <p className="text-muted mt-0.5">
                     Enviado assim que o aluno se cadastra ou é criado na plataforma.
                   </p>
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-canvas-soft hover:bg-surface transition-colors cursor-pointer">
+              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-background-secondary hover:bg-surface transition-colors cursor-pointer">
                 <input
                   type="checkbox"
                   checked={config.categories.platform.passwordReset}
@@ -1285,17 +1285,17 @@ export function ResendIntegrationContent() {
                       },
                     })
                   }
-                  className="w-4 h-4 mt-0.5 rounded border-border text-primary focus:ring-primary"
+                  className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-primary"
                 />
                 <div className="text-xs">
-                  <p className="font-bold text-text">Recuperação de Senha</p>
-                  <p className="text-text-mute mt-0.5">
+                  <p className="font-bold text-foreground">Recuperação de Senha</p>
+                  <p className="text-muted mt-0.5">
                     Link seguro para redefinição de acesso à conta.
                   </p>
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-canvas-soft hover:bg-surface transition-colors cursor-pointer">
+              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-background-secondary hover:bg-surface transition-colors cursor-pointer">
                 <input
                   type="checkbox"
                   checked={config.categories.platform.courseEnrollment}
@@ -1308,17 +1308,17 @@ export function ResendIntegrationContent() {
                       },
                     })
                   }
-                  className="w-4 h-4 mt-0.5 rounded border-border text-primary focus:ring-primary"
+                  className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-primary"
                 />
                 <div className="text-xs">
-                  <p className="font-bold text-text">Confirmação de Matrícula</p>
-                  <p className="text-text-mute mt-0.5">
+                  <p className="font-bold text-foreground">Confirmação de Matrícula</p>
+                  <p className="text-muted mt-0.5">
                     Disparado quando um curso é adquirido ou liberado manualmente.
                   </p>
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-canvas-soft hover:bg-surface transition-colors cursor-pointer">
+              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-background-secondary hover:bg-surface transition-colors cursor-pointer">
                 <input
                   type="checkbox"
                   checked={config.categories.platform.certificateIssued}
@@ -1331,17 +1331,17 @@ export function ResendIntegrationContent() {
                       },
                     })
                   }
-                  className="w-4 h-4 mt-0.5 rounded border-border text-primary focus:ring-primary"
+                  className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-primary"
                 />
                 <div className="text-xs">
-                  <p className="font-bold text-text">Emissão de Certificado</p>
-                  <p className="text-text-mute mt-0.5">
+                  <p className="font-bold text-foreground">Emissão de Certificado</p>
+                  <p className="text-muted mt-0.5">
                     Aviso e link do certificado oficial quando o curso é concluído.
                   </p>
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-canvas-soft hover:bg-surface transition-colors cursor-pointer sm:col-span-2">
+              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-background-secondary hover:bg-surface transition-colors cursor-pointer sm:col-span-2">
                 <input
                   type="checkbox"
                   checked={config.categories.platform.subscriptionConfirmation}
@@ -1357,11 +1357,11 @@ export function ResendIntegrationContent() {
                       },
                     })
                   }
-                  className="w-4 h-4 mt-0.5 rounded border-border text-primary focus:ring-primary"
+                  className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-primary"
                 />
                 <div className="text-xs">
-                  <p className="font-bold text-text">Confirmação de Assinatura & Fatura</p>
-                  <p className="text-text-mute mt-0.5">
+                  <p className="font-bold text-foreground">Confirmação de Assinatura & Fatura</p>
+                  <p className="text-muted mt-0.5">
                     Recibo e confirmação de renovação ou contratação de plano de assinatura.
                   </p>
                 </div>
@@ -1372,17 +1372,17 @@ export function ResendIntegrationContent() {
           {/* Notifications & Engagement Emails */}
           <div className="editorial-card p-6 space-y-4">
             <div className="border-b border-border/60 pb-3">
-              <h2 className="text-base font-bold text-ink flex items-center gap-2">
+              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                 🔔 E-mails de Notificação & Engajamento
               </h2>
-              <p className="text-xs text-text-mute">
+              <p className="text-xs text-muted">
                 E-mails enviados pelo painel de Notificações, automações comportamentais e
                 interações da comunidade.
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-canvas-soft hover:bg-surface transition-colors cursor-pointer">
+              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-background-secondary hover:bg-surface transition-colors cursor-pointer">
                 <input
                   type="checkbox"
                   checked={config.categories.notifications.newContent}
@@ -1398,17 +1398,17 @@ export function ResendIntegrationContent() {
                       },
                     })
                   }
-                  className="w-4 h-4 mt-0.5 rounded border-border text-primary focus:ring-primary"
+                  className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-primary"
                 />
                 <div className="text-xs">
-                  <p className="font-bold text-text">Novos Módulos & Aulas</p>
-                  <p className="text-text-mute mt-0.5">
+                  <p className="font-bold text-foreground">Novos Módulos & Aulas</p>
+                  <p className="text-muted mt-0.5">
                     Aviso automático aos matriculados quando novo conteúdo é publicado.
                   </p>
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-canvas-soft hover:bg-surface transition-colors cursor-pointer">
+              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-background-secondary hover:bg-surface transition-colors cursor-pointer">
                 <input
                   type="checkbox"
                   checked={config.categories.notifications.communityReplies}
@@ -1424,17 +1424,17 @@ export function ResendIntegrationContent() {
                       },
                     })
                   }
-                  className="w-4 h-4 mt-0.5 rounded border-border text-primary focus:ring-primary"
+                  className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-primary"
                 />
                 <div className="text-xs">
-                  <p className="font-bold text-text">Respostas na Comunidade</p>
-                  <p className="text-text-mute mt-0.5">
+                  <p className="font-bold text-foreground">Respostas na Comunidade</p>
+                  <p className="text-muted mt-0.5">
                     Notifica o aluno quando um professor ou colega responde sua dúvida.
                   </p>
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-canvas-soft hover:bg-surface transition-colors cursor-pointer">
+              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-background-secondary hover:bg-surface transition-colors cursor-pointer">
                 <input
                   type="checkbox"
                   checked={config.categories.notifications.broadcasts}
@@ -1450,17 +1450,17 @@ export function ResendIntegrationContent() {
                       },
                     })
                   }
-                  className="w-4 h-4 mt-0.5 rounded border-border text-primary focus:ring-primary"
+                  className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-primary"
                 />
                 <div className="text-xs">
-                  <p className="font-bold text-text">Comunicados Gerais (Admin)</p>
-                  <p className="text-text-mute mt-0.5">
+                  <p className="font-bold text-foreground">Comunicados Gerais (Admin)</p>
+                  <p className="text-muted mt-0.5">
                     Envios manuais realizados na aba de Notificações com canal Email marcado.
                   </p>
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-canvas-soft hover:bg-surface transition-colors cursor-pointer">
+              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-background-secondary hover:bg-surface transition-colors cursor-pointer">
                 <input
                   type="checkbox"
                   checked={config.categories.notifications.inactivityReengagement}
@@ -1476,11 +1476,11 @@ export function ResendIntegrationContent() {
                       },
                     })
                   }
-                  className="w-4 h-4 mt-0.5 rounded border-border text-primary focus:ring-primary"
+                  className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-primary"
                 />
                 <div className="text-xs">
-                  <p className="font-bold text-text">Automações de Reengajamento</p>
-                  <p className="text-text-mute mt-0.5">
+                  <p className="font-bold text-foreground">Automações de Reengajamento</p>
+                  <p className="text-muted mt-0.5">
                     Lembrete para alunos ausentes há 7 ou 30 dias retornarem aos estudos.
                   </p>
                 </div>
@@ -1493,7 +1493,7 @@ export function ResendIntegrationContent() {
               type="button"
               onClick={handleSaveConfig}
               disabled={isSaving}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground hover:bg-primary-active transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-xs font-bold text-primary-foreground hover:bg-accent-hover transition-colors disabled:opacity-50"
             >
               {isSaving ? <RefreshCw className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
               Salvar Categorias
@@ -1509,17 +1509,17 @@ export function ResendIntegrationContent() {
           <div className="lg:col-span-5 space-y-6">
             <div className="editorial-card p-6 space-y-4">
               <div className="border-b border-border/60 pb-3">
-                <h2 className="text-base font-bold text-ink flex items-center gap-2">
-                  <Send className="size-4 text-primary" /> Teste de Disparo
+                <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+                  <Send className="size-4 text-accent" /> Teste de Disparo
                 </h2>
-                <p className="text-xs text-text-mute">
+                <p className="text-xs text-muted">
                   Envie um e-mail de teste para verificar a formatação e entrega na caixa de entrada.
                 </p>
               </div>
 
               <form onSubmit={handleSendTestEmail} className="space-y-3.5">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
                     E-mail de Destino
                   </label>
                   <input
@@ -1528,18 +1528,18 @@ export function ResendIntegrationContent() {
                     onChange={(e) => setTestEmail(e.target.value)}
                     placeholder="seu-email@teste.com"
                     required
-                    className="w-full min-h-10 rounded-[10px] border border-border bg-canvas-soft px-3 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                    className="w-full min-h-10 rounded-lg border border-border bg-background-secondary px-3 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
                     Modelo do Teste
                   </label>
                   <select
                     value={testTemplate}
                     onChange={(e) => setTestTemplate(e.target.value as EmailTemplateType)}
-                    className="w-full min-h-10 rounded-[10px] border border-border bg-canvas-soft px-3 text-sm text-text focus:border-primary focus:bg-surface focus:outline-none"
+                    className="w-full min-h-10 rounded-lg border border-border bg-background-secondary px-3 text-sm text-foreground focus:border-accent focus:bg-surface focus:outline-none"
                   >
                     <option value="welcome">🎉 Boas-vindas (Cadastro)</option>
                     <option value="password_reset">🔒 Recuperação de Senha</option>
@@ -1552,7 +1552,7 @@ export function ResendIntegrationContent() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
                     Nome do Destinatário
                   </label>
                   <input
@@ -1560,34 +1560,34 @@ export function ResendIntegrationContent() {
                     value={testName}
                     onChange={(e) => setTestName(e.target.value)}
                     placeholder="Ex: Carlos Silva"
-                    className="w-full min-h-10 rounded-[10px] border border-border bg-canvas-soft px-3 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                    className="w-full min-h-10 rounded-lg border border-border bg-background-secondary px-3 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                   />
                 </div>
 
                 {testTemplate === "course_enrollment" && (
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
                       Título do Curso
                     </label>
                     <input
                       type="text"
                       value={testCourseTitle}
                       onChange={(e) => setTestCourseTitle(e.target.value)}
-                      className="w-full min-h-10 rounded-[10px] border border-border bg-canvas-soft px-3 text-sm text-text focus:border-primary focus:bg-surface focus:outline-none"
+                      className="w-full min-h-10 rounded-lg border border-border bg-background-secondary px-3 text-sm text-foreground focus:border-accent focus:bg-surface focus:outline-none"
                     />
                   </div>
                 )}
 
                 {testTemplate === "notification" && (
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
                       Mensagem da Notificação
                     </label>
                     <textarea
                       value={testMessage}
                       onChange={(e) => setTestMessage(e.target.value)}
                       rows={3}
-                      className="w-full rounded-[10px] border border-border bg-canvas-soft px-3 py-2 text-sm text-text focus:border-primary focus:bg-surface focus:outline-none"
+                      className="w-full rounded-lg border border-border bg-background-secondary px-3 py-2 text-sm text-foreground focus:border-accent focus:bg-surface focus:outline-none"
                     />
                   </div>
                 )}
@@ -1595,7 +1595,7 @@ export function ResendIntegrationContent() {
                 <button
                   type="submit"
                   disabled={isSendingTest}
-                  className="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-xs font-bold text-primary-foreground hover:bg-primary-active transition-colors disabled:opacity-50"
+                  className="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-lg bg-accent py-2.5 text-xs font-bold text-primary-foreground hover:bg-accent-hover transition-colors disabled:opacity-50"
                 >
                   {isSendingTest ? (
                     <RefreshCw className="size-4 animate-spin" />
@@ -1611,14 +1611,14 @@ export function ResendIntegrationContent() {
                   className={`mt-4 p-3.5 rounded-xl border text-xs space-y-1.5 ${
                     testResult.success
                       ? "bg-success-soft border-success/20 text-success-soft-foreground"
-                      : "bg-negative-soft border-negative/20 text-negative-soft-foreground"
+                      : "bg-danger-soft border-danger/20 text-danger-soft-foreground"
                   }`}
                 >
                   <div className="flex items-center gap-2 font-bold">
                     {testResult.success ? (
                       <CheckCircle2 className="size-4 text-success" />
                     ) : (
-                      <AlertCircle className="size-4 text-negative" />
+                      <AlertCircle className="size-4 text-danger" />
                     )}
                     <span>{testResult.success ? "Envio Realizado" : "Erro no Envio"}</span>
                     {testResult.timestamp && (
@@ -1639,7 +1639,7 @@ export function ResendIntegrationContent() {
           {/* Sandbox Live Preview */}
           <div className="lg:col-span-7 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-wider text-text-mute flex items-center gap-1.5">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
                 <Eye className="size-3.5" /> Pré-visualização do Modelo Selecionado
               </p>
               <button
@@ -1649,7 +1649,7 @@ export function ResendIntegrationContent() {
                   loadTemplateIntoEditor(testTemplate);
                   setActiveTab("templates");
                 }}
-                className="text-xs text-primary hover:underline font-bold flex items-center gap-1"
+                className="text-xs text-accent hover:underline font-bold flex items-center gap-1"
               >
                 <Code2 className="size-3.5" /> Editar HTML deste modelo
               </button>
@@ -1706,10 +1706,10 @@ export function ResendIntegrationContent() {
         <div className="space-y-6">
           <div className="editorial-card p-6 space-y-6">
             <div className="border-b border-border/60 pb-4">
-              <h2 className="text-base font-bold text-ink flex items-center gap-2">
-                <Globe className="size-4 text-primary" /> Verificação de Domínio Próprio no Resend
+              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+                <Globe className="size-4 text-accent" /> Verificação de Domínio Próprio no Resend
               </h2>
-              <p className="text-xs text-text-mute mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 Para enviar e-mails usando seu próprio domínio (ex: <code>@seudominio.com.br</code>),
                 cadastre os registros DNS abaixo na sua hospedagem (Cloudflare, GoDaddy, Registro.br,
                 AWS Route 53, etc.).
@@ -1718,29 +1718,29 @@ export function ResendIntegrationContent() {
 
             <div className="space-y-4">
               {/* Record 1: SPF */}
-              <div className="rounded-xl border border-border bg-canvas-soft p-4 space-y-3">
+              <div className="rounded-xl border border-border bg-background-secondary p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-mono text-xs font-bold">
+                    <span className="px-2 py-0.5 rounded bg-accent/10 text-accent font-mono text-xs font-bold">
                       TXT (SPF)
                     </span>
-                    <span className="text-xs font-semibold text-text">
+                    <span className="text-xs font-semibold text-foreground">
                       Registro de Remetente Autorizado
                     </span>
                   </div>
-                  <span className="text-[10px] text-text-mute uppercase tracking-wider">
+                  <span className="text-[10px] text-muted uppercase tracking-wider">
                     Obrigatório
                   </span>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2 text-xs font-mono">
                   <div className="bg-surface p-2.5 rounded-lg border border-border/60 flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-text-mute font-sans">Nome / Host</p>
-                      <p className="text-text font-bold">@ (ou seu domínio)</p>
+                      <p className="text-[10px] text-muted font-sans">Nome / Host</p>
+                      <p className="text-foreground font-bold">@ (ou seu domínio)</p>
                     </div>
                     <button
                       onClick={() => copyToClipboard("@", "spf_name")}
-                      className="p-1.5 text-text-mute hover:text-text rounded"
+                      className="p-1.5 text-muted hover:text-foreground rounded"
                     >
                       {copiedField === "spf_name" ? (
                         <Check className="size-3.5 text-success" />
@@ -1752,14 +1752,14 @@ export function ResendIntegrationContent() {
 
                   <div className="bg-surface p-2.5 rounded-lg border border-border/60 flex items-center justify-between">
                     <div className="truncate pr-2">
-                      <p className="text-[10px] text-text-mute font-sans">Valor / Conteúdo</p>
-                      <p className="text-text font-bold truncate">
+                      <p className="text-[10px] text-muted font-sans">Valor / Conteúdo</p>
+                      <p className="text-foreground font-bold truncate">
                         v=spf1 include:amazonses.com ~all
                       </p>
                     </div>
                     <button
                       onClick={() => copyToClipboard("v=spf1 include:amazonses.com ~all", "spf_val")}
-                      className="p-1.5 text-text-mute hover:text-text rounded"
+                      className="p-1.5 text-muted hover:text-foreground rounded"
                     >
                       {copiedField === "spf_val" ? (
                         <Check className="size-3.5 text-success" />
@@ -1772,29 +1772,29 @@ export function ResendIntegrationContent() {
               </div>
 
               {/* Record 2: DKIM */}
-              <div className="rounded-xl border border-border bg-canvas-soft p-4 space-y-3">
+              <div className="rounded-xl border border-border bg-background-secondary p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded bg-success/10 text-success font-mono text-xs font-bold">
                       CNAME / TXT (DKIM)
                     </span>
-                    <span className="text-xs font-semibold text-text">
+                    <span className="text-xs font-semibold text-foreground">
                       Assinatura Criptográfica de Autenticidade
                     </span>
                   </div>
-                  <span className="text-[10px] text-text-mute uppercase tracking-wider">
+                  <span className="text-[10px] text-muted uppercase tracking-wider">
                     Obrigatório
                   </span>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2 text-xs font-mono">
                   <div className="bg-surface p-2.5 rounded-lg border border-border/60 flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-text-mute font-sans">Nome / Host</p>
-                      <p className="text-text font-bold">resend._domainkey</p>
+                      <p className="text-[10px] text-muted font-sans">Nome / Host</p>
+                      <p className="text-foreground font-bold">resend._domainkey</p>
                     </div>
                     <button
                       onClick={() => copyToClipboard("resend._domainkey", "dkim_name")}
-                      className="p-1.5 text-text-mute hover:text-text rounded"
+                      className="p-1.5 text-muted hover:text-foreground rounded"
                     >
                       {copiedField === "dkim_name" ? (
                         <Check className="size-3.5 text-success" />
@@ -1806,8 +1806,8 @@ export function ResendIntegrationContent() {
 
                   <div className="bg-surface p-2.5 rounded-lg border border-border/60 flex items-center justify-between">
                     <div className="truncate pr-2">
-                      <p className="text-[10px] text-text-mute font-sans">Valor / Conteúdo</p>
-                      <p className="text-text font-bold truncate">
+                      <p className="text-[10px] text-muted font-sans">Valor / Conteúdo</p>
+                      <p className="text-foreground font-bold truncate">
                         resend._domainkey.resend.com
                       </p>
                     </div>
@@ -1815,7 +1815,7 @@ export function ResendIntegrationContent() {
                       onClick={() =>
                         copyToClipboard("resend._domainkey.resend.com", "dkim_val")
                       }
-                      className="p-1.5 text-text-mute hover:text-text rounded"
+                      className="p-1.5 text-muted hover:text-foreground rounded"
                     >
                       {copiedField === "dkim_val" ? (
                         <Check className="size-3.5 text-success" />
@@ -1828,29 +1828,29 @@ export function ResendIntegrationContent() {
               </div>
 
               {/* Record 3: DMARC */}
-              <div className="rounded-xl border border-border bg-canvas-soft p-4 space-y-3">
+              <div className="rounded-xl border border-border bg-background-secondary p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded bg-warning/10 text-warning font-mono text-xs font-bold">
                       TXT (DMARC)
                     </span>
-                    <span className="text-xs font-semibold text-text">
+                    <span className="text-xs font-semibold text-foreground">
                       Política de Proteção contra Spoofing
                     </span>
                   </div>
-                  <span className="text-[10px] text-text-mute uppercase tracking-wider">
+                  <span className="text-[10px] text-muted uppercase tracking-wider">
                     Recomendado
                   </span>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2 text-xs font-mono">
                   <div className="bg-surface p-2.5 rounded-lg border border-border/60 flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-text-mute font-sans">Nome / Host</p>
-                      <p className="text-text font-bold">_dmarc</p>
+                      <p className="text-[10px] text-muted font-sans">Nome / Host</p>
+                      <p className="text-foreground font-bold">_dmarc</p>
                     </div>
                     <button
                       onClick={() => copyToClipboard("_dmarc", "dmarc_name")}
-                      className="p-1.5 text-text-mute hover:text-text rounded"
+                      className="p-1.5 text-muted hover:text-foreground rounded"
                     >
                       {copiedField === "dmarc_name" ? (
                         <Check className="size-3.5 text-success" />
@@ -1862,12 +1862,12 @@ export function ResendIntegrationContent() {
 
                   <div className="bg-surface p-2.5 rounded-lg border border-border/60 flex items-center justify-between">
                     <div className="truncate pr-2">
-                      <p className="text-[10px] text-text-mute font-sans">Valor / Conteúdo</p>
-                      <p className="text-text font-bold truncate">v=DMARC1; p=none;</p>
+                      <p className="text-[10px] text-muted font-sans">Valor / Conteúdo</p>
+                      <p className="text-foreground font-bold truncate">v=DMARC1; p=none;</p>
                     </div>
                     <button
                       onClick={() => copyToClipboard("v=DMARC1; p=none;", "dmarc_val")}
-                      className="p-1.5 text-text-mute hover:text-text rounded"
+                      className="p-1.5 text-muted hover:text-foreground rounded"
                     >
                       {copiedField === "dmarc_val" ? (
                         <Check className="size-3.5 text-success" />
@@ -1885,7 +1885,7 @@ export function ResendIntegrationContent() {
                 href="https://resend.com/domains"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-accent hover:underline"
               >
                 Gerenciar Domínios no Console do Resend <ExternalLink className="size-3.5" />
               </a>
@@ -1899,15 +1899,15 @@ export function ResendIntegrationContent() {
         <div className="editorial-card p-6 space-y-4">
           <div className="flex items-center justify-between border-b border-border/60 pb-3">
             <div>
-              <h2 className="text-base font-bold text-ink">Histórico de Disparos Recentes</h2>
-              <p className="text-xs text-text-mute">
+              <h2 className="text-base font-bold text-foreground">Histórico de Disparos Recentes</h2>
+              <p className="text-xs text-muted">
                 Registro detalhado de todos os e-mails disparados ou simulados via Resend.
               </p>
             </div>
             {logs.length > 0 && (
               <button
                 onClick={handleClearLogs}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-text-mute hover:text-negative hover:border-negative/30 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted hover:text-danger hover:border-danger/30 transition-colors"
               >
                 <Trash2 className="size-3.5" /> Limpar Histórico
               </button>
@@ -1915,7 +1915,7 @@ export function ResendIntegrationContent() {
           </div>
 
           {logs.length === 0 ? (
-            <div className="py-12 text-center text-text-mute text-sm">
+            <div className="py-12 text-center text-muted text-sm">
               <Mail className="size-8 mx-auto mb-2 opacity-40" />
               Nenhum e-mail disparado até o momento.
             </div>
@@ -1923,7 +1923,7 @@ export function ResendIntegrationContent() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-border text-text-mute font-bold uppercase tracking-wider">
+                  <tr className="border-b border-border text-muted font-bold uppercase tracking-wider">
                     <th className="py-3 px-3">Status</th>
                     <th className="py-3 px-3">Destinatário</th>
                     <th className="py-3 px-3">Assunto</th>
@@ -1934,7 +1934,7 @@ export function ResendIntegrationContent() {
                 </thead>
                 <tbody className="divide-y divide-border/60">
                   {logs.map((log) => (
-                    <tr key={log.id} className="hover:bg-canvas-soft transition-colors">
+                    <tr key={log.id} className="hover:bg-background-secondary transition-colors">
                       <td className="py-3 px-3">
                         <span
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -1942,7 +1942,7 @@ export function ResendIntegrationContent() {
                               ? "bg-success-soft text-success"
                               : log.status === "simulated"
                               ? "bg-warning-soft text-warning"
-                              : "bg-negative-soft text-negative"
+                              : "bg-danger-soft text-danger"
                           }`}
                         >
                           {log.status === "sent" && "Enviado"}
@@ -1950,17 +1950,17 @@ export function ResendIntegrationContent() {
                           {log.status === "failed" && "Falhou"}
                         </span>
                       </td>
-                      <td className="py-3 px-3 font-medium text-text">{log.to}</td>
-                      <td className="py-3 px-3 text-text truncate max-w-[220px]" title={log.subject}>
+                      <td className="py-3 px-3 font-medium text-foreground">{log.to}</td>
+                      <td className="py-3 px-3 text-foreground truncate max-w-[220px]" title={log.subject}>
                         {log.subject}
                       </td>
-                      <td className="py-3 px-3 text-text-mute font-mono uppercase text-[10px]">
+                      <td className="py-3 px-3 text-muted font-mono uppercase text-[10px]">
                         {log.template}
                       </td>
-                      <td className="py-3 px-3 font-mono text-[10px] text-text-mute truncate max-w-[150px]">
+                      <td className="py-3 px-3 font-mono text-[10px] text-muted truncate max-w-[150px]">
                         {log.resendId || "—"}
                       </td>
-                      <td className="py-3 px-3 text-right text-text-mute font-mono text-[11px]">
+                      <td className="py-3 px-3 text-right text-muted font-mono text-[11px]">
                         {new Date(log.createdAt).toLocaleString("pt-BR")}
                       </td>
                     </tr>

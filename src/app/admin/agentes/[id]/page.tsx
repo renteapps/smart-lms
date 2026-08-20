@@ -1328,7 +1328,7 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                             {selectedPlanIds.length > 0 && (
                               <div className="flex items-center gap-1 truncate">
                                 <dt className="text-muted">Planos:</dt>
-                                <dd className="font-semibold text-primary truncate max-w-[140px]">
+                                <dd className="font-semibold text-accent truncate max-w-[140px]">
                                   {selectedPlanIds.length === 1
                                     ? mappedPlanNames[0]
                                     : `${mappedPlanNames[0]} (+${selectedPlanIds.length - 1})`}

@@ -269,8 +269,8 @@ export default function ResendTemplateStudioPage() {
 
   if (!template) {
     return (
-      <div className="py-20 text-center text-text-mute">
-        <RefreshCw className="size-6 animate-spin mx-auto mb-2 text-primary" />
+      <div className="py-20 text-center text-muted">
+        <RefreshCw className="size-6 animate-spin mx-auto mb-2 text-accent" />
         Carregando estúdio de e-mails...
       </div>
     );
@@ -320,7 +320,7 @@ export default function ResendTemplateStudioPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <Link
               href="/admin/integracoes/resend/modelos"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-text hover:bg-canvas-soft transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground hover:bg-background-secondary transition-colors"
             >
               <ArrowLeft className="size-3.5" /> Voltar aos Modelos
             </Link>
@@ -337,7 +337,7 @@ export default function ResendTemplateStudioPage() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-text hover:bg-canvas-soft transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground hover:bg-background-secondary transition-colors"
               title="Subir arquivo HTML do seu computador"
             >
               <Upload className="size-3.5" /> Subir HTML (.html)
@@ -348,7 +348,7 @@ export default function ResendTemplateStudioPage() {
                 type="button"
                 onClick={handleReset}
                 disabled={isResetting}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-text-mute hover:text-negative hover:border-negative/30 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted hover:text-danger hover:border-danger/30 transition-colors disabled:opacity-50"
               >
                 <RotateCcw className="size-3.5" /> Restaurar Padrão
               </button>
@@ -357,16 +357,16 @@ export default function ResendTemplateStudioPage() {
             <button
               type="button"
               onClick={() => setIsTestModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-text hover:bg-canvas-soft transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground hover:bg-background-secondary transition-colors"
             >
-              <Send className="size-3.5 text-primary" /> Testar
+              <Send className="size-3.5 text-accent" /> Testar
             </button>
 
             <button
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-active transition-all shadow-sm disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-accent-hover transition-all shadow-sm disabled:opacity-50"
             >
               {isSaving ? <RefreshCw className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
               Salvar Alterações
@@ -379,7 +379,7 @@ export default function ResendTemplateStudioPage() {
       <div className="editorial-card p-5 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+            <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
               Assunto do E-mail (Subject)
             </label>
             <input
@@ -387,15 +387,15 @@ export default function ResendTemplateStudioPage() {
               value={editedSubject}
               onChange={(e) => setEditedSubject(e.target.value)}
               placeholder="Ex: Boas-vindas ao {{nome_plataforma}}!"
-              className="w-full min-h-10 rounded-xl border border-border bg-canvas-soft px-3.5 text-xs font-mono text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+              className="w-full min-h-10 rounded-xl border border-border bg-background-secondary px-3.5 text-xs font-mono text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
             />
-            <p className="text-[10px] text-text-mute mt-1">
+            <p className="text-[10px] text-muted mt-1">
               Suporta variáveis dinâmicas como <code>{"{{nome}}"}</code> ou <code>{"{{nome_curso}}"}</code>.
             </p>
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+            <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
               Texto de Prévia (Preheader / Snippet)
             </label>
             <input
@@ -403,9 +403,9 @@ export default function ResendTemplateStudioPage() {
               value={editedPreviewText}
               onChange={(e) => setEditedPreviewText(e.target.value)}
               placeholder="Resumo exibido ao lado do assunto..."
-              className="w-full min-h-10 rounded-xl border border-border bg-canvas-soft px-3.5 text-xs font-mono text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+              className="w-full min-h-10 rounded-xl border border-border bg-background-secondary px-3.5 text-xs font-mono text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
             />
-            <p className="text-[10px] text-text-mute mt-1">
+            <p className="text-[10px] text-muted mt-1">
               Texto complementar que aparece antes de abrir o e-mail no Gmail / Apple Mail.
             </p>
           </div>
@@ -414,10 +414,10 @@ export default function ResendTemplateStudioPage() {
         {/* Dynamic Variable Chips Drawer */}
         <div className="border-t border-border/60 pt-3 space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-text flex items-center gap-1.5">
-              <Tag className="size-3.5 text-primary" /> Campos Personalizados Disponíveis
+            <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <Tag className="size-3.5 text-accent" /> Campos Personalizados Disponíveis
             </p>
-            <span className="text-[10px] text-text-mute">
+            <span className="text-[10px] text-muted">
               Clique em uma tag para copiar ou inserir no código
             </span>
           </div>
@@ -428,17 +428,17 @@ export default function ResendTemplateStudioPage() {
                 key={v.tag}
                 type="button"
                 onClick={() => handleInsertVariable(v.tag)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border bg-surface hover:border-primary hover:bg-primary/5 text-xs font-mono text-text transition-all group shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border bg-surface hover:border-accent hover:bg-accent/5 text-xs font-mono text-foreground transition-all group shadow-2xs"
                 title={`${v.label} - ${v.description} (Ex: ${v.example})`}
               >
-                <span className="text-primary font-bold">{v.tag}</span>
-                <span className="text-[10px] text-text-mute group-hover:text-text font-sans">
+                <span className="text-accent font-bold">{v.tag}</span>
+                <span className="text-[10px] text-muted group-hover:text-foreground font-sans">
                   {v.label}
                 </span>
                 {copiedField === v.tag ? (
                   <Check className="size-3 text-success" />
                 ) : (
-                  <Copy className="size-3 text-text-mute opacity-40 group-hover:opacity-100" />
+                  <Copy className="size-3 text-muted opacity-40 group-hover:opacity-100" />
                 )}
               </button>
             ))}
@@ -448,14 +448,14 @@ export default function ResendTemplateStudioPage() {
 
       {/* Editor & Preview Header Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-surface p-2 rounded-xl border border-border">
-        <div className="flex items-center gap-1 bg-canvas-soft p-1 rounded-lg text-xs font-semibold">
+        <div className="flex items-center gap-1 bg-background-secondary p-1 rounded-lg text-xs font-semibold">
           <button
             type="button"
             onClick={() => setEditorMode("code")}
             className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all ${
               editorMode === "code"
-                ? "bg-surface shadow-sm text-text font-bold"
-                : "text-text-mute hover:text-text"
+                ? "bg-surface shadow-sm text-foreground font-bold"
+                : "text-muted hover:text-foreground"
             }`}
           >
             <Code2 className="size-3.5" /> Código HTML
@@ -465,8 +465,8 @@ export default function ResendTemplateStudioPage() {
             onClick={() => setEditorMode("preview")}
             className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all ${
               editorMode === "preview"
-                ? "bg-surface shadow-sm text-text font-bold"
-                : "text-text-mute hover:text-text"
+                ? "bg-surface shadow-sm text-foreground font-bold"
+                : "text-muted hover:text-foreground"
             }`}
           >
             <Eye className="size-3.5" /> Prévia Renderizada
@@ -476,8 +476,8 @@ export default function ResendTemplateStudioPage() {
             onClick={() => setEditorMode("split")}
             className={`hidden md:flex px-3 py-1.5 rounded-md items-center gap-1.5 transition-all ${
               editorMode === "split"
-                ? "bg-surface shadow-sm text-text font-bold"
-                : "text-text-mute hover:text-text"
+                ? "bg-surface shadow-sm text-foreground font-bold"
+                : "text-muted hover:text-foreground"
             }`}
           >
             <Sparkles className="size-3.5" /> Lado a Lado
@@ -485,12 +485,12 @@ export default function ResendTemplateStudioPage() {
         </div>
 
         <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 cursor-pointer text-xs text-text-mute hover:text-text">
+          <label className="flex items-center gap-2 cursor-pointer text-xs text-muted hover:text-foreground">
             <input
               type="checkbox"
               checked={useSampleData}
               onChange={(e) => setUseSampleData(e.target.checked)}
-              className="w-3.5 h-3.5 rounded border-border text-primary focus:ring-primary"
+              className="w-3.5 h-3.5 rounded border-border text-accent focus:ring-primary"
             />
             <span>Prévia com Dados de Exemplo</span>
           </label>
@@ -501,8 +501,8 @@ export default function ResendTemplateStudioPage() {
               onClick={() => setPreviewDevice("desktop")}
               className={`p-1.5 rounded-lg text-xs transition-colors ${
                 previewDevice === "desktop"
-                  ? "bg-primary-soft text-primary font-bold"
-                  : "text-text-mute hover:text-text"
+                  ? "bg-primary-soft text-accent font-bold"
+                  : "text-muted hover:text-foreground"
               }`}
               title="Desktop (580px)"
             >
@@ -513,8 +513,8 @@ export default function ResendTemplateStudioPage() {
               onClick={() => setPreviewDevice("mobile")}
               className={`p-1.5 rounded-lg text-xs transition-colors ${
                 previewDevice === "mobile"
-                  ? "bg-primary-soft text-primary font-bold"
-                  : "text-text-mute hover:text-text"
+                  ? "bg-primary-soft text-accent font-bold"
+                  : "text-muted hover:text-foreground"
               }`}
               title="Mobile (360px)"
             >
@@ -529,7 +529,7 @@ export default function ResendTemplateStudioPage() {
         {/* Code Editor Pane */}
         {(editorMode === "code" || editorMode === "split") && (
           <div className={editorMode === "split" ? "md:col-span-6 space-y-2" : "col-span-12 space-y-2"}>
-            <div className="flex items-center justify-between text-[11px] text-text-mute font-mono px-1">
+            <div className="flex items-center justify-between text-[11px] text-muted font-mono px-1">
               <span>Editor de Código HTML</span>
               <span>{editedHtml.length} caracteres</span>
             </div>
@@ -551,7 +551,7 @@ export default function ResendTemplateStudioPage() {
         {/* Live Preview Pane */}
         {(editorMode === "preview" || editorMode === "split") && (
           <div className={editorMode === "split" ? "md:col-span-6 space-y-2" : "col-span-12 space-y-2"}>
-            <div className="flex items-center justify-between text-[11px] text-text-mute font-mono px-1">
+            <div className="flex items-center justify-between text-[11px] text-muted font-mono px-1">
               <span>Pré-visualização em Tempo Real</span>
               <span className="truncate max-w-[200px]" title={previewSubject}>
                 Assunto: {previewSubject}
@@ -597,15 +597,15 @@ export default function ResendTemplateStudioPage() {
           <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <div className="flex items-center gap-2">
-                <div className="size-8 rounded-lg bg-primary-soft text-primary grid place-items-center">
+                <div className="size-8 rounded-lg bg-primary-soft text-accent grid place-items-center">
                   <Send className="size-4" />
                 </div>
-                <h3 className="font-bold text-sm text-ink">Testar Envio: {template.name}</h3>
+                <h3 className="font-bold text-sm text-foreground">Testar Envio: {template.name}</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsTestModalOpen(false)}
-                className="p-1.5 text-text-mute hover:text-text rounded-lg"
+                className="p-1.5 text-muted hover:text-foreground rounded-lg"
               >
                 <X className="size-4" />
               </button>
@@ -613,16 +613,16 @@ export default function ResendTemplateStudioPage() {
 
             <form onSubmit={handleSendTest} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-bold text-text mb-1">E-mail de Destino</label>
+                <label className="block font-bold text-foreground mb-1">E-mail de Destino</label>
                 <input
                   type="email"
                   value={testEmail}
                   onChange={(e) => setTestEmail(e.target.value)}
                   placeholder="seu-email@teste.com"
                   required
-                  className="w-full min-h-10 rounded-xl border border-border bg-canvas-soft px-3 text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                  className="w-full min-h-10 rounded-xl border border-border bg-background-secondary px-3 text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                 />
-                <p className="text-[10px] text-text-mute mt-1">
+                <p className="text-[10px] text-muted mt-1">
                   O e-mail será disparado com o HTML customizado e tags dinâmicas preenchidas.
                 </p>
               </div>
@@ -631,14 +631,14 @@ export default function ResendTemplateStudioPage() {
                 <button
                   type="button"
                   onClick={() => setIsTestModalOpen(false)}
-                  className="flex-1 rounded-xl border border-border py-2.5 font-semibold text-text hover:bg-canvas-soft transition-colors"
+                  className="flex-1 rounded-xl border border-border py-2.5 font-semibold text-foreground hover:bg-background-secondary transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSendingTest}
-                  className="flex-1 rounded-xl bg-primary py-2.5 font-bold text-primary-foreground hover:bg-primary-active transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  className="flex-1 rounded-xl bg-accent py-2.5 font-bold text-primary-foreground hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {isSendingTest ? <RefreshCw className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
                   Enviar Teste Agora

@@ -28,7 +28,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ versio
 
   if (versions.length === 0) {
     return (
-      <div className="editorial-card p-8 text-center text-sm text-text-mute">
+      <div className="editorial-card p-8 text-center text-sm text-muted">
         <History className="mx-auto mb-3 h-8 w-8 opacity-30" />
         Nenhuma versão publicada ainda. Publique o questionário para começar o histórico.
       </div>
@@ -40,9 +40,9 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ versio
       <div className="mb-4 flex items-center justify-between">
         <div>
           <p className="eyebrow">Auditoria</p>
-          <h3 className="mt-1 text-xl font-extrabold text-ink">Histórico de versões</h3>
+          <h3 className="mt-1 text-xl font-extrabold text-foreground">Histórico de versões</h3>
         </div>
-        <History className="h-6 w-6 text-primary" />
+        <History className="h-6 w-6 text-accent" />
       </div>
 
       <div className="flex flex-col divide-y divide-border/40">
@@ -53,26 +53,26 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ versio
           return (
             <div key={version.id} className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0">
               <div className="flex items-start gap-3 min-w-0">
-                <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-canvas-soft text-text-soft">
+                <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-background-secondary text-muted">
                   <Icon size={16} />
                 </span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <strong className="text-sm font-bold text-ink">v{version.version}</strong>
+                    <strong className="text-sm font-bold text-foreground">v{version.version}</strong>
                     <StatusBadge tone={meta.tone}>{meta.label}</StatusBadge>
-                    <span className="text-xs text-text-mute">{version.questions.length} perguntas</span>
+                    <span className="text-xs text-muted">{version.questions.length} perguntas</span>
                   </div>
-                  <p className="mt-1 text-xs text-text-soft">
+                  <p className="mt-1 text-xs text-muted">
                     {version.status === 'published' ? `Publicado em ${formatDate(version.publishedAt)}` : `Criado em ${formatDate(version.createdAt)}`}
                   </p>
-                  {version.notes && <p className="mt-1 text-xs italic text-text-soft">“{version.notes}”</p>}
+                  {version.notes && <p className="mt-1 text-xs italic text-muted">“{version.notes}”</p>}
                 </div>
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => onPreview(version)}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-text-soft hover:bg-surface-hover hover:text-text transition-colors"
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-muted hover:bg-surface-hover hover:text-foreground transition-colors"
                 >
                   <Eye size={14} />
                   Pré-visualizar
@@ -83,13 +83,13 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ versio
                       <button
                         onClick={() => { setConfirmingVersion(null); onRestore(version); }}
                         disabled={restoringVersion === version.version}
-                        className="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-on-primary hover:bg-primary-active disabled:opacity-50 transition-colors"
+                        className="rounded-lg bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-50 transition-colors"
                       >
                         {restoringVersion === version.version ? 'Restaurando…' : 'Confirmar'}
                       </button>
                       <button
                         onClick={() => setConfirmingVersion(null)}
-                        className="rounded-lg px-3 py-1.5 text-xs font-semibold text-text-mute hover:bg-surface-hover transition-colors"
+                        className="rounded-lg px-3 py-1.5 text-xs font-semibold text-muted hover:bg-surface-hover transition-colors"
                       >
                         Cancelar
                       </button>
@@ -97,7 +97,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ versio
                   ) : (
                     <button
                       onClick={() => setConfirmingVersion(version.version)}
-                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5 transition-colors"
+                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-accent hover:bg-accent/5 transition-colors"
                     >
                       <RotateCcw size={14} />
                       Restaurar para rascunho

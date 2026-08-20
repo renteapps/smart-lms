@@ -46,11 +46,11 @@ export default function AddEditModuleModal({
     if (initialModule) {
       setTitle(initialModule.title || "");
       setDescription(initialModule.description || "");
-      setCoverUrl(initialModule.coverUrl || PRESET_COVERS[0].url);
+      setCoverUrl(initialModule.coverUrl || "");
     } else {
       setTitle("");
       setDescription("");
-      setCoverUrl(PRESET_COVERS[0].url);
+      setCoverUrl("");
     }
   }, [initialModule, isOpen]);
 
@@ -61,7 +61,7 @@ export default function AddEditModuleModal({
     onSave({
       title: title.trim(),
       description: description.trim(),
-      coverUrl: coverUrl.trim() || PRESET_COVERS[0].url
+      coverUrl: coverUrl.trim()
     });
 
     onClose();
@@ -72,7 +72,7 @@ export default function AddEditModuleModal({
       <Modal.Backdrop>
         <Modal.Container size="lg" scroll="inside">
           <Modal.Dialog>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
               <Modal.Header>
                 <div className="flex items-center gap-3">
                   <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground">
@@ -89,7 +89,7 @@ export default function AddEditModuleModal({
                 </div>
               </Modal.Header>
 
-              <Modal.Body className="space-y-6">
+              <Modal.Body className="space-y-6 py-4">
                 <TextField value={title} onChange={setTitle} isRequired>
                   <Label>Nome / Título do Módulo</Label>
                   <Input placeholder="Ex: Módulo 3: Gerenciamento Avançado de Estado" />
@@ -104,16 +104,17 @@ export default function AddEditModuleModal({
                 </TextField>
 
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-semibold flex items-center gap-1.5">
                       <ImageIcon className="size-4 text-accent" aria-hidden="true" />
                       Capa do Módulo
-                    </p>
+                    </Label>
                     <Chip variant="soft" size="sm">16:9 HD</Chip>
                   </div>
 
                   <ImageUpload
                     label="Capa do módulo"
+                    hideLabel
                     value={coverUrl}
                     onChange={(url) => setCoverUrl(url ?? "")}
                     folder="modules"

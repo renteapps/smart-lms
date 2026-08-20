@@ -7,6 +7,8 @@ import type { ActionResult } from "../progress";
 
 type Saved<T> = { success: boolean; message?: string; data?: T };
 
+const generateShortId = () => Math.random().toString(36).substring(2, 10);
+
 // ---------------------------------------------------------------------------
 // Cursos
 // ---------------------------------------------------------------------------
@@ -54,6 +56,9 @@ export async function saveCourse(input: CourseInput & { id?: string }): Promise<
   try {
     const { adminClient } = await requireAdmin();
     const row = courseToRow(input);
+    if (!input.id && !row.slug) {
+      row.slug = generateShortId();
+    }
 
     const query = input.id
       ? adminClient.from("courses").update(row).eq("id", input.id).select("id").single()
@@ -97,9 +102,24 @@ export async function saveModule(
 
     const row: Record<string, unknown> = { course_id: courseId };
     if (input.title !== undefined) row.title = input.title;
+    if (input.slug !== undefined) row.slug = input.slug;
     if (input.description !== undefined) row.description = input.description;
     if (input.coverUrl !== undefined) row.cover_url = input.coverUrl;
     if (input.order !== undefined) row.order_index = input.order;
+
+    if (!input.id) {
+      if (!row.slug) row.slug = generateShortId();
+      if (row.order_index === undefined) {
+        const { data: maxModule } = await adminClient
+          .from("modules")
+          .select("order_index")
+          .eq("course_id", courseId)
+          .order("order_index", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        row.order_index = (maxModule?.order_index || 0) + 1;
+      }
+    }
 
     const query = input.id
       ? adminClient.from("modules").update(row).eq("id", input.id).select("id").single()
@@ -166,14 +186,15 @@ export async function saveLesson(
     set("title", input.title);
     set("type", input.type);
     set("video_url", input.videoUrl);
+    set("pandavideo_id", input.pandavideoId);
+    set("transcription", input.transcription);
     set("content", input.content);
     set("blocks", input.blocks);
     set("duration_in_minutes", input.durationInMinutes);
     set("order_index", input.order);
     set("is_published", input.isPublished);
     set("slug", input.slug);
-    set("meta_title", input.metaTitle);
-    set("meta_description", input.metaDescription);
+    set("short_description", input.shortDescription);
     set("profile_test_ref", input.profileTestId ?? null);
     set("profile_test_config", input.profileTestConfig);
     set("topics", input.topics);
@@ -183,6 +204,20 @@ export async function saveLesson(
     set("audience", input.audience);
     set("prerequisites", input.prerequisites);
     set("is_eligible_for_trail", input.isEligibleForTrail);
+
+    if (!input.id) {
+      if (!row.slug) row.slug = generateShortId();
+      if (row.order_index === undefined) {
+        const { data: maxLesson } = await adminClient
+          .from("lessons")
+          .select("order_index")
+          .eq("module_id", moduleId)
+          .order("order_index", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        row.order_index = (maxLesson?.order_index || 0) + 1;
+      }
+    }
 
     const query = input.id
       ? adminClient.from("lessons").update(row).eq("id", input.id).select("id").single()

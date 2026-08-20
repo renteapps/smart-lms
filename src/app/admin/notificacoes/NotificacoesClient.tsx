@@ -271,8 +271,8 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
           onClick={() => setActiveTab("manual")}
           className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${
             activeTab === "manual"
-              ? "border-primary text-primary"
-              : "border-transparent text-text-mute hover:text-text"
+              ? "border-accent text-accent"
+              : "border-transparent text-muted hover:text-foreground"
           }`}
         >
           Envio Avulso
@@ -282,8 +282,8 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
           onClick={() => setActiveTab("automations")}
           className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${
             activeTab === "automations"
-              ? "border-primary text-primary"
-              : "border-transparent text-text-mute hover:text-text"
+              ? "border-accent text-accent"
+              : "border-transparent text-muted hover:text-foreground"
           }`}
         >
           Automações
@@ -298,8 +298,8 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
           <div className="lg:col-span-7 space-y-6">
             <div className="editorial-card p-6 space-y-5">
               <div className="flex items-center justify-between border-b border-border/60 pb-3">
-                <h2 className="text-lg font-extrabold text-ink">Nova Notificação & Disparo</h2>
-                <span className="text-[11px] font-bold text-text-mute uppercase tracking-wider">
+                <h2 className="text-lg font-extrabold text-foreground">Nova Notificação & Disparo</h2>
+                <span className="text-[11px] font-bold text-muted uppercase tracking-wider">
                   Envio Manual
                 </span>
               </div>
@@ -308,7 +308,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                 {/* Basic Title & Message */}
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                       Título da Notificação
                     </label>
                     <input
@@ -320,13 +320,13 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                         if (!emailSubject) setEmailSubject(`🔔 ${e.target.value}`);
                       }}
                       placeholder="Ex: Novo módulo liberado no seu curso!"
-                      className="min-h-11 w-full rounded-xl border border-border bg-canvas-soft px-4 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                      className="min-h-11 w-full rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                       Mensagem / Conteúdo
                     </label>
                     <textarea
@@ -337,19 +337,19 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                       }}
                       placeholder="Escreva os detalhes do aviso ou comunicado..."
                       rows={3}
-                      className="w-full resize-none rounded-xl border border-border bg-canvas-soft px-4 py-3 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                      className="w-full resize-none rounded-xl border border-border bg-background-secondary px-4 py-3 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                       Público Alvo
                     </label>
                     <select
                       value={targetAudience}
                       onChange={(e) => setTargetAudience(e.target.value as typeof targetAudience)}
-                      className="min-h-11 w-full rounded-xl border border-border bg-canvas-soft px-4 text-sm text-text focus:border-primary focus:bg-surface focus:outline-none"
+                      className="min-h-11 w-full rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground focus:border-accent focus:bg-surface focus:outline-none"
                     >
                       <optgroup label="Geral">
                         <option value="all">Todos os alunos</option>
@@ -370,7 +370,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
 
                   {["course", "user", "course_completed", "course_abandoned"].includes(targetAudience) && (
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-1.5">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                         {targetAudience === "user" ? "E-mail do Usuário" : "ID do Curso"}
                       </label>
                       <input
@@ -380,7 +380,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                         placeholder={
                           targetAudience === "user" ? "Ex: aluno@email.com" : "Ex: course_123"
                         }
-                        className="min-h-11 w-full rounded-xl border border-border bg-canvas-soft px-4 text-sm text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                        className="min-h-11 w-full rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                         required
                       />
                     </div>
@@ -388,28 +388,28 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
 
                   {/* Channels Selection */}
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-text-mute mb-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">
                       Canais de Disparo
                     </label>
                     <div className="flex flex-wrap gap-3">
-                      <label className="flex items-center gap-2 p-3 rounded-xl border border-border bg-canvas-soft hover:bg-surface cursor-pointer text-xs font-semibold">
+                      <label className="flex items-center gap-2 p-3 rounded-xl border border-border bg-background-secondary hover:bg-surface cursor-pointer text-xs font-semibold">
                         <input
                           type="checkbox"
                           checked={channels.includes("platform")}
                           onChange={() => toggleChannel("platform")}
-                          className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                          className="w-4 h-4 rounded border-border text-accent focus:ring-primary"
                         />
-                        <span className="text-text">Plataforma (Sininho)</span>
+                        <span className="text-foreground">Plataforma (Sininho)</span>
                       </label>
 
-                      <label className="flex items-center gap-2 p-3 rounded-xl border border-border bg-canvas-soft hover:bg-surface cursor-pointer text-xs font-semibold">
+                      <label className="flex items-center gap-2 p-3 rounded-xl border border-border bg-background-secondary hover:bg-surface cursor-pointer text-xs font-semibold">
                         <input
                           type="checkbox"
                           checked={channels.includes("push")}
                           onChange={() => toggleChannel("push")}
-                          className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                          className="w-4 h-4 rounded border-border text-accent focus:ring-primary"
                         />
-                        <span className="text-text">Push Notification</span>
+                        <span className="text-foreground">Push Notification</span>
                       </label>
 
                       <label className="flex items-center gap-2 p-3 rounded-xl border-2 border-accent/40 bg-accent/5 hover:bg-accent/10 cursor-pointer text-xs font-bold transition-all">
@@ -419,7 +419,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                           onChange={() => toggleChannel("email")}
                           className="w-4 h-4 rounded border-border text-accent focus:ring-accent"
                         />
-                        <span className="text-ink flex items-center gap-1.5">
+                        <span className="text-foreground flex items-center gap-1.5">
                           <Mail className="size-4 text-accent" /> E-mail (Resend)
                         </span>
                       </label>
@@ -429,17 +429,17 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
 
                 {/* Email Customization Card (Unfolds when email is active) */}
                 {channels.includes("email") && (
-                  <div className="p-5 rounded-2xl border-2 border-primary/20 bg-primary/5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="flex items-center justify-between border-b border-primary/15 pb-3">
+                  <div className="p-5 rounded-2xl border-2 border-accent/20 bg-accent/5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center justify-between border-b border-accent/15 pb-3">
                       <div className="flex items-center gap-2">
-                        <div className="size-7 rounded-lg bg-primary-soft text-primary grid place-items-center">
+                        <div className="size-7 rounded-lg bg-primary-soft text-accent grid place-items-center">
                           <Mail className="size-4" />
                         </div>
                         <div>
-                          <h3 className="text-xs font-bold text-ink uppercase tracking-wider">
+                          <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
                             Campos Personalizados do E-mail (Resend)
                           </h3>
-                          <p className="text-[11px] text-text-mute">
+                          <p className="text-[11px] text-muted">
                             Personalize o modelo, assunto, pré-texto e botão com link.
                           </p>
                         </div>
@@ -448,7 +448,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                       <button
                         type="button"
                         onClick={() => setIsPreviewOpen(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary/30 bg-surface text-xs font-bold text-primary hover:bg-primary-soft transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-accent/30 bg-surface text-xs font-bold text-accent hover:bg-primary-soft transition-colors"
                       >
                         <Eye className="size-3.5" /> Prévia do E-mail
                       </button>
@@ -457,11 +457,11 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                     {/* Template Selector */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-xs font-bold text-text">Modelo de E-mail (HTML)</label>
+                        <label className="text-xs font-bold text-foreground">Modelo de E-mail (HTML)</label>
                         <Link
                           href={`/admin/integracoes/resend/modelos/${emailTemplate}`}
                           target="_blank"
-                          className="text-[11px] text-primary hover:underline font-semibold flex items-center gap-1"
+                          className="text-[11px] text-accent hover:underline font-semibold flex items-center gap-1"
                         >
                           Customizar layout no Studio <ExternalLink className="size-3" />
                         </Link>
@@ -469,7 +469,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                       <select
                         value={emailTemplate}
                         onChange={(e) => setEmailTemplate(e.target.value as EmailTemplateType)}
-                        className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs text-text focus:border-primary focus:outline-none font-medium"
+                        className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs text-foreground focus:border-accent focus:outline-none font-medium"
                       >
                         <option value="notification">📢 Comunicado & Notificação Geral (Recomendado)</option>
                         <option value="welcome">🚀 Boas-vindas à Plataforma</option>
@@ -484,7 +484,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                     {/* Email Subject & Preheader */}
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div>
-                        <label className="block text-xs font-bold text-text mb-1">
+                        <label className="block text-xs font-bold text-foreground mb-1">
                           Assunto do E-mail (Subject)
                         </label>
                         <input
@@ -496,12 +496,12 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                           value={emailSubject}
                           onChange={(e) => setEmailSubject(e.target.value)}
                           placeholder="Ex: 🔔 {{titulo_notificacao}}"
-                          className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs font-mono text-text placeholder:text-text-mute focus:border-primary focus:outline-none"
+                          className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs font-mono text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-text mb-1">
+                        <label className="block text-xs font-bold text-foreground mb-1">
                           Pré-texto (Preheader / Snippet)
                         </label>
                         <input
@@ -513,7 +513,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                           value={emailPreviewText}
                           onChange={(e) => setEmailPreviewText(e.target.value)}
                           placeholder="Texto exibido na caixa de entrada..."
-                          className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs font-mono text-text placeholder:text-text-mute focus:border-primary focus:outline-none"
+                          className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs font-mono text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
                         />
                       </div>
                     </div>
@@ -521,7 +521,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                     {/* Email Heading & Body */}
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-xs font-bold text-text mb-1">
+                        <label className="block text-xs font-bold text-foreground mb-1">
                           Título Interno do E-mail
                         </label>
                         <input
@@ -533,12 +533,12 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                           value={emailTitle}
                           onChange={(e) => setEmailTitle(e.target.value)}
                           placeholder="Título em destaque dentro do e-mail..."
-                          className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs text-text placeholder:text-text-mute focus:border-primary focus:outline-none font-medium"
+                          className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs text-foreground placeholder:text-muted focus:border-accent focus:outline-none font-medium"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-text mb-1">
+                        <label className="block text-xs font-bold text-foreground mb-1">
                           Texto / Mensagem do E-mail
                         </label>
                         <textarea
@@ -550,7 +550,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                           onChange={(e) => setEmailBody(e.target.value)}
                           placeholder="Escreva a mensagem do e-mail (suporta quebras de linha e tags)..."
                           rows={3}
-                          className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-xs text-text placeholder:text-text-mute focus:border-primary focus:outline-none leading-relaxed"
+                          className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-xs text-foreground placeholder:text-muted focus:border-accent focus:outline-none leading-relaxed"
                         />
                       </div>
                     </div>
@@ -558,7 +558,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                     {/* CTA Button Label & Link */}
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div>
-                        <label className="block text-xs font-bold text-text mb-1">
+                        <label className="block text-xs font-bold text-foreground mb-1">
                           Texto do Botão (CTA)
                         </label>
                         <input
@@ -566,12 +566,12 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                           value={emailButtonText}
                           onChange={(e) => setEmailButtonText(e.target.value)}
                           placeholder="Ex: Acessar Agora"
-                          className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-text focus:border-primary focus:outline-none"
+                          className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground focus:border-accent focus:outline-none"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-text mb-1">
+                        <label className="block text-xs font-bold text-foreground mb-1">
                           Link do Botão (URL de Ação)
                         </label>
                         <input
@@ -579,14 +579,14 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                           value={emailButtonUrl}
                           onChange={(e) => setEmailButtonUrl(e.target.value)}
                           placeholder="Ex: https://smartlms.com/cursos"
-                          className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs font-mono text-text focus:border-primary focus:outline-none"
+                          className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs font-mono text-foreground focus:border-accent focus:outline-none"
                         />
                       </div>
                     </div>
 
                     {/* Variable Chips Toolbar */}
-                    <div className="pt-2 border-t border-primary/15 space-y-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-text-mute flex items-center gap-1">
+                    <div className="pt-2 border-t border-accent/15 space-y-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted flex items-center gap-1">
                         <Tag className="size-3" /> Inserir Tag Dinâmica (Clique para Copiar / Inserir)
                       </span>
                       <div className="flex flex-wrap gap-1">
@@ -602,14 +602,14 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                             key={v.tag}
                             type="button"
                             onClick={() => handleInsertTag(v.tag)}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-border bg-surface hover:border-primary text-[11px] font-mono text-text transition-all"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-border bg-surface hover:border-accent text-[11px] font-mono text-foreground transition-all"
                           >
-                            <span className="text-primary font-bold">{v.tag}</span>
-                            <span className="text-[10px] text-text-mute font-sans">{v.label}</span>
+                            <span className="text-accent font-bold">{v.tag}</span>
+                            <span className="text-[10px] text-muted font-sans">{v.label}</span>
                             {copiedTag === v.tag ? (
                               <Check className="size-2.5 text-success" />
                             ) : (
-                              <Copy className="size-2.5 text-text-mute opacity-40" />
+                              <Copy className="size-2.5 text-muted opacity-40" />
                             )}
                           </button>
                         ))}
@@ -621,7 +621,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                 <button
                   type="submit"
                   disabled={isSending}
-                  className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 font-bold text-primary-foreground hover:bg-primary-active transition-all disabled:opacity-50 shadow-sm"
+                  className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 font-bold text-primary-foreground hover:bg-accent-hover transition-all disabled:opacity-50 shadow-sm"
                 >
                   {isSending ? (
                     <RefreshCw className="size-5 animate-spin" />
@@ -640,15 +640,15 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
           <div className="lg:col-span-5 space-y-6">
             <div className="editorial-card flex flex-col p-6 h-full">
               <div className="flex items-center justify-between border-b border-border/60 pb-3 mb-4">
-                <h2 className="text-base font-extrabold text-ink">Histórico de Disparos</h2>
-                <span className="text-xs text-text-mute font-bold">
+                <h2 className="text-base font-extrabold text-foreground">Histórico de Disparos</h2>
+                <span className="text-xs text-muted font-bold">
                   {campaigns.length} registros
                 </span>
               </div>
 
               <div className="flex-1 overflow-y-auto max-h-[600px] pr-1 space-y-3.5">
                 {campaigns.length === 0 ? (
-                  <div className="py-16 text-center text-text-mute space-y-2">
+                  <div className="py-16 text-center text-muted space-y-2">
                     <MailOpen className="size-8 mx-auto opacity-30" />
                     <p className="font-semibold text-xs">Nenhuma notificação enviada ainda.</p>
                   </div>
@@ -656,10 +656,10 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                   campaigns.map((notification) => (
                     <div
                       key={notification.id}
-                      className="group relative rounded-xl border border-border/70 bg-canvas-soft p-4 space-y-2 hover:border-primary/40 transition-all"
+                      className="group relative rounded-xl border border-border/70 bg-background-secondary p-4 space-y-2 hover:border-accent/40 transition-all"
                     >
-                      <h4 className="font-bold text-sm text-text pr-6">{notification.title}</h4>
-                      <p className="text-xs text-text-mute line-clamp-2 leading-relaxed">
+                      <h4 className="font-bold text-sm text-foreground pr-6">{notification.title}</h4>
+                      <p className="text-xs text-muted line-clamp-2 leading-relaxed">
                         {notification.message}
                       </p>
 
@@ -671,7 +671,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                               className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
                                 channel === "email"
                                   ? "bg-accent-soft text-accent"
-                                  : "bg-canvas-alt text-text-mute"
+                                  : "bg-background-secondary text-muted"
                               }`}
                             >
                               {channel === "platform" ? "Plataforma" : channel === "email" ? "E-mail (Resend)" : channel}
@@ -695,7 +695,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                       </div>
 
                       {notification.views !== undefined && (
-                        <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-border/50 text-[11px] text-text-mute">
+                        <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-border/50 text-[11px] text-muted">
                           <div className="flex items-center gap-1" title="Visualizações">
                             <Eye className="size-3" />
                             <span>{notification.views}</span>
@@ -723,7 +723,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                           }
                         }}
                         aria-label={`Excluir ${notification.title}`}
-                        className="absolute right-2.5 top-2.5 grid size-7 place-items-center rounded-lg text-text-mute opacity-0 group-hover:opacity-100 hover:bg-negative/10 hover:text-negative transition-all"
+                        className="absolute right-2.5 top-2.5 grid size-7 place-items-center rounded-lg text-muted opacity-0 group-hover:opacity-100 hover:bg-danger/10 hover:text-danger transition-all"
                       >
                         <Trash2 className="size-3.5" />
                       </button>
@@ -742,24 +742,24 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
           <div className="w-full max-w-3xl rounded-2xl border border-border bg-surface p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <div className="flex items-center gap-2">
-                <div className="size-8 rounded-lg bg-primary-soft text-primary grid place-items-center">
+                <div className="size-8 rounded-lg bg-primary-soft text-accent grid place-items-center">
                   <Mail className="size-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-ink">Prévia do E-mail Renderizado</h3>
-                  <p className="text-[11px] text-text-mute">
-                    Assunto: <span className="font-mono text-text font-semibold">{generatedPreviewSubject}</span>
+                  <h3 className="font-bold text-sm text-foreground">Prévia do E-mail Renderizado</h3>
+                  <p className="text-[11px] text-muted">
+                    Assunto: <span className="font-mono text-foreground font-semibold">{generatedPreviewSubject}</span>
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 bg-canvas-soft p-1 rounded-lg border border-border">
+                <div className="flex items-center gap-1 bg-background-secondary p-1 rounded-lg border border-border">
                   <button
                     type="button"
                     onClick={() => setPreviewDevice("desktop")}
                     className={`p-1.5 rounded text-xs ${
-                      previewDevice === "desktop" ? "bg-surface shadow text-primary font-bold" : "text-text-mute"
+                      previewDevice === "desktop" ? "bg-surface shadow text-accent font-bold" : "text-muted"
                     }`}
                   >
                     <Laptop className="size-3.5" />
@@ -768,7 +768,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                     type="button"
                     onClick={() => setPreviewDevice("mobile")}
                     className={`p-1.5 rounded text-xs ${
-                      previewDevice === "mobile" ? "bg-surface shadow text-primary font-bold" : "text-text-mute"
+                      previewDevice === "mobile" ? "bg-surface shadow text-accent font-bold" : "text-muted"
                     }`}
                   >
                     <Smartphone className="size-3.5" />
@@ -778,7 +778,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                 <button
                   type="button"
                   onClick={() => setIsPreviewOpen(false)}
-                  className="p-1.5 text-text-mute hover:text-text rounded-lg"
+                  className="p-1.5 text-muted hover:text-foreground rounded-lg"
                 >
                   <X className="size-4" />
                 </button>
@@ -807,7 +807,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
               <button
                 type="button"
                 onClick={() => setIsPreviewOpen(false)}
-                className="rounded-xl bg-primary px-5 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-active transition-colors"
+                className="rounded-xl bg-accent px-5 py-2 text-xs font-bold text-primary-foreground hover:bg-accent-hover transition-colors"
               >
                 Fechar Prévia
               </button>

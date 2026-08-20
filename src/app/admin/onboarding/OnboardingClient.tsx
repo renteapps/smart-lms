@@ -348,7 +348,7 @@ export function OnboardingClient({
               <button
                 onClick={handleDiscardDraft}
                 disabled={isDiscarding}
-                className="flex min-h-10 items-center gap-2 rounded-full border border-border/60 px-4 text-sm font-semibold text-text-soft hover:bg-surface-hover disabled:opacity-50 transition-colors"
+                className="flex min-h-10 items-center gap-2 rounded-full border border-border/60 px-4 text-sm font-semibold text-muted hover:bg-surface-hover disabled:opacity-50 transition-colors"
               >
                 <Undo2 size={16} />
                 Descartar rascunho
@@ -357,7 +357,7 @@ export function OnboardingClient({
             <button
               onClick={handleSaveDraft}
               disabled={isSavingDraft}
-              className="flex min-h-10 items-center gap-2 rounded-full border border-border/60 bg-surface px-4 text-sm font-bold text-text hover:bg-surface-hover disabled:opacity-50 transition-colors"
+              className="flex min-h-10 items-center gap-2 rounded-full border border-border/60 bg-surface px-4 text-sm font-bold text-foreground hover:bg-surface-hover disabled:opacity-50 transition-colors"
             >
               {isSavingDraft ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />}
               Salvar rascunho
@@ -366,7 +366,7 @@ export function OnboardingClient({
               onClick={() => canPublish ? setIsPublishDialogOpen(true) : toast.error('Revise as pendências antes de publicar.')}
               disabled={!canPublish}
               title={!canPublish ? validationErrors.join(' ') : undefined}
-              className="flex min-h-10 items-center gap-2 rounded-full bg-primary px-6 text-sm font-bold text-on-primary hover:bg-primary-active disabled:opacity-40 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
+              className="flex min-h-10 items-center gap-2 rounded-full bg-accent px-6 text-sm font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-40 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
             >
               <UploadCloud size={17} />
               Publicar
@@ -400,19 +400,19 @@ export function OnboardingClient({
         <button
           onClick={() => setActiveTab('questions')}
           className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors shrink-0 ${
-            activeTab === 'questions' ? 'border-primary text-primary' : 'border-transparent text-text-mute hover:text-text'
+            activeTab === 'questions' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-foreground'
           }`}
         >
           <ListChecks size={18} />
           Perguntas & Mapeamentos
           {validationErrors.length > 0 && (
-            <span className="rounded-full bg-negative/10 px-2 py-0.5 text-xs font-bold text-negative">{validationErrors.length}</span>
+            <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-bold text-danger">{validationErrors.length}</span>
           )}
         </button>
         <button
           onClick={() => setActiveTab('preview')}
           className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors shrink-0 ${
-            activeTab === 'preview' ? 'border-primary text-primary' : 'border-transparent text-text-mute hover:text-text'
+            activeTab === 'preview' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-foreground'
           }`}
         >
           <PlayCircle size={18} />
@@ -421,7 +421,7 @@ export function OnboardingClient({
         <button
           onClick={() => setActiveTab('stats')}
           className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors shrink-0 ${
-            activeTab === 'stats' ? 'border-primary text-primary' : 'border-transparent text-text-mute hover:text-text'
+            activeTab === 'stats' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-foreground'
           }`}
         >
           <BarChart3 size={18} />
@@ -430,7 +430,7 @@ export function OnboardingClient({
         <button
           onClick={() => setActiveTab('history')}
           className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors shrink-0 ${
-            activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-text-mute hover:text-text'
+            activeTab === 'history' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-foreground'
           }`}
         >
           <History size={18} />
@@ -441,7 +441,7 @@ export function OnboardingClient({
       {/* Tab Content */}
       <div className="min-h-[500px]">
         {activeTab === 'questions' && validationErrors.length > 0 && (
-          <div className="mb-5 rounded-[12px] border border-warning/30 bg-warning/8 p-4 text-sm text-warning">
+          <div className="mb-5 rounded-xl border border-warning/30 bg-warning/8 p-4 text-sm text-warning">
             <p className="flex items-center gap-2 font-bold"><TriangleAlert size={17} /> Pendências para publicar</p>
             <ul className="mt-2 list-disc space-y-1 pl-5">{validationErrors.map((error) => <li key={error}>{error}</li>)}</ul>
           </div>
@@ -468,7 +468,7 @@ export function OnboardingClient({
 
             <button
               onClick={handleAddQuestion}
-              className="flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed border-border/60 rounded-2xl text-text-mute font-bold hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
+              className="flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed border-border/60 rounded-2xl text-muted font-bold hover:border-accent hover:text-accent hover:bg-accent/5 transition-all"
             >
               <Plus size={20} />
               Adicionar Nova Pergunta
@@ -482,7 +482,7 @@ export function OnboardingClient({
             ) : (
               <button
                 onClick={handleAddAvailabilityQuestion}
-                className="flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed border-primary/40 rounded-2xl text-primary font-bold hover:bg-primary/5 transition-all"
+                className="flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed border-accent/40 rounded-2xl text-accent font-bold hover:bg-accent/5 transition-all"
               >
                 <Clock3 size={20} />
                 Adicionar pergunta de disponibilidade (obrigatória)
@@ -494,7 +494,7 @@ export function OnboardingClient({
         {activeTab === 'preview' && (
           <div className="max-w-6xl">
             {previewVersion && (
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm text-primary-active">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent/5 p-3 text-sm text-accent-soft-foreground">
                 <span>Pré-visualizando a versão v{previewVersion.version} do histórico — não afeta seu rascunho atual.</span>
                 <button onClick={() => setPreviewVersion(null)} className="flex items-center gap-1 font-bold hover:underline">
                   <X size={14} /> Voltar ao rascunho atual
@@ -508,19 +508,19 @@ export function OnboardingClient({
         {activeTab === 'stats' && (
           <div className="max-w-6xl space-y-8">
             <section>
-              <div className="mb-4 flex items-center justify-between"><div><p className="eyebrow">Efetividade</p><h2 className="mt-1 text-2xl font-extrabold text-ink">Sinais da experiência do aluno</h2></div><Activity className="h-6 w-6 text-primary" /></div>
+              <div className="mb-4 flex items-center justify-between"><div><p className="eyebrow">Efetividade</p><h2 className="mt-1 text-2xl font-extrabold text-foreground">Sinais da experiência do aluno</h2></div><Activity className="h-6 w-6 text-accent" /></div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="editorial-card p-5"><CheckCircle2 className="h-5 w-5 text-positive" /><p className="mt-4 text-xs font-semibold text-text-mute">Sessões concluídas</p><p className="mt-1 text-3xl font-extrabold text-ink">{analytics?.completedSessions || 0}<span className="text-base text-text-mute">/{analytics?.plannedSessions || 0}</span></p><p className="mt-2 text-xs text-text-soft">{analytics?.completionRate || 0}% do plano atual</p></div>
-                <div className="editorial-card p-5"><Clock3 className="h-5 w-5 text-accent-orange" /><p className="mt-4 text-xs font-semibold text-text-mute">Carga suportada</p><p className="mt-1 text-3xl font-extrabold text-ink">{analytics?.averageSupportedMinutes || 0}<span className="text-base text-text-mute"> min</span></p><p className="mt-2 text-xs text-text-soft">Média de sessões leves ou adequadas</p></div>
-                <div className="editorial-card p-5"><RefreshCw className="h-5 w-5 text-primary" /><p className="mt-4 text-xs font-semibold text-text-mute">Taxa de replanejamento</p><p className="mt-1 text-3xl font-extrabold text-ink">{analytics?.replanRate || 0}%</p><p className="mt-2 text-xs text-text-soft">{analytics?.replanCount || 0} ajustes registrados</p></div>
-                <div className="editorial-card p-5"><BarChart3 className="h-5 w-5 text-primary" /><p className="mt-4 text-xs font-semibold text-text-mute">Onboarding concluído</p><p className="mt-1 text-3xl font-extrabold text-ink">{analytics?.onboardingCompletionRate || 0}%</p><p className="mt-2 text-xs text-text-soft">{analytics?.onboardingCompletions || 0} de {analytics?.onboardingStarts || 0} inícios</p></div>
+                <div className="editorial-card p-5"><CheckCircle2 className="h-5 w-5 text-success" /><p className="mt-4 text-xs font-semibold text-muted">Sessões concluídas</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.completedSessions || 0}<span className="text-base text-muted">/{analytics?.plannedSessions || 0}</span></p><p className="mt-2 text-xs text-muted">{analytics?.completionRate || 0}% do plano atual</p></div>
+                <div className="editorial-card p-5"><Clock3 className="h-5 w-5 text-accent-orange" /><p className="mt-4 text-xs font-semibold text-muted">Carga suportada</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.averageSupportedMinutes || 0}<span className="text-base text-muted"> min</span></p><p className="mt-2 text-xs text-muted">Média de sessões leves ou adequadas</p></div>
+                <div className="editorial-card p-5"><RefreshCw className="h-5 w-5 text-accent" /><p className="mt-4 text-xs font-semibold text-muted">Taxa de replanejamento</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.replanRate || 0}%</p><p className="mt-2 text-xs text-muted">{analytics?.replanCount || 0} ajustes registrados</p></div>
+                <div className="editorial-card p-5"><BarChart3 className="h-5 w-5 text-accent" /><p className="mt-4 text-xs font-semibold text-muted">Onboarding concluído</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.onboardingCompletionRate || 0}%</p><p className="mt-2 text-xs text-muted">{analytics?.onboardingCompletions || 0} de {analytics?.onboardingStarts || 0} inícios</p></div>
               </div>
             </section>
 
             <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-              <div className="editorial-card p-5 sm:p-6"><div className="flex items-center justify-between"><div><p className="eyebrow">Diagnóstico</p><h3 className="mt-1 text-xl font-extrabold text-ink">Saúde da curadoria</h3></div><span className="rounded-full bg-canvas-soft px-3 py-1 text-xs font-bold text-text-soft">{diagnostics.length} sinais</span></div>{diagnostics.length === 0 ? <div className="mt-6 flex items-center gap-3 rounded-[10px] border border-positive/20 bg-positive/5 p-4 text-sm text-positive"><CheckCircle2 size={19} /> Nenhuma inconsistência encontrada na configuração atual.</div> : <div className="mt-5 space-y-3">{diagnostics.map((item) => <article key={item.id} className={`rounded-[10px] border p-4 ${item.severity === 'error' ? 'border-negative/25 bg-negative/5' : item.severity === 'warning' ? 'border-warning/25 bg-warning/5' : 'border-primary/20 bg-primary/5'}`}><div className="flex items-start gap-3"><TriangleAlert className={`mt-0.5 h-4 w-4 shrink-0 ${item.severity === 'error' ? 'text-negative' : item.severity === 'warning' ? 'text-warning' : 'text-primary'}`} /><div><h4 className="text-sm font-bold text-ink">{item.title}</h4><p className="mt-1 text-xs leading-5 text-text-soft">{item.detail}</p></div></div></article>)}</div>}</div>
+              <div className="editorial-card p-5 sm:p-6"><div className="flex items-center justify-between"><div><p className="eyebrow">Diagnóstico</p><h3 className="mt-1 text-xl font-extrabold text-foreground">Saúde da curadoria</h3></div><span className="rounded-full bg-background-secondary px-3 py-1 text-xs font-bold text-muted">{diagnostics.length} sinais</span></div>{diagnostics.length === 0 ? <div className="mt-6 flex items-center gap-3 rounded-lg border border-positive/20 bg-success/5 p-4 text-sm text-success"><CheckCircle2 size={19} /> Nenhuma inconsistência encontrada na configuração atual.</div> : <div className="mt-5 space-y-3">{diagnostics.map((item) => <article key={item.id} className={`rounded-lg border p-4 ${item.severity === 'error' ? 'border-danger/25 bg-danger/5' : item.severity === 'warning' ? 'border-warning/25 bg-warning/5' : 'border-accent/20 bg-accent/5'}`}><div className="flex items-start gap-3"><TriangleAlert className={`mt-0.5 h-4 w-4 shrink-0 ${item.severity === 'error' ? 'text-danger' : item.severity === 'warning' ? 'text-warning' : 'text-accent'}`} /><div><h4 className="text-sm font-bold text-foreground">{item.title}</h4><p className="mt-1 text-xs leading-5 text-muted">{item.detail}</p></div></div></article>)}</div>}</div>
 
-              <div className="space-y-6"><div className="editorial-card p-5 sm:p-6"><p className="eyebrow">Abandono por etapa</p><h3 className="mt-1 text-xl font-extrabold text-ink">Funil do onboarding</h3>{analytics?.stepViews.length ? <div className="mt-5 space-y-3">{analytics.stepViews.map((step) => <div key={step.step}><div className="flex items-center justify-between gap-3 text-xs"><span className="truncate font-semibold text-text-soft">{step.step}. {step.label}</span><strong className="text-ink">-{step.dropRate}%</strong></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-canvas-soft"><div className="h-full rounded-full bg-primary" style={{ width: `${analytics.onboardingStarts ? Math.min(100, (step.views / analytics.onboardingStarts) * 100) : 0}%` }} /></div></div>)}</div> : <p className="mt-5 text-sm text-text-mute">O funil aparecerá após uma passagem pelo onboarding.</p>}</div><div className="editorial-card p-5 sm:p-6"><p className="eyebrow">Conteúdos ignorados</p><h3 className="mt-1 text-xl font-extrabold text-ink">Removidos pelos alunos</h3>{analytics?.ignoredContents.length ? <div className="mt-4 space-y-2">{analytics.ignoredContents.slice(0, 5).map((item) => <div key={item.id} className="flex items-center justify-between gap-3 rounded-[9px] bg-canvas-soft px-3 py-2 text-sm"><span className="truncate font-semibold text-text-soft">{item.title}</span><strong className="text-ink">{item.count}×</strong></div>)}</div> : <p className="mt-5 text-sm text-text-mute">Nenhum conteúdo foi removido em toda a base de alunos.</p>}</div></div>
+              <div className="space-y-6"><div className="editorial-card p-5 sm:p-6"><p className="eyebrow">Abandono por etapa</p><h3 className="mt-1 text-xl font-extrabold text-foreground">Funil do onboarding</h3>{analytics?.stepViews.length ? <div className="mt-5 space-y-3">{analytics.stepViews.map((step) => <div key={step.step}><div className="flex items-center justify-between gap-3 text-xs"><span className="truncate font-semibold text-muted">{step.step}. {step.label}</span><strong className="text-foreground">-{step.dropRate}%</strong></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-background-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${analytics.onboardingStarts ? Math.min(100, (step.views / analytics.onboardingStarts) * 100) : 0}%` }} /></div></div>)}</div> : <p className="mt-5 text-sm text-muted">O funil aparecerá após uma passagem pelo onboarding.</p>}</div><div className="editorial-card p-5 sm:p-6"><p className="eyebrow">Conteúdos ignorados</p><h3 className="mt-1 text-xl font-extrabold text-foreground">Removidos pelos alunos</h3>{analytics?.ignoredContents.length ? <div className="mt-4 space-y-2">{analytics.ignoredContents.slice(0, 5).map((item) => <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg bg-background-secondary px-3 py-2 text-sm"><span className="truncate font-semibold text-muted">{item.title}</span><strong className="text-foreground">{item.count}×</strong></div>)}</div> : <p className="mt-5 text-sm text-muted">Nenhum conteúdo foi removido em toda a base de alunos.</p>}</div></div>
             </section>
           </div>
         )}
@@ -549,29 +549,29 @@ export function OnboardingClient({
         <>
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => setIsPublishDialogOpen(false)} />
           <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border/50 bg-surface shadow-2xl p-6">
-            <h2 className="text-lg font-bold text-ink-deep flex items-center gap-2"><UploadCloud size={19} className="text-primary" /> Publicar questionário</h2>
-            <p className="mt-2 text-sm text-text-soft">
+            <h2 className="text-lg font-bold text-foreground flex items-center gap-2"><UploadCloud size={19} className="text-accent" /> Publicar questionário</h2>
+            <p className="mt-2 text-sm text-muted">
               A versão atualmente publicada será arquivada e esta se torna a nova versão ativa para todos os alunos.
             </p>
-            <label className="mt-4 block text-xs font-semibold text-text-mute">Nota da versão (opcional)</label>
+            <label className="mt-4 block text-xs font-semibold text-muted">Nota da versão (opcional)</label>
             <textarea
               value={publishNotes}
               onChange={(event) => setPublishNotes(event.target.value)}
               placeholder="O que mudou nesta versão?"
               rows={3}
-              className="mt-1.5 w-full rounded-lg border border-border/60 bg-bg px-3 py-2 text-sm text-text outline-none focus:border-primary resize-none"
+              className="mt-1.5 w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent resize-none"
             />
             <div className="mt-5 flex justify-end gap-3">
               <button
                 onClick={() => setIsPublishDialogOpen(false)}
-                className="px-5 py-2.5 rounded-lg font-semibold text-text-mute hover:text-text hover:bg-surface-hover transition-colors"
+                className="px-5 py-2.5 rounded-lg font-semibold text-muted hover:text-foreground hover:bg-surface-hover transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleConfirmPublish}
                 disabled={isPublishing}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold bg-primary text-on-primary hover:bg-primary-active disabled:opacity-50 transition-colors shadow-sm"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold bg-accent text-accent-foreground hover:bg-accent-hover disabled:opacity-50 transition-colors shadow-sm"
               >
                 {isPublishing ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
                 {isPublishing ? 'Publicando…' : 'Confirmar publicação'}

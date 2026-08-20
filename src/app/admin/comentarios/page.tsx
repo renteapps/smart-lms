@@ -81,11 +81,12 @@ export default function AdminComentarios() {
 
       const repliedIds = new Set(replies?.map(r => r.parent_id));
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const formatted = (data ?? []).map((row: any) => {
         const student = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
         const lesson = Array.isArray(row.lessons) ? row.lessons[0] : row.lessons;
-        const module = lesson?.modules && Array.isArray(lesson.modules) ? lesson.modules[0] : lesson?.modules;
-        const course = module?.courses && Array.isArray(module.courses) ? module.courses[0] : module?.courses;
+        const mod = lesson?.modules && Array.isArray(lesson.modules) ? lesson.modules[0] : lesson?.modules;
+        const course = mod?.courses && Array.isArray(mod.courses) ? mod.courses[0] : mod?.courses;
 
         return {
           id: row.id,
@@ -110,7 +111,7 @@ export default function AdminComentarios() {
   };
 
   useEffect(() => {
-    loadComments();
+    void loadComments();
   }, []);
 
   const handleSendReply = async () => {

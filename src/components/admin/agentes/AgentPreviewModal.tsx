@@ -99,7 +99,7 @@ export function AgentPreviewModal({ agent, onClose }: AgentPreviewModalProps) {
                         {agent.planNames && agent.planNames.length > 0 && (
                           <div className="flex items-center gap-1.5">
                             <dt>Planos:</dt>
-                            <dd className="font-semibold text-primary">{agent.planNames.join(", ")}</dd>
+                            <dd className="font-semibold text-accent">{agent.planNames.join(", ")}</dd>
                           </div>
                         )}
                       </dl>

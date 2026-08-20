@@ -30,12 +30,14 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
     notFound();
   }
 
-  // Busca matrículas do usuário
+  // Busca matrículas ativas do usuário
+  const nowIso = new Date().toISOString();
   const { count: enrollments } = await supabase
     .from("enrollments")
     .select("*", { count: "exact", head: true })
     .eq("user_id", id)
-    .eq("status", "active");
+    .eq("status", "active")
+    .or(`expires_at.is.null,expires_at.gt.${nowIso}`);
 
   const progressDisplay = profile.role === "student" ? "Calculando..." : "—";
   const statusToDisplay = profile.status === "active" ? "Ativo" : "Inativo";

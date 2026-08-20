@@ -5,6 +5,9 @@ import { ProfileTest } from '@/types/profileTest';
 import { Edit3, Eye, Trash2, HelpCircle, Layers, Users, Copy } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Button, buttonVariants } from '@heroui/react';
+import { StatusBadge } from '@/components/ui/editorial';
+import { cn } from '@/lib/utils';
 
 interface TestCardProps {
   test: ProfileTest;
@@ -17,10 +20,10 @@ export const TestCard: React.FC<TestCardProps> = ({ test, onPreview, onDelete, o
   const isPublished = test.status === 'published';
 
   return (
-    <div className="bg-surface-card border border-border/60 rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 flex flex-col group">
-      
+    <div className="group flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-surface shadow-elev-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-elev-3">
+
       {/* Thumbnail Header */}
-      <div className="h-40 bg-gradient-to-r from-primary/10 via-accent-cyan/20 to-primary-pale relative overflow-hidden flex items-center justify-center">
+      <div className="relative flex h-40 items-center justify-center overflow-hidden bg-gradient-to-r from-accent/10 via-accent/20 to-accent-soft">
         {test.coverUrl ? (
           <Image
             src={test.coverUrl}
@@ -30,33 +33,27 @@ export const TestCard: React.FC<TestCardProps> = ({ test, onPreview, onDelete, o
             className="object-cover transition-transform duration-[var(--duration-lg)] group-hover:scale-[1.035]"
           />
         ) : (
-          <div className="text-center p-4">
-            <span className="text-4xl block mb-1">📊</span>
-            <span className="text-xs font-semibold text-text-soft">Teste de Perfil</span>
+          <div className="p-4 text-center">
+            <span className="mb-1 block text-4xl">📊</span>
+            <span className="text-xs font-semibold text-muted">Teste de Perfil</span>
           </div>
         )}
 
         {/* Status Badge */}
-        <div className="absolute top-3 right-3">
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-extrabold shadow-sm ${
-              isPublished
-                ? 'bg-positive/90 text-white'
-                : 'bg-warning/90 text-yellow-950'
-            }`}
-          >
+        <div className="absolute right-3 top-3">
+          <StatusBadge tone={isPublished ? 'positive' : 'warning'}>
             {isPublished ? 'Publicado' : 'Rascunho'}
-          </span>
+          </StatusBadge>
         </div>
       </div>
 
       {/* Body Content */}
       <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
         <div>
-          <h3 className="font-display font-black text-xl text-ink-deep group-hover:text-primary transition-colors line-clamp-1 mb-2">
+          <h3 className="font-display font-black text-xl text-foreground group-hover:text-accent transition-colors line-clamp-1 mb-2">
             {test.title}
           </h3>
-          <p className="text-text-soft text-sm line-clamp-2 leading-relaxed">
+          <p className="text-muted text-sm line-clamp-2 leading-relaxed">
             {test.description || 'Sem descrição.'}
           </p>
         </div>
@@ -83,24 +80,24 @@ export const TestCard: React.FC<TestCardProps> = ({ test, onPreview, onDelete, o
         {/* Metrics Row */}
         <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border/40 text-center">
           <div>
-            <span className="text-xs font-semibold text-text-mute flex items-center justify-center gap-1">
+            <span className="text-xs font-semibold text-muted flex items-center justify-center gap-1">
               <HelpCircle className="w-3.5 h-3.5" /> Perguntas
             </span>
-            <span className="text-sm font-extrabold text-ink-deep">{test.questions.length}</span>
+            <span className="text-sm font-extrabold text-foreground">{test.questions.length}</span>
           </div>
 
           <div>
-            <span className="text-xs font-semibold text-text-mute flex items-center justify-center gap-1">
+            <span className="text-xs font-semibold text-muted flex items-center justify-center gap-1">
               <Layers className="w-3.5 h-3.5" /> Perfis
             </span>
-            <span className="text-sm font-extrabold text-ink-deep">{test.categories.length}</span>
+            <span className="text-sm font-extrabold text-foreground">{test.categories.length}</span>
           </div>
 
           <div>
-            <span className="text-xs font-semibold text-text-mute flex items-center justify-center gap-1">
+            <span className="text-xs font-semibold text-muted flex items-center justify-center gap-1">
               <Users className="w-3.5 h-3.5" /> Respostas
             </span>
-            <span className="text-sm font-extrabold text-ink-deep">{test.completionsCount || 0}</span>
+            <span className="text-sm font-extrabold text-foreground">{test.completionsCount || 0}</span>
           </div>
         </div>
 
@@ -108,38 +105,42 @@ export const TestCard: React.FC<TestCardProps> = ({ test, onPreview, onDelete, o
         <div className="flex items-center gap-2 pt-2">
           <Link
             href={`/admin/testes-perfil/${test.id}`}
-            className="flex-1 bg-primary/10 hover:bg-primary text-primary hover:text-on-primary py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+            className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "flex-1 gap-1.5")}
           >
-            <Edit3 className="w-3.5 h-3.5" />
+            <Edit3 className="size-3.5" aria-hidden="true" />
             Editar
           </Link>
 
-          <button
-            type="button"
+          <Button
+            isIconOnly
+            variant="outline"
+            size="sm"
+            aria-label="Preview do aluno"
             onClick={() => onPreview(test)}
-            className="p-2.5 rounded-xl border border-border/60 hover:bg-canvas-soft text-text-soft hover:text-text transition-colors"
-            title="Preview do Aluno"
           >
-            <Eye className="w-4 h-4" />
-          </button>
+            <Eye className="size-4" aria-hidden="true" />
+          </Button>
 
-          <button
-            type="button"
+          <Button
+            isIconOnly
+            variant="outline"
+            size="sm"
+            aria-label="Duplicar teste"
             onClick={() => onDuplicate(test)}
-            className="p-2.5 rounded-xl border border-border/60 hover:bg-canvas-soft text-text-soft hover:text-text transition-colors"
-            title="Duplicar Teste"
           >
-            <Copy className="w-4 h-4" />
-          </button>
+            <Copy className="size-4" aria-hidden="true" />
+          </Button>
 
-          <button
-            type="button"
+          <Button
+            isIconOnly
+            variant="outline"
+            size="sm"
+            aria-label="Excluir teste"
+            className="hover:bg-danger-soft hover:text-danger-soft-foreground"
             onClick={() => onDelete(test.id)}
-            className="p-2.5 rounded-xl border border-border/60 hover:bg-negative/10 text-text-mute hover:text-negative transition-colors"
-            title="Excluir Teste"
           >
-            <Trash2 className="w-4 h-4" />
-          </button>
+            <Trash2 className="size-4" aria-hidden="true" />
+          </Button>
         </div>
 
       </div>

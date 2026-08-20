@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   BellRing,
   Camera,
@@ -181,14 +181,17 @@ export function ProfileEditor() {
   const [profile, setProfile] = useState<ProfilePreferences>(defaultProfile);
   const [savedProfile, setSavedProfile] = useState<ProfilePreferences>(defaultProfile);
   const [phoneDdi, setPhoneDdi] = useState("+55");
-  const [saveState, setSaveState] = useState<"idle" | "saved">("idle");
+  const [savedPhoneDdi, setSavedPhoneDdi] = useState("+55");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [isProcessingAvatar, setIsProcessingAvatar] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [cities, setCities] = useState<string[]>([]);
   const [isLoadingCities, setIsLoadingCities] = useState(false);
   const { user, signOut, isAuthenticated } = useAuth();
+  const isLoadedRef = useRef(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Carrega dados do Supabase ou localStorage
+  // Carrega dados iniciais
   useEffect(() => {
     let isMounted = true;
     const loadData = async () => {
@@ -204,10 +207,8 @@ export function ProfileEditor() {
 
       // Processa telefone inicial
       const parsedInitial = parseStoredPhone(currentData.phone);
-      if (isMounted) {
-        setPhoneDdi(parsedInitial.ddi);
-        currentData.phone = parsedInitial.formatted;
-      }
+      let currentDdi = parsedInitial.ddi;
+      currentData.phone = parsedInitial.formatted;
 
       try {
         const supabase = createClient();
@@ -221,8 +222,7 @@ export function ProfileEditor() {
 
           const rawPhone = dbProfile?.phone || currentData.phone;
           const parsedDbPhone = parseStoredPhone(rawPhone);
-
-          setPhoneDdi(parsedDbPhone.ddi);
+          currentDdi = parsedDbPhone.ddi;
 
           const merged: ProfilePreferences = {
             ...currentData,
@@ -252,8 +252,11 @@ export function ProfileEditor() {
       }
 
       if (isMounted) {
+        setPhoneDdi(currentDdi);
+        setSavedPhoneDdi(currentDdi);
         setProfile(currentData);
         setSavedProfile(currentData);
+        isLoadedRef.current = true;
       }
     };
 
@@ -285,12 +288,131 @@ export function ProfileEditor() {
     }
   }, [profile.country, profile.state, profile.city]);
 
-  const hasChanges = JSON.stringify(profile) !== JSON.stringify(savedProfile);
+  const hasChanges = JSON.stringify(profile) !== JSON.stringify(savedProfile) || phoneDdi !== savedPhoneDdi;
 
   const updateProfile = <Key extends keyof ProfilePreferences>(key: Key, value: ProfilePreferences[Key]) => {
     setProfile((current) => ({ ...current, [key]: value }));
-    setSaveState("idle");
   };
+
+  /**
+   * Salva as preferências de perfil no Supabase e no LocalStorage
+   */
+  const saveProfile = useCallback(
+    async (
+      profileToSave: ProfilePreferences,
+      ddiToSave: string,
+      isManualAction = false
+    ) => {
+      setIsSaving(true);
+      setSaveStatus("saving");
+
+      const sanitizedUsername = profileToSave.username
+        ? profileToSave.username.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, "")
+        : "";
+
+      const fullPhoneToSave = profileToSave.phone ? composeFullPhone(ddiToSave, profileToSave.phone) : null;
+
+      const cleanProfile: ProfilePreferences = {
+        ...profileToSave,
+        username: sanitizedUsername,
+      };
+
+      // Atualiza o localStorage e avisa o restante da UI
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(cleanProfile));
+      setSavedProfile(cleanProfile);
+      setSavedPhoneDdi(ddiToSave);
+      window.dispatchEvent(new CustomEvent<ProfilePreferences>(PROFILE_SAVED_EVENT, { detail: cleanProfile }));
+
+      try {
+        const supabase = createClient();
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const { error: dbError } = await supabase
+            .from("profiles")
+            .update({
+              full_name: cleanProfile.name,
+              username: sanitizedUsername || null,
+              avatar_url: cleanProfile.avatarUrl || null,
+              phone: fullPhoneToSave,
+              birth_date: cleanProfile.birthDate || null,
+              gender: cleanProfile.gender || null,
+              career_role: cleanProfile.role || null,
+              company: cleanProfile.company || null,
+              country: cleanProfile.country || "Brasil",
+              state: cleanProfile.state || null,
+              city: cleanProfile.city || null,
+              bio: cleanProfile.bio,
+              weekly_goal: cleanProfile.weeklyGoal,
+              lesson_reminders: cleanProfile.lessonReminders,
+              email_digest: cleanProfile.emailDigest,
+              achievement_alerts: cleanProfile.achievementAlerts,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", authUser.id);
+
+          if (dbError) throw dbError;
+
+          await supabase.auth.updateUser({
+            data: {
+              full_name: cleanProfile.name,
+              username: sanitizedUsername || null,
+              avatar_url: cleanProfile.avatarUrl || null,
+              phone: fullPhoneToSave,
+              birth_date: cleanProfile.birthDate,
+              gender: cleanProfile.gender,
+              career_role: cleanProfile.role,
+            },
+          });
+        }
+
+        setSaveStatus("saved");
+        if (isManualAction) {
+          toast.success("Perfil salvo com sucesso!", {
+            description: "Todas as suas informações estão atualizadas.",
+          });
+        }
+      } catch (err: any) {
+        console.error("Erro ao salvar perfil:", err);
+        setSaveStatus("error");
+        if (isManualAction) {
+          toast.danger("Erro ao salvar alterações", {
+            description: err?.message || "Tente novamente mais tarde.",
+          });
+        }
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    []
+  );
+
+  // Efeito de auto-save com debounce de 800ms
+  useEffect(() => {
+    if (!isLoadedRef.current) return;
+
+    const isProfileDifferent = JSON.stringify(profile) !== JSON.stringify(savedProfile);
+    const isPhoneDdiDifferent = phoneDdi !== savedPhoneDdi;
+
+    if (!isProfileDifferent && !isPhoneDdiDifferent) {
+      return;
+    }
+
+    setSaveStatus("saving");
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      void saveProfile(profile, phoneDdi, false);
+    }, 800);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [profile, phoneDdi, savedProfile, savedPhoneDdi, saveProfile]);
 
   /**
    * Recebe a URL já otimizada pelo ImageUpload (ou `null` na remoção) e cuida
@@ -322,9 +444,7 @@ export function ProfileEditor() {
       window.dispatchEvent(new CustomEvent<ProfilePreferences>(PROFILE_SAVED_EVENT, { detail: updated }));
 
       if (!url) {
-        toast.success("Foto de perfil removida.", {
-          description: "O arquivo foi excluído do servidor para otimizar o armazenamento.",
-        });
+        toast.success("Foto de perfil removida.");
       }
     } catch (err: unknown) {
       console.error("Erro ao atualizar a foto de perfil:", err);
@@ -361,80 +481,12 @@ export function ProfileEditor() {
     }
   };
 
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSaving(true);
-
-    const sanitizedUsername = profile.username
-      ? profile.username.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, "")
-      : "";
-
-    const fullPhoneToSave = profile.phone ? composeFullPhone(phoneDdi, profile.phone) : null;
-
-    const cleanProfile: ProfilePreferences = {
-      ...profile,
-      username: sanitizedUsername,
-    };
-
-    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(cleanProfile));
-    setSavedProfile(cleanProfile);
-    setSaveState("saved");
-    window.dispatchEvent(new CustomEvent<ProfilePreferences>(PROFILE_SAVED_EVENT, { detail: cleanProfile }));
-
-    try {
-      const supabase = createClient();
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
-        const { error: dbError } = await supabase
-          .from("profiles")
-          .update({
-            full_name: cleanProfile.name,
-            username: sanitizedUsername || null,
-            avatar_url: cleanProfile.avatarUrl || null,
-            phone: fullPhoneToSave,
-            birth_date: cleanProfile.birthDate || null,
-            gender: cleanProfile.gender || null,
-            career_role: cleanProfile.role || null,
-            company: cleanProfile.company || null,
-            country: cleanProfile.country || "Brasil",
-            state: cleanProfile.state || null,
-            city: cleanProfile.city || null,
-            bio: cleanProfile.bio,
-            weekly_goal: cleanProfile.weeklyGoal,
-            lesson_reminders: cleanProfile.lessonReminders,
-            email_digest: cleanProfile.emailDigest,
-            achievement_alerts: cleanProfile.achievementAlerts,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", authUser.id);
-
-        if (dbError) throw dbError;
-
-        await supabase.auth.updateUser({
-          data: {
-            full_name: cleanProfile.name,
-            username: sanitizedUsername || null,
-            avatar_url: cleanProfile.avatarUrl || null,
-            phone: fullPhoneToSave,
-            birth_date: cleanProfile.birthDate,
-            gender: cleanProfile.gender,
-            career_role: cleanProfile.role,
-          },
-        });
-
-        toast.success("Perfil atualizado com sucesso!", {
-          description: "Todas as suas informações foram salvas.",
-        });
-      } else {
-        toast.success("Perfil salvo localmente!");
-      }
-    } catch (err: any) {
-      console.error("Erro ao salvar perfil no Supabase:", err);
-      toast.danger("Erro ao sincronizar com o banco", { description: err?.message || "Tente novamente mais tarde." });
-    } finally {
-      setIsSaving(false);
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
+    void saveProfile(profile, phoneDdi, true);
   };
 
   return (
@@ -861,27 +913,35 @@ export function ProfileEditor() {
         </Card>
       </section>
 
-      {/* Barra de Ações Persistente */}
+      {/* Barra de Ações Persistente com Feedback de Salvamento Automático */}
       <div className="material-thick sticky bottom-4 z-10 flex flex-col gap-3 rounded-2xl p-3.5 sm:flex-row sm:items-center sm:justify-between shadow-elev-2">
-        <p aria-live="polite" className="min-h-5 text-sm text-muted">
-          {saveState === "saved" ? (
-            <span className="inline-flex items-center gap-2 font-semibold text-success">
-              <CheckCircle2 className="size-4" aria-hidden="true" /> Tudo certo! Seu perfil está atualizado. ✓
+        <div aria-live="polite" className="flex items-center gap-2 text-sm text-muted">
+          {saveStatus === "saving" || isSaving ? (
+            <span className="inline-flex items-center gap-2 font-medium text-muted">
+              <Spinner size="sm" /> Salvando alterações...
             </span>
-          ) : hasChanges ? (
-            "Você tem alterações ainda não salvas."
+          ) : saveStatus === "error" ? (
+            <span className="inline-flex items-center gap-2 font-medium text-danger">
+              Não foi possível salvar as alterações. Tentaremos novamente em instantes.
+            </span>
           ) : (
-            "Seus dados estão atualizados no Supabase."
+            <span className="inline-flex items-center gap-2 font-semibold text-success">
+              <CheckCircle2 className="size-4" aria-hidden="true" /> Todas as alterações estão salvas.
+            </span>
           )}
-        </p>
-        <Button type="submit" variant="primary" isDisabled={!hasChanges || isSaving}>
+        </div>
+        <Button
+          type="submit"
+          variant={hasChanges ? "primary" : "outline"}
+          isDisabled={!hasChanges && !isSaving}
+        >
           {isSaving ? (
             <>
               <Spinner size="sm" /> Salvando...
             </>
           ) : (
             <>
-              <Save className="size-4" aria-hidden="true" /> Salvar alterações
+              <Save className="size-4" aria-hidden="true" /> {hasChanges ? "Salvar agora" : "Salvo"}
             </>
           )}
         </Button>

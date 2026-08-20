@@ -96,11 +96,11 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
 
   const getIconForType = (type: string) => {
     switch (type) {
-      case 'lesson': return <Video size={16} className="text-blue-400" />;
-      case 'module': return <Folder size={16} className="text-yellow-400" />;
-      case 'course': return <BookOpen size={16} className="text-green-400" />;
-      case 'article': return <FileText size={16} className="text-purple-400" />;
-      case 'external_link': return <LinkIcon size={16} className="text-gray-400" />;
+      case 'lesson': return <Video size={16} className="text-accent" />;
+      case 'module': return <Folder size={16} className="text-warning" />;
+      case 'course': return <BookOpen size={16} className="text-success" />;
+      case 'article': return <FileText size={16} className="text-accent" />;
+      case 'external_link': return <LinkIcon size={16} className="text-muted" />;
       default: return <FileText size={16} />;
     }
   };
@@ -125,12 +125,12 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
             className="fixed left-1/2 top-1/2 z-50 w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex flex-col max-h-[85vh] rounded-2xl border border-border/50 bg-surface shadow-2xl overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-border/40 p-5 bg-surface-card">
-              <h2 className="text-xl font-bold text-ink-deep flex items-center gap-2">
-                <Plus size={20} className="text-primary" />
+            <div className="flex items-center justify-between border-b border-border/40 p-5 bg-surface">
+              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                <Plus size={20} className="text-accent" />
                 Associar Conteúdo
               </h2>
-              <button onClick={onClose} className="p-2 text-text-mute hover:text-text hover:bg-surface-hover rounded-full transition-colors">
+              <button onClick={onClose} className="p-2 text-muted hover:text-foreground hover:bg-surface-hover rounded-full transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -143,8 +143,8 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors shrink-0 ${
                     activeTab === tab.id
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-text-mute hover:text-text'
+                      ? 'border-accent text-accent'
+                      : 'border-transparent text-muted hover:text-foreground'
                   }`}
                 >
                   {tab.icon && <tab.icon size={16} />}
@@ -154,24 +154,24 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
             </div>
 
             {/* Search */}
-            <div className="p-5 border-b border-border/40 bg-surface-card/50">
+            <div className="p-5 border-b border-border/40 bg-surface/50">
               <div className="relative">
-                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-mute" />
+                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar por título ou categoria..."
-                  className="w-full bg-bg border border-border/60 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:border-primary transition-colors text-text"
+                  className="w-full bg-background border border-border/60 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:border-accent transition-colors text-foreground"
                 />
               </div>
             </div>
 
             {/* Content List / Custom Form */}
-            <div className="flex-1 overflow-y-auto p-5 bg-bg">
+            <div className="flex-1 overflow-y-auto p-5 bg-background">
               {activeTab === 'external_link' && (
-                <div className="mb-6 p-4 border border-primary/30 bg-primary/5 rounded-xl flex flex-col gap-3">
-                  <h3 className="text-sm font-bold text-primary flex items-center gap-2">
+                <div className="mb-6 p-4 border border-accent/30 bg-accent/5 rounded-xl flex flex-col gap-3">
+                  <h3 className="text-sm font-bold text-accent flex items-center gap-2">
                     <LinkIcon size={16} />
                     Adicionar Link Personalizado
                   </h3>
@@ -181,16 +181,16 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                       placeholder="Título do Link (ex: Entrar no Grupo VIP)"
                       value={customLinkTitle}
                       onChange={e => setCustomLinkTitle(e.target.value)}
-                      className="bg-surface border border-border/60 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
+                      className="bg-surface border border-border/60 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent"
                     />
-                    <label className="flex items-center gap-2 rounded-lg border border-border/60 bg-surface px-3 text-xs font-semibold text-text-soft">
+                    <label className="flex items-center gap-2 rounded-lg border border-border/60 bg-surface px-3 text-xs font-semibold text-muted">
                       <input
                         type="number"
                         min="1"
                         max="240"
                         value={customLinkDuration}
                         onChange={(event) => setCustomLinkDuration(Number(event.target.value) || 10)}
-                        className="w-12 bg-transparent text-sm text-text outline-none"
+                        className="w-12 bg-transparent text-sm text-foreground outline-none"
                       /> min
                     </label>
                     <input
@@ -198,7 +198,7 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                       placeholder="https://..."
                       value={customLinkUrl}
                       onChange={e => setCustomLinkUrl(e.target.value)}
-                      className="bg-surface border border-border/60 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
+                      className="bg-surface border border-border/60 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent"
                     />
                   </div>
                 </div>
@@ -214,12 +214,12 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                         onClick={() => toggleSelect(item.id)}
                         className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                           isSelected
-                            ? 'border-primary bg-primary/5 shadow-sm'
+                            ? 'border-accent bg-accent/5 shadow-sm'
                             : 'border-border/60 bg-surface hover:border-border hover:shadow-sm'
                         }`}
                       >
                         <div className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded border transition-colors shrink-0 ${
-                          isSelected ? 'bg-primary border-primary' : 'border-border/80 bg-surface'
+                          isSelected ? 'bg-accent border-accent' : 'border-border/80 bg-surface'
                         }`}>
                           {isSelected && <Check size={14} className="text-white" />}
                         </div>
@@ -227,18 +227,18 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             {getIconForType(item.type)}
-                            <span className="text-xs font-semibold uppercase tracking-wider text-text-mute">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-muted">
                               {item.type}
                             </span>
                             {item.estimatedDurationMin && (
-                              <span className="text-xs font-semibold text-text-mute">· {item.estimatedDurationMin} min</span>
+                              <span className="text-xs font-semibold text-muted">· {item.estimatedDurationMin} min</span>
                             )}
                           </div>
-                          <h4 className={`font-semibold text-sm truncate ${isSelected ? 'text-primary' : 'text-text'}`}>
+                          <h4 className={`font-semibold text-sm truncate ${isSelected ? 'text-accent' : 'text-foreground'}`}>
                             {item.title}
                           </h4>
                           {item.category && (
-                            <p className="text-xs text-text-soft mt-0.5 truncate">{item.category}</p>
+                            <p className="text-xs text-muted mt-0.5 truncate">{item.category}</p>
                           )}
                         </div>
                       </div>
@@ -246,33 +246,33 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                   })}
                 </div>
               ) : activeTab !== 'external_link' ? (
-                <div className="flex flex-col items-center justify-center py-12 text-text-mute">
+                <div className="flex flex-col items-center justify-center py-12 text-muted">
                   <Inbox size={40} className="mb-4 opacity-20" />
                   <p className="font-semibold">
                     {search ? 'Nenhum conteúdo encontrado para sua busca.' : 'Nenhum conteúdo publicado nesta categoria ainda.'}
                   </p>
-                  {!search && <p className="mt-1 text-xs text-text-soft">Publique cursos, módulos ou artigos para poder mapeá-los aqui.</p>}
+                  {!search && <p className="mt-1 text-xs text-muted">Publique cursos, módulos ou artigos para poder mapeá-los aqui.</p>}
                 </div>
               ) : null}
             </div>
 
             {/* Footer */}
-            <div className="border-t border-border/40 p-5 bg-surface-card flex items-center justify-between">
-              <span className="text-sm font-medium text-text-soft">
+            <div className="border-t border-border/40 p-5 bg-surface flex items-center justify-between">
+              <span className="text-sm font-medium text-muted">
                 {selectedIds.size} item(s) selecionado(s)
                 {customLinkTitle && customLinkUrl ? ' + 1 Link Pers.' : ''}
               </span>
               <div className="flex gap-3">
                 <button
                   onClick={onClose}
-                  className="px-5 py-2.5 rounded-lg font-semibold text-text-mute hover:text-text hover:bg-surface-hover transition-colors"
+                  className="px-5 py-2.5 rounded-lg font-semibold text-muted hover:text-foreground hover:bg-surface-hover transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleAdd}
                   disabled={selectedIds.size === 0 && (!customLinkTitle || !customLinkUrl)}
-                  className="px-6 py-2.5 rounded-lg font-bold bg-primary text-white hover:bg-primary-active disabled:opacity-50 transition-colors shadow-sm"
+                  className="px-6 py-2.5 rounded-lg font-bold bg-accent text-white hover:bg-accent-hover disabled:opacity-50 transition-colors shadow-sm"
                 >
                   Adicionar à Opção
                 </button>

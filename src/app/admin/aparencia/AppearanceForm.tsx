@@ -38,29 +38,29 @@ export function AppearanceForm({ initialData }: AppearanceFormProps) {
       <div className="lg:col-span-2 space-y-6">
         
         {/* Seção: Informações da Marca */}
-        <section className="bg-surface-card rounded-2xl p-6 md:p-8 space-y-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-          <h2 className="text-xl font-bold flex items-center gap-2 text-ink">
-            <Type className="w-5 h-5 text-primary" />
+        <section className="bg-surface rounded-2xl p-6 md:p-8 space-y-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <h2 className="text-xl font-bold flex items-center gap-2 text-foreground">
+            <Type className="w-5 h-5 text-accent" />
             Informações da Marca
           </h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-text mb-1.5">Nome da Plataforma</label>
+              <label className="block text-sm font-semibold text-foreground mb-1.5">Nome da Plataforma</label>
               <input 
                 type="text" 
                 name="platformName"
                 defaultValue={initialData.platformName || "Smart LMS"}
-                className="w-full bg-canvas-soft border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-ink"
+                className="w-full bg-background-secondary border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-accent transition-all text-foreground"
                 placeholder="Ex: Minha Academia"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-text mb-1.5">Slogan / Descrição Curta</label>
+              <label className="block text-sm font-semibold text-foreground mb-1.5">Slogan / Descrição Curta</label>
               <textarea 
                 rows={3}
                 name="slogan"
                 defaultValue={initialData.slogan || "A melhor plataforma de ensino a distância."}
-                className="w-full bg-canvas-soft border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-ink resize-none"
+                className="w-full bg-background-secondary border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-accent transition-all text-foreground resize-none"
                 placeholder="Ex: Aprenda no seu próprio ritmo."
               />
             </div>
@@ -68,14 +68,14 @@ export function AppearanceForm({ initialData }: AppearanceFormProps) {
         </section>
 
         {/* Seção: Identidade Visual (Cores) */}
-        <section className="bg-surface-card rounded-2xl p-6 md:p-8 space-y-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-          <h2 className="text-xl font-bold flex items-center gap-2 text-ink">
-            <Palette className="w-5 h-5 text-primary" />
+        <section className="bg-surface rounded-2xl p-6 md:p-8 space-y-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <h2 className="text-xl font-bold flex items-center gap-2 text-foreground">
+            <Palette className="w-5 h-5 text-accent" />
             Cores e Tema
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-text mb-2">Cor Principal</label>
+              <label className="block text-sm font-semibold text-foreground mb-2">Cor Principal</label>
               <div className="flex items-center gap-3">
                 <div 
                   className="w-10 h-10 rounded-lg border border-border shadow-inner flex-shrink-0 relative overflow-hidden group"
@@ -93,22 +93,22 @@ export function AppearanceForm({ initialData }: AppearanceFormProps) {
                   type="text" 
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="w-full bg-canvas-soft border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 text-ink font-mono text-sm uppercase transition-all"
+                  className="w-full bg-background-secondary border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground font-mono text-sm uppercase transition-all"
                 />
               </div>
-              <p className="text-xs text-text-mute mt-2">Usada em botões principais, links e destaques.</p>
+              <p className="text-xs text-muted mt-2">Usada em botões principais, links e destaques.</p>
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-text mb-3">Tema da experiência</label>
-              <div className="rounded-[12px] border border-border bg-canvas-soft p-3">
+              <label className="block text-sm font-semibold text-foreground mb-3">Tema da experiência</label>
+              <div className="rounded-xl border border-border bg-background-secondary p-3">
                 <div className="flex items-center gap-3">
-                  <span className="grid h-9 w-9 place-items-center rounded-[11px] bg-surface text-primary shadow-sm">
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-surface text-accent shadow-sm">
                     <Sun className="h-4 w-4" />
                   </span>
                   <div>
-                    <p className="text-sm font-bold text-ink">Claro editorial</p>
-                    <p className="text-xs text-text-mute">Tema principal desta versão</p>
+                    <p className="text-sm font-bold text-foreground">Claro editorial</p>
+                    <p className="text-xs text-muted">Tema principal desta versão</p>
                     <input type="hidden" name="theme" value="light" />
                   </div>
                 </div>
@@ -119,12 +119,12 @@ export function AppearanceForm({ initialData }: AppearanceFormProps) {
       </div>
 
       <div className="space-y-6">
-        <section className="bg-surface-card rounded-2xl p-6 md:p-8 space-y-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] lg:sticky lg:top-24">
-          <h3 className="font-bold text-ink flex items-center gap-2">
-            <Monitor className="w-5 h-5 text-primary" />
+        <section className="bg-surface rounded-2xl p-6 md:p-8 space-y-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] lg:sticky lg:top-24">
+          <h3 className="font-bold text-foreground flex items-center gap-2">
+            <Monitor className="w-5 h-5 text-accent" />
             Salvar Alterações
           </h3>
-          <p className="text-sm text-text-mute">
+          <p className="text-sm text-muted">
             As alterações de aparência aplicam-se imediatamente a todos os alunos.
           </p>
           <Button 

@@ -252,8 +252,8 @@ export default function AdminCursoVendasPage() {
   if (!hasLoaded) {
     return (
       <div className="max-w-5xl mx-auto py-20 flex flex-col items-center justify-center gap-4 text-center">
-        <div className="size-8 rounded-full border-3 border-primary/30 border-t-primary animate-spin" />
-        <p className="text-sm text-text-soft">Carregando configurações de vendas...</p>
+        <div className="size-8 rounded-full border-3 border-accent/30 border-t-primary animate-spin" />
+        <p className="text-sm text-muted">Carregando configurações de vendas...</p>
       </div>
     );
   }
@@ -304,7 +304,7 @@ export default function AdminCursoVendasPage() {
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="flex-1 md:flex-none bg-primary hover:bg-primary-active disabled:opacity-70 disabled:cursor-not-allowed text-primary-foreground px-6 py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-sm transition-all text-sm hover:shadow-md"
+            className="flex-1 md:flex-none bg-accent hover:bg-accent-hover disabled:opacity-70 disabled:cursor-not-allowed text-primary-foreground px-6 py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-sm transition-all text-sm hover:shadow-md"
           >
             {isSaving ? (
               <div className="size-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />

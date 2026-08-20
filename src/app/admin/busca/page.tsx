@@ -79,7 +79,7 @@ export default async function AdminBuscaUnificada({ searchParams }: { searchPara
             <Card>
               <Card.Header>
                 <div className="flex items-center gap-2 font-display font-semibold">
-                  <User className="size-4 text-primary" /> Usuários
+                  <User className="size-4 text-accent" /> Usuários
                 </div>
               </Card.Header>
               <ul className="divide-y divide-separator">
@@ -94,7 +94,7 @@ export default async function AdminBuscaUnificada({ searchParams }: { searchPara
               </ul>
               {users.length === 5 && (
                 <Card.Footer className="bg-surface/50 border-t border-border">
-                  <Link href={`/admin/users?q=${encodeURIComponent(q)}`} className="text-xs font-semibold text-primary flex items-center gap-1">
+                  <Link href={`/admin/users?q=${encodeURIComponent(q)}`} className="text-xs font-semibold text-accent flex items-center gap-1">
                     Ver todos os usuários <ArrowRight className="size-3" />
                   </Link>
                 </Card.Footer>
@@ -107,7 +107,7 @@ export default async function AdminBuscaUnificada({ searchParams }: { searchPara
             <Card>
               <Card.Header>
                 <div className="flex items-center gap-2 font-display font-semibold">
-                  <BookOpen className="size-4 text-primary" /> Cursos
+                  <BookOpen className="size-4 text-accent" /> Cursos
                 </div>
               </Card.Header>
               <ul className="divide-y divide-separator">
@@ -128,7 +128,7 @@ export default async function AdminBuscaUnificada({ searchParams }: { searchPara
             <Card>
               <Card.Header>
                 <div className="flex items-center gap-2 font-display font-semibold">
-                  <Building2 className="size-4 text-primary" /> Empresas
+                  <Building2 className="size-4 text-accent" /> Empresas
                 </div>
               </Card.Header>
               <ul className="divide-y divide-separator">

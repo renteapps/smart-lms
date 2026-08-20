@@ -11,6 +11,11 @@ const ReactPlayer = dynamic(() => import("react-player").then((module) => module
   loading: () => <Skeleton className="size-full rounded-none" />,
 });
 
+const PandaVideoPlayer = dynamic(() => import("./PandaVideoPlayer"), {
+  ssr: false,
+  loading: () => <Skeleton className="size-full rounded-none" />,
+});
+
 interface VideoPlayerProps {
   lesson: Lesson;
   onEnded?: () => void;
@@ -47,7 +52,11 @@ export default function VideoPlayer({ lesson, onEnded }: VideoPlayerProps) {
       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
       className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-elev-4"
     >
-      <ReactPlayer src={lesson.videoUrl} width="100%" height="100%" controls onEnded={onEnded} />
+      {lesson.pandavideoId ? (
+        <PandaVideoPlayer embedUrl={lesson.videoUrl} className="size-full" onEnded={onEnded} />
+      ) : (
+        <ReactPlayer src={lesson.videoUrl} width="100%" height="100%" controls onEnded={onEnded} />
+      )}
     </motion.div>
   );
 }

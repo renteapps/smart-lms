@@ -7,6 +7,13 @@
       "runtimeArgs": ["run", "dev"],
       "url": "http://localhost:3888",
       "port": 3888
+    },
+    {
+      "name": "dev-verify",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["next", "dev", "--webpack", "-p", "3999"],
+      "url": "http://localhost:3999",
+      "port": 3999
     }
   ]
 }

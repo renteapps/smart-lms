@@ -166,7 +166,7 @@ export default function ResendModelosCatalogPage() {
           <div className="flex items-center gap-2.5 flex-wrap">
             <Link
               href="/admin/integracoes/resend"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3.5 py-2 text-xs font-semibold text-text hover:bg-canvas-soft transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-background-secondary transition-colors"
             >
               <ArrowLeft className="size-3.5" /> Voltar para Resend
             </Link>
@@ -177,7 +177,7 @@ export default function ResendModelosCatalogPage() {
                 setTestTemplate("welcome");
                 setIsTestModalOpen(true);
               }}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-active transition-all shadow-sm"
+              className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-xs font-bold text-primary-foreground hover:bg-accent-hover transition-all shadow-sm"
             >
               <Send className="size-3.5" /> Disparar Teste
             </button>
@@ -194,8 +194,8 @@ export default function ResendModelosCatalogPage() {
             onClick={() => setCategoryFilter("all")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               categoryFilter === "all"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-surface border border-border text-text-mute hover:text-text"
+                ? "bg-accent text-primary-foreground shadow-sm"
+                : "bg-surface border border-border text-muted hover:text-foreground"
             }`}
           >
             Todos ({totalCount})
@@ -206,8 +206,8 @@ export default function ResendModelosCatalogPage() {
             onClick={() => setCategoryFilter("platform")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               categoryFilter === "platform"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-surface border border-border text-text-mute hover:text-text"
+                ? "bg-accent text-primary-foreground shadow-sm"
+                : "bg-surface border border-border text-muted hover:text-foreground"
             }`}
           >
             Plataforma ({platformCount})
@@ -218,8 +218,8 @@ export default function ResendModelosCatalogPage() {
             onClick={() => setCategoryFilter("notification")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               categoryFilter === "notification"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-surface border border-border text-text-mute hover:text-text"
+                ? "bg-accent text-primary-foreground shadow-sm"
+                : "bg-surface border border-border text-muted hover:text-foreground"
             }`}
           >
             Notificações ({notificationCount})
@@ -231,7 +231,7 @@ export default function ResendModelosCatalogPage() {
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               categoryFilter === "customized"
                 ? "bg-accent text-accent-foreground shadow-sm"
-                : "bg-surface border border-border text-text-mute hover:text-text"
+                : "bg-surface border border-border text-muted hover:text-foreground"
             }`}
           >
             Customizados ({customizedCount})
@@ -240,13 +240,13 @@ export default function ResendModelosCatalogPage() {
 
         {/* Search Field */}
         <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-text-mute" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar modelo ou variável..."
-            className="w-full min-h-9 rounded-xl border border-border bg-canvas-soft pl-9 pr-3 text-xs text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+            className="w-full min-h-9 rounded-xl border border-border bg-background-secondary pl-9 pr-3 text-xs text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
           />
         </div>
       </div>
@@ -259,17 +259,17 @@ export default function ResendModelosCatalogPage() {
           return (
             <div
               key={tpl.type}
-              className="editorial-card p-5 flex flex-col justify-between space-y-4 hover:border-primary/50 transition-all hover:shadow-md group"
+              className="editorial-card p-5 flex flex-col justify-between space-y-4 hover:border-accent/50 transition-all hover:shadow-md group"
             >
               <div className="space-y-3">
                 {/* Header: Icon & Badges */}
                 <div className="flex items-start justify-between gap-2">
-                  <div className="size-10 rounded-xl bg-primary-soft text-primary grid place-items-center shrink-0 group-hover:scale-105 transition-transform">
+                  <div className="size-10 rounded-xl bg-primary-soft text-accent grid place-items-center shrink-0 group-hover:scale-105 transition-transform">
                     <Icon className="size-5" />
                   </div>
 
                   <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-canvas-alt text-text-mute uppercase tracking-wider">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-background-secondary text-muted uppercase tracking-wider">
                       {tpl.category === "platform" ? "Plataforma" : "Notificação"}
                     </span>
                     {tpl.isCustomized ? (
@@ -277,7 +277,7 @@ export default function ResendModelosCatalogPage() {
                         Customizado
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-canvas-alt text-text-mute">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-background-secondary text-muted">
                         Padrão
                       </span>
                     )}
@@ -286,41 +286,41 @@ export default function ResendModelosCatalogPage() {
 
                 {/* Title & Description */}
                 <div>
-                  <h3 className="font-bold text-sm text-ink group-hover:text-primary transition-colors">
+                  <h3 className="font-bold text-sm text-foreground group-hover:text-accent transition-colors">
                     {tpl.name}
                   </h3>
-                  <p className="text-xs text-text-mute mt-1 leading-relaxed line-clamp-2">
+                  <p className="text-xs text-muted mt-1 leading-relaxed line-clamp-2">
                     {tpl.description}
                   </p>
                 </div>
 
                 {/* Subject Preview */}
-                <div className="p-2.5 rounded-xl border border-border/60 bg-canvas-soft text-xs space-y-1">
-                  <span className="text-[10px] font-bold text-text-mute uppercase font-sans">
+                <div className="p-2.5 rounded-xl border border-border/60 bg-background-secondary text-xs space-y-1">
+                  <span className="text-[10px] font-bold text-muted uppercase font-sans">
                     Assunto Padrão:
                   </span>
-                  <p className="font-mono text-[11px] text-text truncate" title={tpl.subject}>
+                  <p className="font-mono text-[11px] text-foreground truncate" title={tpl.subject}>
                     {tpl.subject}
                   </p>
                 </div>
 
                 {/* Variables Preview Chips */}
                 <div className="space-y-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-text-mute flex items-center gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted flex items-center gap-1">
                     <Tag className="size-3" /> Tags Dinâmicas
                   </span>
                   <div className="flex flex-wrap gap-1">
                     {tpl.variables.slice(0, 4).map((v) => (
                       <span
                         key={v.tag}
-                        className="px-1.5 py-0.5 rounded bg-surface border border-border/70 text-[10px] font-mono text-text-mute"
+                        className="px-1.5 py-0.5 rounded bg-surface border border-border/70 text-[10px] font-mono text-muted"
                         title={`${v.label}: ${v.description}`}
                       >
                         {v.tag}
                       </span>
                     ))}
                     {tpl.variables.length > 4 && (
-                      <span className="px-1.5 py-0.5 rounded bg-canvas-alt text-[10px] font-mono text-text-mute">
+                      <span className="px-1.5 py-0.5 rounded bg-background-secondary text-[10px] font-mono text-muted">
                         +{tpl.variables.length - 4}
                       </span>
                     )}
@@ -337,7 +337,7 @@ export default function ResendModelosCatalogPage() {
                       setTestTemplate(tpl.type);
                       setIsTestModalOpen(true);
                     }}
-                    className="p-2 rounded-lg text-text-mute hover:text-text hover:bg-canvas-soft transition-colors"
+                    className="p-2 rounded-lg text-muted hover:text-foreground hover:bg-background-secondary transition-colors"
                     title="Disparar teste deste modelo"
                   >
                     <Send className="size-3.5" />
@@ -347,7 +347,7 @@ export default function ResendModelosCatalogPage() {
                     <button
                       type="button"
                       onClick={() => handleReset(tpl.type, tpl.name)}
-                      className="p-2 rounded-lg text-text-mute hover:text-negative hover:bg-negative-soft transition-colors"
+                      className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger-soft transition-colors"
                       title="Restaurar layout original"
                     >
                       <RotateCcw className="size-3.5" />
@@ -357,7 +357,7 @@ export default function ResendModelosCatalogPage() {
 
                 <Link
                   href={`/admin/integracoes/resend/modelos/${tpl.type}`}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-primary-foreground hover:bg-primary-active transition-all shadow-sm"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3.5 py-2 text-xs font-bold text-primary-foreground hover:bg-accent-hover transition-all shadow-sm"
                 >
                   <FileCode className="size-3.5" /> Editar HTML & Tags →
                 </Link>
@@ -373,15 +373,15 @@ export default function ResendModelosCatalogPage() {
           <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <div className="flex items-center gap-2">
-                <div className="size-8 rounded-lg bg-primary-soft text-primary grid place-items-center">
+                <div className="size-8 rounded-lg bg-primary-soft text-accent grid place-items-center">
                   <Send className="size-4" />
                 </div>
-                <h3 className="font-bold text-sm text-ink">Disparo de E-mail de Teste</h3>
+                <h3 className="font-bold text-sm text-foreground">Disparo de E-mail de Teste</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsTestModalOpen(false)}
-                className="p-1.5 text-text-mute hover:text-text rounded-lg"
+                className="p-1.5 text-muted hover:text-foreground rounded-lg"
               >
                 <X className="size-4" />
               </button>
@@ -389,23 +389,23 @@ export default function ResendModelosCatalogPage() {
 
             <form onSubmit={handleQuickTest} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-bold text-text mb-1">E-mail de Destino</label>
+                <label className="block font-bold text-foreground mb-1">E-mail de Destino</label>
                 <input
                   type="email"
                   value={testEmail}
                   onChange={(e) => setTestEmail(e.target.value)}
                   placeholder="seu-email@teste.com"
                   required
-                  className="w-full min-h-10 rounded-xl border border-border bg-canvas-soft px-3 text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+                  className="w-full min-h-10 rounded-xl border border-border bg-background-secondary px-3 text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-text mb-1">Modelo Selecionado</label>
+                <label className="block font-bold text-foreground mb-1">Modelo Selecionado</label>
                 <select
                   value={testTemplate}
                   onChange={(e) => setTestTemplate(e.target.value as EmailTemplateType)}
-                  className="w-full min-h-10 rounded-xl border border-border bg-canvas-soft px-3 text-text focus:border-primary focus:bg-surface focus:outline-none font-medium"
+                  className="w-full min-h-10 rounded-xl border border-border bg-background-secondary px-3 text-foreground focus:border-accent focus:bg-surface focus:outline-none font-medium"
                 >
                   {templateList.map((t) => (
                     <option key={t.type} value={t.type}>
@@ -419,14 +419,14 @@ export default function ResendModelosCatalogPage() {
                 <button
                   type="button"
                   onClick={() => setIsTestModalOpen(false)}
-                  className="flex-1 rounded-xl border border-border py-2.5 font-semibold text-text hover:bg-canvas-soft transition-colors"
+                  className="flex-1 rounded-xl border border-border py-2.5 font-semibold text-foreground hover:bg-background-secondary transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSendingTest}
-                  className="flex-1 rounded-xl bg-primary py-2.5 font-bold text-primary-foreground hover:bg-primary-active transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  className="flex-1 rounded-xl bg-accent py-2.5 font-bold text-primary-foreground hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {isSendingTest ? <RefreshCw className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
                   Disparar Teste

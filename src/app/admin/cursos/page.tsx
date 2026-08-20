@@ -1,14 +1,20 @@
 import Link from "next/link";
 import { BookOpen, Plus } from "lucide-react";
-import { Card, EmptyState, Label, SearchField, Table, buttonVariants } from "@heroui/react";
+import { Card, EmptyState, Table, buttonVariants } from "@heroui/react";
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
+import { CourseSearch } from "./CourseSearch";
 
 // Using a server component here so we fetch directly
-export default async function AdminCursosList() {
+export default async function AdminCursosList({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
   const supabase = await createClient();
-  
+
   // Fetch courses with lesson counts
   const { data: coursesData, error } = await supabase
     .from("courses")
@@ -47,7 +53,11 @@ export default async function AdminCursosList() {
       status: course.is_published ? "Publicado" : "Rascunho",
       updated: updatedStr
     };
-  });
+  }).filter((course) =>
+    !q?.trim() ||
+    course.title.toLowerCase().includes(q.trim().toLowerCase()) ||
+    course.category.toLowerCase().includes(q.trim().toLowerCase()),
+  );
 
   const isEmpty = courses.length === 0;
   const publicadosCount = courses.filter(c => c.status === "Publicado").length;
@@ -68,16 +78,7 @@ export default async function AdminCursosList() {
 
       <Card>
         <Card.Header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="w-full sm:max-w-md" aria-label="Buscar curso">
-            {/* Minimal static search representation for SSR, would need client component for interactive search */}
-            <input 
-              type="text" 
-              placeholder="Buscar curso..." 
-              className="w-full px-3 py-2 rounded-md border border-separator bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-              disabled
-              title="A busca precisa ser implementada como client component"
-            />
-          </div>
+          <CourseSearch initialQuery={q ?? ""} />
           <div className="flex items-center gap-2">
             <StatusBadge tone="positive">{publicadosCount} publicados</StatusBadge>
             <StatusBadge tone="warning">{rascunhosCount} rascunhos</StatusBadge>
@@ -90,8 +91,12 @@ export default async function AdminCursosList() {
               <span className="grid size-11 place-items-center rounded-xl bg-background-secondary">
                 <BookOpen className="size-5 text-muted" aria-hidden="true" />
               </span>
-              <p className="font-semibold text-foreground">Nenhum curso no catálogo</p>
-              <p className="text-sm text-muted">Crie o primeiro curso para começar a montar as trilhas.</p>
+              <p className="font-semibold text-foreground">
+                {q ? `Nenhum curso encontrado para "${q}"` : "Nenhum curso no catálogo"}
+              </p>
+              <p className="text-sm text-muted">
+                {q ? "Tente outro termo ou limpe a busca." : "Crie o primeiro curso para começar a montar as trilhas."}
+              </p>
               <Link href="/admin/cursos/novo" className={cn(buttonVariants({ variant: "primary", size: "sm" }), "mt-2 gap-2")}>
                 <Plus className="size-4" aria-hidden="true" /> Novo curso
               </Link>

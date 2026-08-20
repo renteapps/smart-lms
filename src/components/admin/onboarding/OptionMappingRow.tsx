@@ -16,11 +16,11 @@ interface OptionMappingRowProps {
 
 const getTypeIcon = (type: string) => {
   switch (type) {
-    case 'lesson': return <Video size={14} className="text-blue-400" />;
-    case 'module': return <Folder size={14} className="text-yellow-400" />;
-    case 'course': return <BookOpen size={14} className="text-green-400" />;
-    case 'article': return <FileText size={14} className="text-purple-400" />;
-    case 'external_link': return <LinkIcon size={14} className="text-gray-400" />;
+    case 'lesson': return <Video size={14} className="text-accent" />;
+    case 'module': return <Folder size={14} className="text-warning" />;
+    case 'course': return <BookOpen size={14} className="text-success" />;
+    case 'article': return <FileText size={14} className="text-accent" />;
+    case 'external_link': return <LinkIcon size={14} className="text-muted" />;
     default: return <FileText size={14} />;
   }
 };
@@ -83,21 +83,21 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
       {/* Top Row: Label and Tags */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-1 items-center gap-3">
-          <GripVertical size={16} className="cursor-grab text-text-mute hover:text-text" />
+          <GripVertical size={16} className="cursor-grab text-muted hover:text-foreground" />
           <input
             type="text"
             value={option.label}
             onChange={(e) => onUpdate({ ...option, label: e.target.value })}
-            className="flex-1 bg-transparent text-sm font-medium outline-none border-b border-transparent focus:border-primary px-1 py-0.5 transition-colors"
+            className="flex-1 bg-transparent text-sm font-medium outline-none border-b border-transparent focus:border-accent px-1 py-0.5 transition-colors"
             placeholder="Texto da Opção"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {option.tags?.map((tag, idx) => (
-            <span key={idx} className="flex items-center gap-1 rounded-full bg-surface-hover px-2.5 py-1 text-xs text-text-soft">
+            <span key={idx} className="flex items-center gap-1 rounded-full bg-surface-hover px-2.5 py-1 text-xs text-muted">
               {tag}
-              <button onClick={() => handleRemoveTag(tag)} className="hover:text-negative transition-colors">
+              <button onClick={() => handleRemoveTag(tag)} className="hover:text-danger transition-colors">
                 <X size={12} />
               </button>
             </span>
@@ -114,18 +114,18 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
                 }
               }}
               placeholder="nova tag"
-              className="w-16 bg-transparent text-xs text-text-soft outline-none placeholder:text-text-mute"
+              className="w-16 bg-transparent text-xs text-muted outline-none placeholder:text-muted"
             />
             <button
               onClick={handleAddTag}
               disabled={!newTag.trim()}
-              className="p-0.5 text-text-mute hover:text-primary disabled:opacity-30 transition-colors"
+              className="p-0.5 text-muted hover:text-accent disabled:opacity-30 transition-colors"
               aria-label="Adicionar tag"
             >
               <Plus size={12} />
             </button>
           </div>
-          <button onClick={onDelete} className="p-1.5 text-text-mute hover:bg-negative/10 hover:text-negative rounded-lg transition-colors">
+          <button onClick={onDelete} className="p-1.5 text-muted hover:bg-danger/10 hover:text-danger rounded-lg transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -133,7 +133,7 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
 
       {/* Content Mappings Area */}
       <div className="pl-7 pr-1 mt-2">
-        <div className="text-xs font-semibold uppercase tracking-wider text-text-mute mb-3 flex items-center gap-2">
+        <div className="text-xs font-semibold uppercase tracking-wider text-muted mb-3 flex items-center gap-2">
           <span>Conteúdos Vinculados</span>
           <div className="h-px flex-1 bg-border/40"></div>
         </div>
@@ -152,18 +152,18 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
                 <Reorder.Item
                   key={mapping.id}
                   value={mapping}
-                  className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm shadow-sm ${orphan ? 'border-negative/40 bg-negative/5' : 'border-border/60 bg-surface'}`}
+                  className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm shadow-sm ${orphan ? 'border-danger/40 bg-danger/5' : 'border-border/60 bg-surface'}`}
                 >
-                  <GripVertical size={14} className="cursor-grab text-text-mute shrink-0" />
+                  <GripVertical size={14} className="cursor-grab text-muted shrink-0" />
 
-                  <div className="flex items-center justify-center w-6 h-6 rounded bg-bg shrink-0" title={getTypeLabel(mapping.type)}>
+                  <div className="flex items-center justify-center w-6 h-6 rounded bg-background shrink-0" title={getTypeLabel(mapping.type)}>
                     {getTypeIcon(mapping.type)}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="truncate font-medium text-text">{mapping.title}</div>
+                    <div className="truncate font-medium text-foreground">{mapping.title}</div>
                     {orphan && (
-                      <div className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-negative">
+                      <div className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-danger">
                         <TriangleAlert size={11} />
                         Não encontrado no catálogo — remova ou substitua
                       </div>
@@ -171,19 +171,19 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
                   </div>
 
                   <div className="flex flex-wrap items-center justify-end gap-2 border-l border-border/60 pl-3">
-                    <Layers3 size={14} className="text-text-mute" />
+                    <Layers3 size={14} className="text-muted" />
                     <select
                       aria-label={`Papel pedagógico de ${mapping.title}`}
                       value={mapping.learningRole}
                       onChange={(event) => handleUpdateMapping(mapping.id, { learningRole: event.target.value as ContentMapping['learningRole'] })}
-                      className="rounded border border-border/70 bg-bg px-2 py-1 text-xs font-semibold outline-none focus:border-primary"
+                      className="rounded border border-border/70 bg-background px-2 py-1 text-xs font-semibold outline-none focus:border-accent"
                     >
                       <option value="essential">Essencial</option>
                       <option value="deepening">Aprofundamento</option>
                       <option value="extra">Extra</option>
                     </select>
                     {(mapping.type === 'article' || mapping.type === 'external_link') && (
-                      <label className="flex items-center gap-1 text-xs text-text-soft">
+                      <label className="flex items-center gap-1 text-xs text-muted">
                         <Clock size={13} />
                         <input
                           aria-label={`Duração estimada de ${mapping.title}`}
@@ -192,7 +192,7 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
                           max="240"
                           value={mapping.estimatedDurationMin || 10}
                           onChange={(event) => handleUpdateMapping(mapping.id, { estimatedDurationMin: Number(event.target.value) || 10 })}
-                          className="w-12 rounded border border-border/70 bg-bg px-1.5 py-1 text-center outline-none focus:border-primary"
+                          className="w-12 rounded border border-border/70 bg-background px-1.5 py-1 text-center outline-none focus:border-accent"
                         />
                         min
                       </label>
@@ -201,7 +201,7 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
 
                   <button
                     onClick={() => handleRemoveMapping(mapping.id)}
-                    className="ml-2 p-1 text-text-mute hover:bg-negative/10 hover:text-negative rounded transition-colors"
+                    className="ml-2 p-1 text-muted hover:bg-danger/10 hover:text-danger rounded transition-colors"
                   >
                     <X size={14} />
                   </button>
@@ -210,7 +210,7 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
               })}
             </Reorder.Group>
           ) : (
-            <div className="text-sm text-text-soft italic py-2 px-3 border border-dashed border-border/60 rounded-lg bg-surface/30">
+            <div className="text-sm text-muted italic py-2 px-3 border border-dashed border-border/60 rounded-lg bg-surface/30">
               Nenhum conteúdo vinculado. Respostas contarão apenas via tags.
             </div>
           )}
@@ -218,7 +218,7 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
 
         <button
           onClick={onOpenContentPicker}
-          className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-active transition-colors px-2 py-1.5 rounded-md hover:bg-primary/5 w-max"
+          className="flex items-center gap-1.5 text-xs font-semibold text-accent hover:text-accent-soft-foreground transition-colors px-2 py-1.5 rounded-md hover:bg-accent/5 w-max"
         >
           <Plus size={14} />
           Associar Conteúdo

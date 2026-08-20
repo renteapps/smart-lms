@@ -10,15 +10,16 @@ const FALLBACK_COVER =
  *
  * Cursos, módulos, aulas e artigos entram no mesmo catálogo, que é o que a tela
  * de curadoria oferece ao admin e o que o motor da trilha consegue agendar.
- * Pré-requisito de uma aula é a aula anterior do mesmo curso, na ordem editorial
- * — a mesma regra implícita que o mock codificava.
+ * Pré-requisito de uma aula é o que o admin declarou no formulário da aula; sem
+ * declaração, cai na aula anterior do mesmo curso na ordem editorial (ver o
+ * comentário em `flatLessons.forEach`).
  */
 export async function getContentIndex(db: DB): Promise<ContentIndex> {
   const [courses, articles] = await Promise.all([
     db
       .from("courses")
       .select(
-        "id, slug, title, cover_url, modules(id, title, order_index, cover_url, lessons(id, title, duration_in_minutes, order_index, is_published, is_eligible_for_trail, topics, solves, level, objective, audience, content, slug))",
+        "id, slug, title, cover_url, modules(id, title, order_index, cover_url, lessons(id, title, duration_in_minutes, order_index, is_published, is_eligible_for_trail, topics, solves, level, objective, audience, prerequisites, content, slug))",
       )
       .eq("is_published", true)
       .order("order_index", { ascending: true }),
@@ -55,6 +56,29 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
       const previous = flatLessons[position - 1]?.lesson.id;
       courseLessonIds.push(lesson.id);
 
+      /*
+       * Pré-requisitos declarados pelo admin substituem a corrente linear.
+       *
+       * Sem eles, o padrão é "a aula anterior do curso" — que mantém a ordem
+       * editorial funcionando sem ninguém configurar nada. Quando o admin
+       * declara explicitamente de quais aulas esta depende, a declaração
+       * ganha: somar a anterior por cima traria de volta a cadeia inteira e
+       * anularia justamente a trilha não-linear que ele quis montar.
+       *
+       * Só entram ids de aulas que existem neste curso — id órfão (aula
+       * apagada, ou colado de outro curso) viraria aviso de "pré-requisito não
+       * encontrado" na trilha do aluno.
+       */
+      const declared: string[] = Array.isArray(lesson.prerequisites) ? lesson.prerequisites : [];
+      const validDeclared = declared.filter(
+        (id) => id !== lesson.id && flatLessons.some(({ lesson: other }) => other.id === id),
+      );
+      const prerequisites = validDeclared.length > 0
+        ? validDeclared
+        : previous
+          ? [previous]
+          : undefined;
+
       items.push({
         id: lesson.id,
         type: "lesson",
@@ -65,7 +89,7 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
         moduleId: mod.id,
         moduleName: mod.title,
         cover: mod.cover_url || course.cover_url || FALLBACK_COVER,
-        prerequisites: previous ? [previous] : undefined,
+        prerequisites,
         slug: lesson.slug ?? undefined,
       });
 
@@ -82,7 +106,7 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
           nivel: (lesson.level ?? "iniciante") as EligibleLesson["nivel"],
           objetivo: lesson.objective ?? undefined,
           publico: lesson.audience ?? undefined,
-          prerequisitos: previous ? [previous] : undefined,
+          prerequisitos: prerequisites,
         });
       }
     });

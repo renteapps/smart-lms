@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ProfileTest, ProfileCategory } from '@/types/profileTest';
 import { X, CheckCircle2, RotateCcw, Award, ArrowRight, Play, BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Button, Modal } from '@heroui/react';
 
 interface TestPreviewProps {
   test: ProfileTest;
@@ -116,29 +117,28 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
   const isPercentageResult = test.resultType === 'percentage';
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8 overflow-hidden">
-      <div className="bg-bg border border-border/60 rounded-[2rem] max-w-2xl w-full h-[90vh] sm:h-[80vh] flex flex-col shadow-2xl relative overflow-hidden animate-in fade-in zoom-in-95 duration-300">
-        
+    <Modal.Root isOpen onOpenChange={(open) => !open && onClose()}>
+      <Modal.Backdrop>
+        <Modal.Container size="lg" className="h-[90vh] max-w-2xl p-0 sm:h-[80vh]">
+          <Modal.Dialog className="relative flex h-full flex-col overflow-hidden rounded-4xl p-0">
+
         {/* Top Header */}
         <div className="bg-surface/80 backdrop-blur-md border-b border-border/40 p-4 sm:p-6 flex items-center justify-between z-10 shrink-0">
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-primary bg-primary/10 px-2.5 py-0.5 rounded-full mb-1 inline-block">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-accent bg-accent/10 px-2.5 py-0.5 rounded-full mb-1 inline-block">
               Simulador do Aluno
             </span>
-            <h2 className="font-display font-black text-lg text-ink-deep leading-tight truncate max-w-[200px] sm:max-w-md">
+            <h2 className="font-display font-black text-lg text-foreground leading-tight truncate max-w-[200px] sm:max-w-md">
               {test.title || 'Teste sem título'}
             </h2>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-text-mute hover:text-text rounded-full hover:bg-canvas-soft transition-colors shrink-0"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <Button isIconOnly variant="ghost" size="sm" aria-label="Fechar preview" className="shrink-0 rounded-full" onClick={onClose}>
+            <X className="size-5" aria-hidden="true" />
+          </Button>
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 relative overflow-hidden bg-canvas">
+        <div className="flex-1 relative overflow-hidden bg-background">
           <AnimatePresence mode="wait" custom={1}>
             
             {/* --- START SCREEN --- */}
@@ -164,26 +164,29 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
                 
                 <div className="px-6 pb-12 pt-6 sm:px-12 flex-1 flex flex-col z-20 relative -mt-12 sm:-mt-20">
                   <div className="bg-surface border border-border/50 shadow-xl rounded-3xl p-6 sm:p-8 flex-1 flex flex-col justify-center items-center text-center space-y-6">
-                    <div className="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-sm mb-2">
+                    <div className="w-16 h-16 bg-accent/10 text-accent rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-sm mb-2">
                       🎯
                     </div>
                     <div>
-                      <h1 className="text-2xl sm:text-3xl font-display font-black text-ink-deep mb-4">
+                      <h1 className="text-2xl sm:text-3xl font-display font-black text-foreground mb-4">
                         {test.title || 'Teste de Perfil'}
                       </h1>
-                      <p className="text-body-text leading-relaxed text-sm sm:text-base">
+                      <p className="text-foreground leading-relaxed text-sm sm:text-base">
                         {test.description || 'Descubra mais sobre o seu perfil comportamental respondendo a este teste rápido e intuitivo.'}
                       </p>
                     </div>
 
                     <div className="pt-6 w-full max-w-sm">
-                      <button
+                      <Button
+                        variant="primary"
+                        size="lg"
+                        fullWidth
+                        className="gap-2 rounded-2xl py-4 text-lg shadow-lg shadow-accent/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-accent/30"
                         onClick={handleNext}
-                        className="w-full bg-primary text-on-primary py-4 rounded-2xl font-bold text-lg hover:bg-primary-active transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/25 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/30"
                       >
-                        <Play className="w-5 h-5 fill-current" />
+                        <Play className="size-5 fill-current" aria-hidden="true" />
                         Iniciar Teste
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -206,24 +209,24 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
                   
                   {/* Progress */}
                   <div className="space-y-2.5">
-                    <div className="flex justify-between items-end text-text-soft">
+                    <div className="flex justify-between items-end text-muted">
                       <span className="text-xs font-bold uppercase tracking-wider">
                         Pergunta {currentStep + 1} de {totalQuestions}
                       </span>
-                      <span className="text-sm font-black text-primary">
+                      <span className="text-sm font-black text-accent">
                         {Math.round(((currentStep + 1) / totalQuestions) * 100)}%
                       </span>
                     </div>
                     <div className="w-full bg-border/40 rounded-full h-1.5 overflow-hidden">
                       <div
-                        className="bg-primary h-full transition-all duration-700 ease-out rounded-full"
+                        className="bg-accent h-full transition-all duration-700 ease-out rounded-full"
                         style={{ width: `${((currentStep + 1) / totalQuestions) * 100}%` }}
                       />
                     </div>
                   </div>
 
                   {/* Question Title */}
-                  <h3 className="text-2xl sm:text-3xl font-display font-black text-ink-deep leading-tight">
+                  <h3 className="text-2xl sm:text-3xl font-display font-black text-foreground leading-tight">
                     {test.questions[currentStep].text}
                   </h3>
 
@@ -234,19 +237,21 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
                       return (
                         <button
                           key={opt.id}
+                          type="button"
+                          aria-pressed={isSelected}
                           onClick={() => handleSelectOption(test.questions[currentStep].id, opt.id)}
                           className={`w-full text-left p-4 sm:p-5 rounded-2xl border-2 transition-all duration-200 flex items-center gap-4 group ${
                             isSelected
-                              ? 'border-primary bg-primary/5 shadow-md shadow-primary/5'
-                              : 'border-border/60 hover:border-primary/40 bg-surface hover:bg-canvas-soft'
+                              ? 'border-accent bg-accent/5 shadow-md shadow-accent/5'
+                              : 'border-border/60 hover:border-accent/40 bg-surface hover:bg-background-secondary'
                           }`}
                         >
                           <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                            isSelected ? 'border-primary bg-primary text-on-primary' : 'border-border/80 group-hover:border-primary/50'
+                            isSelected ? 'border-accent bg-accent text-accent-foreground' : 'border-border/80 group-hover:border-accent/50'
                           }`}>
-                            {isSelected && <CheckCircle2 className="w-4 h-4" />}
+                            {isSelected && <CheckCircle2 className="w-4 h-4" aria-hidden="true" />}
                           </div>
-                          <span className={`text-base leading-relaxed transition-colors ${isSelected ? 'text-ink-deep font-bold' : 'text-text font-medium'}`}>
+                          <span className={`text-base leading-relaxed transition-colors ${isSelected ? 'text-foreground font-bold' : 'text-foreground font-medium'}`}>
                             {opt.text}
                           </span>
                         </button>
@@ -258,16 +263,18 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
                 {/* Fixed Footer CTA */}
                 <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-bg via-bg to-transparent">
                   <div className="max-w-2xl mx-auto flex justify-end">
-                    <button
-                      disabled={!answers[test.questions[currentStep].id]}
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      isDisabled={!answers[test.questions[currentStep].id]}
+                      className="gap-2 rounded-full px-8 py-4 shadow-lg shadow-accent/20 hover:-translate-y-1 hover:shadow-xl"
                       onClick={handleNext}
-                      className="bg-primary text-on-primary px-8 py-4 rounded-full font-bold hover:bg-primary-active transition-all disabled:opacity-30 disabled:hover:-translate-y-0 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-1"
                     >
                       <span className="text-sm">
                         {currentStep < totalQuestions - 1 ? 'Próxima Pergunta' : 'Finalizar Teste'}
                       </span>
-                      <ArrowRight className="w-5 h-5" />
-                    </button>
+                      <ArrowRight className="size-5" aria-hidden="true" />
+                    </Button>
                   </div>
                 </div>
               </motion.div>
@@ -288,7 +295,7 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
                 <div className="px-6 py-12 sm:px-12 sm:py-16 max-w-2xl mx-auto w-full flex flex-col items-center text-center space-y-8">
                   
                   <div className="space-y-4 w-full">
-                    <span className="text-xs font-bold text-text-mute uppercase tracking-widest block animate-pulse">
+                    <span className="text-xs font-bold text-muted uppercase tracking-widest block animate-pulse">
                       Análise Concluída
                     </span>
                     
@@ -296,7 +303,7 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
                       initial={{ scale: 0.8, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 20 }}
-                      className="w-28 h-28 mx-auto rounded-[2rem] flex items-center justify-center text-6xl shadow-xl border-4 border-surface"
+                      className="w-28 h-28 mx-auto rounded-4xl flex items-center justify-center text-6xl shadow-xl border-4 border-surface"
                       style={{ backgroundColor: `${resultCategory.color}20`, color: resultCategory.color, outline: `2px solid ${resultCategory.color}` }}
                     >
                       {resultCategory.emoji}
@@ -308,7 +315,7 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.4 }}
                   >
-                    <span className="text-sm font-bold text-text-soft uppercase tracking-wider block mb-2">
+                    <span className="text-sm font-bold text-muted uppercase tracking-wider block mb-2">
                       Seu Perfil Dominante é:
                     </span>
                     <h3 className="text-4xl sm:text-5xl font-display font-black leading-tight" style={{ color: resultCategory.color }}>
@@ -324,9 +331,9 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
                   >
                     {/* PERCENTAGE DIAGNOSTIC SECTION */}
                     {isPercentageResult && categoryPercentages && (
-                      <div className="bg-canvas-soft border border-border/50 rounded-3xl p-6 sm:p-8 space-y-5">
-                        <h4 className="font-bold text-sm text-ink-deep uppercase tracking-wide flex items-center gap-2 justify-center mb-6">
-                          <BarChart3 className="w-5 h-5 text-primary" />
+                      <div className="bg-background-secondary border border-border/50 rounded-3xl p-6 sm:p-8 space-y-5">
+                        <h4 className="font-bold text-sm text-foreground uppercase tracking-wide flex items-center gap-2 justify-center mb-6">
+                          <BarChart3 className="w-5 h-5 text-accent" />
                           Seu Diagnóstico Completo
                         </h4>
                         
@@ -338,7 +345,7 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
                                   <span>{item.category.emoji}</span>
                                   <span>{item.category.name}</span>
                                 </span>
-                                <span className="font-black text-ink-deep">{item.percentage}%</span>
+                                <span className="font-black text-foreground">{item.percentage}%</span>
                               </div>
                               <div className="w-full bg-border/40 rounded-full h-2.5 overflow-hidden">
                                 <motion.div
@@ -356,13 +363,13 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
                     )}
 
                     {/* ALWAYS SHOW THE DOMINANT CATEGORY DETAILS */}
-                    <div className="bg-canvas-soft border border-border/50 rounded-3xl p-6 sm:p-8 text-left space-y-4 relative overflow-hidden">
+                    <div className="bg-background-secondary border border-border/50 rounded-3xl p-6 sm:p-8 text-left space-y-4 relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-2 h-full" style={{ backgroundColor: resultCategory.color }} />
-                      <h4 className="font-bold text-sm text-text-soft uppercase tracking-wide flex items-center gap-2">
+                      <h4 className="font-bold text-sm text-muted uppercase tracking-wide flex items-center gap-2">
                         <Award className="w-5 h-5" style={{ color: resultCategory.color }} />
                         Detalhes do seu perfil
                       </h4>
-                      <p className="text-body-text leading-relaxed text-sm sm:text-base">
+                      <p className="text-foreground leading-relaxed text-sm sm:text-base">
                         {resultCategory.description}
                       </p>
                     </div>
@@ -374,13 +381,15 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
                     transition={{ delay: 0.8 }}
                     className="pt-4"
                   >
-                    <button
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="gap-2 rounded-full px-8 py-4 hover:-translate-y-1 hover:shadow-md"
                       onClick={handleRestart}
-                      className="inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold bg-canvas border border-border hover:bg-border/50 text-text transition-all hover:shadow-md hover:-translate-y-1"
                     >
-                      <RotateCcw className="w-4 h-4" />
+                      <RotateCcw className="size-4" aria-hidden="true" />
                       Refazer o Teste
-                    </button>
+                    </Button>
                   </motion.div>
 
                 </div>
@@ -390,7 +399,9 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
           </AnimatePresence>
         </div>
 
-      </div>
-    </div>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </Modal.Root>
   );
 };

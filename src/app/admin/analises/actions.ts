@@ -79,9 +79,12 @@ export async function getCoursesAnalytics() {
     .from("courses")
     .select("id, title, status");
 
+  const nowIso = new Date().toISOString();
   const { count: enrollmentsCount } = await supabase
     .from("enrollments")
-    .select("id", { count: "exact", head: true });
+    .select("id", { count: "exact", head: true })
+    .eq("status", "active")
+    .or(`expires_at.is.null,expires_at.gt.${nowIso}`);
 
   const { data: progress } = await supabase
     .from("lesson_progress")

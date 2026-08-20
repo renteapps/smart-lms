@@ -58,15 +58,15 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
         className="flex items-center gap-4 p-4 cursor-pointer select-none"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <GripVertical size={20} className="text-text-mute hover:text-text cursor-grab shrink-0" />
+        <GripVertical size={20} className="text-muted hover:text-foreground cursor-grab shrink-0" />
 
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold shrink-0">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 text-accent font-bold shrink-0">
           {index + 1}
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-text truncate">{question.text}</h3>
-          <div className="flex items-center gap-2 mt-1 text-xs text-text-soft">
+          <h3 className="font-semibold text-foreground truncate">{question.text}</h3>
+          <div className="flex items-center gap-2 mt-1 text-xs text-muted">
             <span className="capitalize">{question.role}</span>
             <span>•</span>
             <span>{question.type === 'single' ? 'Escolha Única' : 'Múltipla Escolha'}</span>
@@ -86,20 +86,20 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
           <button
             onClick={onDuplicate}
             title="Duplicar pergunta"
-            className="p-2 text-text-mute hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+            className="p-2 text-muted hover:text-accent hover:bg-accent/5 rounded-lg transition-colors"
           >
             <Copy size={17} />
           </button>
           <button
             onClick={onDelete}
             title="Excluir pergunta"
-            className="p-2 text-text-mute hover:text-negative hover:bg-negative/5 rounded-lg transition-colors"
+            className="p-2 text-muted hover:text-danger hover:bg-danger/5 rounded-lg transition-colors"
           >
             <Trash2 size={17} />
           </button>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-2 text-text-mute hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+            className="p-2 text-muted hover:text-accent hover:bg-accent/5 rounded-lg transition-colors"
           >
             {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </button>
@@ -114,31 +114,31 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="border-t border-border/40 bg-surface-card"
+            className="border-t border-border/40 bg-surface"
           >
             <div className="p-5 flex flex-col gap-5">
 
               {/* Question Settings Row */}
               <div className="flex flex-wrap gap-4 items-center bg-surface p-3 rounded-xl border border-border/40">
                 <div className="flex-1 min-w-[200px]">
-                  <label className="text-xs font-semibold text-text-mute mb-1 block">Título da Pergunta</label>
-                  <div className="flex items-center gap-2 border-b border-border/60 pb-1 focus-within:border-primary transition-colors">
-                    <Type size={16} className="text-text-mute" />
+                  <label className="text-xs font-semibold text-muted mb-1 block">Título da Pergunta</label>
+                  <div className="flex items-center gap-2 border-b border-border/60 pb-1 focus-within:border-accent transition-colors">
+                    <Type size={16} className="text-muted" />
                     <input
                       type="text"
                       value={question.text}
                       onChange={(e) => onUpdate({ ...question, text: e.target.value })}
-                      className="w-full bg-transparent text-sm font-medium outline-none text-text"
+                      className="w-full bg-transparent text-sm font-medium outline-none text-foreground"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-text-mute mb-1 block">Papel (Role)</label>
+                  <label className="text-xs font-semibold text-muted mb-1 block">Papel (Role)</label>
                   <select
                     value={question.role}
                     onChange={(e) => onUpdate({ ...question, role: e.target.value as Question['role'] })}
-                    className="bg-bg border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-primary"
+                    className="bg-background border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-accent"
                   >
                     <option value="perfil">Perfil</option>
                     <option value="problema">Problema</option>
@@ -149,14 +149,14 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-text-mute mb-1 block">Seleção</label>
+                  <label className="text-xs font-semibold text-muted mb-1 block">Seleção</label>
                   <select
                     value={question.type}
                     onChange={(e) => {
                       const type = e.target.value as Question['type'];
                       onUpdate({ ...question, type });
                     }}
-                    className="bg-bg border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-primary"
+                    className="bg-background border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-accent"
                   >
                     <option value="single">Única</option>
                     <option value="multiple">Múltipla</option>
@@ -164,26 +164,26 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-text-mute mb-1 block">Visual</label>
+                  <label className="text-xs font-semibold text-muted mb-1 block">Visual</label>
                   <select
                     value={question.visualType || 'list'}
                     onChange={(e) => onUpdate({ ...question, visualType: e.target.value as NonNullable<Question['visualType']> })}
-                    className="bg-bg border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-primary"
+                    className="bg-background border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-accent"
                   >
                     <option value="list">Lista</option>
                     <option value="cards">Cards (Grid)</option>
                     <option value="physics">Bolhas dinâmicas</option>
                   </select>
                   {question.visualType === 'physics' && (
-                    <p className="mt-1.5 max-w-44 text-[11px] leading-4 text-text-mute">Uma opção por bolha, sem níveis secundários.</p>
+                    <p className="mt-1.5 max-w-44 text-[11px] leading-4 text-muted">Uma opção por bolha, sem níveis secundários.</p>
                   )}
                 </div>
               </div>
 
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between mb-1">
-                  <h4 className="text-sm font-bold text-ink-deep flex items-center gap-2">
-                    <Settings2 size={16} className="text-primary" />
+                  <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <Settings2 size={16} className="text-accent" />
                     Opções de Resposta e Mapeamento
                   </h4>
                 </div>
@@ -203,7 +203,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
 
                 <button
                   onClick={handleAddOption}
-                  className="mt-2 flex items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary/5 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 hover:border-primary/60"
+                  className="mt-2 flex items-center justify-center gap-2 rounded-xl border border-dashed border-accent/40 bg-accent/5 py-3 text-sm font-semibold text-accent transition-colors hover:bg-accent/10 hover:border-accent/60"
                 >
                   <Plus size={16} />
                   Adicionar Opção

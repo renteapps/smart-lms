@@ -34,7 +34,7 @@ export default function AdminError({
       <button
         type="button"
         onClick={reset}
-        className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-on-primary hover:bg-primary-active"
+        className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-accent-foreground hover:bg-accent-hover"
       >
         <RotateCcw className="size-4" aria-hidden="true" />
         Tentar novamente

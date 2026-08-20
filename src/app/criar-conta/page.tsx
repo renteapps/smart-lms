@@ -112,7 +112,7 @@ function CriarContaContent() {
             error.message.includes("Failed to fetch") ||
             error.message.includes("NetworkError")
           ) {
-            message = "Falha ao conectar aos serviços de autenticação. Verifique as configurações do Supabase.";
+            message = "Falha ao conectar aos serviços de autenticação. Tente novamente mais tarde.";
           }
           setErrorMessage(message);
           return;

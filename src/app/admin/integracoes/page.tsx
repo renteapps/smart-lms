@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, Chip } from "@heroui/react";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription, Chip } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
 import { createClient } from "@/lib/supabase/server";
 
@@ -8,7 +8,7 @@ export default async function IntegracoesPage() {
 
   const { data: dbIntegrations } = await supabase
     .from("integrations")
-    .select("provider, is_active");
+    .select("slug, enabled");
 
   // Definindo a base estática de integrações que a plataforma suporta
   const baseIntegrations = [
@@ -40,14 +40,21 @@ export default async function IntegracoesPage() {
       logo: "https://hotmart.com/favicon.ico",
       badge: "Pagamentos",
     },
+    {
+      name: "PandaVideo",
+      slug: "pandavideo",
+      description: "Integração com PandaVideo para hospedar e exibir vídeos nas aulas.",
+      logo: "https://pandavideo.com/favicon.ico",
+      badge: "Vídeos",
+    },
   ];
 
   // Mescla a base com o status real do banco
   const integrations = baseIntegrations.map((base) => {
-    const dbInt = dbIntegrations?.find((i) => i.provider === base.slug);
+    const dbInt = dbIntegrations?.find((i) => i.slug === base.slug);
     return {
       ...base,
-      status: dbInt?.is_active ? "active" : "inactive",
+      status: dbInt?.enabled ? "active" : "inactive",
     };
   });
 
@@ -62,9 +69,9 @@ export default async function IntegracoesPage() {
         {integrations.map((integration) => {
           const isActive = integration.status === "active";
 
-          const CardContent = (
+          const integrationCard = (
             <Card className={`h-full transition-all hover:-translate-y-1 hover:shadow-lg ${isActive ? "border-accent" : ""}`}>
-              <Card.Header className="flex flex-row items-center gap-4">
+              <CardHeader className="flex flex-row items-center gap-4">
                 <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-background-secondary border border-border">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -78,7 +85,7 @@ export default async function IntegracoesPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <Card.Title className="text-base">{integration.name}</Card.Title>
+                    <CardTitle className="text-base">{integration.name}</CardTitle>
                     {isActive ? (
                       <Chip size="sm" variant="soft" color="success" className="text-[10px]">Ativa</Chip>
                     ) : integration.badge ? (
@@ -86,16 +93,16 @@ export default async function IntegracoesPage() {
                     ) : null}
                   </div>
                 </div>
-              </Card.Header>
-              <Card.Content>
-                <Card.Description>{integration.description}</Card.Description>
-              </Card.Content>
+              </CardHeader>
+              <CardContent>
+                <CardDescription>{integration.description}</CardDescription>
+              </CardContent>
             </Card>
           );
 
           return (
             <Link key={integration.slug} href={`/admin/integracoes/${integration.slug}`} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-xl">
-              {CardContent}
+              {integrationCard}
             </Link>
           );
         })}

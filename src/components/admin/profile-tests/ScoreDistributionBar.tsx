@@ -11,7 +11,7 @@ export const ScoreDistributionBar: React.FC<ScoreDistributionBarProps> = ({ cate
 
   if (totalPoints === 0) {
     return (
-      <div className="w-full bg-canvas-soft rounded-full h-2 overflow-hidden flex">
+      <div className="w-full bg-background-secondary rounded-full h-2 overflow-hidden flex">
         <div className="w-full bg-border/40 h-full" title="Sem pontuação definida" />
       </div>
     );
@@ -19,7 +19,7 @@ export const ScoreDistributionBar: React.FC<ScoreDistributionBarProps> = ({ cate
 
   return (
     <div className="space-y-1.5">
-      <div className="w-full bg-canvas-soft rounded-full h-2.5 overflow-hidden flex shadow-inner">
+      <div className="w-full bg-background-secondary rounded-full h-2.5 overflow-hidden flex shadow-inner">
         {categories.map((cat) => {
           const score = categoryScores[cat.id] || 0;
           if (score <= 0) return null;

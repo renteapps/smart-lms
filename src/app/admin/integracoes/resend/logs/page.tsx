@@ -106,7 +106,7 @@ export default function ResendLogsPage() {
           <div className="flex items-center gap-2.5 flex-wrap">
             <Link
               href="/admin/integracoes/resend"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3.5 py-2 text-xs font-semibold text-text hover:bg-canvas-soft transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-background-secondary transition-colors"
             >
               <ArrowLeft className="size-3.5" /> Voltar para Resend
             </Link>
@@ -115,7 +115,7 @@ export default function ResendLogsPage() {
               <button
                 type="button"
                 onClick={handleClearLogs}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-2 text-xs font-semibold text-text-mute hover:text-negative hover:border-negative/30 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-2 text-xs font-semibold text-muted hover:text-danger hover:border-danger/30 transition-colors"
               >
                 <Trash2 className="size-3.5" /> Limpar Histórico
               </button>
@@ -127,27 +127,27 @@ export default function ResendLogsPage() {
       {/* Top Stats Summary */}
       <div className="grid gap-4 sm:grid-cols-4">
         <div className="editorial-card p-4">
-          <p className="text-xs font-medium text-text-mute">Total Registrado</p>
-          <p className="font-display text-2xl font-bold text-text mt-1">{logs.length}</p>
-          <p className="text-[11px] text-text-mute mt-0.5">Disparos no sistema</p>
+          <p className="text-xs font-medium text-muted">Total Registrado</p>
+          <p className="font-display text-2xl font-bold text-foreground mt-1">{logs.length}</p>
+          <p className="text-[11px] text-muted mt-0.5">Disparos no sistema</p>
         </div>
 
         <div className="editorial-card p-4">
-          <p className="text-xs font-medium text-text-mute">Enviados Reais (Live)</p>
+          <p className="text-xs font-medium text-muted">Enviados Reais (Live)</p>
           <p className="font-display text-2xl font-bold text-success mt-1">{totalSent}</p>
-          <p className="text-[11px] text-text-mute mt-0.5">Via API Resend</p>
+          <p className="text-[11px] text-muted mt-0.5">Via API Resend</p>
         </div>
 
         <div className="editorial-card p-4">
-          <p className="text-xs font-medium text-text-mute">Modo Sandbox</p>
+          <p className="text-xs font-medium text-muted">Modo Sandbox</p>
           <p className="font-display text-2xl font-bold text-warning mt-1">{totalSimulated}</p>
-          <p className="text-[11px] text-text-mute mt-0.5">Ambiente de teste</p>
+          <p className="text-[11px] text-muted mt-0.5">Ambiente de teste</p>
         </div>
 
         <div className="editorial-card p-4">
-          <p className="text-xs font-medium text-text-mute">Falhas / Erros</p>
-          <p className="font-display text-2xl font-bold text-negative mt-1">{totalFailed}</p>
-          <p className="text-[11px] text-text-mute mt-0.5">Rejeições ou timeout</p>
+          <p className="text-xs font-medium text-muted">Falhas / Erros</p>
+          <p className="font-display text-2xl font-bold text-danger mt-1">{totalFailed}</p>
+          <p className="text-[11px] text-muted mt-0.5">Rejeições ou timeout</p>
         </div>
       </div>
 
@@ -160,8 +160,8 @@ export default function ResendLogsPage() {
             onClick={() => setStatusFilter("all")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               statusFilter === "all"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-surface border border-border text-text-mute hover:text-text"
+                ? "bg-accent text-primary-foreground shadow-sm"
+                : "bg-surface border border-border text-muted hover:text-foreground"
             }`}
           >
             Todos ({logs.length})
@@ -173,7 +173,7 @@ export default function ResendLogsPage() {
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               statusFilter === "sent"
                 ? "bg-success text-success-foreground shadow-sm"
-                : "bg-surface border border-border text-text-mute hover:text-text"
+                : "bg-surface border border-border text-muted hover:text-foreground"
             }`}
           >
             Enviados ({totalSent})
@@ -185,7 +185,7 @@ export default function ResendLogsPage() {
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               statusFilter === "simulated"
                 ? "bg-warning text-warning-foreground shadow-sm"
-                : "bg-surface border border-border text-text-mute hover:text-text"
+                : "bg-surface border border-border text-muted hover:text-foreground"
             }`}
           >
             Simulados ({totalSimulated})
@@ -196,8 +196,8 @@ export default function ResendLogsPage() {
             onClick={() => setStatusFilter("failed")}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               statusFilter === "failed"
-                ? "bg-negative text-negative-foreground shadow-sm"
-                : "bg-surface border border-border text-text-mute hover:text-text"
+                ? "bg-danger text-danger-foreground shadow-sm"
+                : "bg-surface border border-border text-muted hover:text-foreground"
             }`}
           >
             Falhas ({totalFailed})
@@ -206,13 +206,13 @@ export default function ResendLogsPage() {
 
         {/* Search */}
         <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-text-mute" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por e-mail, assunto ou ID..."
-            className="w-full min-h-9 rounded-xl border border-border bg-canvas-soft pl-9 pr-3 text-xs text-text placeholder:text-text-mute focus:border-primary focus:bg-surface focus:outline-none"
+            className="w-full min-h-9 rounded-xl border border-border bg-background-secondary pl-9 pr-3 text-xs text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
           />
         </div>
       </div>
@@ -220,9 +220,9 @@ export default function ResendLogsPage() {
       {/* Table of Logs */}
       <div className="editorial-card p-6 space-y-4">
         {filteredLogs.length === 0 ? (
-          <div className="py-16 text-center text-text-mute space-y-2">
-            <Mail className="size-10 mx-auto opacity-30 text-text-mute" />
-            <p className="font-semibold text-sm text-text">Nenhum registro encontrado</p>
+          <div className="py-16 text-center text-muted space-y-2">
+            <Mail className="size-10 mx-auto opacity-30 text-muted" />
+            <p className="font-semibold text-sm text-foreground">Nenhum registro encontrado</p>
             <p className="text-xs max-w-sm mx-auto">
               Os e-mails disparados pela plataforma, automações e testes aparecerão aqui em tempo real.
             </p>
@@ -231,7 +231,7 @@ export default function ResendLogsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-border text-text-mute font-bold uppercase tracking-wider">
+                <tr className="border-b border-border text-muted font-bold uppercase tracking-wider">
                   <th className="py-3 px-3">Status</th>
                   <th className="py-3 px-3">Destinatário</th>
                   <th className="py-3 px-3">Assunto</th>
@@ -245,7 +245,7 @@ export default function ResendLogsPage() {
                   <tr
                     key={log.id}
                     onClick={() => setSelectedLog(log)}
-                    className="hover:bg-canvas-soft transition-colors cursor-pointer group"
+                    className="hover:bg-background-secondary transition-colors cursor-pointer group"
                   >
                     <td className="py-3 px-3">
                       <span
@@ -254,7 +254,7 @@ export default function ResendLogsPage() {
                             ? "bg-success-soft text-success"
                             : log.status === "simulated"
                             ? "bg-warning-soft text-warning"
-                            : "bg-negative-soft text-negative"
+                            : "bg-danger-soft text-danger"
                         }`}
                       >
                         {log.status === "sent" && "Enviado"}
@@ -262,19 +262,19 @@ export default function ResendLogsPage() {
                         {log.status === "failed" && "Falhou"}
                       </span>
                     </td>
-                    <td className="py-3 px-3 font-medium text-text group-hover:text-primary transition-colors">
+                    <td className="py-3 px-3 font-medium text-foreground group-hover:text-accent transition-colors">
                       {log.to}
                     </td>
-                    <td className="py-3 px-3 text-text truncate max-w-[240px]" title={log.subject}>
+                    <td className="py-3 px-3 text-foreground truncate max-w-[240px]" title={log.subject}>
                       {log.subject}
                     </td>
-                    <td className="py-3 px-3 font-mono text-[10px] uppercase text-text-mute">
+                    <td className="py-3 px-3 font-mono text-[10px] uppercase text-muted">
                       {log.template}
                     </td>
-                    <td className="py-3 px-3 font-mono text-[10px] text-text-mute truncate max-w-[140px]">
+                    <td className="py-3 px-3 font-mono text-[10px] text-muted truncate max-w-[140px]">
                       {log.resendId || "—"}
                     </td>
-                    <td className="py-3 px-3 text-right text-text-mute font-mono text-[11px]">
+                    <td className="py-3 px-3 text-right text-muted font-mono text-[11px]">
                       {new Date(log.createdAt).toLocaleString("pt-BR")}
                     </td>
                   </tr>
@@ -291,31 +291,31 @@ export default function ResendLogsPage() {
           <div className="w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <div className="flex items-center gap-2">
-                <div className="size-8 rounded-lg bg-primary-soft text-primary grid place-items-center">
+                <div className="size-8 rounded-lg bg-primary-soft text-accent grid place-items-center">
                   <FileText className="size-4" />
                 </div>
-                <h3 className="font-bold text-sm text-ink">Detalhes do Disparo</h3>
+                <h3 className="font-bold text-sm text-foreground">Detalhes do Disparo</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedLog(null)}
-                className="p-1.5 text-text-mute hover:text-text rounded-lg"
+                className="p-1.5 text-muted hover:text-foreground rounded-lg"
               >
                 <X className="size-4" />
               </button>
             </div>
 
             <div className="space-y-3 text-xs">
-              <div className="p-3 rounded-xl bg-canvas-soft border border-border/60 space-y-2">
+              <div className="p-3 rounded-xl bg-background-secondary border border-border/60 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-text-mute font-medium">Status da Entrega:</span>
+                  <span className="text-muted font-medium">Status da Entrega:</span>
                   <span
                     className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                       selectedLog.status === "sent"
                         ? "bg-success-soft text-success"
                         : selectedLog.status === "simulated"
                         ? "bg-warning-soft text-warning"
-                        : "bg-negative-soft text-negative"
+                        : "bg-danger-soft text-danger"
                     }`}
                   >
                     {selectedLog.status === "sent" && "Enviado via Resend"}
@@ -325,24 +325,24 @@ export default function ResendLogsPage() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-text-mute font-medium">Destinatário:</span>
-                  <strong className="text-text">{selectedLog.to}</strong>
+                  <span className="text-muted font-medium">Destinatário:</span>
+                  <strong className="text-foreground">{selectedLog.to}</strong>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-text-mute font-medium">Modelo Utilizado:</span>
-                  <span className="font-mono text-text uppercase font-bold">{selectedLog.template}</span>
+                  <span className="text-muted font-medium">Modelo Utilizado:</span>
+                  <span className="font-mono text-foreground uppercase font-bold">{selectedLog.template}</span>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-text-mute font-medium">Data e Hora:</span>
-                  <span className="font-mono text-text">{new Date(selectedLog.createdAt).toLocaleString("pt-BR")}</span>
+                  <span className="text-muted font-medium">Data e Hora:</span>
+                  <span className="font-mono text-foreground">{new Date(selectedLog.createdAt).toLocaleString("pt-BR")}</span>
                 </div>
               </div>
 
               <div>
-                <label className="block font-bold text-text mb-1">Assunto da Mensagem</label>
-                <div className="p-2.5 rounded-xl border border-border bg-canvas-soft font-mono text-xs text-text">
+                <label className="block font-bold text-foreground mb-1">Assunto da Mensagem</label>
+                <div className="p-2.5 rounded-xl border border-border bg-background-secondary font-mono text-xs text-foreground">
                   {selectedLog.subject}
                 </div>
               </div>
@@ -350,16 +350,16 @@ export default function ResendLogsPage() {
               {selectedLog.resendId && (
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="font-bold text-text">ID da Mensagem (Resend)</label>
+                    <label className="font-bold text-foreground">ID da Mensagem (Resend)</label>
                     <button
                       type="button"
                       onClick={() => copyToClipboard(selectedLog.resendId!, "resend_id")}
-                      className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-1"
+                      className="text-[10px] text-accent hover:underline font-semibold flex items-center gap-1"
                     >
                       {copiedField === "resend_id" ? <Check className="size-3" /> : <Copy className="size-3" />} Copiar ID
                     </button>
                   </div>
-                  <div className="p-2.5 rounded-xl border border-border bg-canvas-soft font-mono text-xs text-text">
+                  <div className="p-2.5 rounded-xl border border-border bg-background-secondary font-mono text-xs text-foreground">
                     {selectedLog.resendId}
                   </div>
                 </div>
@@ -367,8 +367,8 @@ export default function ResendLogsPage() {
 
               {selectedLog.error && (
                 <div>
-                  <label className="block font-bold text-negative mb-1">Detalhes do Erro</label>
-                  <div className="p-2.5 rounded-xl border border-negative/20 bg-negative-soft text-negative text-xs">
+                  <label className="block font-bold text-danger mb-1">Detalhes do Erro</label>
+                  <div className="p-2.5 rounded-xl border border-danger/20 bg-danger-soft text-danger text-xs">
                     {selectedLog.error}
                   </div>
                 </div>
@@ -379,7 +379,7 @@ export default function ResendLogsPage() {
               <button
                 type="button"
                 onClick={() => setSelectedLog(null)}
-                className="w-full rounded-xl bg-primary py-2.5 font-bold text-primary-foreground hover:bg-primary-active transition-colors"
+                className="w-full rounded-xl bg-accent py-2.5 font-bold text-primary-foreground hover:bg-accent-hover transition-colors"
               >
                 Fechar
               </button>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Home, Palette, Menu as MenuIcon, Plug } from "lucide-react";
+import { Bot, Home, Palette, Menu as MenuIcon, Plug } from "lucide-react";
 import { Card } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
 
@@ -26,6 +26,13 @@ const settingsCards = [
     title: "Menu",
     description: "Configure os itens de navegação do menu lateral dos estudantes.",
     tone: "bg-warning-soft text-warning-soft-foreground",
+  },
+  {
+    href: "/admin/chat",
+    icon: Bot,
+    title: "Assistente IA",
+    description: "Configure identidade, conhecimento e histórico do assistente dos alunos.",
+    tone: "bg-accent-soft text-accent-soft-foreground",
   },
   {
     href: "/admin/integracoes",

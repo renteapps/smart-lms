@@ -5,10 +5,12 @@ import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 import ChatSticker from "@/components/ChatSticker";
 import { ProfileBanner } from "@/components/profile/ProfileBanner";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 export function RouteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const isAdmin = pathname.startsWith("/admin");
   const isClassroom = /^\/courses\/[^/]+\/lessons/.test(pathname);
   const isFocusedOnboarding = pathname === "/onboarding";
@@ -16,7 +18,7 @@ export function RouteShell({ children }: { children: React.ReactNode }) {
    * A conversa com um agente ocupa a altura toda e já tem a própria caixa de
    * mensagem: rodapé e bolha flutuante da IA só brigariam com ela.
    */
-  const isAgentWorkspace = /^\/agentes\/[^/]+/.test(pathname);
+  const isAgentWorkspace = pathname.startsWith("/agentes");
   const isAuthPage =
     pathname.startsWith("/acessar") ||
     pathname.startsWith("/criar-conta") ||
@@ -24,8 +26,17 @@ export function RouteShell({ children }: { children: React.ReactNode }) {
     pathname.startsWith("/confirmar");
   const hasStudentChrome = !isAdmin && !isClassroom;
   const hasFloatingChrome = !isFocusedOnboarding && !isAgentWorkspace && !isAuthPage;
+  const showAssistant =
+    !isAuthLoading && isAuthenticated && !isAdmin && !isFocusedOnboarding && !isAgentWorkspace && !isAuthPage;
 
-  if (!hasStudentChrome) return <>{children}</>;
+  if (!hasStudentChrome) {
+    return (
+      <>
+        {children}
+        {showAssistant && <ChatSticker />}
+      </>
+    );
+  }
 
   return (
     /*
@@ -39,7 +50,7 @@ export function RouteShell({ children }: { children: React.ReactNode }) {
       {/* A conversa já trava a própria altura; `min-h-screen` sobraria como rolagem morta. */}
       <main className={cn("w-full", !isAgentWorkspace && "min-h-screen")}>{children}</main>
       {hasFloatingChrome && <Footer />}
-      {hasFloatingChrome && <ChatSticker />}
+      {showAssistant && <ChatSticker />}
     </div>
   );
 }

@@ -42,6 +42,8 @@ export type ImageUploadProps = {
   previewClassName?: string;
   /** Conteúdo do estado vazio. Ex.: as iniciais do usuário no lugar do ícone. */
   fallback?: ReactNode;
+  /** Esconde visualmente a label padrão gerada pelo componente */
+  hideLabel?: boolean;
 };
 
 const ASPECT_CLASS: Record<ImageUploadAspect, string> = {
@@ -89,6 +91,7 @@ export function ImageUpload({
   className,
   previewClassName,
   fallback,
+  hideLabel,
 }: ImageUploadProps) {
   const inputId = useId();
   const urlFieldId = useId();
@@ -198,7 +201,7 @@ export function ImageUpload({
     <div className={cn("space-y-2", className)}>
       <label
         htmlFor={inputId}
-        className="block text-sm font-medium text-foreground"
+        className={hideLabel ? "sr-only" : "block text-sm font-medium text-foreground"}
       >
         {label}
         {isRequired && <span className="ml-0.5 text-danger">*</span>}

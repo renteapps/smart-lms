@@ -55,20 +55,20 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({ categories, onCh
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-primary-pale/60 p-4 rounded-xl border border-primary/10">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-accent-soft/60 p-4 rounded-xl border border-accent/10">
         <div>
-          <h3 className="font-bold text-ink-deep flex items-center gap-2 text-base">
-            <Sparkles className="w-5 h-5 text-primary" />
+          <h3 className="font-bold text-foreground flex items-center gap-2 text-base">
+            <Sparkles className="w-5 h-5 text-accent" />
             Perfis & Resultados
           </h3>
-          <p className="text-sm text-text-soft">
+          <p className="text-sm text-muted">
             Defina as categorias que o aluno pode tirar como resultado no teste. O perfil com mais pontos no final será o vencedor.
           </p>
         </div>
         <button
           type="button"
           onClick={handleAddCategory}
-          className="bg-primary text-on-primary px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-primary-active transition-all flex items-center gap-2 shadow-sm hover:shadow-md shrink-0"
+          className="bg-accent text-accent-foreground px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-accent-hover transition-all flex items-center gap-2 shadow-sm hover:shadow-md shrink-0"
         >
           <Plus className="w-4 h-4" />
           Adicionar Categoria
@@ -79,20 +79,20 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({ categories, onCh
         {categories.map((cat, index) => (
           <div
             key={cat.id}
-            className="bg-surface-card border border-border/60 rounded-3xl p-1 shadow-sm hover:shadow-md transition-all relative group grid grid-cols-1 lg:grid-cols-2 gap-0 overflow-hidden"
+            className="bg-surface border border-border/60 rounded-3xl p-1 shadow-sm hover:shadow-md transition-all relative group grid grid-cols-1 lg:grid-cols-2 gap-0 overflow-hidden"
             style={{ borderLeft: `6px solid ${cat.color}` }}
           >
             
             {/* Left Column: Form Editor */}
             <div className="p-5 lg:p-6 space-y-5 lg:border-r border-border/30">
               <div className="flex items-center justify-between gap-3 border-b border-border/30 pb-3">
-                <span className="text-xs font-bold text-text-mute uppercase tracking-wider">
+                <span className="text-xs font-bold text-muted uppercase tracking-wider">
                   Edição do Perfil #{index + 1}
                 </span>
                 <button
                   type="button"
                   onClick={() => handleRemoveCategory(cat.id)}
-                  className="text-text-mute hover:text-negative p-1.5 rounded-lg hover:bg-negative/10 transition-colors"
+                  className="text-muted hover:text-danger p-1.5 rounded-lg hover:bg-danger/10 transition-colors"
                   title="Excluir Categoria"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -107,28 +107,28 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({ categories, onCh
                     value={cat.emoji}
                     onChange={(e) => handleUpdateCategory(cat.id, { emoji: e.target.value })}
                     maxLength={4}
-                    className="w-12 h-12 text-center text-2xl bg-canvas-soft border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-inner"
+                    className="w-12 h-12 text-center text-2xl bg-background-secondary border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-inner"
                   />
                 </div>
 
                 <div className="flex-1">
-                  <label className="text-[10px] font-bold text-text-soft uppercase tracking-wider block mb-1">Nome do Perfil</label>
+                  <label className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-1">Nome do Perfil</label>
                   <input
                     type="text"
                     value={cat.name}
                     onChange={(e) => handleUpdateCategory(cat.id, { name: e.target.value })}
                     placeholder="Ex: Líder Visionário"
-                    className="w-full bg-canvas-soft border border-border/50 rounded-xl px-4 py-2.5 font-bold text-text focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full bg-background-secondary border border-border/50 rounded-xl px-4 py-2.5 font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
               </div>
 
               {/* Color Palette Selector */}
               <div>
-                <label className="text-[10px] font-bold text-text-soft uppercase tracking-wider block mb-2">
+                <label className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-2">
                   Cor Representativa
                 </label>
-                <div className="flex items-center gap-2 flex-wrap bg-canvas-soft p-2 rounded-xl border border-border/50 w-fit">
+                <div className="flex items-center gap-2 flex-wrap bg-background-secondary p-2 rounded-xl border border-border/50 w-fit">
                   {PRESET_COLORS.map((c) => (
                     <button
                       key={c}
@@ -153,7 +153,7 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({ categories, onCh
 
               {/* Description / Outcome Text */}
               <div>
-                <label className="text-[10px] font-bold text-text-soft uppercase tracking-wider block mb-2">
+                <label className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-2">
                   Descrição do Resultado
                 </label>
                 <textarea
@@ -161,17 +161,17 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({ categories, onCh
                   onChange={(e) => handleUpdateCategory(cat.id, { description: e.target.value })}
                   rows={4}
                   placeholder="Explique os pontos fortes e de desenvolvimento deste perfil..."
-                  className="w-full bg-canvas-soft border border-border/50 rounded-xl p-3 text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/20 leading-relaxed"
+                  className="w-full bg-background-secondary border border-border/50 rounded-xl p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 leading-relaxed"
                 />
               </div>
             </div>
 
             {/* Right Column: Live Preview */}
-            <div className="bg-canvas/50 p-5 lg:p-6 flex flex-col justify-center items-center relative overflow-hidden">
+            <div className="bg-background/50 p-5 lg:p-6 flex flex-col justify-center items-center relative overflow-hidden">
               <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ background: `radial-gradient(circle at center, ${cat.color} 0%, transparent 70%)` }} />
               
               <div className="w-full max-w-sm">
-                <span className="text-xs font-bold text-text-mute uppercase tracking-wider block mb-4 text-center">
+                <span className="text-xs font-bold text-muted uppercase tracking-wider block mb-4 text-center">
                   Live Preview do Aluno
                 </span>
                 
@@ -185,7 +185,7 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({ categories, onCh
                     </div>
 
                     <div>
-                      <span className="text-[10px] font-bold text-text-soft uppercase tracking-wider block mb-1">
+                      <span className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-1">
                         Seu Perfil Dominante é:
                       </span>
                       <h3 className="text-2xl font-display font-black leading-tight transition-colors" style={{ color: cat.color }}>
@@ -193,12 +193,12 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({ categories, onCh
                       </h3>
                     </div>
 
-                    <div className="bg-canvas-soft/80 border border-border/50 rounded-xl p-4 text-left space-y-2 relative">
-                       <h4 className="font-bold text-xs text-text-soft uppercase tracking-wide flex items-center gap-1.5">
-                        <Award className="w-3.5 h-3.5 text-primary" />
+                    <div className="bg-background-secondary/80 border border-border/50 rounded-xl p-4 text-left space-y-2 relative">
+                       <h4 className="font-bold text-xs text-muted uppercase tracking-wide flex items-center gap-1.5">
+                        <Award className="w-3.5 h-3.5 text-accent" />
                         O que isso significa?
                       </h4>
-                      <p className="text-text leading-relaxed text-xs line-clamp-4">
+                      <p className="text-foreground leading-relaxed text-xs line-clamp-4">
                         {cat.description || 'A descrição do resultado aparecerá aqui, explicando os pontos fortes do aluno e como ele se destaca.'}
                       </p>
                     </div>

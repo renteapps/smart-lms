@@ -1,9 +1,9 @@
 import type {
   CatalogCourse,
-  ContentBlock,
   ContinueLesson,
   Course,
   Lesson,
+  LessonContentBlock,
   Module,
 } from "@/types/course";
 import { logQueryError, type DB, type Row } from "./types";
@@ -22,8 +22,9 @@ export function mapLesson(row: Row, progress?: Row | null): Lesson {
     title: row.title,
     type: (row.type ?? "video") as Lesson["type"],
     videoUrl: row.video_url ?? undefined,
+    pandavideoId: row.pandavideo_id ?? undefined,
     content: row.content ?? "",
-    blocks: Array.isArray(row.blocks) ? (row.blocks as ContentBlock[]) : [],
+    blocks: Array.isArray(row.blocks) ? (row.blocks as LessonContentBlock[]) : [],
     attachments: Array.isArray(row.attachments)
       ? row.attachments.map((item: Row) => ({ id: item.id, name: item.name, url: item.url }))
       : [],
@@ -34,8 +35,8 @@ export function mapLesson(row: Row, progress?: Row | null): Lesson {
     userRating: progress?.user_rating ?? undefined,
     lastWatchedSecond: progress?.last_watched_second ?? 0,
     slug: row.slug ?? undefined,
-    metaTitle: row.meta_title ?? undefined,
-    metaDescription: row.meta_description ?? undefined,
+    transcription: row.transcription ?? undefined,
+    shortDescription: row.short_description ?? undefined,
     profileTestId: row.profile_test_ref ?? row.profile_test_id ?? undefined,
     profileTestConfig: row.profile_test_config ?? undefined,
     topics: row.topics ?? [],
@@ -181,10 +182,10 @@ const COURSE_TREE_SELECT = `
   id, slug, title, description, short_description, category, cover_url, duration,
   level, price, tags, is_published, is_featured, created_at, updated_at,
   modules (
-    id, course_id, title, description, cover_url, order_index,
+    id, course_id, title, slug, description, cover_url, order_index,
     lessons (
-      id, module_id, title, type, video_url, content, blocks, duration_in_minutes,
-      order_index, is_published, slug, meta_title, meta_description,
+      id, module_id, title, type, video_url, pandavideo_id, content, blocks, duration_in_minutes,
+      order_index, is_published, slug, transcription, short_description,
       profile_test_id, profile_test_ref, profile_test_config, topics, solves,
       level, objective, audience, prerequisites, is_eligible_for_trail,
       attachments ( id, name, url )
@@ -200,6 +201,7 @@ function assembleCourse(row: Row, progressByLesson: Map<string, Row>): Course {
       id: mod.id,
       courseId: mod.course_id,
       title: mod.title,
+      slug: mod.slug ?? undefined,
       description: mod.description ?? undefined,
       coverUrl: mod.cover_url ?? undefined,
       order: mod.order_index ?? 0,
@@ -286,13 +288,15 @@ export async function listCoursesShallow(db: DB, includeUnpublished = false): Pr
 // ---------------------------------------------------------------------------
 
 export async function getEnrolledCourses(db: DB, userId: string): Promise<CatalogCourse[]> {
+  const nowIso = new Date().toISOString();
   const { data, error } = await db
     .from("enrollments")
     .select(
-      "course_id, courses!inner(id, slug, title, category, description, short_description, cover_url, duration, level, modules(id, lessons(id, duration_in_minutes, is_published)))",
+      "course_id, expires_at, courses!inner(id, slug, title, category, description, short_description, cover_url, duration, level, modules(id, lessons(id, duration_in_minutes, is_published)))",
     )
     .eq("user_id", userId)
-    .eq("status", "active");
+    .eq("status", "active")
+    .or(`expires_at.is.null,expires_at.gt.${nowIso}`);
 
   logQueryError("getEnrolledCourses", error);
   if (!data) return [];
@@ -355,12 +359,14 @@ export async function getContinueLessons(db: DB, userId: string, limit = 4): Pro
 }
 
 export async function isEnrolled(db: DB, userId: string, courseId: string): Promise<boolean> {
+  const nowIso = new Date().toISOString();
   const { data } = await db
     .from("enrollments")
     .select("id")
     .eq("user_id", userId)
     .eq("course_id", courseId)
     .eq("status", "active")
+    .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
     .maybeSingle();
   return !!data;
 }

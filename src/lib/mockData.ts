@@ -18,8 +18,8 @@ export type Lesson = {
   isCompleted?: boolean;
   userRating?: number; // 0 to 5
   slug?: string;
-  metaTitle?: string;
-  metaDescription?: string;
+  transcription?: string;
+  shortDescription?: string;
   profileTestId?: string;
   profileTestConfig?: {
     allowSkipIfCompleted?: boolean;

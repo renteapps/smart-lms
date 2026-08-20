@@ -87,9 +87,10 @@ export type StudentSummary = UserProfile & {
 
 /** Lista de alunos do admin, já com os números que a tabela mostra. */
 export async function getStudentsWithStats(db: DB): Promise<StudentSummary[]> {
+  const nowIso = new Date().toISOString();
   const [profiles, enrollments, progress, certificates] = await Promise.all([
     getProfiles(db),
-    db.from("enrollments").select("user_id, course_id").eq("status", "active"),
+    db.from("enrollments").select("user_id, course_id").eq("status", "active").or(`expires_at.is.null,expires_at.gt.${nowIso}`),
     db.from("lesson_progress").select("user_id").eq("is_completed", true),
     db.from("certificates").select("user_id"),
   ]);

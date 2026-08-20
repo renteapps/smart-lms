@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Check, Copy, Plug, AlertCircle } from "lucide-react";
 import { ResendIntegrationContent } from "../ResendIntegrationContent";
 import { OpenRouterIntegrationContent } from "../OpenRouterIntegrationContent";
+import { PandaVideoIntegrationContent } from "../PandaVideoIntegrationContent";
 
 function EduzzIntegrationContent() {
   const searchParams = useSearchParams();
@@ -267,7 +268,7 @@ export default function IntegracaoDetalhePage() {
   const params = useParams();
   const slug = params.slug as string;
 
-  if (slug !== "eduzz" && slug !== "hotmart" && slug !== "resend" && slug !== "openrouter") {
+  if (slug !== "eduzz" && slug !== "hotmart" && slug !== "resend" && slug !== "openrouter" && slug !== "pandavideo") {
     notFound();
   }
 
@@ -277,6 +278,8 @@ export default function IntegracaoDetalhePage() {
         <OpenRouterIntegrationContent />
       ) : slug === "resend" ? (
         <ResendIntegrationContent />
+      ) : slug === "pandavideo" ? (
+        <PandaVideoIntegrationContent />
       ) : slug === "eduzz" ? (
         <EduzzIntegrationContent />
       ) : (

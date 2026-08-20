@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Plus, UserRound, Search } from "lucide-react";
-import { Avatar, Card, EmptyState, Table, buttonVariants } from "@heroui/react";
+import { Plus, UserRound } from "lucide-react";
+import { Avatar, Card, EmptyState, Label, SearchField, Table, buttonVariants } from "@heroui/react";
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
@@ -70,16 +70,15 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
 
       <Card>
         <Card.Header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <form action="/admin/users" method="GET" className="w-full sm:max-w-md relative">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-            <input 
-              type="text" 
-              name="q"
-              defaultValue={q}
-              placeholder="Buscar por nome ou e-mail" 
-              className="w-full px-10 py-2 rounded-lg border border-separator bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-              aria-label="Buscar usuário"
-            />
+          <form action="/admin/users" method="GET" className="w-full sm:max-w-md">
+            <SearchField defaultValue={q} aria-label="Buscar usuário">
+              <Label className="sr-only">Buscar usuário</Label>
+              <SearchField.Group>
+                <SearchField.SearchIcon />
+                <SearchField.Input name="q" placeholder="Buscar por nome ou e-mail" />
+                <SearchField.ClearButton />
+              </SearchField.Group>
+            </SearchField>
           </form>
           <p className="text-xs text-muted">
             <strong className="font-semibold text-foreground">{profiles?.length || 0}</strong> pessoas cadastradas

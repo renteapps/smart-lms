@@ -1,153 +1,292 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { MessageSquare, Send, X } from "lucide-react";
-import { Button, Input, Label, Popover, Separator, TextField } from "@heroui/react";
-import { SparkIcon } from "@/components/ui/AnimatedIcon";
+import { AlertCircle, RefreshCw, Send, X } from "lucide-react";
+import { Button, Label, Popover, Separator, TextArea, TextField } from "@heroui/react";
+import { AssistantAvatar, colorWithAlpha, getContrastText } from "@/components/platform-assistant/AssistantAvatar";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import type {
+  AssistantMessage,
+  AssistantScope,
+  PlatformAssistantGetResponse,
+  PlatformAssistantPostResponse,
+  PlatformAssistantPublicConfig,
+} from "@/types/platformAssistant";
+import { usePathname } from "next/navigation";
+
+const FALLBACK_CONFIG: PlatformAssistantPublicConfig = {
+  enabled: true,
+  displayName: "Assistente IA",
+  avatarType: "icon",
+  iconKey: "sparkles",
+  primaryColor: "#3157B7",
+  welcomeMessage: "Olá! Como posso ajudar você hoje?",
+};
+
+function scopeFromPath(pathname: string): AssistantScope {
+  const match = pathname.match(/^\/courses\/([^/]+)(?:\/lessons\/([^/]+))?/);
+  if (!match) return { kind: "platform" };
+  return {
+    kind: "course",
+    courseId: decodeURIComponent(match[1]),
+    lessonId: match[2] ? decodeURIComponent(match[2]) : undefined,
+  };
+}
+
+function scopeKey(scope: AssistantScope): string {
+  return scope.kind === "platform" ? "platform" : `course:${scope.courseId}:${scope.lessonId ?? "overview"}`;
+}
+
+function scopeQuery(scope: AssistantScope): string {
+  const params = new URLSearchParams({ kind: scope.kind });
+  if (scope.kind === "course") {
+    params.set("courseId", scope.courseId);
+    if (scope.lessonId) params.set("lessonId", scope.lessonId);
+  }
+  return params.toString();
+}
 
 export default function ChatSticker() {
-  const { state: { article } } = useAudioPlayer();
+  const pathname = usePathname();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const {
+    state: { article },
+  } = useAudioPlayer();
+  const scope = useMemo(() => scopeFromPath(pathname), [pathname]);
+  const contextKey = scopeKey(scope);
   const [isOpen, setIsOpen] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [messages, setMessages] = useState<{role: 'ai' | 'user', text: string}[]>([
-    { role: 'ai', text: 'Olá! Sou a assistente de IA da plataforma. Como posso ajudar você hoje?' }
-  ]);
-  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [config, setConfig] = useState<PlatformAssistantPublicConfig | null>(null);
+  const [messages, setMessages] = useState<AssistantMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [failedMessage, setFailedMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const currentContextRef = useRef(contextKey);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
+    currentContextRef.current = contextKey;
+  }, [contextKey]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-
-    setMessages(prev => [...prev, { role: 'user', text: input }]);
-    setInput('');
-    setIsTyping(true);
-
-    // Simulate AI response
-    setTimeout(() => {
-      setIsTyping(false);
-      setMessages(prev => [...prev, { role: 'ai', text: 'Entendi! Posso ajudar com suas dúvidas sobre nossos cursos ou com a navegação da plataforma.' }]);
-    }, 1500);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSend();
+  const loadConversation = async (signal?: AbortSignal) => {
+    setIsLoading(true);
+    setError(null);
+    setFailedMessage(null);
+    try {
+      const response = await fetch(`/api/ai/platform-assistant?${scopeQuery(scope)}`, {
+        cache: "no-store",
+        signal,
+      });
+      const body = (await response.json()) as PlatformAssistantGetResponse & { error?: string };
+      if (!response.ok) throw new Error(body.error || "Não foi possível carregar o assistente.");
+      setConfig(body.config);
+      setMessages(body.conversation?.messages ?? []);
+    } catch (loadError) {
+      if (loadError instanceof DOMException && loadError.name === "AbortError") return;
+      setConfig((current) => current ?? FALLBACK_CONFIG);
+      setMessages([]);
+      setError(loadError instanceof Error ? loadError.message : "O assistente está indisponível.");
+    } finally {
+      if (!signal?.aborted) setIsLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (isAuthLoading || !isAuthenticated) {
+      return;
+    }
+    const controller = new AbortController();
+    // A troca de rota inicia uma nova sincronização com o histórico persistido desse escopo.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadConversation(controller.signal);
+    return () => controller.abort();
+    // contextKey representa curso/aula e evita que uma resposta de outro escopo seja exibida.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contextKey, isAuthenticated, isAuthLoading]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length, isSending, error]);
+
+  const sendMessage = async (rawMessage = input) => {
+    const message = rawMessage.trim();
+    if (!message || isSending || message.length > 4_000) return;
+    const requestContext = contextKey;
+    const optimistic: AssistantMessage = {
+      id: `pending-${crypto.randomUUID()}`,
+      author: "user",
+      content: message,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((current) => [...current, optimistic]);
+    setInput("");
+    setError(null);
+    setFailedMessage(null);
+    setIsSending(true);
+
+    try {
+      const response = await fetch("/api/ai/platform-assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, scope }),
+      });
+      const body = (await response.json()) as PlatformAssistantPostResponse & { error?: string };
+      if (!response.ok) throw new Error(body.error || "Não foi possível enviar a mensagem.");
+      if (requestContext !== currentContextRef.current) return;
+      setMessages((current) => [
+        ...current.filter((item) => item.id !== optimistic.id),
+        body.userMessage,
+        body.assistantMessage,
+      ]);
+    } catch (sendError) {
+      setError(sendError instanceof Error ? sendError.message : "O assistente está indisponível.");
+      setFailedMessage(message);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || event.shiftKey) return;
+    event.preventDefault();
+    void sendMessage();
+  };
+
+  if (isAuthLoading || !isAuthenticated || !config?.enabled) return null;
+
+  const foreground = getContrastText(config.primaryColor);
+  const virtualMessages: AssistantMessage[] = messages.length
+    ? messages
+    : [
+        {
+          id: "welcome",
+          author: "assistant",
+          content: config.welcomeMessage,
+          createdAt: "",
+        },
+      ];
+
   return (
-    /*
-     * O gatilho é o único elemento fixo; o painel é um Popover do HeroUI, que
-     * já resolve posicionamento, foco, Escape e clique fora — três coisas que
-     * um overlay caseiro erraria em silêncio. O estado da conversa vive aqui
-     * fora, então fechar e reabrir não perde nada do que foi escrito.
-     */
     <div
       className="fixed right-4 z-40 flex flex-col items-end transition-[bottom] duration-[var(--duration-md)] sm:right-6"
-      style={{ bottom: article ? "calc(5.75rem + env(safe-area-inset-bottom))" : "max(1rem, env(safe-area-inset-bottom))" }}
+      style={{
+        bottom: article
+          ? "calc(5.75rem + env(safe-area-inset-bottom))"
+          : "max(1rem, env(safe-area-inset-bottom))",
+      }}
     >
       <Popover.Root isOpen={isOpen} onOpenChange={setIsOpen}>
         <Popover.Trigger
-          aria-label={isOpen ? "Fechar assistente" : "Abrir assistente de IA"}
-          /*
-           * Fica sólido de propósito: é a ação primária flutuante e vidro aqui
-           * sumiria sobre o fundo claro. O que ele herda da linguagem é a
-           * forma — cápsula, como a pílula do menu e o player.
-           */
-          className="press grid size-14 place-items-center rounded-full bg-accent text-accent-foreground shadow-elev-4 transition-[background-color,transform] duration-[var(--duration-md)] hover:bg-accent-hover"
+          aria-label={isOpen ? `Fechar ${config.displayName}` : `Abrir ${config.displayName}`}
+          className="press grid size-14 place-items-center overflow-hidden rounded-full shadow-elev-4 transition-transform duration-[var(--duration-md)]"
+          style={{ backgroundColor: config.primaryColor, color: foreground }}
         >
           {isOpen ? (
             <X className="size-6" aria-hidden="true" />
           ) : (
-            <MessageSquare className="size-6" aria-hidden="true" />
+            <AssistantAvatar config={config} className="size-full" iconClassName="size-6" />
           )}
         </Popover.Trigger>
 
         <Popover.Content
           placement="top end"
-          className="h-[min(32rem,calc(100vh-9rem))] w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-surface p-0 shadow-elev-4"
+          className="h-[min(36rem,calc(100vh-8rem))] w-[min(25rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-surface p-0 shadow-elev-4"
         >
-          <Popover.Dialog aria-label="Assistente de IA" className="flex h-full flex-col p-0">
+          <Popover.Dialog aria-label={config.displayName} className="flex h-full flex-col p-0">
             <header className="flex items-center gap-3 px-5 py-4">
-              <span className="icon-draw grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground">
-                <SparkIcon size={20} />
-              </span>
+              <AssistantAvatar config={config} className="size-10 rounded-xl" />
               <div className="min-w-0">
-                <Popover.Heading className="font-display text-base font-extrabold tracking-tight text-foreground">
-                  Assistente IA
+                <Popover.Heading className="truncate font-display text-base font-extrabold tracking-tight text-foreground">
+                  {config.displayName}
                 </Popover.Heading>
                 <p className="mt-0.5 flex items-center gap-1.5 text-xs font-semibold text-muted">
                   <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />
-                  Online agora
+                  {scope.kind === "course" ? "Contexto deste curso" : "Assistente da plataforma"}
                 </p>
               </div>
             </header>
 
             <Separator />
 
-            <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-5">
-              {messages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={cn("flex items-end gap-2", msg.role === "user" ? "justify-end" : "justify-start")}
-                >
-                  {msg.role === "ai" && (
-                    <span
-                      aria-hidden="true"
-                      className="grid size-7 shrink-0 place-items-center rounded-full bg-accent-soft text-accent-soft-foreground"
-                    >
-                      <SparkIcon size={14} />
-                    </span>
-                  )}
-
-                  {/*
-                   * As bolhas são opacas de propósito: o painel é vidro e
-                   * texto longo sobre material perde contraste.
-                   */}
-                  <p
+            <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-5 py-5" aria-live="polite">
+              {isLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted">
+                  <RefreshCw className="size-4 animate-spin" aria-hidden="true" />
+                  Carregando conversa…
+                </div>
+              ) : (
+                virtualMessages.map((message) => (
+                  <div
+                    key={message.id}
                     className={cn(
-                      "max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-elev-1",
-                      msg.role === "user"
-                        ? "rounded-br-sm bg-accent text-accent-foreground"
-                        : "rounded-bl-sm border border-hairline bg-surface text-foreground",
+                      "flex items-end gap-2",
+                      message.author === "user" ? "justify-end" : "justify-start",
                     )}
                   >
-                    {msg.text}
-                  </p>
-                </div>
-              ))}
+                    {message.author === "assistant" && (
+                      <AssistantAvatar config={config} className="size-7 rounded-full" />
+                    )}
+                    <p
+                      className={cn(
+                        "max-w-[82%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-6 shadow-elev-1",
+                        message.author === "user"
+                          ? "rounded-br-sm"
+                          : "rounded-bl-sm border border-hairline bg-surface text-foreground",
+                      )}
+                      style={
+                        message.author === "user"
+                          ? { backgroundColor: config.primaryColor, color: foreground }
+                          : undefined
+                      }
+                    >
+                      {message.content}
+                    </p>
+                  </div>
+                ))
+              )}
 
-              {isTyping && (
-                <div className="flex items-end gap-2" aria-live="polite">
-                  <span
-                    aria-hidden="true"
-                    className="grid size-7 shrink-0 place-items-center rounded-full bg-accent-soft text-accent-soft-foreground"
-                  >
-                    <SparkIcon size={14} />
-                  </span>
+              {isSending && (
+                <div className="flex items-end gap-2">
+                  <AssistantAvatar config={config} className="size-7 rounded-full" />
                   <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-hairline bg-surface px-4 py-4 shadow-elev-1">
                     <span className="sr-only">Assistente digitando</span>
                     {[0, 0.2, 0.4].map((delay) => (
                       <motion.span
                         key={delay}
                         aria-hidden="true"
-                        className="size-1.5 rounded-full bg-accent"
+                        className="size-1.5 rounded-full"
+                        style={{ backgroundColor: config.primaryColor }}
                         animate={{ y: [0, -5, 0] }}
                         transition={{ duration: 0.6, repeat: Infinity, delay }}
                       />
                     ))}
                   </div>
+                </div>
+              )}
+
+              {error && (
+                <div
+                  className="rounded-xl border px-3 py-3 text-xs leading-5"
+                  style={{ borderColor: colorWithAlpha(config.primaryColor, 0.25), background: colorWithAlpha(config.primaryColor, 0.08) }}
+                >
+                  <p className="flex items-start gap-2 text-foreground">
+                    <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                    {error}
+                  </p>
+                  {failedMessage && (
+                    <button
+                      type="button"
+                      onClick={() => void sendMessage(failedMessage)}
+                      disabled={isSending}
+                      className="mt-2 font-bold underline underline-offset-2 disabled:opacity-50"
+                    >
+                      Tentar novamente
+                    </button>
+                  )}
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -158,24 +297,29 @@ export default function ChatSticker() {
             <footer className="px-5 py-4">
               <div className="flex items-end gap-2">
                 <TextField value={input} onChange={setInput} fullWidth className="flex-1">
-                  <Label className="sr-only">Mensagem para a assistente</Label>
-                  <Input
-                    placeholder="Mensagem para a IA..."
-                    onKeyDown={handleKeyPress}
+                  <Label className="sr-only">Mensagem para {config.displayName}</Label>
+                  <TextArea
+                    rows={1}
+                    maxLength={4_000}
+                    placeholder="Digite sua pergunta…"
+                    onKeyDown={handleKeyDown}
+                    disabled={isSending || isLoading}
+                    className="max-h-28 min-h-11 resize-none"
                   />
                 </TextField>
                 <Button
                   isIconOnly
                   aria-label="Enviar mensagem"
-                  onClick={handleSend}
-                  isDisabled={!input.trim()}
+                  onClick={() => void sendMessage()}
+                  isDisabled={!input.trim() || isSending || isLoading}
                   className="size-11 shrink-0"
+                  style={{ backgroundColor: config.primaryColor, color: foreground }}
                 >
                   <Send className="size-4" aria-hidden="true" />
                 </Button>
               </div>
-              <p className="mt-3 text-center text-xs text-muted">
-                A IA pode cometer erros. Verifique informações importantes.
+              <p className="mt-3 text-center text-[11px] leading-4 text-muted">
+                A IA pode cometer erros. As conversas ficam armazenadas e podem ser revisadas pelo administrador.
               </p>
             </footer>
           </Popover.Dialog>

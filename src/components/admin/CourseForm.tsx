@@ -40,14 +40,6 @@ const acessoOptions = [
   { id: "Assinantes", label: "Somente assinantes" },
 ];
 
-function generateSlug(title: string) {
-  return title
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
-}
 
 export function CourseForm({ course }: { course?: Course }) {
   const router = useRouter();
@@ -60,16 +52,15 @@ export function CourseForm({ course }: { course?: Course }) {
   const isEditing = Boolean(course);
   const backHref = isEditing ? `/admin/cursos/${course!.id}` : "/admin/cursos";
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
     const title = formData.get("title") as string;
 
     startTransition(async () => {
       const res = await saveCourse({
         id: course?.id,
         title,
-        slug: isEditing ? undefined : generateSlug(title),
         shortDescription: formData.get("shortDescription") as string,
         description: formData.get("description") as string,
         coverUrl: coverUrl || undefined,
