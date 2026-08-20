@@ -399,7 +399,7 @@ export function PandaVideoSelector({ value, currentVideoUrl, onChange }: PandaVi
                   ) : isLoading ? (
                     <div className="space-y-5">
                       {!debouncedSearch && (
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-2">
                           {Array.from({ length: 3 }).map((_, index) => <div key={index} className="h-16 animate-pulse rounded-xl bg-background" />)}
                         </div>
                       )}
@@ -412,7 +412,7 @@ export function PandaVideoSelector({ value, currentVideoUrl, onChange }: PandaVi
                       {!debouncedSearch && folders.length > 0 && (
                         <section>
                           <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted">Pastas</h3>
-                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                          <div className="grid grid-cols-1 gap-2">
                             {folders.map((folder) => (
                               <button
                                 key={folder.id}
@@ -424,7 +424,7 @@ export function PandaVideoSelector({ value, currentVideoUrl, onChange }: PandaVi
                                   <Folder className="size-4.5 fill-current/20" />
                                 </span>
                                 <span className="min-w-0 flex-1">
-                                  <span className="block truncate text-sm font-semibold text-foreground">{folder.name}</span>
+                                  <span className="block break-words text-sm font-semibold leading-snug text-foreground">{folder.name}</span>
                                   <span className="mt-0.5 block text-[11px] text-muted">{folder.videosCount} vídeo(s)</span>
                                 </span>
                                 <ChevronRight className="size-4 shrink-0 text-muted group-hover:text-accent" />
