@@ -68,16 +68,16 @@ export function FileUpload({
     try {
       for (const file of validFiles) {
         const safeName = file.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
-        const storagePath = `lesson-materials/${crypto.randomUUID()}-${safeName}`;
+        const storagePath = `${crypto.randomUUID()}-${safeName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("public-assets")
+          .from("lesson-materials")
           .upload(storagePath, file, { contentType: file.type || undefined, upsert: false });
         
         if (uploadError) throw new Error(`Erro ao enviar "${file.name}": ${uploadError.message}`);
 
         const { data: publicUrlData } = supabase.storage
-          .from("public-assets")
+          .from("lesson-materials")
           .getPublicUrl(storagePath);
 
         newUploads.push({
@@ -105,10 +105,10 @@ export function FileUpload({
     onChange(newValue);
     
     // Melhor esforço para remover do storage
-    if (fileToRemove.url.includes("public-assets/lesson-materials")) {
-      const pathMatch = fileToRemove.url.match(/public-assets\/(lesson-materials\/.*)/);
+    if (fileToRemove.url.includes("lesson-materials/")) {
+      const pathMatch = fileToRemove.url.match(/lesson-materials\/(.*)/);
       if (pathMatch && pathMatch[1]) {
-        createClient().storage.from("public-assets").remove([pathMatch[1]]).catch(console.warn);
+        createClient().storage.from("lesson-materials").remove([pathMatch[1]]).catch(console.warn);
       }
     }
   };

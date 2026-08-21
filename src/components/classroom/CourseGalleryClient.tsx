@@ -191,6 +191,7 @@ export default function CourseGalleryClient({
               <Rise key={lesson.id} delay={Math.min(index, 8) * 40}>
                 <LessonThumbCard
                   lesson={lesson}
+                  size="lg"
                   className="w-full max-w-none"
                   eager={index < 5}
                   courseId={course.id}

@@ -131,8 +131,14 @@ export default function LessonThumbCard({
 
   const content = (
     <Reveal className="rounded-xl">
-      <Card className="lift gap-0 overflow-hidden p-0">
-        <div className="relative aspect-2/3 overflow-hidden bg-background-secondary">
+      {/*
+       * `variant="transparent"` tira o `bg-surface` que o Card aplica por
+       * padrão — sem ele, a legenda (que agora mora fora da imagem, não mais
+       * sobreposta) virava uma tarja branca colada embaixo de uma capa escura.
+       * A elevação/borda do "cartão" fica só na moldura da imagem.
+       */}
+      <Card variant="transparent" className="gap-0 p-0">
+        <div className="lift relative aspect-2/3 overflow-hidden rounded-xl border border-border bg-background-secondary shadow-elev-1">
           <Image
             src={imgSrc}
             alt={`Capa da aula ${lesson.title}`}
