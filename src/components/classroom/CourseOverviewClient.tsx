@@ -96,7 +96,7 @@ export default function CourseOverviewClient({
         duration: `${nextLesson.durationInMinutes} min`,
         type: "lesson",
       },
-      href: `/courses/${course.id}/lessons/${nextLesson.id}`,
+      href: `/courses/${course.slug || course.id}/lessons/${nextLesson.slug || nextLesson.id}`,
     });
   };
 
@@ -129,7 +129,7 @@ export default function CourseOverviewClient({
         duration: `${lesson.durationInMinutes} min`,
         type: "lesson",
       },
-      href: `/courses/${course.id}/lessons/${lesson.id}`,
+      href: `/courses/${course.slug || course.id}/lessons/${lesson.slug || lesson.id}`,
     });
   };
 
@@ -197,7 +197,7 @@ export default function CourseOverviewClient({
                 </Link>
                 {nextLesson && (
                   <Link
-                    href={`/courses/${course.id}/lessons/${nextLesson.id}`}
+                    href={`/courses/${course.slug || course.id}/lessons/${nextLesson.slug || nextLesson.id}`}
                     onClick={handleNextLessonClick}
                     className={buttonVariants({
                       variant: "outline",
@@ -213,7 +213,7 @@ export default function CourseOverviewClient({
             ) : nextLesson ? (
               <div className="mt-7 sm:mt-9">
                 <Link
-                  href={`/courses/${course.id}/lessons/${nextLesson.id}`}
+                  href={`/courses/${course.slug || course.id}/lessons/${nextLesson.slug || nextLesson.id}`}
                   onClick={handleNextLessonClick}
                   className={buttonVariants({
                     variant: "primary",
@@ -289,7 +289,7 @@ export default function CourseOverviewClient({
                     </Link>
                     {nextLesson && (
                       <Link
-                        href={`/courses/${course.id}/lessons/${nextLesson.id}`}
+                        href={`/courses/${course.slug || course.id}/lessons/${nextLesson.slug || nextLesson.id}`}
                         onClick={handleNextLessonClick}
                         className={buttonVariants({
                           variant: "outline",
@@ -304,7 +304,7 @@ export default function CourseOverviewClient({
                   </div>
                 ) : nextLesson ? (
                   <Link
-                    href={`/courses/${course.id}/lessons/${nextLesson.id}`}
+                    href={`/courses/${course.slug || course.id}/lessons/${nextLesson.slug || nextLesson.id}`}
                     onClick={handleNextLessonClick}
                     className={buttonVariants({ variant: "primary", fullWidth: true, className: "mt-5 sm:mt-7 gap-2" })}
                   >
@@ -367,7 +367,7 @@ export default function CourseOverviewClient({
                           {courseModule.lessons.map((lesson, lessonIndex) => (
                             <li key={lesson.id} className="border-b border-separator last:border-b-0">
                               <Link
-                                href={`/courses/${course.id}/lessons/${lesson.id}`}
+                                href={`/courses/${course.slug || course.id}/lessons/${lesson.slug || lesson.id}`}
                                 onClick={(e) => handleLessonRowClick(lesson, e)}
                                 className="group flex min-h-14 sm:min-h-18 items-center gap-3 sm:gap-4 px-3.5 py-3 sm:px-6 sm:py-4 transition-colors duration-[var(--duration-md)] hover:bg-accent-soft/40 active:bg-accent-soft/60"
                               >

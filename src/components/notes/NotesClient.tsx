@@ -714,39 +714,41 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                                   <Star className={`size-4 ${note.pinned ? "fill-warning" : ""}`} />
                                 </button>
 
-                                <button
-                                  type="button"
-                                  title="Copiar anotação"
-                                  onClick={(e) => handleCopyContent(note, e)}
-                                  className="grid size-9 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground cursor-pointer"
-                                >
-                                  {copiedId === note.id ? (
-                                    <Check className="size-4 text-success" />
-                                  ) : (
-                                    <Copy className="size-4" />
-                                  )}
-                                </button>
+                                <div className="hidden sm:flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                  <button
+                                    type="button"
+                                    title="Copiar anotação"
+                                    onClick={(e) => handleCopyContent(note, e)}
+                                    className="grid size-9 cursor-pointer place-items-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                                  >
+                                    {copiedId === note.id ? (
+                                      <Check className="size-4 text-success" />
+                                    ) : (
+                                      <Copy className="size-4" />
+                                    )}
+                                  </button>
 
-                                <button
-                                  type="button"
-                                  title="Editar anotação"
-                                  onClick={(e) => handleOpenEditModal(note, e)}
-                                  className="grid size-9 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground cursor-pointer"
-                                >
-                                  <Edit3 className="size-4" />
-                                </button>
+                                  <button
+                                    type="button"
+                                    title="Editar anotação"
+                                    onClick={(e) => handleOpenEditModal(note, e)}
+                                    className="grid size-9 cursor-pointer place-items-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                                  >
+                                    <Edit3 className="size-4" />
+                                  </button>
 
-                                <button
-                                  type="button"
-                                  title="Excluir anotação"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDeleteConfirmNote(note);
-                                  }}
-                                  className="grid size-9 place-items-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
-                                >
-                                  <Trash2 className="size-4" />
-                                </button>
+                                  <button
+                                    type="button"
+                                    title="Excluir anotação"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteConfirmNote(note);
+                                    }}
+                                    className="grid size-9 cursor-pointer place-items-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger"
+                                  >
+                                    <Trash2 className="size-4" />
+                                  </button>
+                                </div>
                               </div>
                             </div>
 
@@ -835,7 +837,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
       <Modal.Root isOpen={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <Modal.Backdrop>
           <Modal.Container size="md" scroll="inside">
-            <Modal.Dialog className="relative max-w-lg rounded-3xl border border-border bg-background p-6 sm:p-7 shadow-2xl overflow-hidden">
+            <Modal.Dialog className="relative max-w-lg w-full mt-auto sm:mt-0 rounded-none rounded-t-3xl sm:rounded-3xl border border-border bg-background p-6 sm:p-7 shadow-2xl overflow-hidden">
               {/* Botão Fechar no Canto Superior Direito (Padrão UX) */}
               <button
                 type="button"
@@ -945,7 +947,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
       <Modal.Root isOpen={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <Modal.Backdrop>
           <Modal.Container size="md" scroll="inside">
-            <Modal.Dialog className="relative max-w-lg rounded-3xl border border-border bg-background p-6 sm:p-7 shadow-2xl overflow-hidden">
+            <Modal.Dialog className="relative max-w-lg w-full mt-auto sm:mt-0 rounded-none rounded-t-3xl sm:rounded-3xl border border-border bg-background p-6 sm:p-7 shadow-2xl overflow-hidden">
               {/* Botão Fechar no Canto Superior Direito */}
               <button
                 type="button"
@@ -1049,7 +1051,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
       <Modal.Root isOpen={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
         <Modal.Backdrop>
           <Modal.Container size="lg" scroll="inside">
-            <Modal.Dialog className="relative max-w-2xl rounded-3xl border border-border bg-background p-6 sm:p-8 shadow-2xl overflow-hidden">
+            <Modal.Dialog className="relative max-w-2xl w-full mt-auto sm:mt-0 rounded-none rounded-t-3xl sm:rounded-3xl border border-border bg-background p-6 sm:p-8 shadow-2xl overflow-hidden">
               {/* Botão Fechar no Canto Superior Direito */}
               <button
                 type="button"
@@ -1134,6 +1136,19 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                         <Edit3 className="size-3.5" />
                         Editar
                       </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setIsViewModalOpen(false);
+                          setDeleteConfirmNote(viewingNote);
+                        }}
+                        className="gap-1.5 rounded-xl text-danger hover:bg-danger/10 cursor-pointer"
+                      >
+                        <Trash2 className="size-3.5" />
+                        <span className="hidden sm:inline">Excluir</span>
+                      </Button>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -1184,7 +1199,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
       <Modal.Root isOpen={!!deleteConfirmNote} onOpenChange={(open) => !open && setDeleteConfirmNote(null)}>
         <Modal.Backdrop>
           <Modal.Container size="sm">
-            <Modal.Dialog className="relative max-w-sm rounded-3xl border border-border bg-background p-6 shadow-2xl overflow-hidden">
+            <Modal.Dialog className="relative max-w-sm w-full mt-auto sm:mt-0 rounded-none rounded-t-3xl sm:rounded-3xl border border-border bg-background p-6 shadow-2xl overflow-hidden">
               {/* Botão Fechar no Canto Superior Direito */}
               <button
                 type="button"

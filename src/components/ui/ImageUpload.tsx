@@ -16,7 +16,7 @@ import {
 } from "@/lib/imageOptimization";
 
 /** Proporções suportadas pela moldura de preview. */
-export type ImageUploadAspect = "square" | "video" | "wide" | "free";
+export type ImageUploadAspect = "square" | "video" | "wide" | "portrait" | "free";
 
 export type ImageUploadProps = {
   /** URL atual da imagem (pode vir do storage ou ser um link externo já cadastrado). */
@@ -50,6 +50,7 @@ const ASPECT_CLASS: Record<ImageUploadAspect, string> = {
   square: "aspect-square max-w-44",
   video: "aspect-video",
   wide: "aspect-[1.91/1]",
+  portrait: "aspect-2/3 max-w-40",
   free: "min-h-40",
 };
 
@@ -58,6 +59,7 @@ const ASPECT_MAX_WIDTH: Record<ImageUploadAspect, number> = {
   square: 800,
   video: 1600,
   wide: 1600,
+  portrait: 900,
   free: 1600,
 };
 

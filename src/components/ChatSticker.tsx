@@ -6,6 +6,7 @@ import { AlertCircle, RefreshCw, Send, X } from "lucide-react";
 import { Button, Label, Popover, Separator, TextArea, TextField } from "@heroui/react";
 import { AgentMarkdown } from "@/components/agentes/AgentMarkdown";
 import { AssistantAvatar, colorWithAlpha, getContrastText } from "@/components/platform-assistant/AssistantAvatar";
+import { formatAiCredits } from "@/lib/aiCredits";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -348,7 +349,7 @@ export default function ChatSticker() {
               <div className="mt-3 text-center text-[11px] leading-4 text-muted">
                 {lastCharge && (
                   <p className="mb-1 font-semibold text-foreground">
-                    Última resposta: {lastCharge.charged} créditos · saldo {lastCharge.remaining}
+                    Última resposta: {formatAiCredits(lastCharge.charged)} créditos · saldo {formatAiCredits(lastCharge.remaining)}
                   </p>
                 )}
                 <p>A IA pode cometer erros. As conversas ficam armazenadas e podem ser revisadas pelo administrador.</p>

@@ -18,18 +18,18 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub', '33000000-0000-0000-0000-000000000001', true);
 
 select extensions.is(
-  (public.get_ai_credit_balance()->>'weekly_remaining')::integer,
-  100,
+  (public.get_ai_credit_balance()->>'weekly_remaining')::numeric,
+  100::numeric,
   'saldo semanal começa completo'
 );
 select extensions.is(
-  (public.get_ai_credit_balance()->>'monthly_remaining')::integer,
-  400,
+  (public.get_ai_credit_balance()->>'monthly_remaining')::numeric,
+  400::numeric,
   'saldo mensal começa completo'
 );
 select extensions.is(
-  (public.get_ai_credit_balance()->>'daily_remaining')::integer,
-  25,
+  (public.get_ai_credit_balance()->>'daily_remaining')::numeric,
+  25::numeric,
   'saldo diário começa completo'
 );
 select extensions.throws_ok(
@@ -51,13 +51,13 @@ select extensions.throws_ok(
 
 select set_config('request.jwt.claim.sub', '33000000-0000-0000-0000-000000000003', true);
 select extensions.is(
-  (public.add_ai_credits('33000000-0000-0000-0000-000000000002', 25)->>'additional_credits')::integer,
-  25,
+  (public.add_ai_credits('33000000-0000-0000-0000-000000000002', 25)->>'additional_credits')::numeric,
+  25::numeric,
   'admin adiciona créditos a um usuário específico'
 );
 select extensions.is(
-  (public.get_ai_credit_balance('33000000-0000-0000-0000-000000000002')->>'available_credits')::integer,
-  25,
+  (public.get_ai_credit_balance('33000000-0000-0000-0000-000000000002')->>'available_credits')::numeric,
+  25::numeric,
   'créditos extras não burlam o limite diário'
 );
 

@@ -11,12 +11,12 @@ import { getLessonComments } from "@/lib/data/comments";
 export default async function AulaPage({
   params,
 }: {
-  params: Promise<{ id: string; lessonId: string }>;
+  params: Promise<{ slug: string; lessonSlug: string }>;
 }) {
-  const { id, lessonId } = await params;
+  const { slug, lessonSlug } = await params;
   const { supabase, user } = await getSessionUser();
 
-  const result = await getLessonWithCourse(supabase, id, lessonId, user?.id);
+  const result = await getLessonWithCourse(supabase, slug, lessonSlug, user?.id);
 
   if (!result || result.course.status === "Arquivado") {
     return (
@@ -27,7 +27,7 @@ export default async function AulaPage({
           <p className="lede mx-auto mt-3">
             Esta etapa pode ter sido removida do curso ou o endereço está incorreto.
           </p>
-          <Link href={`/courses/${id}`} className={buttonVariants({ variant: "primary", className: "mt-8" })}>
+          <Link href={`/courses/${slug}`} className={buttonVariants({ variant: "primary", className: "mt-8" })}>
             Voltar ao curso
           </Link>
         </EmptyState>
@@ -68,7 +68,7 @@ export default async function AulaPage({
     <LessonClientWrapper
       lesson={lesson}
       course={course}
-      courseId={course.id}
+      courseId={course.slug || course.id}
       profileTests={profileTests}
       initialNote={note}
       quiz={quiz}

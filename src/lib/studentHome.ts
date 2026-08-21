@@ -524,7 +524,7 @@ export function deriveImplicitSignals(trail: LearningTrail): ImplicitSignals {
 
 /** Mesmo destino usado por /minha-trilha — um lugar só decide para onde um item leva. */
 export function contentHref(item: LearningTrailItem): string {
-  if (item.type === 'lesson') return `/courses/${item.courseId || 'c1'}/lessons/${item.id}`;
+  if (item.type === 'lesson') return `/courses/${item.courseId || 'c1'}/lessons/${item.slug || item.id}`;
   if (item.type === 'article') return item.slug ? `/blog/${item.slug}` : '/blog';
   return item.url || '#';
 }

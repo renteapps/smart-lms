@@ -256,8 +256,8 @@ export function SearchPageView() {
       {/* Conteúdo e Resultados */}
       <section className="editorial-container py-8 sm:py-10">
         {/* Abas de Tipos de Conteúdo */}
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-hairline pb-4">
-          <div className="flex flex-wrap items-center gap-1.5">
+        <div className="mb-6 flex flex-col items-start justify-between gap-4 border-b border-hairline pb-4 md:flex-row md:items-center">
+          <div className="flex w-full items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 md:w-auto md:flex-wrap md:pb-0">
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const count = results.countsByType[tab.id];

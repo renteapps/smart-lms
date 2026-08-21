@@ -18,6 +18,8 @@ export default async function AdminCursoDashboard({ params }: { params: Promise<
     notFound();
   }
 
+  const isGallery = course.layout === "gallery";
+
   const cards = [
     {
       title: "Editar Curso",
@@ -26,13 +28,21 @@ export default async function AdminCursoDashboard({ params }: { params: Promise<
       href: `/admin/cursos/${id}/editar`,
       tone: "bg-accent-soft text-accent-soft-foreground",
     },
-    {
-      title: "Módulos",
-      description: "Adicione ou edite aulas e módulos",
-      icon: List,
-      href: `/admin/cursos/${id}/modulos`,
-      tone: "bg-success-soft text-success-soft-foreground",
-    },
+    isGallery
+      ? {
+          title: "Aulas",
+          description: "Adicione, edite e reordene as aulas da galeria",
+          icon: List,
+          href: `/admin/cursos/${id}/aulas-galeria`,
+          tone: "bg-success-soft text-success-soft-foreground",
+        }
+      : {
+          title: "Módulos",
+          description: "Adicione ou edite aulas e módulos",
+          icon: List,
+          href: `/admin/cursos/${id}/modulos`,
+          tone: "bg-success-soft text-success-soft-foreground",
+        },
     {
       title: "Configurações",
       description: "Ajustes gerais de exibição do curso",
@@ -99,7 +109,7 @@ export default async function AdminCursoDashboard({ params }: { params: Promise<
         </div>
         <div className="flex shrink-0 gap-2 sm:self-center">
           <Link
-            href={`/courses/${course.id}`}
+            href={`/courses/${course.slug || course.id}`}
             target="_blank"
             className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
           >

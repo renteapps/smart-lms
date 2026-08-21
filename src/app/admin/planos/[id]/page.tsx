@@ -742,7 +742,7 @@ export default function EditPlanPage() {
                           ] as const).map(([field, label]) => (
                             <TextField key={field} value={formData[field].toString()} onChange={(value) => setFormData((prev) => ({ ...prev, [field]: value }))}>
                               <Label className="text-xs font-semibold">{label}</Label>
-                              <Input type="number" min="1" step="1" />
+                              <Input type="number" min="0" step="0.0001" />
                             </TextField>
                           ))}
                         </div>

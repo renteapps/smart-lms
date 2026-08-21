@@ -63,9 +63,16 @@ export default async function PerfilPage() {
           <LearningStats />
         </section>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
+        {/* No mobile, o resumo (foto, nome) aparece no topo. A edição de dados logo abaixo. Os cards secundários (créditos, etapa) ficam pro final. */}
+        <div className="mb-6 block lg:hidden">
+          <ProfileSummary />
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse gap-6 lg:mt-12 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
           <aside className="space-y-5 lg:sticky lg:top-[100px]" aria-label="Resumo do perfil">
-            <ProfileSummary />
+            <div className="hidden lg:block">
+              <ProfileSummary />
+            </div>
 
             <AiCreditsCard balance={aiCreditBalance} />
 

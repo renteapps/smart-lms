@@ -32,6 +32,7 @@ function courseFixture(): Course {
     category: "Gestão",
     level: "Essencial",
     isPublished: true,
+    layout: "modules",
     modules: [
       {
         id: "module-a",

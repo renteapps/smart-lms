@@ -58,6 +58,12 @@ export type Lesson = {
   lastWatchedSecond?: number;
   slug?: string;
   shortDescription?: string;
+  /**
+   * Thumb vertical (2:3) da aula. É a capa que a galeria do curso destaque e o
+   * carrossel da home mostram; nos cursos com módulos ela é opcional e a aula
+   * herda a capa do curso.
+   */
+  coverUrl?: string;
   quizId?: string;
   profileTestId?: string;
   profileTestConfig?: {
@@ -87,6 +93,19 @@ export type Module = {
 
 export type CourseStatus = 'Publicado' | 'Rascunho' | 'Arquivado';
 
+/**
+ * Como o curso se organiza — e, por consequência, como ele é editado e exibido.
+ *
+ * `modules`: o curso comum, uma sequência de módulos com aulas dentro.
+ * `gallery`: o curso destaque, uma coleção de aulas avulsas (masterclasses)
+ * exibida como galeria de thumbs verticais, sem módulos.
+ *
+ * Escolhido na criação e imutável: converter um curso reorganizaria conteúdo já
+ * publicado por cima do progresso dos alunos. O banco recusa a troca — ver
+ * `supabase/migrations/20260821090000_gallery_courses.sql`.
+ */
+export type CourseLayout = 'modules' | 'gallery';
+
 export type Course = {
   id: string;
   slug: string;
@@ -101,6 +120,7 @@ export type Course = {
   tags?: string[];
   isPublished: boolean;
   status?: CourseStatus;
+  layout: CourseLayout;
   isFeatured?: boolean;
   instructorNames?: string[];
   coordinatorName?: string;
@@ -118,6 +138,8 @@ export type Course = {
   accessExpirationDays?: number | null;
   /** Máximo de matriculados. Vazio/nulo = ilimitado. */
   maxStudents?: number | null;
+  /** Só em curso galeria: publica as 8 aulas mais recentes num carrossel na home. */
+  homeCarousel?: boolean;
   /** Link de checkout ou venda principal com suporte a tags dinâmicas. */
   salesUrl?: string | null;
   /** URL da landing page descritiva do curso. */
@@ -140,6 +162,8 @@ export type CourseOutlineLesson = Pick<
   | 'userRating'
   | 'lastWatchedSecond'
   | 'slug'
+  | 'shortDescription'
+  | 'coverUrl'
 >;
 
 export type CourseOutlineModule = Omit<Module, 'lessons'> & {
@@ -198,4 +222,24 @@ export type ContinueLesson = {
   duration: string;
   cover: string;
   progress: number;
+};
+
+/** Aula como ela aparece na galeria e no carrossel: só a thumb e o essencial. */
+export type GalleryLesson = {
+  id: string;
+  title: string;
+  /** Thumb vertical já resolvida — cai na capa do curso quando a aula não tem uma. */
+  cover: string;
+  durationInMinutes: number;
+  shortDescription?: string;
+  isCompleted?: boolean;
+  href: string;
+};
+
+/** Uma faixa do carrossel da home: um curso galeria e suas 8 aulas mais recentes. */
+export type HomeCarouselRow = {
+  courseId: string;
+  courseTitle: string;
+  courseHref: string;
+  lessons: GalleryLesson[];
 };

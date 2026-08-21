@@ -33,11 +33,13 @@ import DayCompleteHero from "@/components/home/DayCompleteHero";
 import DiscoverySection from "@/components/home/DiscoverySection";
 import HomeEmptyState from "@/components/home/HomeEmptyState";
 import HomeNoCourses from "@/components/home/HomeNoCourses";
+import MasterclassCarousel from "@/components/home/MasterclassCarousel";
 import NextStepHero from "@/components/home/NextStepHero";
 import SessionRest from "@/components/home/SessionRest";
 import StudyLedger from "@/components/home/StudyLedger";
 import { Rise } from "@/components/ui/Rise";
 import { HomeBlogSection } from "@/components/blog/HomeBlogSection";
+import type { HomeCarouselRow } from "@/types/course";
 
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   weekday: "long",
@@ -100,7 +102,15 @@ function HomeSkeleton() {
  * com uma normalização própria — era por isso que o "continuar aprendendo" do
  * topo e o "comece por aqui" do meio apontavam para aulas diferentes.
  */
-export default function StudentHomeClient({ courses, articles = [] }: { courses: CatalogCourse[], articles?: Article[] }) {
+export default function StudentHomeClient({
+  courses,
+  articles = [],
+  masterclassRows = [],
+}: {
+  courses: CatalogCourse[];
+  articles?: Article[];
+  masterclassRows?: HomeCarouselRow[];
+}) {
   const { hydrated, trail, error, migrated } = useTrailStore();
   /*
    * O questionário vem do banco, e só dele.
@@ -424,6 +434,8 @@ export default function StudentHomeClient({ courses, articles = [] }: { courses:
       )}
 
       {stats && <StudyLedger stats={stats} />}
+
+      <MasterclassCarousel rows={masterclassRows} />
 
       <HomeBlogSection articles={discoverableArticles} />
 

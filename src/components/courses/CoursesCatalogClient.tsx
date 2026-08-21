@@ -84,10 +84,11 @@ export default function CoursesCatalogClient({ courses, trail, questionnaire }: 
             </SearchField.Group>
           </SearchField>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <SlidersHorizontal className="mr-1 size-4 shrink-0 text-muted" aria-hidden="true" />
-            <ToggleButtonGroup
-              aria-label="Filtrar por categoria"
+          <div className="flex items-center gap-2 overflow-hidden">
+            <SlidersHorizontal className="mr-1 size-4 shrink-0 text-muted hidden sm:block" aria-hidden="true" />
+            <div className="flex-1 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+              <ToggleButtonGroup
+                aria-label="Filtrar por categoria"
               selectionMode="single"
               disallowEmptySelection
               isDetached
@@ -96,6 +97,7 @@ export default function CoursesCatalogClient({ courses, trail, questionnaire }: 
                 const [next] = Array.from(keys);
                 if (next !== undefined) setCategory(String(next));
               }}
+              className="flex w-max flex-nowrap"
             >
               {categories.map((item) => (
                 <ToggleButton key={item} id={item} className="shrink-0">
@@ -103,6 +105,7 @@ export default function CoursesCatalogClient({ courses, trail, questionnaire }: 
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
+            </div>
           </div>
         </div>
 
@@ -159,7 +162,7 @@ export default function CoursesCatalogClient({ courses, trail, questionnaire }: 
             ))}
           </div>
         ) : (
-          <EmptyState className="gap-5 py-24">
+          <EmptyState className="gap-5 py-16 px-4 sm:py-24 sm:px-0">
             <span className="icon-draw grid size-14 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground">
               <CourseIcon size={28} />
             </span>

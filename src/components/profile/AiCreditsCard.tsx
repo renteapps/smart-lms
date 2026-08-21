@@ -4,6 +4,7 @@ import { CalendarClock, Sparkles } from "lucide-react";
 import { Card, ProgressBar } from "@heroui/react";
 import {
   formatAiCreditRenewal,
+  formatAiCredits,
   type AiCreditBalance,
 } from "@/lib/aiCredits";
 
@@ -34,7 +35,7 @@ export function AiCreditsCard({ balance }: AiCreditsCardProps) {
                 <p className="font-bold text-foreground">Créditos de IA</p>
                 <p className="text-xs text-muted">
                   {balance
-                    ? `${balance.availableCredits} disponíveis`
+                    ? `${formatAiCredits(balance.availableCredits)} disponíveis`
                     : "Saldo indisponível"}
                 </p>
               </div>
@@ -50,7 +51,7 @@ export function AiCreditsCard({ balance }: AiCreditsCardProps) {
             >
               <div className="mb-1.5 flex items-end justify-between gap-3 text-xs">
                 <span className="font-semibold text-muted">Hoje</span>
-                <span className="font-bold text-foreground" data-numeric>{dailyRemaining} de {dailyLimit}</span>
+                <span className="font-bold text-foreground" data-numeric>{formatAiCredits(dailyRemaining)} de {formatAiCredits(dailyLimit)}</span>
               </div>
               <ProgressBar.Track><ProgressBar.Fill /></ProgressBar.Track>
             </ProgressBar>
@@ -64,7 +65,7 @@ export function AiCreditsCard({ balance }: AiCreditsCardProps) {
               <div className="mb-1.5 flex items-end justify-between gap-3 text-xs">
                 <span className="font-semibold text-muted">Nesta semana</span>
                 <span className="font-bold text-foreground" data-numeric>
-                  {weeklyRemaining} de {weeklyLimit}
+                  {formatAiCredits(weeklyRemaining)} de {formatAiCredits(weeklyLimit)}
                 </span>
               </div>
               <ProgressBar.Track>
@@ -81,7 +82,7 @@ export function AiCreditsCard({ balance }: AiCreditsCardProps) {
               <div className="mb-1.5 flex items-end justify-between gap-3 text-xs">
                 <span className="font-semibold text-muted">Neste mês</span>
                 <span className="font-bold text-foreground" data-numeric>
-                  {monthlyRemaining} de {monthlyLimit}
+                  {formatAiCredits(monthlyRemaining)} de {formatAiCredits(monthlyLimit)}
                 </span>
               </div>
               <ProgressBar.Track>
@@ -111,7 +112,7 @@ export function AiCreditsCard({ balance }: AiCreditsCardProps) {
               {balance.additionalCredits > 0 && (
                 <p className="border-t border-separator pt-2 text-muted">
                   <strong className="font-semibold text-foreground" data-numeric>
-                    +{balance.additionalCredits} extras
+                    +{formatAiCredits(balance.additionalCredits)} extras
                   </strong>{" "}
                   sem vencimento, já incluídos no saldo disponível.
                 </p>

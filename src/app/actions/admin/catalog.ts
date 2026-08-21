@@ -29,7 +29,9 @@ export type CourseInput = Partial<
     | "tags"
     | "status"
     | "isPublished"
+    | "layout"
     | "isFeatured"
+    | "homeCarousel"
     | "instructorNames"
     | "coordinatorName"
     | "enableCertificates"
@@ -72,6 +74,9 @@ function courseToRow(input: CourseInput): Record<string, unknown> {
     row.status = input.isPublished ? "Publicado" : "Rascunho";
   }
   set("is_featured", input.isFeatured);
+  // `layout` só entra na criação — a migration trava a coluna contra update.
+  if (input.layout !== undefined) row.layout = input.layout;
+  set("home_carousel", input.homeCarousel);
   set("enable_certificates", input.enableCertificates);
   set("drip_content", input.dripContent);
   set("enable_comments", input.enableComments);
@@ -224,7 +229,7 @@ export async function reorderModules(courseId: string, orderedIds: string[]): Pr
 
     revalidatePath(`/admin/cursos/${courseId}/modulos`);
     revalidatePath(`/admin/cursos/${courseId}`);
-    revalidatePath("/courses/[id]", "page");
+    revalidatePath("/courses/[slug]", "page");
     return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };
@@ -259,6 +264,7 @@ export async function saveLesson(
     set("order_index", input.order);
     set("is_published", input.isPublished);
     set("slug", input.slug);
+    if (input.coverUrl !== undefined) row.cover_url = input.coverUrl || null;
     set("short_description", input.shortDescription);
     if (input.quizId !== undefined) row.quiz_id = input.quizId || null;
     if (input.profileTestId !== undefined) row.profile_test_ref = input.profileTestId || null;
@@ -339,7 +345,7 @@ export async function reorderLessons(
 
     revalidatePath(`/admin/cursos/${courseId}/modulos`);
     revalidatePath(`/admin/cursos/${courseId}`);
-    revalidatePath("/courses/[id]", "page");
+    revalidatePath("/courses/[slug]", "page");
     return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };

@@ -19,8 +19,8 @@ import { cn } from "@/lib/utils";
  */
 export default function CourseSidebar({ course }: { course: CourseOutline }) {
   const params = useParams();
-  const courseId = params.id as string;
-  const currentLessonId = params.lessonId as string;
+  const courseUrlId = course.slug || course.id;
+  const currentLessonUrlId = (params.lessonSlug || params.lessonId) as string;
   const { isZenMode } = useZenMode();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>(() => Object.fromEntries(course.modules.map((courseModule) => [courseModule.id, true])));
@@ -36,11 +36,52 @@ export default function CourseSidebar({ course }: { course: CourseOutline }) {
     return <PlayCircle className="size-4 text-muted" aria-hidden="true" />;
   };
 
+  const renderLessonList = (lessons: CourseOutlineLesson[], className?: string) => (
+    <ul className={className}>
+      {lessons.map((lesson) => {
+        const isActive = lesson.id === currentLessonUrlId || lesson.slug === currentLessonUrlId;
+        return (
+          <li key={lesson.id}>
+            <Link
+              href={`/courses/${courseUrlId}/lessons/${lesson.slug || lesson.id}`}
+              onClick={() => setMobileOpen(false)}
+              aria-current={isActive ? "page" : undefined}
+              className={cn(
+                "relative flex min-h-14 items-start gap-3 rounded-lg px-3 py-3 transition-colors duration-[var(--duration-md)]",
+                isActive
+                  ? "bg-accent-soft text-accent-soft-foreground"
+                  : "text-foreground hover:bg-surface-secondary",
+              )}
+            >
+              {isActive && (
+                <span aria-hidden="true" className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-accent" />
+              )}
+              <span className="mt-0.5 shrink-0">{lessonIcon(lesson)}</span>
+              <span className="min-w-0 flex-1">
+                <span className={cn("block text-sm leading-5", isActive ? "font-bold" : "font-semibold")}>
+                  {lesson.title}
+                </span>
+                <span className="mt-1 block text-xs font-medium text-muted" data-numeric>
+                  {lesson.durationInMinutes} min
+                </span>
+              </span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
+  // Curso galeria não tem módulos — o único que existe é infraestrutura (ver a
+  // migration `gallery_courses`) e não deve aparecer como se fosse conteúdo.
+  const isGallery = course.layout === "gallery";
+  const allLessonsFlat = course.modules.flatMap((mod) => mod.lessons);
+
   const sidebarContent = (
     <>
       <div className="border-b border-separator px-5 py-5">
         <Link
-          href={`/courses/${courseId}`}
+          href={`/courses/${courseUrlId}`}
           onClick={() => setMobileOpen(false)}
           className={buttonVariants({ variant: "ghost", size: "sm", className: "-ml-2 gap-2" })}
         >
@@ -67,60 +108,30 @@ export default function CourseSidebar({ course }: { course: CourseOutline }) {
       </div>
 
       <nav className="flex-1 overflow-y-auto py-1" aria-label="Conteúdo do curso">
-        {course.modules.map((courseModule) => (
-          <Disclosure
-            key={courseModule.id}
-            isExpanded={expandedModules[courseModule.id]}
-            onExpandedChange={() => setExpandedModules((current) => ({ ...current, [courseModule.id]: !current[courseModule.id] }))}
-            className="border-b border-separator last:border-0"
-          >
-            <Disclosure.Heading level={3}>
-              <Disclosure.Trigger className="flex min-h-18 w-full items-center gap-3 px-5 py-4 text-left transition-colors duration-[var(--duration-md)] hover:bg-surface-secondary">
-                <span className="min-w-0 flex-1">
-                  <span className="eyebrow block text-accent">Módulo {courseModule.order}</span>
-                  <span className="mt-1 block text-sm font-bold text-foreground">{courseModule.title}</span>
-                </span>
-                <Disclosure.Indicator className="text-muted" />
-              </Disclosure.Trigger>
-            </Disclosure.Heading>
+        {isGallery
+          ? renderLessonList(allLessonsFlat, "flex flex-col gap-0.5 px-3 py-2")
+          : course.modules.map((courseModule) => (
+              <Disclosure
+                key={courseModule.id}
+                isExpanded={expandedModules[courseModule.id]}
+                onExpandedChange={() => setExpandedModules((current) => ({ ...current, [courseModule.id]: !current[courseModule.id] }))}
+                className="border-b border-separator last:border-0"
+              >
+                <Disclosure.Heading level={3}>
+                  <Disclosure.Trigger className="flex min-h-18 w-full items-center gap-3 px-5 py-4 text-left transition-colors duration-[var(--duration-md)] hover:bg-surface-secondary">
+                    <span className="min-w-0 flex-1">
+                      <span className="eyebrow block text-accent">Módulo {courseModule.order}</span>
+                      <span className="mt-1 block text-sm font-bold text-foreground">{courseModule.title}</span>
+                    </span>
+                    <Disclosure.Indicator className="text-muted" />
+                  </Disclosure.Trigger>
+                </Disclosure.Heading>
 
-            <Disclosure.Content>
-              <ul className="flex flex-col gap-0.5 px-2 pb-3">
-                {courseModule.lessons.map((lesson) => {
-                  const isActive = lesson.id === currentLessonId;
-                  return (
-                    <li key={lesson.id}>
-                      <Link
-                        href={`/courses/${courseId}/lessons/${lesson.id}`}
-                        onClick={() => setMobileOpen(false)}
-                        aria-current={isActive ? "page" : undefined}
-                        className={cn(
-                          "relative flex min-h-14 items-start gap-3 rounded-lg px-3 py-3 transition-colors duration-[var(--duration-md)]",
-                          isActive
-                            ? "bg-accent-soft text-accent-soft-foreground"
-                            : "text-foreground hover:bg-surface-secondary",
-                        )}
-                      >
-                        {isActive && (
-                          <span aria-hidden="true" className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-accent" />
-                        )}
-                        <span className="mt-0.5 shrink-0">{lessonIcon(lesson)}</span>
-                        <span className="min-w-0 flex-1">
-                          <span className={cn("block text-sm leading-5", isActive ? "font-bold" : "font-semibold")}>
-                            {lesson.title}
-                          </span>
-                          <span className="mt-1 block text-xs font-medium text-muted" data-numeric>
-                            {lesson.durationInMinutes} min
-                          </span>
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Disclosure.Content>
-          </Disclosure>
-        ))}
+                <Disclosure.Content>
+                  {renderLessonList(courseModule.lessons, "flex flex-col gap-0.5 px-2 pb-3")}
+                </Disclosure.Content>
+              </Disclosure>
+            ))}
       </nav>
     </>
   );

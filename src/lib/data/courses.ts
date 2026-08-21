@@ -2,8 +2,11 @@ import type {
   CatalogCourse,
   ContinueLesson,
   Course,
+  CourseLayout,
   CourseOutline,
   CourseOutlineModule,
+  GalleryLesson,
+  HomeCarouselRow,
   Lesson,
   LessonContentBlock,
   Module,
@@ -44,6 +47,7 @@ export function mapLesson(row: Row, progress?: Row | null): Lesson {
     userRating: progress?.user_rating ?? undefined,
     lastWatchedSecond: progress?.last_watched_second ?? 0,
     slug: row.slug ?? undefined,
+    coverUrl: row.cover_url ?? undefined,
     transcription: row.transcription ?? undefined,
     shortDescription: row.short_description ?? undefined,
     quizId: row.quiz_id ?? undefined,
@@ -74,6 +78,7 @@ export function mapCourse(row: Row, modules: Module[] = []): Course {
     tags: row.tags ?? [],
     isPublished: row.is_published ?? true,
     status: row.status ?? (row.is_published ? "Publicado" : "Rascunho"),
+    layout: (row.layout ?? "modules") as CourseLayout,
     isFeatured: row.is_featured ?? false,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -84,6 +89,7 @@ export function mapCourse(row: Row, modules: Module[] = []): Course {
     requireSequentialProgress: row.require_sequential_progress ?? true,
     accessExpirationDays: row.access_expiration_days ?? null,
     maxStudents: row.max_students ?? null,
+    homeCarousel: row.home_carousel ?? false,
     salesUrl: row.sales_url ?? null,
     salesPageUrl: row.sales_page_url ?? null,
     salesConfig: row.sales_config ?? null,
@@ -351,14 +357,15 @@ export async function getCourseCategories(db: DB): Promise<string[]> {
 
 const COURSE_TREE_SELECT = `
   id, slug, title, description, short_description, category, cover_url, duration,
-  level, price, tags, status, is_published, is_featured, created_at, updated_at,
+  level, price, tags, status, layout, home_carousel, is_published, is_featured,
+  created_at, updated_at,
   enable_certificates, drip_content, enable_comments, require_sequential_progress,
   access_expiration_days, max_students, sales_url, sales_page_url, sales_config,
   modules (
     id, course_id, title, slug, description, cover_url, order_index,
     lessons (
       id, module_id, title, type, video_url, pandavideo_id, content, blocks, duration_in_minutes,
-      order_index, is_published, slug, transcription, short_description, quiz_id,
+      order_index, is_published, slug, cover_url, transcription, short_description, quiz_id,
       profile_test_id, profile_test_ref, profile_test_config, topics, solves,
       level, objective, audience, prerequisites, is_eligible_for_trail,
       attachments ( id, name, url )
@@ -368,20 +375,21 @@ const COURSE_TREE_SELECT = `
 
 const COURSE_OUTLINE_SELECT = `
   id, slug, title, description, short_description, category, cover_url, duration,
-  level, price, tags, status, is_published, is_featured, created_at, updated_at,
+  level, price, tags, status, layout, home_carousel, is_published, is_featured,
+  created_at, updated_at,
   enable_certificates, sales_url, sales_page_url, sales_config,
   modules (
     id, course_id, title, slug, description, cover_url, order_index,
     lessons (
       id, module_id, title, type, duration_in_minutes, order_index,
-      is_published, slug, quiz_id
+      is_published, slug, cover_url, short_description, quiz_id
     )
   )
 `;
 
 const LESSON_DETAIL_SELECT = `
   id, module_id, title, type, video_url, pandavideo_id, content, blocks,
-  duration_in_minutes, order_index, is_published, slug, transcription,
+  duration_in_minutes, order_index, is_published, slug, cover_url, transcription,
   short_description, quiz_id, profile_test_id, profile_test_ref, profile_test_config,
   topics, solves, level, objective, audience, prerequisites,
   is_eligible_for_trail, attachments ( id, name, url )
@@ -437,6 +445,8 @@ function assembleCourseOutline(row: Row, progressByLesson: Map<string, Row>): Co
             userRating: progress?.user_rating ?? undefined,
             lastWatchedSecond: progress?.last_watched_second ?? 0,
             slug: lesson.slug ?? undefined,
+            shortDescription: lesson.short_description ?? undefined,
+            coverUrl: lesson.cover_url ?? undefined,
           };
         }),
     }));
@@ -524,21 +534,22 @@ export async function getLessonProgressMap(
 export async function getLessonWithCourse(
   db: DB,
   courseIdOrSlug: string,
-  lessonId: string,
+  lessonIdOrSlug: string,
   userId?: string | null,
 ): Promise<{ course: CourseOutline; lesson: Lesson } | null> {
+  const lessonColumn = isUuid(lessonIdOrSlug) ? "id" : "slug";
   const [course, lessonResult] = await Promise.all([
     getCourseOutline(db, courseIdOrSlug, userId),
-    db.from("lessons").select(LESSON_DETAIL_SELECT).eq("id", lessonId).maybeSingle(),
+    db.from("lessons").select(LESSON_DETAIL_SELECT).eq(lessonColumn, lessonIdOrSlug).maybeSingle(),
   ]);
   if (!course) return null;
 
   logQueryError("getLessonWithCourse:lesson", lessonResult.error);
   if (lessonResult.error) {
-    throw new Error(`Não foi possível carregar a aula ${lessonId}: ${lessonResult.error.message}`);
+    throw new Error(`Não foi possível carregar a aula ${lessonIdOrSlug}: ${lessonResult.error.message}`);
   }
 
-  const outlineLesson = course.modules.flatMap((mod) => mod.lessons).find((item) => item.id === lessonId);
+  const outlineLesson = course.modules.flatMap((mod) => mod.lessons).find((item) => item.id === lessonIdOrSlug || item.slug === lessonIdOrSlug);
   if (!outlineLesson || !lessonResult.data) return null;
 
   const lesson = mapLesson(lessonResult.data, {
@@ -576,6 +587,108 @@ export async function listCoursesShallow(db: DB, includeUnpublished = false): Pr
     lessonCount: 0,
     level: row.level ?? "Essencial",
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Curso galeria
+// ---------------------------------------------------------------------------
+
+/** Quantas aulas o carrossel da home publica por curso. */
+export const HOME_CAROUSEL_SIZE = 8;
+
+function lessonHref(courseUrlId: string, lesson: Row): string {
+  return `/courses/${courseUrlId}/lessons/${lesson.slug || lesson.id}`;
+}
+
+/**
+ * As aulas de um curso galeria, na ordem em que o admin as arrastou.
+ *
+ * O módulo único do curso galeria é infraestrutura (ver a migration
+ * `20260821090000_gallery_courses`): aqui ele some e sobra a coleção de aulas,
+ * que é o que a tela mostra.
+ */
+export function toGalleryLessons(course: CourseOutline): GalleryLesson[] {
+  const courseUrlId = course.slug || course.id;
+  const fallbackCover = course.coverUrl || FALLBACK_COVER;
+
+  return course.modules
+    .flatMap((mod) => mod.lessons)
+    .filter((lesson) => lesson.isPublished !== false)
+    .slice()
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((lesson) => ({
+      id: lesson.id,
+      title: lesson.title,
+      cover: lesson.coverUrl?.trim() || fallbackCover,
+      durationInMinutes: lesson.durationInMinutes,
+      shortDescription: lesson.shortDescription,
+      isCompleted: lesson.isCompleted,
+      href: lessonHref(courseUrlId, lesson),
+    }));
+}
+
+/**
+ * As faixas do carrossel da home — um curso galeria marcado, uma faixa.
+ *
+ * Diferente da galeria do curso, aqui a ordem é cronológica: a promessa da
+ * faixa é "o que entrou por último", então quem manda é `created_at` da aula, e
+ * não a ordem editorial da coleção.
+ */
+export async function getHomeCarouselRows(db: DB, userId?: string | null): Promise<HomeCarouselRow[]> {
+  const { data, error } = await db
+    .from("courses")
+    .select(
+      "id, slug, title, cover_url, order_index, modules(lessons(id, slug, title, cover_url, short_description, duration_in_minutes, is_published, created_at))",
+    )
+    .eq("layout", "gallery")
+    .eq("home_carousel", true)
+    .eq("is_published", true)
+    .neq("status", "Arquivado")
+    .order("order_index", { ascending: true });
+
+  logQueryError("getHomeCarouselRows", error);
+  if (!data) return [];
+
+  const rows = data
+    .map((row: Row) => ({
+      row,
+      lessons: (row.modules ?? [])
+        .flatMap((mod: Row) => mod.lessons ?? [])
+        .filter((lesson: Row) => lesson.is_published !== false)
+        .sort((a: Row, b: Row) => Date.parse(b.created_at) - Date.parse(a.created_at))
+        .slice(0, HOME_CAROUSEL_SIZE),
+    }))
+    .filter((entry) => entry.lessons.length > 0);
+
+  if (rows.length === 0) return [];
+
+  const progressByLesson = userId
+    ? await getLessonProgressMap(
+        db,
+        userId,
+        rows.flatMap((entry) => entry.lessons.map((lesson: Row) => lesson.id)),
+      )
+    : new Map<string, Row>();
+
+  return rows.map(({ row, lessons }) => {
+    const courseUrlId = row.slug || row.id;
+    const fallbackCover = row.cover_url || FALLBACK_COVER;
+
+    return {
+      courseId: row.id,
+      courseTitle: row.title,
+      courseHref: `/courses/${courseUrlId}`,
+      lessons: lessons.map((lesson: Row) => ({
+        id: lesson.id,
+        title: lesson.title,
+        cover: (lesson.cover_url ?? "").trim() || fallbackCover,
+        durationInMinutes: lesson.duration_in_minutes ?? 0,
+        shortDescription: lesson.short_description ?? undefined,
+        isCompleted: progressByLesson.get(lesson.id)?.is_completed ?? false,
+        href: lessonHref(courseUrlId, lesson),
+      })),
+    } satisfies HomeCarouselRow;
+  });
 }
 
 // ---------------------------------------------------------------------------

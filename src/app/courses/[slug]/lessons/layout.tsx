@@ -18,11 +18,11 @@ export default async function CourseLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { id } = await params;
+  const { slug } = await params;
   const { supabase, user } = await getSessionUser();
-  const course = await getCourseOutline(supabase, id, user?.id);
+  const course = await getCourseOutline(supabase, slug, user?.id);
 
   return (
     <ZenModeProvider>

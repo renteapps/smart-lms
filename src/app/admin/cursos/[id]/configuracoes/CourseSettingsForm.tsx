@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Shield, Award, MessageSquare, Clock } from "lucide-react";
+import { ArrowLeft, Save, Shield, Award, MessageSquare, Clock, GalleryHorizontalEnd } from "lucide-react";
 import { Button, Card, Description, Input, Label, Switch, TextField, toast } from "@heroui/react";
 import { saveCourse } from "@/app/actions/admin/catalog";
 import type { Course } from "@/types/course";
@@ -38,11 +38,14 @@ export function CourseSettingsForm({ course }: { course: Course }) {
   const router = useRouter();
   const id = course.id;
 
+  const isGallery = course.layout === "gallery";
+
   const [config, setConfig] = useState({
     enableCertificates: course.enableCertificates ?? true,
     dripContent: course.dripContent ?? false,
     enableComments: course.enableComments ?? true,
     requireSequentialProgress: course.requireSequentialProgress ?? true,
+    homeCarousel: course.homeCarousel ?? false,
     expirationDays: course.accessExpirationDays != null ? String(course.accessExpirationDays) : "",
     maxStudents: course.maxStudents != null ? String(course.maxStudents) : "",
   });
@@ -65,6 +68,7 @@ export function CourseSettingsForm({ course }: { course: Course }) {
       dripContent: config.dripContent,
       enableComments: config.enableComments,
       requireSequentialProgress: config.requireSequentialProgress,
+      homeCarousel: isGallery ? config.homeCarousel : undefined,
       accessExpirationDays: expirationDays,
       maxStudents,
     });
@@ -153,6 +157,26 @@ export function CourseSettingsForm({ course }: { course: Course }) {
             />
           </Card.Content>
         </Card>
+
+        {/* Vitrine — só existe para o curso galeria */}
+        {isGallery && (
+          <Card className="md:col-span-2">
+            <Card.Header>
+              <Card.Title className="flex items-center gap-2">
+                <GalleryHorizontalEnd className="size-5 text-accent" aria-hidden="true" />
+                Vitrine
+              </Card.Title>
+            </Card.Header>
+            <Card.Content className="space-y-6">
+              <SettingSwitch
+                isSelected={config.homeCarousel}
+                onChange={() => handleToggle("homeCarousel")}
+                title="Carrossel na Home"
+                description="Mostra as 8 aulas mais recentes deste curso num carrossel de streaming na home do aluno."
+              />
+            </Card.Content>
+          </Card>
+        )}
 
         {/* Regras de Acesso */}
         <Card className="md:col-span-2">

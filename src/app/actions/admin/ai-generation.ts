@@ -1,7 +1,10 @@
 "use server";
 
 import { requireAdmin } from "@/lib/supabase/auth";
-import { sendOpenRouterChatCompletion } from "@/lib/openrouterService";
+import {
+  getOpenRouterServerConfig,
+  sendOpenRouterChatCompletion,
+} from "@/lib/openrouterService";
 
 export async function generateLessonMetadataFromTranscription(
   transcription: string,
@@ -17,6 +20,15 @@ export async function generateLessonMetadataFromTranscription(
     return { success: false, error: "A transcrição está vazia." };
   }
 
+  const openRouterConfig = await getOpenRouterServerConfig();
+  if (!openRouterConfig.enabled || !openRouterConfig.apiKey?.trim()) {
+    return {
+      success: false,
+      error:
+        "A integração com OpenRouter não está configurada ou está desativada. Acesse /admin/integracoes/openrouter para salvar uma chave de API válida.",
+    };
+  }
+
   const prompt = `Você é um assistente educacional de primeira linha.
 Sua tarefa é analisar a transcrição de um vídeo e gerar metadados pedagógicos mais um material de apoio textual bem formatado.
 
@@ -30,39 +42,59 @@ Transcrição da Aula:
 ${transcription.slice(0, 60000)}
 """
 
-Retorne EXCLUSIVAMENTE um objeto JSON válido. Nenhuma palavra a mais, nada de crases markdown em volta. Apenas o objeto JSON puro:
+Retorne EXCLUSIVAMENTE um objeto JSON válido. Nenhuma palavra a mais, nada de introdução ou conclusão. Apenas o objeto JSON:
 {
   "contentMarkdown": "Texto longo em Markdown. Use headers ##, listas -, negritos **. Baseie-se no vídeo para criar o apoio de leitura estruturado.",
   "shortDescription": "Resumo muito breve do assunto, máximo 200 caracteres.",
-  "level": "Escolha entre 'iniciante', 'intermediario' ou 'avancado'.",
+  "level": "iniciante",
   "audience": "Para quem é esta aula (ex: 'Quem já conhece HTML básico')",
   "objective": "O que o aluno saberá ao final (ex: 'Criar um componente reativo')",
   "topics": ["palavra-chave", "outra-palavra"],
   "solves": ["Problema 1 que resolve", "Problema 2"]
-}`;
+}
+
+Nota sobre o campo "level": deve ser exatamente uma destas 3 opções: "iniciante", "intermediario" ou "avancado".`;
 
   try {
-    const response = await sendOpenRouterChatCompletion({
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      maxTokens: 3000,
-    });
+    const response = await sendOpenRouterChatCompletion(
+      {
+        model: openRouterConfig.defaultModel || "google/gemini-2.0-flash-001",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        maxTokens: 3000,
+      },
+      openRouterConfig
+    );
 
-    if (!response.success || !response.text) {
-      return { success: false, error: response.error || "Ocorreu um erro na IA." };
+    if (!response.success || response.simulated || !response.text) {
+      return {
+        success: false,
+        error:
+          response.error ||
+          (response.simulated
+            ? "A chave do OpenRouter não está configurada. Configure em /admin/integracoes/openrouter."
+            : "Ocorreu um erro ao comunicar com a IA."),
+      };
     }
 
-    let jsonText = response.text.trim();
-    if (jsonText.startsWith("```json")) {
-      jsonText = jsonText.replace(/^```json/, "").replace(/```$/, "").trim();
-    } else if (jsonText.startsWith("```")) {
-      jsonText = jsonText.replace(/^```/, "").replace(/```$/, "").trim();
+    const rawText = response.text.trim();
+    // Extrai o conteúdo entre delimitadores de código ou chaves JSON
+    const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, rawText];
+    let candidate = (jsonMatch[1] || rawText).trim();
+
+    const firstBrace = candidate.indexOf("{");
+    const lastBrace = candidate.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      candidate = candidate.slice(firstBrace, lastBrace + 1);
     }
 
-    const data = JSON.parse(jsonText);
+    const data = JSON.parse(candidate);
     return { success: true, data };
   } catch (error: any) {
     console.error("Erro na geração de IA:", error);
-    return { success: false, error: error.message || "Erro ao processar a resposta da IA." };
+    return {
+      success: false,
+      error: error.message || "Erro ao processar a resposta da IA.",
+    };
   }
 }

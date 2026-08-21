@@ -8,6 +8,8 @@ import {
   ArrowLeft,
   FileText,
   Image as ImageIcon,
+  Images,
+  Rows3,
   Save,
   Tag as TagIcon,
   Type,
@@ -30,13 +32,34 @@ import {
 } from "@heroui/react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { saveCourse } from "@/app/actions/admin/catalog";
-import type { Course, CourseStatus } from "@/types/course";
+import { cn } from "@/lib/utils";
+import type { Course, CourseLayout, CourseStatus } from "@/types/course";
 import type { CategoryRow, TagRow } from "@/app/actions/admin/categories";
 
 const statusOptions: Array<{ id: CourseStatus; label: string }> = [
   { id: "Rascunho", label: "Rascunho" },
   { id: "Publicado", label: "Publicado" },
   { id: "Arquivado", label: "Arquivado" },
+];
+
+const layoutOptions: Array<{
+  id: CourseLayout;
+  label: string;
+  description: string;
+  icon: typeof Rows3;
+}> = [
+  {
+    id: "modules",
+    label: "Curso por módulos",
+    description: "Sequência de módulos com aulas dentro — o formato padrão de trilha.",
+    icon: Rows3,
+  },
+  {
+    id: "gallery",
+    label: "Curso galeria (destaque)",
+    description: "Coleção de aulas avulsas — masterclasses, exibidas como galeria de thumbs.",
+    icon: Images,
+  },
 ];
 
 const acessoOptions = [
@@ -65,6 +88,7 @@ export function CourseForm({
   const [status, setStatus] = useState<CourseStatus>(initialStatus);
   const [pendingStatus, setPendingStatus] = useState<CourseStatus | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [layout, setLayout] = useState<CourseLayout>(course?.layout ?? "modules");
 
   const [access, setAccess] = useState("Pago");
   const [category, setCategory] = useState(course?.category || "");
@@ -131,6 +155,10 @@ export function CourseForm({
 
       const res = await saveCourse({
         id: course?.id,
+        // O tipo do curso só é enviado na criação: a coluna é travada contra
+        // alteração no banco, e reenviar o mesmo valor numa edição não faz
+        // diferença — mas não faz sentido oferecer o campo fora da criação.
+        layout: isEditing ? undefined : layout,
         title,
         shortDescription: formData.get("shortDescription") as string,
         description: formData.get("description") as string,
@@ -195,6 +223,75 @@ export function CourseForm({
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Formulário principal */}
           <div className="space-y-6 lg:col-span-2">
+            <Card>
+              <Card.Header>
+                <Card.Title className="flex items-center gap-2">
+                  {layout === "gallery" ? (
+                    <Images className="size-5 text-accent" aria-hidden="true" />
+                  ) : (
+                    <Rows3 className="size-5 text-accent" aria-hidden="true" />
+                  )}
+                  Tipo de curso
+                </Card.Title>
+                {isEditing && (
+                  <Card.Description>
+                    Definido na criação e não pode ser alterado depois.
+                  </Card.Description>
+                )}
+              </Card.Header>
+              <Card.Content>
+                {isEditing ? (
+                  <div className="flex items-center gap-3 rounded-xl border border-border bg-background-secondary p-4">
+                    {layout === "gallery" ? (
+                      <Images className="size-5 shrink-0 text-accent" aria-hidden="true" />
+                    ) : (
+                      <Rows3 className="size-5 shrink-0 text-accent" aria-hidden="true" />
+                    )}
+                    <div>
+                      <p className="text-sm font-bold text-foreground">
+                        {layoutOptions.find((opt) => opt.id === layout)?.label}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {layoutOptions.find((opt) => opt.id === layout)?.description}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {layoutOptions.map((opt) => {
+                      const Icon = opt.icon;
+                      const isSelected = layout === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setLayout(opt.id)}
+                          aria-pressed={isSelected}
+                          className={cn(
+                            "flex flex-col items-start gap-2 rounded-xl border-2 p-4 text-left transition-colors",
+                            isSelected
+                              ? "border-accent bg-accent-soft"
+                              : "border-border bg-surface hover:border-accent/40",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "grid size-9 place-items-center rounded-lg",
+                              isSelected ? "bg-accent text-accent-foreground" : "bg-background-secondary text-muted",
+                            )}
+                          >
+                            <Icon className="size-4.5" aria-hidden="true" />
+                          </span>
+                          <span className="text-sm font-bold text-foreground">{opt.label}</span>
+                          <span className="text-xs leading-snug text-muted">{opt.description}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card.Content>
+            </Card>
+
             <Card>
               <Card.Header>
                 <Card.Title className="flex items-center gap-2">

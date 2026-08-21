@@ -36,6 +36,7 @@ export default async function AulaAdminPage({
       moduleId={module || lesson?.moduleId || null}
       modules={course.modules}
       initialLesson={lesson}
+      courseLayout={course.layout}
     />
   );
 }

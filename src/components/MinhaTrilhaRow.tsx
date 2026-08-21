@@ -58,7 +58,7 @@ export default function MinhaTrilhaRow() {
             duration={`${item.durationMin} min`}
             cover={item.cover || 'https://images.unsplash.com/photo-1573497491765-0a15320e8b2b?q=80&w=600&auto=format&fit=crop'}
             reason={item.reason}
-            href={`/courses/${item.courseId || 'c1'}/lessons/${item.id}`}
+            href={`/courses/${item.courseId || 'c1'}/lessons/${item.slug || item.id}`}
           />
         ))}
       </CarouselRow>

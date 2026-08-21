@@ -43,38 +43,82 @@ function parseVttToText(vtt: string): string {
   return uniqueLines.join("\n");
 }
 
-export async function getPandaVideoTranscription(videoId: string) {
+export async function getPandaVideoTranscription(videoId: string): Promise<{
+  success: boolean;
+  text?: string | null;
+  error?: string;
+}> {
   try {
     await requireAdmin();
-    // Use the known PandaVideo subtitles API endpoint
-    const response = await fetchPandaVideo(`/videos/${videoId}/subtitles`) as any;
-    
-    const subtitles = Array.isArray(response) ? response : response?.subtitles || [];
-    
-    if (subtitles.length === 0) {
-      return { text: null };
+    const cleanId = videoId?.trim();
+    if (!cleanId) {
+      return { success: false, text: null, error: "Identificador do vídeo não informado." };
     }
-    
-    let subtitle = subtitles.find((s: any) => s.language === "pt-BR" || s.language === "pt");
+
+    // Use the known PandaVideo subtitles API endpoint
+    const response = (await fetchPandaVideo(`/videos/${cleanId}/subtitles`)) as any;
+
+    const subtitles = Array.isArray(response)
+      ? response
+      : response?.subtitles || (response?.videos ? response.videos : []);
+
+    if (!Array.isArray(subtitles) || subtitles.length === 0) {
+      return {
+        success: false,
+        text: null,
+        error: "Nenhuma legenda encontrada para este vídeo no PandaVideo.",
+      };
+    }
+
+    let subtitle = subtitles.find(
+      (s: any) =>
+        s?.language === "pt-BR" ||
+        s?.language === "pt" ||
+        s?.lang === "pt-BR" ||
+        s?.lang === "pt" ||
+        s?.srclang === "pt" ||
+        s?.srclang === "pt-BR"
+    );
     if (!subtitle) {
       subtitle = subtitles[0];
     }
-    
-    // Typical Panda Video subtitles format contains `vtt` or `url`
-    const vttUrl = subtitle?.vtt || subtitle?.url;
+
+    const vttUrl = subtitle?.vtt || subtitle?.url || subtitle?.src;
     if (!vttUrl) {
-      return { text: null };
+      return {
+        success: false,
+        text: null,
+        error: "Arquivo de legenda não localizado no PandaVideo.",
+      };
     }
-    
+
     const vttRes = await fetch(vttUrl);
-    if (!vttRes.ok) return { text: null };
-    
+    if (!vttRes.ok) {
+      return {
+        success: false,
+        text: null,
+        error: "Não foi possível transferir o arquivo de legenda do PandaVideo.",
+      };
+    }
+
     const vttContent = await vttRes.text();
     const plainText = parseVttToText(vttContent);
-    
-    return { text: plainText };
-  } catch (error) {
+
+    if (!plainText || !plainText.trim()) {
+      return {
+        success: false,
+        text: null,
+        error: "O arquivo de legenda do vídeo está vazio.",
+      };
+    }
+
+    return { success: true, text: plainText };
+  } catch (error: any) {
     console.error("Error fetching panda video transcription:", error);
-    return { text: null };
+    return {
+      success: false,
+      text: null,
+      error: error?.message || "Não foi possível consultar as legendas no PandaVideo.",
+    };
   }
 }

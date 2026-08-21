@@ -44,11 +44,11 @@ const VIEW_META: Record<TrailView, { title: string; hint: string }> = {
   },
   calendar: {
     title: 'Sua agenda',
-    hint: 'Quando cada conteúdo está planejado. Adie um dia inteiro se a semana apertar — o resto se reorganiza.',
+    hint: 'Quando cada conteúdo está planejado. Adie um dia inteiro se a semana apertar e o resto se reorganiza.',
   },
   full: {
     title: 'Sua trilha completa',
-    hint: 'Onde você está em cada formação, do começo ao fim — incluindo o que já concluiu.',
+    hint: 'Onde você está em cada formação, do começo ao fim, incluindo o que já concluiu.',
   },
 };
 
@@ -897,7 +897,7 @@ export default function MinhaTrilhaPage() {
               <p className="eyebrow">Agenda personalizada</p>
               <h1 className="display-2 mt-3 max-w-3xl text-foreground">Por que estes conteúdos</h1>
               <p className="lede mt-6">
-                Montamos sua sequência a partir do que você respondeu. Mudou de objetivo ou de rotina? Ajuste — a agenda se reorganiza sozinha.
+                Montamos sua sequência a partir do que você respondeu. Mudou de objetivo ou de rotina? Ajuste, a agenda se reorganiza sozinha.
               </p>
             </Rise>
 
@@ -1019,7 +1019,7 @@ export default function MinhaTrilhaPage() {
                 <p className="eyebrow">Hoje</p>
                 <h2 className="display-3 mt-2 text-foreground">Nenhuma sessão pendente para hoje.</h2>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-muted">
-                  Você pode descansar ou adiantar qualquer conteúdo planejado — nada está bloqueado.
+                  Você pode descansar ou adiantar qualquer conteúdo planejado, nada está bloqueado.
                 </p>
               </div>
               <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-success-soft text-success-soft-foreground">
@@ -1042,22 +1042,24 @@ export default function MinhaTrilhaPage() {
 
         <Tabs.Root selectedKey={viewMode} onSelectionChange={(key) => setViewMode(String(key) as TrailView)}>
           <div className="mb-8 flex flex-col gap-5 border-b border-hairline pb-6 sm:flex-row sm:items-end sm:justify-between">
-            <div className="min-w-0">
+            <div className="flex-1 min-w-0">
               <p className="eyebrow">Plano de aprendizagem</p>
               <h2 className="display-2 mt-2 text-foreground">{VIEW_META[viewMode].title}</h2>
               <p className="mt-2 max-w-xl text-sm leading-6 text-muted">{VIEW_META[viewMode].hint}</p>
             </div>
-            <Tabs.List aria-label="Como ver seu plano">
-              <Tabs.Tab id="next">
-                <LayoutList className="size-4" aria-hidden="true" /> Próximos passos
-              </Tabs.Tab>
-              <Tabs.Tab id="calendar">
-                <CalendarDays className="size-4" aria-hidden="true" /> Agenda
-              </Tabs.Tab>
-              <Tabs.Tab id="full">
-                <Route className="size-4" aria-hidden="true" /> Trilha completa
-              </Tabs.Tab>
-            </Tabs.List>
+            <div className="w-full overflow-x-auto no-scrollbar sm:w-auto">
+              <Tabs.List aria-label="Como ver seu plano" className="flex-nowrap w-max sm:w-auto">
+                <Tabs.Tab id="next">
+                  <LayoutList className="size-4" aria-hidden="true" /> Próximos passos
+                </Tabs.Tab>
+                <Tabs.Tab id="calendar">
+                  <CalendarDays className="size-4" aria-hidden="true" /> Agenda
+                </Tabs.Tab>
+                <Tabs.Tab id="full">
+                  <Route className="size-4" aria-hidden="true" /> Trilha completa
+                </Tabs.Tab>
+              </Tabs.List>
+            </div>
           </div>
 
           <Tabs.Panel id="next">

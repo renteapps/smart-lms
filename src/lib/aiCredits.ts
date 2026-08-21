@@ -52,6 +52,16 @@ export function formatAiCredits(value: number): string {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 }).format(value);
 }
 
+/** Formata custo/valor real em reais com 4 casas fixas: 23.6056 -> "R$ 23,6056". */
+export function formatAiCostBrl(value: number): string {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  }).format(value);
+}
+
 export async function getAiCreditBalance(db: DB, userId?: string): Promise<AiCreditBalance | null> {
   const { data, error } = await db.rpc(
     "get_ai_credit_balance",

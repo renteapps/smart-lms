@@ -73,10 +73,12 @@ export default function LessonClientWrapper({
   const currentIndex = allLessons.findIndex(l => l.id === lesson.id);
 
   if (currentIndex > 0) {
-    prevLessonId = allLessons[currentIndex - 1].id;
+    const prev = allLessons[currentIndex - 1];
+    prevLessonId = prev.slug || prev.id;
   }
   if (currentIndex < allLessons.length - 1) {
-    nextLessonId = allLessons[currentIndex + 1].id;
+    const next = allLessons[currentIndex + 1];
+    nextLessonId = next.slug || next.id;
   }
 
   const persistCompletion = (completed: boolean) => {

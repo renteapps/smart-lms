@@ -47,7 +47,7 @@ export default async function CertificadosPage({
 
       <main className="editorial-container py-10 sm:py-14">
         {certificates.length === 0 ? (
-          <EmptyState className="gap-5 py-24">
+          <EmptyState className="gap-5 py-16 px-4 sm:py-24 sm:px-0">
             <span className="grid size-16 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground">
               <Award className="size-8" aria-hidden="true" />
             </span>

@@ -47,7 +47,46 @@ function CriarContaContent() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    const checkUsername = async () => {
+      if (!username.trim() || username.length < 3) {
+        setUsernameError(null);
+        return;
+      }
+
+      setIsCheckingUsername(true);
+      setUsernameError(null);
+
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("username", username.trim())
+          .maybeSingle();
+
+        if (error) {
+          console.error("Erro ao verificar usuário:", error);
+        } else if (data) {
+          setUsernameError("Este nome de usuário já está em uso.");
+        }
+      } catch (err) {
+        console.error("Erro no check de usuário:", err);
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      checkUsername();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [username]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -55,6 +94,11 @@ function CriarContaContent() {
 
     if (!username.trim() || !fullName.trim() || !email.trim() || !password) {
       setErrorMessage("Por favor, preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    if (usernameError) {
+      setErrorMessage("Por favor, corrija o erro no nome de usuário antes de continuar.");
       return;
     }
 
@@ -189,7 +233,7 @@ function CriarContaContent() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Username */}
-        <TextField isRequired fullWidth className="w-full space-y-1.5">
+        <TextField isRequired fullWidth className="w-full space-y-1.5" isInvalid={!!usernameError}>
           <Label htmlFor="username" className="text-sm font-medium text-foreground">
             Nome de usuário
           </Label>
@@ -208,8 +252,17 @@ function CriarContaContent() {
               className="w-full text-sm"
               required
             />
+            {isCheckingUsername && (
+              <InputGroup.Suffix className="pr-3">
+                <Spinner size="sm" />
+              </InputGroup.Suffix>
+            )}
           </InputGroup>
-          <FieldError />
+          {usernameError ? (
+            <p className="text-xs font-semibold text-danger">{usernameError}</p>
+          ) : (
+            <FieldError />
+          )}
         </TextField>
 
         {/* Full Name */}

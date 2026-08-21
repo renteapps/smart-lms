@@ -5,7 +5,9 @@ import { CalendarClock, Plus, Sparkles, Zap } from "lucide-react";
 import { Button, Card, Label, Modal, NumberField } from "@heroui/react";
 import { toast } from "sonner";
 import {
+  formatAiCostBrl,
   formatAiCreditRenewal,
+  formatAiCredits,
   type AiCreditBalance,
 } from "@/lib/aiCredits";
 import { addAiCreditsToUser } from "./actions";
@@ -61,15 +63,15 @@ export function AiCreditAdminCard({ userId, userName, initialBalance }: AiCredit
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               <div className="rounded-xl bg-background-secondary p-4">
                 <p className="text-xs font-semibold text-muted">Disponíveis agora</p>
-                <p className="mt-1 text-2xl font-bold text-foreground" data-numeric>{balance.availableCredits}</p>
+                <p className="mt-1 text-2xl font-bold text-foreground" data-numeric>{formatAiCredits(balance.availableCredits)}</p>
                 <p className="mt-1 text-[11px] text-muted">
-                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(balance.availableCredits * balance.creditValueBrl)} nominais
+                  {formatAiCostBrl(balance.availableCredits * balance.creditValueBrl)} nominais
                 </p>
               </div>
               <div className="rounded-xl bg-background-secondary p-4">
                 <p className="text-xs font-semibold text-muted">Franquia diária</p>
                 <p className="mt-1 text-xl font-bold text-foreground" data-numeric>
-                  {balance.dailyRemaining} <span className="text-sm font-medium text-muted">de {balance.dailyLimit}</span>
+                  {formatAiCredits(balance.dailyRemaining)} <span className="text-sm font-medium text-muted">de {formatAiCredits(balance.dailyLimit)}</span>
                 </p>
                 <p className="mt-1.5 flex items-center gap-1 text-[11px] text-muted">
                   <CalendarClock className="size-3" aria-hidden="true" />
@@ -79,7 +81,7 @@ export function AiCreditAdminCard({ userId, userName, initialBalance }: AiCredit
               <div className="rounded-xl bg-background-secondary p-4">
                 <p className="text-xs font-semibold text-muted">Franquia semanal</p>
                 <p className="mt-1 text-xl font-bold text-foreground" data-numeric>
-                  {balance.weeklyRemaining} <span className="text-sm font-medium text-muted">de {balance.weeklyLimit}</span>
+                  {formatAiCredits(balance.weeklyRemaining)} <span className="text-sm font-medium text-muted">de {formatAiCredits(balance.weeklyLimit)}</span>
                 </p>
                 <p className="mt-1.5 flex items-center gap-1 text-[11px] text-muted">
                   <CalendarClock className="size-3" aria-hidden="true" />
@@ -89,7 +91,7 @@ export function AiCreditAdminCard({ userId, userName, initialBalance }: AiCredit
               <div className="rounded-xl bg-background-secondary p-4">
                 <p className="text-xs font-semibold text-muted">Franquia mensal</p>
                 <p className="mt-1 text-xl font-bold text-foreground" data-numeric>
-                  {balance.monthlyRemaining} <span className="text-sm font-medium text-muted">de {balance.monthlyLimit}</span>
+                  {formatAiCredits(balance.monthlyRemaining)} <span className="text-sm font-medium text-muted">de {formatAiCredits(balance.monthlyLimit)}</span>
                 </p>
                 <p className="mt-1.5 flex items-center gap-1 text-[11px] text-muted">
                   <CalendarClock className="size-3" aria-hidden="true" />
@@ -99,7 +101,7 @@ export function AiCreditAdminCard({ userId, userName, initialBalance }: AiCredit
               <div className="rounded-xl border border-accent/20 bg-accent-soft p-4">
                 <p className="text-xs font-semibold text-accent-soft-foreground">Créditos extras</p>
                 <p className="mt-1 text-2xl font-bold text-accent-soft-foreground" data-numeric>
-                  +{balance.additionalCredits}
+                  +{formatAiCredits(balance.additionalCredits)}
                 </p>
                 <p className="mt-1.5 text-[11px] text-accent-soft-foreground/80">Não expiram nas renovações.</p>
               </div>
@@ -147,7 +149,7 @@ export function AiCreditAdminCard({ userId, userName, initialBalance }: AiCredit
                 <div className="rounded-xl bg-background-secondary p-3 text-xs text-muted">
                   Novo saldo extra estimado:{" "}
                   <strong className="font-semibold text-foreground" data-numeric>
-                    {(balance?.additionalCredits ?? 0) + amount} créditos
+                    {formatAiCredits((balance?.additionalCredits ?? 0) + amount)} créditos
                   </strong>
                 </div>
               </Modal.Body>

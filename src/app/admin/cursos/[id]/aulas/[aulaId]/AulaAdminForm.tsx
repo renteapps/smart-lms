@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Film, Link2, Save, Tv, Upload, Sparkles } from "lucide-react";
+import { ArrowLeft, Film, Link2, Loader2, RefreshCw, Save, Tv, Upload, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -19,6 +19,7 @@ import LessonPrerequisitePicker from "@/components/admin/LessonPrerequisitePicke
 import { extractYouTubeId, youtubeEmbedUrl } from "@/lib/editor/youtube";
 import { secondsToLessonMinutes } from "@/lib/pandavideo";
 import { cn } from "@/lib/utils";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 
 const LessonBlockEditor = dynamic(() => import("@/components/admin/editor/LessonBlockEditor"), {
   ssr: false,
@@ -69,6 +70,8 @@ interface AulaAdminFormProps {
   moduleId: string | null;
   modules: Module[];
   initialLesson: Lesson | null;
+  /** Só o curso galeria usa a thumb vertical — nos demais a aula herda a capa do curso. */
+  courseLayout?: "modules" | "gallery";
 }
 
 export default function AulaAdminForm({
@@ -77,6 +80,7 @@ export default function AulaAdminForm({
   moduleId,
   modules,
   initialLesson,
+  courseLayout = "modules",
 }: AulaAdminFormProps) {
   const router = useRouter();
   const isNew = aulaId === "nova";
@@ -85,7 +89,30 @@ export default function AulaAdminForm({
 
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [isAIGenerating, setIsAIGenerating] = useState(false);
+  const [isFetchingTranscription, setIsFetchingTranscription] = useState(false);
   const [aiGeneratedMarkdown, setAiGeneratedMarkdown] = useState<string | undefined>(undefined);
+
+  const handleCheckPandaTranscription = async () => {
+    if (!formData.pandavideoId) {
+      toast.danger("Nenhum vídeo do PandaVideo selecionado.");
+      return;
+    }
+
+    setIsFetchingTranscription(true);
+    try {
+      const res = await getPandaVideoTranscription(formData.pandavideoId);
+      if (res.success && res.text) {
+        setFormData((prev) => ({ ...prev, transcription: res.text ?? "" }));
+        toast.success("Legenda encontrada e adicionada à transcrição!");
+      } else {
+        toast.warning(res.error || "Nenhuma legenda encontrada para este vídeo no PandaVideo.");
+      }
+    } catch (error: any) {
+      toast.danger(error?.message || "Erro ao consultar legendas no PandaVideo.");
+    } finally {
+      setIsFetchingTranscription(false);
+    }
+  };
 
   const [formData, setFormData] = useState<Partial<Lesson>>(
     initialLesson ? { ...EMPTY_LESSON, ...initialLesson } : EMPTY_LESSON
@@ -314,17 +341,20 @@ export default function AulaAdminForm({
                       }));
 
                       // Fetch transcription asynchronously
+                      setIsFetchingTranscription(true);
                       try {
                         const res = await getPandaVideoTranscription(video.id);
-                        if (res?.text) {
+                        if (res.success && res.text) {
                           setFormData((prev) => ({
                             ...prev,
                             // Only overwrite transcription if it's currently empty
-                            transcription: prev.transcription ? prev.transcription : res.text
+                            transcription: prev.transcription ? prev.transcription : (res.text ?? ""),
                           }));
                         }
                       } catch (error) {
                         console.error("Error fetching transcription:", error);
+                      } finally {
+                        setIsFetchingTranscription(false);
                       }
                     }}
                   />
@@ -350,9 +380,31 @@ export default function AulaAdminForm({
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="transcription" className="block text-sm font-medium text-foreground">
-                Transcrição do Vídeo (Opcional)
-              </label>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label htmlFor="transcription" className="block text-sm font-medium text-foreground">
+                  Transcrição do Vídeo (Opcional)
+                </label>
+                {videoProvider === "panda" && formData.pandavideoId && (
+                  <button
+                    type="button"
+                    onClick={handleCheckPandaTranscription}
+                    disabled={isFetchingTranscription}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent transition-colors hover:text-accent/80 disabled:opacity-50"
+                  >
+                    {isFetchingTranscription ? (
+                      <>
+                        <Loader2 className="size-3.5 animate-spin" />
+                        Verificando legenda...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="size-3.5" />
+                        Verificar legenda no PandaVideo
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
               <textarea
                 id="transcription"
                 name="transcription"
@@ -402,6 +454,17 @@ export default function AulaAdminForm({
             <h3 className="text-lg font-bold text-foreground">Detalhes Adicionais</h3>
             <p className="text-sm text-muted">Informações para melhor organização da aula.</p>
           </div>
+
+          {courseLayout === "gallery" && (
+            <ImageUpload
+              label="Thumb vertical (2:3)"
+              value={formData.coverUrl}
+              onChange={(url) => setFormData((prev) => ({ ...prev, coverUrl: url ?? undefined }))}
+              folder="lessons"
+              aspect="portrait"
+              description="É essa imagem que aparece na galeria do curso e no carrossel da home. Recomendado: 900x1350px."
+            />
+          )}
 
           <div className="space-y-2">
             <label htmlFor="shortDescription" className="block text-sm font-medium text-foreground">
