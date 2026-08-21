@@ -5,11 +5,13 @@ import Link from "next/link";
 import { Check, Clock3, Lock } from "lucide-react";
 import { ProgressBar } from "@heroui/react/progress-bar";
 import { Label } from "@heroui/react/label";
+import { buttonVariants } from "@heroui/styles";
 import { ArrowIcon } from "@/components/ui/AnimatedIcon";
 import { Rise } from "@/components/ui/Rise";
 import { useCardTransition } from "@/contexts/CardTransitionContext";
 import { contentHref, type HomeSession } from "@/lib/studentHome";
 import type { LearningTrailItem } from "@/types/trilha";
+import { cn } from "@/lib/utils";
 
 const DEFAULT_COVER =
   "https://images.unsplash.com/photo-1521737711867-e3b97375f902?q=85&w=1000&auto=format&fit=crop";
@@ -18,6 +20,9 @@ type RowProps = {
   item: LearningTrailItem;
   locked: boolean;
   completed: boolean;
+  /** Artigo e link externo não avisam que foram lidos — quem declara é o aluno. */
+  onComplete?: (item: LearningTrailItem) => void;
+  isCompleting?: boolean;
 };
 
 /**
@@ -26,7 +31,7 @@ type RowProps = {
  * Dois cards do mesmo peso competiriam com o próximo passo e desfariam a
  * hierarquia que esta seção existe para criar.
  */
-function ContentRow({ item, locked, completed }: RowProps) {
+function ContentRow({ item, locked, completed, onComplete, isCompleting = false }: RowProps) {
   const { triggerTransition } = useCardTransition();
   const targetHref = contentHref(item);
 
@@ -97,19 +102,36 @@ function ContentRow({ item, locked, completed }: RowProps) {
   );
 
   const shell = "flex items-center gap-4 rounded-xl border border-hairline bg-surface p-3";
+  const interactive = "icon-spring shadow-elev-1 transition-[box-shadow,border-color,transform] duration-[var(--duration-md)] hover:-translate-y-0.5 hover:border-hairline-strong hover:shadow-elev-2";
 
   if (locked || completed) {
     return <div className={`${shell} opacity-70`}>{body}</div>;
   }
 
-  return (
-    <Link
-      href={targetHref}
-      onClick={handleClick}
-      className={`${shell} icon-spring shadow-elev-1 transition-[box-shadow,border-color,transform] duration-[var(--duration-md)] hover:-translate-y-0.5 hover:border-hairline-strong hover:shadow-elev-2`}
-    >
+  const link = (
+    <Link href={targetHref} onClick={handleClick} className={`${shell} ${interactive} min-w-0 flex-1`}>
       {body}
     </Link>
+  );
+
+  const selfReported = Boolean(onComplete)
+    && (item.type === "article" || item.type === "external_link");
+  if (!selfReported) return link;
+
+  return (
+    <div className="flex items-center gap-2">
+      {link}
+      <button
+        type="button"
+        disabled={isCompleting}
+        onClick={() => onComplete?.(item)}
+        aria-label={`Marcar ${item.title} como concluído`}
+        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}
+      >
+        <Check className="size-3.5" aria-hidden="true" />
+        {isCompleting ? "…" : "Já concluí"}
+      </button>
+    </div>
   );
 }
 
@@ -117,9 +139,12 @@ type SessionRestProps = {
   session: HomeSession;
   /** O item já apresentado no herói — não se repete aqui. */
   excludeId: string;
+  onComplete?: (item: LearningTrailItem) => void;
+  /** Id em gravação, para desabilitar só a linha que está sendo registrada. */
+  completingId?: string | null;
 };
 
-export default function SessionRest({ session, excludeId }: SessionRestProps) {
+export default function SessionRest({ session, excludeId, onComplete, completingId }: SessionRestProps) {
   const rest = session.items.filter((item) => item.id !== excludeId);
   if (rest.length === 0) return null;
 
@@ -157,6 +182,8 @@ export default function SessionRest({ session, excludeId }: SessionRestProps) {
                 item={item}
                 completed={item.status === "completed"}
                 locked={Boolean(item.prerequisites?.some((id) => pendingIds.has(id)))}
+                onComplete={onComplete}
+                isCompleting={completingId === item.id}
               />
             </li>
           ))}

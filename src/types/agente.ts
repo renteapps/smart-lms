@@ -8,6 +8,7 @@ export type AgentStatus = 'Disponível' | 'Beta' | 'Em manutenção';
  * e um dia virão de uma API.
  */
 export type AgentAvatarKey =
+  | 'padrao'
   | 'feedback'
   | 'contratacao'
   | 'simulacao'
@@ -53,6 +54,12 @@ export interface Agent {
   category: AgentCategory;
   status: AgentStatus;
   avatar: AgentAvatarKey;
+  /** Cor personalizada do agente (hex) */
+  themeColor?: string;
+  /** Código SVG do ícone personalizado */
+  iconSvg?: string;
+  /** URL da foto de perfil personalizada do agente */
+  photoUrl?: string;
   /** Quem publicou o agente e de qual curso ele nasceu. */
   createdBy: string;
   courseTitle: string;

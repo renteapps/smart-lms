@@ -167,6 +167,44 @@ export async function validateResendApiKey(apiKey: string): Promise<{ valid: boo
   }
 }
 
+export async function getResendDomains(apiKey: string): Promise<{ success: boolean; domains: any[]; message?: string }> {
+  if (!apiKey || typeof apiKey !== "string") {
+    return { success: false, domains: [], message: "A chave de API não foi informada." };
+  }
+
+  const cleanKey = apiKey.trim();
+  if (!cleanKey.startsWith("re_")) {
+    return { success: false, domains: [], message: "Chave do Resend inválida (deve começar com 're_')." };
+  }
+
+  try {
+    const res = await fetch("https://api.resend.com/domains", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${cleanKey}`,
+      },
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.data) {
+      return { success: true, domains: data.data };
+    }
+
+    return {
+      success: false,
+      domains: [],
+      message: data.message || `Erro ao buscar domínios no Resend (HTTP ${res.status}).`,
+    };
+  } catch (_err: unknown) {
+    return {
+      success: false,
+      domains: [],
+      message: "Falha na conexão com a API do Resend.",
+    };
+  }
+}
+
+
 export async function sendEmail(
   payload: EmailSendPayload,
   configOverride?: Partial<ResendConfig>

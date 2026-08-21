@@ -290,12 +290,14 @@ export default function LessonClientWrapper({
       )}
 
       {/* Tabs */}
-      <LessonTabs
-        lesson={lesson}
-        initialNote={initialNote}
-        initialComments={initialComments}
-        currentUser={currentUser}
-      />
+      {lesson.type !== 'quiz' && (
+        <LessonTabs
+          lesson={lesson}
+          initialNote={initialNote}
+          initialComments={initialComments}
+          currentUser={currentUser}
+        />
+      )}
     </div>
   );
 }

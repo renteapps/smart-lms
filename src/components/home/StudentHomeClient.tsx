@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { Alert } from "@heroui/react/alert";
 import { Skeleton } from "@heroui/react/skeleton";
 import { applySessionFeedback, generateLearningTrail, replanLearningTrail } from "@/lib/matching";
-import { refreshTrail } from "@/app/actions/trail";
+import { refreshTrail, setTrailItemCompletion } from "@/app/actions/trail";
 import { saveLearningTrail } from "@/lib/trailStorage";
 import { notifyTrailChanged, useStoredValue, useTrailStore } from "@/lib/useTrailStore";
 import { recordTrailEvent } from "@/lib/trailAnalytics";
@@ -22,7 +22,7 @@ import {
   REFINEMENT_STORAGE_KEY,
 } from "@/lib/refinementSurveys";
 import RecalibrationSlot from "@/components/home/RecalibrationSlot";
-import type { SessionLoadRating } from "@/types/trilha";
+import type { LearningTrailItem, Questionnaire, SessionLoadRating } from "@/types/trilha";
 import type { CatalogCourse } from "@/types/course";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { PROFILE_STORAGE_KEY, PROFILE_SAVED_EVENT } from "@/lib/profilePreferences";
@@ -99,12 +99,23 @@ function HomeSkeleton() {
  * topo e o "comece por aqui" do meio apontavam para aulas diferentes.
  */
 export default function StudentHomeClient({ courses }: { courses: CatalogCourse[] }) {
-  const { hydrated, trail, questionnaire, error, migrated } = useTrailStore();
+  const { hydrated, trail, error, migrated } = useTrailStore();
+  /*
+   * O questionário vem do banco, e só dele.
+   *
+   * A home lia a versão guardada no dispositivo, que cai no questionário de
+   * exemplo quando não existe nada gravado — e aí o slot de recalibração
+   * chegava a piscar "esta pergunta é nova" com uma pergunta que não existe no
+   * produto. Enquanto o servidor não responde, `null`: nenhuma pergunta é
+   * melhor do que uma pergunta inventada.
+   */
+  const [questionnaire, setQuestionnaire] = useState<Questionnaire | null>(null);
   const { dailyPill, profileTests, loading } = useSupabaseData();
   const profileRaw = useSyncExternalStore(subscribeToProfile, readProfileRaw, noProfile);
   const refinementRaw = useStoredValue(REFINEMENT_STORAGE_KEY);
   /** O que a última recalibração mudou — some na próxima navegação, de propósito. */
   const [outcome, setOutcome] = useState<string | null>(null);
+  const [completingId, setCompletingId] = useState<string | null>(null);
 
   const state = useMemo(() => selectHomeState(trail), [trail]);
 
@@ -134,7 +145,9 @@ export default function StudentHomeClient({ courses }: { courses: CatalogCourse[
 
     refreshTrail()
       .then((result) => {
-        if (cancelled || !result.success || !result.trail) return;
+        if (cancelled || !result.success) return;
+        if (result.questionnaire) setQuestionnaire(result.questionnaire);
+        if (!result.trail) return;
         saveLearningTrail(result.trail);
         notifyTrailChanged();
         if (result.notice?.summary) setOutcome(result.notice.summary);
@@ -169,6 +182,21 @@ export default function StudentHomeClient({ courses }: { courses: CatalogCourse[
       profileTests,
     });
   }, [trail, state, questionnaire, refinementRaw, profileTests]);
+
+  /** Conclusão declarada pelo aluno para conteúdo que abre fora da plataforma. */
+  const handleCompleteContent = useCallback(async (item: LearningTrailItem) => {
+    setCompletingId(item.id);
+    try {
+      const result = await setTrailItemCompletion(item.id, true);
+      if (result.success && result.trail) {
+        saveLearningTrail(result.trail);
+        notifyTrailChanged();
+        setOutcome(`“${item.title}” entrou no seu progresso.`);
+      }
+    } finally {
+      setCompletingId(null);
+    }
+  }, []);
 
   const handleFeedback = useCallback(
     (rating: SessionLoadRating) => {
@@ -320,8 +348,15 @@ export default function StudentHomeClient({ courses }: { courses: CatalogCourse[
             session={state.session}
             nextStep={state.session.nextStep}
             greeting={greeting}
+            onComplete={handleCompleteContent}
+            isCompleting={completingId === state.session.nextStep.id}
           />
-          <SessionRest session={state.session} excludeId={state.session.nextStep.id} />
+          <SessionRest
+            session={state.session}
+            excludeId={state.session.nextStep.id}
+            onComplete={handleCompleteContent}
+            completingId={completingId}
+          />
         </>
       ) : (
         <DayCompleteHero

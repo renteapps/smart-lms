@@ -148,10 +148,15 @@ export default function CourseCard({
                   setFailedCover(selectedCover);
                 }
               }}
-              className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.035]"
+              className={cn(
+                "object-cover transition-[filter,transform] duration-[var(--duration-lg)] ease-[var(--ease-zen)]",
+                state.kind === "locked"
+                  ? "scale-[1.02] blur-[3px]"
+                  : "group-hover:scale-[1.035]",
+              )}
             />
             {state.kind === "locked" && (
-              <div className="absolute inset-0 z-10 grid place-items-center bg-foreground/45 backdrop-blur-[2px]">
+              <div className="absolute inset-0 z-10 grid place-items-center bg-foreground/45">
                 <span className="grid size-12 place-items-center rounded-full border border-background/30 bg-foreground/65 text-background shadow-elev-2">
                   <LockKeyhole className="size-5" aria-hidden="true" />
                   <span className="sr-only">Curso bloqueado</span>
@@ -170,7 +175,7 @@ export default function CourseCard({
              * Material sobre imagem: a capa continua visível através da etiqueta.
              * Espessura `thick` porque há texto em cima — contraste AA é obrigatório.
              */}
-            <span className="material-thick absolute bottom-3 left-3 rounded-md px-2.5 py-1 text-[0.6875rem] font-bold uppercase tracking-[0.06em] text-foreground">
+            <span className="material-thick absolute bottom-3 left-3 z-20 rounded-md px-2.5 py-1 text-[0.6875rem] font-bold uppercase tracking-[0.06em] text-foreground">
               {category}
             </span>
             {state.kind === "in-progress" && (

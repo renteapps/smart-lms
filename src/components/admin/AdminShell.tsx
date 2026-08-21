@@ -105,7 +105,7 @@ const segmentLabels: Record<string, string> = {
   ajustes: "Ajustes",
   chat: "Assistente IA",
   credits: "Créditos de IA",
-  menu: "Menu",
+  navegacao: "Navegação",
   editar: "Editar",
   modulos: "Módulos",
   configuracoes: "Configurações",

@@ -30,6 +30,7 @@ export type CourseInput = Partial<
     | "status"
     | "isPublished"
     | "isFeatured"
+    | "instructorNames"
     | "enableCertificates"
     | "dripContent"
     | "enableComments"
@@ -58,6 +59,7 @@ function courseToRow(input: CourseInput): Record<string, unknown> {
   }
   set("duration", input.duration);
   set("level", input.level);
+  set("instructor_names", input.instructorNames);
   set("price", input.price);
   set("tags", input.tags);
   if (input.status !== undefined) {
@@ -206,34 +208,15 @@ export async function deleteModule(id: string, courseId: string): Promise<Action
   }
 }
 
-/** Reordenação por arrasto: grava a ordem inteira de uma vez. */
+/** Reordenação por arrasto: grava a ordem inteira de uma vez via RPC Postgres. */
 export async function reorderModules(courseId: string, orderedIds: string[]): Promise<ActionResult> {
   try {
     const { adminClient } = await requireAdmin();
 
-    if (new Set(orderedIds).size !== orderedIds.length) {
-      return { success: false, message: "A lista de módulos contém itens duplicados." };
-    }
-
-    const { data: currentModules, error: modulesError } = await adminClient
-      .from("modules")
-      .select("id")
-      .eq("course_id", courseId);
-
-    if (modulesError) return { success: false, message: modulesError.message };
-
-    const currentIds = new Set((currentModules ?? []).map((module) => module.id));
-    const containsEveryModule = orderedIds.length === currentIds.size
-      && orderedIds.every((id) => currentIds.has(id));
-
-    if (!containsEveryModule) {
-      return { success: false, message: "A lista de módulos não corresponde ao conteúdo atual do curso." };
-    }
-
-    const { error } = await adminClient.from("modules").upsert(
-      orderedIds.map((id, index) => ({ id, course_id: courseId, order_index: index + 1 })),
-      { onConflict: "id" },
-    );
+    const { error } = await adminClient.rpc("reorder_modules", {
+      p_course_id: courseId,
+      p_ordered_ids: orderedIds,
+    });
 
     if (error) return { success: false, message: error.message };
 
@@ -345,39 +328,10 @@ export async function reorderLessons(
   try {
     const { adminClient } = await requireAdmin();
 
-    if (new Set(orderedIds).size !== orderedIds.length) {
-      return { success: false, message: "A lista de aulas contém itens duplicados." };
-    }
-
-    const { data: courseModule, error: moduleError } = await adminClient
-      .from("modules")
-      .select("id")
-      .eq("id", moduleId)
-      .eq("course_id", courseId)
-      .maybeSingle();
-
-    if (moduleError) return { success: false, message: moduleError.message };
-    if (!courseModule) return { success: false, message: "Módulo não encontrado neste curso." };
-
-    const { data: currentLessons, error: lessonsError } = await adminClient
-      .from("lessons")
-      .select("id")
-      .eq("module_id", moduleId);
-
-    if (lessonsError) return { success: false, message: lessonsError.message };
-
-    const currentIds = new Set((currentLessons ?? []).map((lesson) => lesson.id));
-    const containsEveryLesson = orderedIds.length === currentIds.size
-      && orderedIds.every((id) => currentIds.has(id));
-
-    if (!containsEveryLesson) {
-      return { success: false, message: "A lista de aulas não corresponde ao conteúdo atual do módulo." };
-    }
-
-    const { error } = await adminClient.from("lessons").upsert(
-      orderedIds.map((id, index) => ({ id, module_id: moduleId, order_index: index + 1 })),
-      { onConflict: "id" },
-    );
+    const { error } = await adminClient.rpc("reorder_lessons", {
+      p_module_id: moduleId,
+      p_ordered_ids: orderedIds,
+    });
 
     if (error) return { success: false, message: error.message };
 

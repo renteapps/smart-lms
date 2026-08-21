@@ -79,7 +79,7 @@ export const mockQuestionnaire: Questionnaire = {
     {
       id: 'q_disponibilidade', type: 'availability', role: 'disponibilidade', visualType: 'list', options: [],
       text: 'Quando você quer reservar tempo para estudar?',
-      availabilityConfig: { minutePresets: [15, 30, 45, 60, 90], minMinutes: 10, maxMinutes: 240 },
+      availabilityConfig: { minutePresets: [15, 30, 45, 60, 90], minMinutes: 10, maxMinutes: 240, allowPerDayMinutes: true },
     },
   ],
 };

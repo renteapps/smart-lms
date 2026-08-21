@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser, requireAdmin } from "@/lib/supabase/auth";
-import type { LearningTrail, StudyAvailability } from "@/types/trilha";
+import type { LearningTrail, Questionnaire, StudyAvailability } from "@/types/trilha";
 import type { TrailAnalyticsEvent, TrailAnalyticsEventType } from "@/lib/trailAnalytics";
 import { generateLearningTrail, replanLearningTrail, syncTrailCompletion } from "@/lib/matching";
 import { getContentIndex } from "@/lib/data/content";
@@ -109,6 +109,14 @@ export type TrailRefreshNotice = {
 export async function refreshTrail(): Promise<{
   success: boolean;
   trail?: LearningTrail | null;
+  /**
+   * O questionário publicado agora.
+   *
+   * A home lia o questionário do `localStorage`, com queda para o mock — por
+   * isso uma pergunta nova publicada pelo admin nunca aparecia como ajuste
+   * rápido para quem já tinha trilha. Quem manda é o banco.
+   */
+  questionnaire?: Questionnaire | null;
   notice?: TrailRefreshNotice;
   message?: string;
 }> {
@@ -117,9 +125,10 @@ export async function refreshTrail(): Promise<{
     const stored = await trailData.getLearningTrail(supabase, user.id);
     if (!stored) return { success: true, trail: null };
 
-    const [completedIds, stamp] = await Promise.all([
+    const [completedIds, stamp, published] = await Promise.all([
       trailData.getCompletedContentIds(supabase, user.id),
       trailData.getCatalogStamp(supabase),
+      getPublishedQuestionnaire(supabase),
     ]);
 
     let trail = stored;
@@ -134,7 +143,7 @@ export async function refreshTrail(): Promise<{
     let added = 0;
     if (stamp && stamp !== trail.catalogStamp) {
       const [questionnaire, index] = await Promise.all([
-        getPublishedQuestionnaire(supabase),
+        Promise.resolve(published),
         getContentIndex(supabase),
       ]);
 
@@ -164,7 +173,7 @@ export async function refreshTrail(): Promise<{
       changed = true;
     }
 
-    if (!changed) return { success: true, trail: stored };
+    if (!changed) return { success: true, trail: stored, questionnaire: published };
 
     await persistTrail(supabase, user.id, trail);
 
@@ -189,6 +198,7 @@ export async function refreshTrail(): Promise<{
     return {
       success: true,
       trail,
+      questionnaire: published,
       notice: {
         added,
         synced: synced.completed,

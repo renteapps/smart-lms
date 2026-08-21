@@ -308,7 +308,14 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             {agent ? (
-              <AgentAvatar avatar={agent.avatar} size="lg" isMuted={agent.status === "Em manutenção"} />
+              <AgentAvatar 
+                avatar={agent.avatar} 
+                themeColor={agent.themeColor}
+                iconSvg={agent.iconSvg}
+                photoUrl={agent.photoUrl}
+                size="lg" 
+                isMuted={agent.status === "Em manutenção"} 
+              />
             ) : (
               <span className="grid size-14 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground">
                 <Bot className="size-7" />
@@ -718,7 +725,14 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
                           className={cn("flex items-start gap-3", isStudent ? "justify-end" : "justify-start")}
                         >
                           {!isStudent && (
-                            <AgentAvatar avatar={agent?.avatar || "feedback"} size="sm" className="mt-1" />
+                            <AgentAvatar 
+                              avatar={agent?.avatar || "feedback"} 
+                              themeColor={agent?.themeColor}
+                              iconSvg={agent?.iconSvg}
+                              photoUrl={agent?.photoUrl}
+                              size="sm" 
+                              className="mt-1" 
+                            />
                           )}
 
                           <div

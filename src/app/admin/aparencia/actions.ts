@@ -30,7 +30,7 @@ export async function saveAppearance(appearanceData: {
     return { error: error.message };
   }
 
-  revalidatePath("/admin/aparencia");
+  revalidatePath("/", "layout");
   return { success: true };
 }
 
@@ -67,7 +67,7 @@ export async function saveBrandingImages(images: BrandingImages) {
       return { success: false, message: error.message };
     }
 
-    revalidatePath("/admin/aparencia");
+    revalidatePath("/", "layout");
     return { success: true, message: "Imagens da marca atualizadas." };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Não foi possível salvar as imagens.";

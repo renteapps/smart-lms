@@ -120,6 +120,7 @@ export default function EditPlanPage() {
   const [coursesList, setCoursesList] = useState<{ id: string; title: string; category?: string }[]>([]);
   const [courseSearch, setCourseSearch] = useState("");
   const [newCustomFeatureText, setNewCustomFeatureText] = useState("");
+  const [creditValueBrl, setCreditValueBrl] = useState<number>(0.01);
 
   const [formData, setFormData] = useState<PlanFormState>({
     name: "",
@@ -156,6 +157,13 @@ export default function EditPlanPage() {
         setCoursesList(courses.map((c) => ({ id: c.id, title: c.title, category: c.category })));
       } catch (e) {
         console.error("Erro ao carregar cursos:", e);
+      }
+
+      try {
+        const { data: settings } = await supabase.from("ai_billing_settings").select("credit_value_brl").eq("id", 1).single();
+        if (settings?.credit_value_brl) setCreditValueBrl(Number(settings.credit_value_brl));
+      } catch (e) {
+        console.error("Erro ao carregar configurações de IA:", e);
       }
 
       if (!isNew) {
@@ -738,6 +746,63 @@ export default function EditPlanPage() {
                             </TextField>
                           ))}
                         </div>
+                        {(() => {
+                          const valueBrl = creditValueBrl || 0.01;
+                          let estimate = 0;
+                          let periodLabel = "por ciclo";
+                          const mC = Number(formData.aiMonthlyCredits) || 0;
+                          const wC = Number(formData.aiWeeklyCredits) || 0;
+                          
+                          switch(formData.frequency) {
+                            case "semanal":
+                              estimate = wC * valueBrl;
+                              periodLabel = "por semana";
+                              break;
+                            case "quinzenal":
+                              estimate = wC * 2 * valueBrl;
+                              periodLabel = "por quinzena";
+                              break;
+                            case "mensal":
+                              estimate = mC * valueBrl;
+                              periodLabel = "por mês";
+                              break;
+                            case "trimestral":
+                              estimate = mC * 3 * valueBrl;
+                              periodLabel = "por trimestre";
+                              break;
+                            case "semestral":
+                              estimate = mC * 6 * valueBrl;
+                              periodLabel = "por semestre";
+                              break;
+                            case "anual":
+                              estimate = mC * 12 * valueBrl;
+                              periodLabel = "por ano";
+                              break;
+                            case "vitalicio":
+                              estimate = mC * valueBrl;
+                              periodLabel = "por mês (vitalício)";
+                              break;
+                            case "personalizado": {
+                              const days = Number(formData.accessTimeDays) || 30;
+                              estimate = mC * (days / 30) * valueBrl;
+                              periodLabel = `a cada ${days} dias`;
+                              break;
+                            }
+                          }
+                          
+                          return (
+                            <div className="mt-4 p-3 rounded-lg bg-accent/10 border border-accent/20">
+                              <p className="text-sm font-semibold text-accent-foreground">Custo estimado ({new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valueBrl)} / crédito)</p>
+                              <p className="text-xs text-muted mt-1">
+                                Se o aluno usar todos os créditos, o custo de IA estimado para você será de{" "}
+                                <strong className="text-foreground">
+                                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(estimate)}
+                                </strong>{" "}
+                                {periodLabel}.
+                              </p>
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>

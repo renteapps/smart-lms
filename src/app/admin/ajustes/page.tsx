@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, Home, Palette, Menu as MenuIcon, Plug, WalletCards } from "lucide-react";
+import { Bot, Home, Palette, Navigation, Plug, WalletCards } from "lucide-react";
 import { Card } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
 import { requireAdmin } from "@/lib/supabase/auth";
@@ -20,10 +20,10 @@ const settingsCards = [
     tone: "bg-success-soft text-success-soft-foreground",
   },
   {
-    href: "/admin/menu",
-    icon: MenuIcon,
-    title: "Menu",
-    description: "Configure os itens de navegação do menu lateral dos estudantes.",
+    href: "/admin/navegacao",
+    icon: Navigation,
+    title: "Navegação",
+    description: "Escolha quais páginas aparecem no menu e no rodapé, com nome, ícone e ordem.",
     tone: "bg-warning-soft text-warning-soft-foreground",
   },
   {

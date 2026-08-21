@@ -324,6 +324,9 @@ export default function AdminAgentesPage() {
                               <div className="flex max-w-xs items-start gap-3">
                                 <AgentAvatar
                                   avatar={agent.avatar}
+                                  themeColor={agent.themeColor}
+                                  iconSvg={agent.iconSvg}
+                                  photoUrl={agent.photoUrl}
                                   size="sm"
                                   isMuted={agent.status === "Em manutenção"}
                                 />
@@ -480,6 +483,9 @@ export default function AdminAgentesPage() {
                     <div className="flex items-start gap-3">
                       <AgentAvatar
                         avatar={agent.avatar}
+                        themeColor={agent.themeColor}
+                        iconSvg={agent.iconSvg}
+                        photoUrl={agent.photoUrl}
                         isMuted={agent.status === "Em manutenção"}
                       />
                       <div className="min-w-0 flex-1">

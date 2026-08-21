@@ -50,7 +50,12 @@ export function AgentConversationList({
         </Link>
 
         <div className="flex items-start gap-3">
-          <AgentAvatar avatar={agent.avatar} />
+          <AgentAvatar 
+            avatar={agent.avatar}
+            themeColor={agent.themeColor}
+            iconSvg={agent.iconSvg}
+            photoUrl={agent.photoUrl}
+          />
           <div className="min-w-0">
             <p className="truncate font-display text-base font-extrabold tracking-[-0.02em] text-foreground">
               {agent.name}
@@ -135,7 +140,13 @@ export function AgentConversationList({
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-surface-hover"
             aria-label="Trocar de agente"
           >
-            <AgentAvatar avatar={agent.avatar} size="sm" />
+            <AgentAvatar 
+              avatar={agent.avatar} 
+              themeColor={agent.themeColor}
+              iconSvg={agent.iconSvg}
+              photoUrl={agent.photoUrl}
+              size="sm" 
+            />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold text-foreground">Trocar de agente</span>
               <span className="block truncate text-xs text-muted">{agent.courseTitle}</span>
@@ -151,7 +162,13 @@ export function AgentConversationList({
               {otherAgents.map((item) => (
                 <Dropdown.Item key={item.slug} id={item.slug} textValue={item.name}>
                   <span className="flex min-w-0 items-center gap-2.5">
-                    <AgentAvatar avatar={item.avatar} size="sm" />
+                    <AgentAvatar 
+                      avatar={item.avatar} 
+                      themeColor={item.themeColor}
+                      iconSvg={item.iconSvg}
+                      photoUrl={item.photoUrl}
+                      size="sm" 
+                    />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-semibold text-foreground">{item.name}</span>
                       <span className="block truncate text-xs text-muted">{item.role}</span>

@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+'use client';
+
+import React, { useRef, useState } from 'react';
 import { ContentMapping, QuestionOption } from '@/types/trilha';
-import { X, Clock, Plus, GripVertical, FileText, Video, Folder, BookOpen, Link as LinkIcon, Layers3, TriangleAlert } from 'lucide-react';
+import { X, Clock, Plus, GripVertical, FileText, Video, Folder, BookOpen, Link as LinkIcon, Layers3, TriangleAlert, ImagePlus, LoaderCircle } from 'lucide-react';
 import { Reorder } from 'framer-motion';
 import type { ContentIndex } from '@/lib/contentCatalog';
 import { normalizeTag } from '@/lib/matching';
+import { createClient } from '@/lib/supabase/client';
+import { uploadImageToStorage } from '@/lib/imageOptimization';
 
 interface OptionMappingRowProps {
   option: QuestionOption;
@@ -44,6 +48,10 @@ function isOrphan(mapping: ContentMapping, index: ContentIndex): boolean {
 
 export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUpdate, onDelete, onOpenContentPicker, index }) => {
   const [newTag, setNewTag] = useState('');
+  /** Mapeamento cuja capa está sendo enviada agora. */
+  const [uploadingCoverFor, setUploadingCoverFor] = useState<string | null>(null);
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
+  const coverTargetRef = useRef<string | null>(null);
 
   const handleRemoveTag = (tagToRemove: string) => {
     onUpdate({
@@ -77,8 +85,48 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
     });
   };
 
+  /**
+   * Troca da capa de um link já vinculado.
+   *
+   * A capa vem do Open Graph do site quando o link é criado; aqui o admin
+   * substitui por uma imagem própria sem precisar remover e remapear o conteúdo.
+   */
+  const handlePickCover = (mappingId: string) => {
+    coverTargetRef.current = mappingId;
+    coverInputRef.current?.click();
+  };
+
+  const handleCoverSelected = async (file: File | undefined) => {
+    const mappingId = coverTargetRef.current;
+    if (!file || !mappingId) return;
+
+    setUploadingCoverFor(mappingId);
+    try {
+      const { publicUrl } = await uploadImageToStorage(createClient(), {
+        file,
+        folder: 'trilha',
+        maxWidth: 1600,
+      });
+      handleUpdateMapping(mappingId, { cover: publicUrl });
+    } catch (error) {
+      console.error('Erro ao enviar a capa do link:', error);
+    } finally {
+      setUploadingCoverFor(null);
+      coverTargetRef.current = null;
+      if (coverInputRef.current) coverInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border/50 bg-surface/50 p-4 transition-colors hover:border-border">
+      {/* Um input só para todos os links da opção: quem abre define o alvo. */}
+      <input
+        ref={coverInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => handleCoverSelected(event.target.files?.[0])}
+      />
 
       {/* Top Row: Label and Tags */}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -156,9 +204,34 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
                 >
                   <GripVertical size={14} className="cursor-grab text-muted shrink-0" />
 
-                  <div className="flex items-center justify-center w-6 h-6 rounded bg-background shrink-0" title={getTypeLabel(mapping.type)}>
-                    {getTypeIcon(mapping.type)}
-                  </div>
+                  {mapping.type === 'external_link' ? (
+                    <button
+                      type="button"
+                      onClick={() => handlePickCover(mapping.id)}
+                      title="Trocar a capa deste link"
+                      aria-label={`Trocar a capa de ${mapping.title}`}
+                      className="group relative h-8 w-14 shrink-0 overflow-hidden rounded border border-border/60 bg-background"
+                    >
+                      {mapping.cover ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={mapping.cover} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="grid h-full w-full place-items-center">{getTypeIcon(mapping.type)}</span>
+                      )}
+                      <span className="absolute inset-0 grid place-items-center bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                        <ImagePlus size={13} />
+                      </span>
+                      {uploadingCoverFor === mapping.id && (
+                        <span className="absolute inset-0 grid place-items-center bg-black/55 text-white">
+                          <LoaderCircle size={13} className="animate-spin" />
+                        </span>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="flex items-center justify-center w-6 h-6 rounded bg-background shrink-0" title={getTypeLabel(mapping.type)}>
+                      {getTypeIcon(mapping.type)}
+                    </div>
+                  )}
 
                   <div className="flex-1 min-w-0">
                     <div className="truncate font-medium text-foreground">{mapping.title}</div>

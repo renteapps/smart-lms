@@ -102,6 +102,7 @@ export type Course = {
   isPublished: boolean;
   status?: CourseStatus;
   isFeatured?: boolean;
+  instructorNames?: string[];
   createdAt?: string;
   updatedAt?: string;
   modules: Module[];

@@ -124,6 +124,11 @@ export function CourseForm({
     const title = formData.get("title") as string;
 
     startTransition(async () => {
+      const instructorNamesRaw = formData.get("instructorNames") as string;
+      const instructorNames = instructorNamesRaw
+        ? instructorNamesRaw.split(",").map(s => s.trim()).filter(Boolean)
+        : [];
+
       const res = await saveCourse({
         id: course?.id,
         title,
@@ -134,6 +139,7 @@ export function CourseForm({
         status: status,
         isPublished: status === "Publicado",
         tags: selectedTags,
+        instructorNames,
       });
 
       if (res.success) {
@@ -199,6 +205,11 @@ export function CourseForm({
                 <TextField name="title" defaultValue={course?.title || ""} isRequired>
                   <Label>Título do curso</Label>
                   <Input placeholder="Ex.: Formação em Liderança" />
+                </TextField>
+                <TextField name="instructorNames" defaultValue={course?.instructorNames?.join(", ") || ""}>
+                  <Label>Instrutor(es)</Label>
+                  <Input placeholder="Ex.: Maria Silva, João Santos" />
+                  <Description>Separe múltiplos instrutores por vírgula. Aparecerá no curso e certificado.</Description>
                 </TextField>
                 <TextField name="shortDescription" defaultValue={course?.shortDescription || ""}>
                   <Label>Descrição curta</Label>

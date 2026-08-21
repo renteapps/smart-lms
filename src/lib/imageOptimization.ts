@@ -27,7 +27,8 @@ export type ImageFolder =
   | "branding"
   | "plans"
   | "pilulas"
-  | "blog";
+  | "blog"
+  | "trilha";
 
 export interface ImageOptimizationOptions {
   /**

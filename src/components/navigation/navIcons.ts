@@ -1,0 +1,101 @@
+import {
+  Award,
+  Bell,
+  Bot,
+  BookOpen,
+  Briefcase,
+  Building2,
+  Calendar,
+  FileText,
+  GraduationCap,
+  HelpCircle,
+  Home,
+  LayoutDashboard,
+  Lightbulb,
+  Link2,
+  Mail,
+  MessageSquare,
+  NotebookPen,
+  PlayCircle,
+  Route,
+  Search,
+  Settings,
+  Shield,
+  Sparkles,
+  Star,
+  TrendingUp,
+  User,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
+import { NAV_FALLBACK_ICON, type NavIconKey } from "@/types/navigation";
+
+/**
+ * Ponte entre a chave gravada no banco e o componente do lucide.
+ *
+ * Mesmo desenho de `AssistantAvatar`: um mapa fechado, porque `import()`
+ * dinâmico por nome arrastaria o pacote inteiro para o bundle do header.
+ */
+export const NAV_ICONS: Record<NavIconKey, LucideIcon> = {
+  home: Home,
+  book: BookOpen,
+  route: Route,
+  bot: Bot,
+  article: FileText,
+  notes: NotebookPen,
+  award: Award,
+  search: Search,
+  user: User,
+  users: Users,
+  sparkles: Sparkles,
+  graduation: GraduationCap,
+  building: Building2,
+  settings: Settings,
+  calendar: Calendar,
+  bell: Bell,
+  message: MessageSquare,
+  play: PlayCircle,
+  dashboard: LayoutDashboard,
+  help: HelpCircle,
+  mail: Mail,
+  link: Link2,
+  star: Star,
+  trending: TrendingUp,
+  briefcase: Briefcase,
+  lightbulb: Lightbulb,
+  shield: Shield,
+};
+
+export const NAV_ICON_LABELS: Record<NavIconKey, string> = {
+  home: "Casa",
+  book: "Livro",
+  route: "Trilha",
+  bot: "Robô",
+  article: "Artigo",
+  notes: "Anotações",
+  award: "Certificado",
+  search: "Busca",
+  user: "Pessoa",
+  users: "Grupo",
+  sparkles: "Brilhos",
+  graduation: "Formatura",
+  building: "Empresa",
+  settings: "Engrenagem",
+  calendar: "Calendário",
+  bell: "Sino",
+  message: "Mensagem",
+  play: "Play",
+  dashboard: "Painel",
+  help: "Ajuda",
+  mail: "E-mail",
+  link: "Link",
+  star: "Estrela",
+  trending: "Crescimento",
+  briefcase: "Maleta",
+  lightbulb: "Ideia",
+  shield: "Escudo",
+};
+
+export function navIcon(key: NavIconKey): LucideIcon {
+  return NAV_ICONS[key] ?? NAV_ICONS[NAV_FALLBACK_ICON];
+}

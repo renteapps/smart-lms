@@ -54,6 +54,9 @@ export function AgentPreviewModal({ agent, onClose }: AgentPreviewModalProps) {
                   <div className="flex items-start gap-4">
                     <AgentAvatar
                       avatar={agent.avatar}
+                      themeColor={agent.themeColor}
+                      iconSvg={agent.iconSvg}
+                      photoUrl={agent.photoUrl}
                       size="lg"
                       isMuted={agent.status === "Em manutenção"}
                     />
@@ -123,7 +126,13 @@ export function AgentPreviewModal({ agent, onClose }: AgentPreviewModalProps) {
               <section>
                 <p className="eyebrow mb-3">Abertura da conversa</p>
                 <div className="flex items-start gap-3">
-                  <AgentAvatar avatar={agent.avatar} size="sm" />
+                  <AgentAvatar 
+                    avatar={agent.avatar} 
+                    themeColor={agent.themeColor}
+                    iconSvg={agent.iconSvg}
+                    photoUrl={agent.photoUrl}
+                    size="sm" 
+                  />
                   <p className="max-w-lg rounded-2xl rounded-tl-sm bg-surface-secondary px-4 py-3 text-sm leading-relaxed whitespace-pre-line text-foreground">
                     {agent.greeting}
                   </p>

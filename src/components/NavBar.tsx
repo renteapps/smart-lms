@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { BookOpen, Bot, Building2, FileText, Home, LogIn, LogOut, Menu, Route, Search, User, UserPlus } from "lucide-react";
+import { LogIn, LogOut, Menu, Search, User, UserPlus } from "lucide-react";
 import { buttonVariants, Drawer } from "@heroui/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { NotificationBell } from "./NotificationBell";
@@ -15,23 +15,50 @@ import {
   PROFILE_STORAGE_KEY,
   type ProfilePreferences,
 } from "@/lib/profilePreferences";
+import { navIcon } from "@/components/navigation/navIcons";
+import { isNavItemVisible, type NavItem } from "@/types/navigation";
 
-export default function NavBar() {
+/**
+ * Um item configurado pode apontar para fora da plataforma, e link externo não
+ * passa pelo router do Next — nem pode ir sem `rel` seguro.
+ */
+function NavAnchor({
+  item,
+  className,
+  ariaCurrent,
+  onClick,
+  children,
+}: {
+  item: NavItem;
+  className: string;
+  ariaCurrent?: "page";
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
+  if (item.external) {
+    return (
+      <a href={item.href} target="_blank" rel="noopener noreferrer" className={className} onClick={onClick}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={item.href} aria-current={ariaCurrent} className={className} onClick={onClick}>
+      {children}
+    </Link>
+  );
+}
+
+export default function NavBar({ items }: { items: NavItem[] }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
-  const { user, isAuthenticated, isLoading, signOut } = useAuth();
+  const { user, isAuthenticated, signOut, profileRole, isManager } = useAuth();
 
-  const navLinks = [
-    { href: "/", label: "Início", icon: Home },
-    { href: "/cursos", label: "Cursos", icon: BookOpen },
-    { href: "/minha-trilha", label: "Minha Trilha", icon: Route },
-    { href: "/agentes", label: "Agentes", icon: Bot },
-    { href: "/blog", label: "Insights", icon: FileText },
-    { href: "/notas", label: "Anotações", icon: FileText },
-  ];
+  const viewer = { isAuthenticated, isAdmin: profileRole === "admin", isManager };
+  const visibleLinks = items.filter((item) => isNavItemVisible(item, viewer));
 
   useEffect(() => {
     let frame: number | null = null;
@@ -80,6 +107,8 @@ export default function NavBar() {
   }, [user]);
 
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  // Link externo nunca é "a página atual".
+  const isItemActive = (item: NavItem) => !item.external && isActive(item.href);
 
   /*
    * Dentro da pílula os controles acompanham a curvatura da peça e perdem a
@@ -131,13 +160,13 @@ export default function NavBar() {
         <div className="flex min-w-0 items-center gap-9">
           <BrandMark />
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Navegação principal">
-            {navLinks.map((link) => {
-              const active = isActive(link.href);
+            {visibleLinks.map((item) => {
+              const active = isItemActive(item);
               return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  aria-current={active ? "page" : undefined}
+                <NavAnchor
+                  key={item.id}
+                  item={item}
+                  ariaCurrent={active ? "page" : undefined}
                   className={cn(
                     "relative px-3 py-2 text-sm font-semibold transition-colors",
                     controlRadius,
@@ -159,8 +188,8 @@ export default function NavBar() {
                       transition={{ type: "spring", stiffness: 380, damping: 32 }}
                     />
                   )}
-                  <span className="underline-grow">{link.label}</span>
-                </Link>
+                  <span className="underline-grow">{item.label}</span>
+                </NavAnchor>
               );
             })}
           </nav>
@@ -273,26 +302,27 @@ export default function NavBar() {
                     </p>
                   </Drawer.Header>
 
-                  <Drawer.Body>
+                  <Drawer.Body className="flex-initial">
                     <nav className="flex flex-col gap-1" aria-label="Menu móvel">
-                      {navLinks.map((link) => {
-                        const Icon = link.icon;
+                      {visibleLinks.map((item) => {
+                        const Icon = navIcon(item.icon);
+                        const active = isItemActive(item);
                         return (
-                          <Link
-                            key={link.href}
-                            href={link.href}
-                            aria-current={isActive(link.href) ? "page" : undefined}
+                          <NavAnchor
+                            key={item.id}
+                            item={item}
+                            ariaCurrent={active ? "page" : undefined}
                             onClick={() => setMobileOpen(false)}
                             className={cn(
                               "flex min-h-12 items-center gap-3 rounded-xl px-4 text-base font-semibold transition-colors",
-                              isActive(link.href)
+                              active
                                 ? "bg-accent-soft text-accent-soft-foreground"
                                 : "text-muted hover:bg-surface-hover hover:text-foreground",
                             )}
                           >
                             <Icon className="size-5" aria-hidden="true" />
-                            {link.label}
-                          </Link>
+                            {item.label}
+                          </NavAnchor>
                         );
                       })}
                     </nav>

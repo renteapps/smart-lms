@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Clock3, Lock } from "lucide-react";
+import { Check, Clock3, Lock } from "lucide-react";
 import { buttonVariants } from "@heroui/styles";
 import { Chip } from "@heroui/react/chip";
 import HeroBackdrop from "@/components/HeroBackdrop";
@@ -33,6 +33,13 @@ type NextStepHeroProps = {
   session: HomeSession;
   nextStep: LearningTrailItem;
   greeting: string;
+  /**
+   * Artigo e link externo abrem fora da plataforma e não têm como avisar que
+   * foram lidos. Sem uma conclusão declarada aqui, eles seguravam a agenda de
+   * quem já os tinha consumido.
+   */
+  onComplete?: (item: LearningTrailItem) => void;
+  isCompleting?: boolean;
 };
 
 /**
@@ -46,7 +53,13 @@ type NextStepHeroProps = {
  * havia quatro botões primários competindo aqui — herói, card de "continuar",
  * pílula do dia e trilha de hoje. Agora há um.
  */
-export default function NextStepHero({ session, nextStep, greeting }: NextStepHeroProps) {
+export default function NextStepHero({
+  session,
+  nextStep,
+  greeting,
+  onComplete,
+  isCompleting = false,
+}: NextStepHeroProps) {
   const { triggerTransition } = useCardTransition();
   const cover = nextStep.cover || DEFAULT_COVER;
   const locked = Boolean(nextStep.prerequisites?.some((id) => (
@@ -54,6 +67,8 @@ export default function NextStepHero({ session, nextStep, greeting }: NextStepHe
   )));
 
   const targetHref = contentHref(nextStep);
+  const selfReported = Boolean(onComplete)
+    && (nextStep.type === "article" || nextStep.type === "external_link");
 
   const handleStartClick = (e: React.MouseEvent<HTMLElement>) => {
     if (
@@ -150,6 +165,17 @@ export default function NextStepHero({ session, nextStep, greeting }: NextStepHe
                   <PlayIcon size={20} />
                   Começar agora
                 </Link>
+              )}
+              {selfReported && !locked && (
+                <button
+                  type="button"
+                  disabled={isCompleting}
+                  onClick={() => onComplete?.(nextStep)}
+                  className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
+                >
+                  <Check className="size-4" aria-hidden="true" />
+                  {isCompleting ? "Registrando…" : "Já concluí"}
+                </button>
               )}
               <Link
                 href="/minha-trilha"

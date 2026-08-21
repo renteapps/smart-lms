@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Award, BookOpen, CalendarDays, Download, ShieldCheck } from 'lucide-react';
+import { Award, BookOpen, CalendarDays, ShieldCheck } from 'lucide-react';
 import { buttonVariants, Card, Chip, EmptyState } from '@heroui/react';
 import { Rise } from '@/components/ui/Rise';
 import { getSessionUser } from '@/lib/supabase/auth';
@@ -114,21 +114,13 @@ export default async function CertificadosPage({
                     </Card.Content>
 
                     <Card.Footer className="mt-auto border-t border-hairline px-5 py-4">
-                      {certificate.pdfUrl ? (
-                        <a
-                          href={certificate.pdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={cn(buttonVariants({ variant: 'primary', size: 'sm' }), 'w-full')}
-                        >
-                          <Download className="size-4" aria-hidden="true" />
-                          Baixar certificado
-                        </a>
-                      ) : (
-                        <p className="text-xs leading-5 text-muted">
-                          Certificado emitido. O PDF ficará disponível aqui assim que o processamento terminar.
-                        </p>
-                      )}
+                      <Link
+                        href={`/certificados/${certificate.validationHash}`}
+                        className={cn(buttonVariants({ variant: 'primary', size: 'sm' }), 'w-full')}
+                      >
+                        <Award className="size-4" aria-hidden="true" />
+                        Visualizar Certificado
+                      </Link>
                     </Card.Footer>
                   </Card>
                 </Rise>

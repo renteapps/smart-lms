@@ -11,6 +11,8 @@ import {
   Presentation,
   UserRoundCheck,
 } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { BubbleChatSpark01Icon } from "@hugeicons/core-free-icons";
 import type { AgentAvatarKey } from "@/types/agente";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +20,7 @@ import { cn } from "@/lib/utils";
  * Identidade visual do agente. O tom é decorativo — quem comunica estado é o
  * chip com texto e ícone, nunca a cor da marca do agente sozinha.
  */
-const avatars: Record<AgentAvatarKey, { icon: LucideIcon; tone: string }> = {
+const avatars: Partial<Record<AgentAvatarKey, { icon: LucideIcon; tone: string }>> = {
   feedback: { icon: MessagesSquare, tone: "bg-accent-soft text-accent-soft-foreground" },
   contratacao: { icon: Handshake, tone: "bg-success-soft text-success-soft-foreground" },
   simulacao: { icon: Drama, tone: "bg-warning-soft text-warning-soft-foreground" },
@@ -43,26 +45,59 @@ const iconSizes = {
 
 type AgentAvatarProps = {
   avatar: AgentAvatarKey;
+  themeColor?: string;
+  iconSvg?: string;
+  photoUrl?: string;
   size?: keyof typeof containerSizes;
   /** Agente fora do ar: perde a cor de identidade para não parecer ativo. */
   isMuted?: boolean;
   className?: string;
+  /** Nome do agente, usado para o alt text da imagem */
+  name?: string;
 };
 
-export function AgentAvatar({ avatar, size = "md", isMuted = false, className }: AgentAvatarProps) {
-  const { icon: Icon, tone } = avatars[avatar];
+export function AgentAvatar({ avatar, themeColor, iconSvg, photoUrl, size = "md", isMuted = false, className, name = "Agente" }: AgentAvatarProps) {
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt={name}
+        className={cn(
+          "object-cover shrink-0",
+          containerSizes[size],
+          isMuted && "grayscale opacity-50",
+          className,
+        )}
+      />
+    );
+  }
+
+  const avatarConfig = avatars[avatar];
+  const tone = avatarConfig?.tone || "bg-accent-soft text-accent-soft-foreground";
+  const customStyle = !isMuted && themeColor ? { backgroundColor: themeColor, color: "#ffffff" } : undefined;
 
   return (
     <span
       aria-hidden="true"
+      style={customStyle}
       className={cn(
         "grid shrink-0 place-items-center",
         containerSizes[size],
-        isMuted ? "bg-default text-muted" : tone,
+        isMuted ? "bg-default text-muted" : (themeColor ? "" : tone),
         className,
       )}
     >
-      <Icon className={iconSizes[size]} />
+      {iconSvg && !isMuted ? (
+        <div 
+          className={iconSizes[size]} 
+          dangerouslySetInnerHTML={{ __html: iconSvg }} 
+          style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
+        />
+      ) : avatarConfig ? (
+        <avatarConfig.icon className={iconSizes[size]} />
+      ) : (
+        <HugeiconsIcon icon={BubbleChatSpark01Icon} className={iconSizes[size]} />
+      )}
     </span>
   );
 }

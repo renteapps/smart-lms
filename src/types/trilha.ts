@@ -43,6 +43,11 @@ export type ContentMapping = {
   url?: string;
   learningRole: LearningRole;
   estimatedDurationMin?: number;
+  /**
+   * Capa do conteúdo. Em link externo é a imagem que o próprio site publica em
+   * Open Graph, e o admin pode substituí-la enviando outra.
+   */
+  cover?: string;
 };
 
 export type QuestionOption = {

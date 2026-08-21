@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendEmail, validateResendApiKey } from "@/lib/resendService";
+import { sendEmail, validateResendApiKey, getResendDomains } from "@/lib/resendService";
 import { EmailTemplateType } from "@/types/resend";
 
 export async function POST(req: NextRequest) {
@@ -20,6 +20,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: validation.valid,
         message: validation.message,
+      });
+    }
+
+    if (action === "get_domains") {
+      if (!apiKey) {
+        return NextResponse.json(
+          { success: false, message: "Informe a chave de API para buscar domínios." },
+          { status: 400 }
+        );
+      }
+
+      const res = await getResendDomains(apiKey);
+      return NextResponse.json({
+        success: res.success,
+        domains: res.domains,
+        message: res.message,
       });
     }
 

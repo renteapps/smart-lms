@@ -99,9 +99,31 @@ export function pickRecalibration({
   now = new Date(),
 }: PickRecalibrationOptions): Recalibration | null {
   if (state.kind === 'sem-trilha') return null;
-  if (state.kind === 'dia-pronto' && state.session.done.length === 0) return null;
 
   const { trail } = state;
+  const questions = questionnaire?.questions || [];
+
+  /*
+   * 0. Pergunta que entrou no questionário depois desta pessoa.
+   *
+   * Vem antes de tudo e não espera a sessão do dia: enquanto ela não for
+   * respondida, a trilha está sendo montada com um pedaço a menos do perfil. As
+   * demais recalibrações são refinamento de algo que já existe; esta é o que
+   * falta.
+   */
+  const unanswered = questions.find((question) => (
+    question.type !== 'availability' && (trail.answers?.[question.id]?.length ?? 0) === 0
+  ));
+  if (unanswered) {
+    return {
+      kind: 'survey',
+      question: unanswered,
+      current: [],
+      reason: 'Esta pergunta é nova desde que você montou sua trilha.',
+    };
+  }
+
+  if (state.kind === 'dia-pronto' && state.session.done.length === 0) return null;
 
   // 1. Feedback da sessão que acabou de fechar.
   if (state.kind === 'dia-concluido') {
@@ -121,7 +143,6 @@ export function pickRecalibration({
   // 2. Micro-pesquisa. Atraso alto puxa a pergunta de disponibilidade para a
   //    frente: não adianta refinar interesses de quem não está dando conta do
   //    tamanho da sessão.
-  const questions = questionnaire?.questions || [];
   const ordered = signals.lateRate >= 0.5
     ? [...questions].sort((a, b) => (
       Number(b.type === 'availability') - Number(a.type === 'availability')

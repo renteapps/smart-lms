@@ -36,6 +36,7 @@ import {
   toast,
 } from "@heroui/react";
 import { AssistantAvatar, ASSISTANT_ICON_LABELS, getContrastText } from "@/components/platform-assistant/AssistantAvatar";
+import { AgentMarkdown } from "@/components/agentes/AgentMarkdown";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import type { OpenRouterModel } from "@/types/openrouter";
 import {
@@ -501,7 +502,11 @@ export function ChatAdminClient({
                           <span>{message.author === "user" ? "Aluno" : settings.displayName}</span>
                           <span>{formatDate(message.createdAt)}</span>
                         </div>
-                        <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
+                        {message.author === "assistant" ? (
+                          <AgentMarkdown text={message.content} />
+                        ) : (
+                          <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
+                        )}
                         {message.model && (
                           <div className="mt-3 border-t border-current/10 pt-2 text-[10px] opacity-65">
                             <p>

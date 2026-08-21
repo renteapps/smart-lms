@@ -22,6 +22,7 @@ import { getProfile } from "@/lib/data/profiles";
 import { getAiCreditBalance } from "@/lib/aiCredits";
 import { createClient } from "@/lib/supabase/server";
 import { AiCreditAdminCard } from "./AiCreditAdminCard";
+import { SupportActions } from "./SupportActions";
 
 export default async function AdminUserDashboard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -158,19 +159,8 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
             <CardTitle>Ações de Suporte</CardTitle>
             <CardDescription>Resolva problemas de acesso do usuário</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            <Button variant="tertiary" fullWidth className="justify-start gap-3">
-              <Mail className="size-4" aria-hidden="true" />
-              Reenviar e-mail de acesso
-            </Button>
-            <Button variant="tertiary" fullWidth className="justify-start gap-3">
-              <KeyRound className="size-4" aria-hidden="true" />
-              Redefinir Senha
-            </Button>
-            <Button variant="danger-soft" fullWidth className="justify-start gap-3">
-              <MonitorOff className="size-4" aria-hidden="true" />
-              Forçar Logoff
-            </Button>
+          <CardContent>
+            <SupportActions userId={id} userEmail={profile.email} />
           </CardContent>
         </Card>
       </div>

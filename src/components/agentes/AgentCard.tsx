@@ -36,7 +36,13 @@ export default function AgentCard({ agent, conversationCount, featured = false }
           )}
         >
           <div className="flex items-start gap-4">
-            <AgentAvatar avatar={agent.avatar} isMuted={isUnavailable} />
+            <AgentAvatar 
+              avatar={agent.avatar} 
+              themeColor={agent.themeColor}
+              iconSvg={agent.iconSvg}
+              photoUrl={agent.photoUrl}
+              isMuted={isUnavailable} 
+            />
             <div className="min-w-0 flex-1">
               <h3 className="font-display text-lg font-extrabold leading-snug tracking-[-0.025em] text-foreground">
                 {agent.name}

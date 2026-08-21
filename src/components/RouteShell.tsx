@@ -7,10 +7,17 @@ import Footer from "@/components/Footer";
 import { ProfileBanner } from "@/components/profile/ProfileBanner";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import type { NavigationConfig } from "@/types/navigation";
 
 const ChatSticker = dynamic(() => import("@/components/ChatSticker"), { ssr: false });
 
-export function RouteShell({ children }: { children: React.ReactNode }) {
+export function RouteShell({
+  children,
+  navigation,
+}: {
+  children: React.ReactNode;
+  navigation: NavigationConfig;
+}) {
   const pathname = usePathname();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const isAdmin = pathname.startsWith("/admin");
@@ -47,11 +54,11 @@ export function RouteShell({ children }: { children: React.ReactNode }) {
      * refratar — sem ele o efeito some sobre fundo chapado.
      */
     <div className="ambient-canvas">
-      {!isAuthPage && <NavBar />}
+      {!isAuthPage && <NavBar items={navigation.menu} />}
       {!isAuthPage && <ProfileBanner />}
       {/* A conversa já trava a própria altura; `min-h-screen` sobraria como rolagem morta. */}
       <main className={cn("w-full", !isAgentWorkspace && "min-h-screen")}>{children}</main>
-      {hasFloatingChrome && <Footer />}
+      {hasFloatingChrome && <Footer groups={navigation.footer.groups} />}
       {showAssistant && <ChatSticker />}
     </div>
   );

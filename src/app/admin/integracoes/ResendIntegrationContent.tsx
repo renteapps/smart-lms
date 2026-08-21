@@ -57,6 +57,12 @@ export function ResendIntegrationContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [isValidatingKey, setIsValidatingKey] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  
+  // Domains State
+  const [domains, setDomains] = useState<any[]>([]);
+  const [isLoadingDomains, setIsLoadingDomains] = useState(false);
+  const [emailPrefix, setEmailPrefix] = useState("");
+  const [selectedDomain, setSelectedDomain] = useState("");
 
   // Templates Management State
   const [templates, setTemplates] = useState<Record<string, CustomEmailTemplate>>({});
@@ -137,6 +143,56 @@ export function ResendIntegrationContent() {
     }
   };
 
+  const fetchDomains = async (key: string) => {
+    if (!key || !key.startsWith("re_")) return;
+    setIsLoadingDomains(true);
+    try {
+      const res = await fetch("/api/admin/integracoes/resend/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "get_domains", apiKey: key }),
+      });
+      const data = await res.json();
+      if (data.success && data.domains) {
+        setDomains(data.domains);
+      } else {
+        setDomains([]);
+      }
+    } catch (e) {
+      console.error(e);
+      setDomains([]);
+    } finally {
+      setIsLoadingDomains(false);
+    }
+  };
+
+  // Fetch domains when API key is available and enabled
+  useEffect(() => {
+    if (config.apiKey && config.apiKey.startsWith("re_")) {
+      fetchDomains(config.apiKey);
+    }
+  }, [config.apiKey]);
+
+  // Sync prefix/domain with config.fromEmail
+  useEffect(() => {
+    if (config.fromEmail) {
+      if (config.fromEmail === "onboarding@resend.dev") {
+        setEmailPrefix("onboarding");
+        setSelectedDomain("resend.dev");
+      } else {
+        const [prefix, domain] = config.fromEmail.split("@");
+        setEmailPrefix(prefix || "");
+        setSelectedDomain(domain || "");
+      }
+    }
+  }, [config.fromEmail]);
+
+  const handleFromEmailChange = (prefix: string, domain: string) => {
+    setEmailPrefix(prefix);
+    setSelectedDomain(domain);
+    setConfig((prev) => ({ ...prev, fromEmail: `${prefix}@${domain}` }));
+  };
+
   const loadTemplateIntoEditor = (
     type: EmailTemplateType,
     templatesMap: Record<string, CustomEmailTemplate> = templates
@@ -200,6 +256,8 @@ export function ResendIntegrationContent() {
       const data = await res.json();
       if (data.success) {
         toast.success(data.message || "Chave de API válida!");
+        // Fetch domains immediately upon successful validation
+        fetchDomains(apiKeyInput.trim());
       } else {
         toast.warning(data.message || "Não foi possível validar a chave online.");
       }
@@ -782,16 +840,49 @@ export function ResendIntegrationContent() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
-                    E-mail do Remetente (From)
-                  </label>
-                  <input
-                    type="email"
-                    value={config.fromEmail}
-                    onChange={(e) => setConfig({ ...config, fromEmail: e.target.value })}
-                    placeholder="Ex: notificacoes@seudominio.com"
-                    className="w-full min-h-11 rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
-                  />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-muted">
+                      E-mail do Remetente (From)
+                    </label>
+                    {isLoadingDomains && (
+                      <span className="text-[10px] text-accent flex items-center gap-1">
+                        <RefreshCw className="size-3 animate-spin" /> Carregando domínios...
+                      </span>
+                    )}
+                  </div>
+                  
+                  {domains.length > 0 ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={emailPrefix}
+                        onChange={(e) => handleFromEmailChange(e.target.value, selectedDomain)}
+                        placeholder="notificacoes"
+                        className="w-1/2 min-h-11 rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
+                      />
+                      <span className="text-muted font-bold">@</span>
+                      <select
+                        value={selectedDomain}
+                        onChange={(e) => handleFromEmailChange(emailPrefix, e.target.value)}
+                        className="w-1/2 min-h-11 rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground focus:border-accent focus:bg-surface focus:outline-none"
+                      >
+                        <option value="resend.dev">resend.dev (Sandbox)</option>
+                        {domains.map((d: any) => (
+                          <option key={d.id} value={d.name}>
+                            {d.name} {d.status === "verified" ? "✅" : "⚠️"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <input
+                      type="email"
+                      value={config.fromEmail}
+                      onChange={(e) => setConfig({ ...config, fromEmail: e.target.value })}
+                      placeholder="Ex: notificacoes@seudominio.com"
+                      className="w-full min-h-11 rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
+                    />
+                  )}
                   <p className="text-[11px] text-muted mt-1">
                     Para testes rápidos sem domínio próprio, use <code>onboarding@resend.dev</code>.
                   </p>

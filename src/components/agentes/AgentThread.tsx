@@ -81,7 +81,14 @@ export function AgentThread({ agent, conversation, isTyping, onSend, credits, la
           {isEmpty ? (
             /* Abertura de conversa nova: identidade, saudação e os atalhos do roteiro. */
             <div className="flex flex-col items-center py-6 text-center sm:py-12">
-              <AgentAvatar avatar={agent.avatar} size="lg" isMuted={isUnavailable} />
+              <AgentAvatar 
+                avatar={agent.avatar} 
+                themeColor={agent.themeColor}
+                iconSvg={agent.iconSvg}
+                photoUrl={agent.photoUrl}
+                size="lg" 
+                isMuted={isUnavailable} 
+              />
               <h2 className="display-3 mt-5 text-foreground">
                 {agent.name}, {agent.role.toLocaleLowerCase("pt-BR")}
               </h2>
@@ -134,7 +141,14 @@ export function AgentThread({ agent, conversation, isTyping, onSend, credits, la
 
           {isTyping && (
             <div className="flex items-end gap-3" aria-live="polite">
-              <AgentAvatar avatar={agent.avatar} size="sm" className="mb-1" />
+              <AgentAvatar 
+                avatar={agent.avatar} 
+                themeColor={agent.themeColor}
+                iconSvg={agent.iconSvg}
+                photoUrl={agent.photoUrl}
+                size="sm" 
+                className="mb-1" 
+              />
               <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-hairline bg-surface px-4 py-4 shadow-elev-1">
                 <span className="sr-only">{agent.name} está escrevendo</span>
                 {[0, 0.2, 0.4].map((delay) => (
@@ -211,7 +225,14 @@ function AgentMessage({ agent, text, onCopy, onSaveNote }: AgentMessageProps) {
 
   return (
     <div className="group/message flex items-start gap-3">
-      <AgentAvatar avatar={agent.avatar} size="sm" className="mt-1" />
+      <AgentAvatar 
+        avatar={agent.avatar} 
+        themeColor={agent.themeColor}
+        iconSvg={agent.iconSvg}
+        photoUrl={agent.photoUrl}
+        size="sm" 
+        className="mt-1" 
+      />
       <div className="min-w-0 max-w-[85%]">
         {/* Bolha opaca de propósito: texto longo sobre material perde contraste. */}
         <div className="rounded-2xl rounded-tl-sm border border-hairline bg-surface px-4 py-3 text-sm text-foreground shadow-elev-1">

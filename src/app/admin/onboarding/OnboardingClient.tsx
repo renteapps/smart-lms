@@ -44,7 +44,7 @@ function createDefaultAvailabilityQuestion(): Question {
     text: 'Quando você prefere estudar?',
     role: 'disponibilidade',
     options: [],
-    availabilityConfig: { minutePresets: [15, 30, 45, 60, 90], minMinutes: 10, maxMinutes: 240 },
+    availabilityConfig: { minutePresets: [15, 30, 45, 60, 90], minMinutes: 10, maxMinutes: 240, allowPerDayMinutes: true },
   };
 }
 

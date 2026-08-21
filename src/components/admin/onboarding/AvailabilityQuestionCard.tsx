@@ -7,7 +7,12 @@ interface AvailabilityQuestionCardProps {
   onUpdate: (updated: Question) => void;
 }
 
-const DEFAULT_CONFIG = { minutePresets: [15, 30, 45, 60, 90], minMinutes: 10, maxMinutes: 240 };
+const DEFAULT_CONFIG = {
+  minutePresets: [15, 30, 45, 60, 90],
+  minMinutes: 10,
+  maxMinutes: 240,
+  allowPerDayMinutes: true,
+};
 
 /** Clamp usado pelo motor de agendamento (`schedulePendingItems`) — a config nunca pode fugir disso. */
 function clampMinutes(value: number): number {
@@ -58,8 +63,18 @@ export const AvailabilityQuestionCard: React.FC<AvailabilityQuestionCardProps> =
             className="mt-2 w-full max-w-md bg-transparent text-sm font-medium text-foreground outline-none border-b border-transparent focus:border-accent py-0.5 transition-colors"
           />
           <p className="mt-2 text-xs leading-5 text-muted">
-            O aluno escolhe dias específicos e uma meta de {config.minMinutes} a {config.maxMinutes} minutos por sessão. Esta pergunta não associa conteúdos.
+            O aluno escolhe dias específicos e uma meta de {config.minMinutes} a {config.maxMinutes} minutos por sessão. O motor monta cada dia com folga de 20% para cima ou para baixo. Esta pergunta não associa conteúdos.
           </p>
+
+          <label className="mt-3 flex w-fit items-center gap-2 text-xs font-semibold text-foreground">
+            <input
+              type="checkbox"
+              checked={config.allowPerDayMinutes !== false}
+              onChange={(event) => updateConfig({ allowPerDayMinutes: event.target.checked })}
+              className="size-4 accent-[var(--color-accent)]"
+            />
+            Deixar o aluno definir um tempo diferente para cada dia
+          </label>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_auto_auto]">
             <div>

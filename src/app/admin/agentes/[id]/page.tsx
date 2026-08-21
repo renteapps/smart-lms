@@ -96,6 +96,7 @@ const STATUS_OPTIONS: { value: AgentStatus; label: string; hint: string; tone: "
 ];
 
 const AVATAR_OPTIONS: { value: AgentAvatarKey; label: string; description: string }[] = [
+  { value: "padrao", label: "Padrão", description: "O ícone padrão do agente" },
   { value: "feedback", label: "Feedback", description: "Comunicação e alinhamentos" },
   { value: "contratacao", label: "Contratação", description: "Entrevistas e seleção" },
   { value: "simulacao", label: "Simulação", description: "Roleplay e dinâmicas" },
@@ -334,7 +335,12 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<AgentCategory>("Comunicação");
   const [status, setStatus] = useState<AgentStatus>("Disponível");
-  const [avatar, setAvatar] = useState<AgentAvatarKey>("feedback");
+  const [avatar, setAvatar] = useState<AgentAvatarKey>("padrao");
+  const [themeColor, setThemeColor] = useState("");
+  const [iconSvg, setIconSvg] = useState("");
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [unavailableNote, setUnavailableNote] = useState("");
   const [createdBy, setCreatedBy] = useState("");
   const [courseTitle, setCourseTitle] = useState("");
@@ -426,6 +432,9 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
       setCategory(agentToEdit.category);
       setStatus(agentToEdit.status);
       setAvatar(agentToEdit.avatar);
+      setThemeColor(agentToEdit.themeColor ?? "");
+      setIconSvg(agentToEdit.iconSvg ?? "");
+      setPhotoUrl(agentToEdit.photoUrl ?? "");
       setUnavailableNote(agentToEdit.unavailableNote ?? "");
       setCreatedBy(agentToEdit.createdBy);
       setCourseTitle(agentToEdit.courseTitle);
@@ -484,6 +493,9 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
       category,
       status,
       avatar,
+      themeColor: themeColor.trim() || undefined,
+      iconSvg: iconSvg.trim() || undefined,
+      photoUrl: photoUrl.trim() || undefined,
       createdBy: createdBy.trim() || "Equipe Pedagógica",
       courseTitle: primaryCourseTitle,
       courseId: selectedCourseIds[0] || undefined,
@@ -516,6 +528,9 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
       category,
       status,
       avatar,
+      themeColor,
+      iconSvg,
+      photoUrl,
       createdBy,
       primaryCourseTitle,
       selectedCourseIds,
@@ -680,7 +695,14 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <AgentAvatar avatar={avatar} size="lg" isMuted={status === "Em manutenção"} />
+            <AgentAvatar 
+              avatar={avatar} 
+              themeColor={themeColor}
+              iconSvg={iconSvg}
+              photoUrl={photoUrl}
+              size="lg" 
+              isMuted={status === "Em manutenção"} 
+            />
             <div>
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
@@ -1269,12 +1291,16 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                       <Card.Content>
                         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2">
                           {AVATAR_OPTIONS.map((option) => {
-                            const isSelected = avatar === option.value;
+                            const isSelected = avatar === option.value && !photoUrl && !iconSvg;
                             return (
                               <button
                                 key={option.value}
                                 type="button"
-                                onClick={() => setAvatar(option.value)}
+                                onClick={() => {
+                                  setAvatar(option.value);
+                                  setIconSvg("");
+                                  setPhotoUrl("");
+                                }}
                                 className={cn(
                                   "group relative flex items-center gap-3 rounded-xl border p-3 text-left transition-all",
                                   isSelected
@@ -1303,6 +1329,90 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                             );
                           })}
                         </div>
+                        
+                        <Separator className="my-5" />
+
+                        <div className="space-y-4">
+                          <h4 className="text-sm font-bold text-foreground">Identidade Personalizada</h4>
+                          
+                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <TextField value={themeColor} onChange={setThemeColor} fullWidth>
+                              <Label>Cor (Hex)</Label>
+                              <div className="flex gap-2 items-center">
+                                <input 
+                                  type="color" 
+                                  value={themeColor || "#000000"} 
+                                  onChange={(e) => setThemeColor(e.target.value)} 
+                                  className="w-8 h-8 rounded cursor-pointer border-0 p-0"
+                                />
+                                <Input placeholder="#FF0000" />
+                              </div>
+                              <Description>Cor personalizada do agente.</Description>
+                            </TextField>
+
+                            <div>
+                              <Label className="mb-2 block text-sm font-medium">Foto do Agente</Label>
+                              <input
+                                type="file"
+                                ref={photoInputRef}
+                                className="hidden"
+                                accept="image/*"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  
+                                  setIsUploadingPhoto(true);
+                                  try {
+                                    const { uploadImageToStorage } = await import("@/lib/imageOptimization");
+                                    const supabase = createClient();
+                                    const { publicUrl } = await uploadImageToStorage(supabase, {
+                                      file,
+                                      folder: "branding",
+                                    });
+                                    setPhotoUrl(publicUrl);
+                                    setIconSvg(""); // Remove SVG se a foto for adicionada
+                                    toast.success("Foto do agente enviada com sucesso.");
+                                  } catch (error: any) {
+                                    toast.danger(error.message || "Erro ao fazer upload da foto");
+                                  } finally {
+                                    setIsUploadingPhoto(false);
+                                    if (photoInputRef.current) photoInputRef.current.value = "";
+                                  }
+                                }}
+                              />
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  isDisabled={isUploadingPhoto} 
+                                  onPress={() => photoInputRef.current?.click()}
+                                >
+                                  <UploadCloud className="size-4 mr-2" />
+                                  {isUploadingPhoto ? "Enviando..." : (photoUrl ? "Trocar Foto" : "Subir Foto")}
+                                </Button>
+                                {photoUrl && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-danger" 
+                                    onPress={() => setPhotoUrl("")}
+                                  >
+                                    Remover
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <TextField value={iconSvg} onChange={(val) => {
+                            setIconSvg(val);
+                            if (val) setPhotoUrl(""); // Remove foto se adicionar SVG
+                          }} fullWidth>
+                            <Label>Ícone SVG Customizado</Label>
+                            <TextArea rows={3} placeholder="<svg>...</svg>" />
+                            <Description>Cole o código SVG de um ícone personalizado.</Description>
+                          </TextField>
+                        </div>
                       </Card.Content>
                     </Card>
 
@@ -1319,7 +1429,14 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                       <Card.Content className="space-y-4">
                         <div className="rounded-2xl border border-border bg-background-secondary p-4 transition-all">
                           <div className="flex items-start gap-3.5">
-                            <AgentAvatar avatar={avatar} size="md" isMuted={status === "Em manutenção"} />
+                            <AgentAvatar 
+                              avatar={avatar} 
+                              themeColor={themeColor}
+                              iconSvg={iconSvg}
+                              photoUrl={photoUrl}
+                              size="md" 
+                              isMuted={status === "Em manutenção"} 
+                            />
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2">
                                 <h4 className="font-display text-base font-bold text-foreground">
@@ -1642,7 +1759,13 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                       <div className="rounded-2xl border border-border bg-background-secondary/50 p-4">
                         <span className="eyebrow mb-2 block">Prévia da Mensagem no Chat</span>
                         <div className="flex items-start gap-3">
-                          <AgentAvatar avatar={avatar} size="sm" />
+                          <AgentAvatar 
+                            avatar={avatar} 
+                            themeColor={themeColor}
+                            iconSvg={iconSvg}
+                            photoUrl={photoUrl}
+                            size="sm" 
+                          />
                           <div className="max-w-lg rounded-2xl rounded-tl-sm bg-surface border border-border px-4 py-3 text-sm leading-relaxed text-foreground shadow-sm whitespace-pre-line">
                             {greeting}
                           </div>
@@ -2017,7 +2140,15 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                         key={msg.id}
                         className={cn("flex items-start gap-2.5", isStudent ? "justify-end" : "justify-start")}
                       >
-                        {!isStudent && <AgentAvatar avatar={avatar} size="sm" />}
+                        {!isStudent && (
+                          <AgentAvatar 
+                            avatar={avatar} 
+                            themeColor={themeColor}
+                            iconSvg={iconSvg}
+                            photoUrl={photoUrl}
+                            size="sm" 
+                          />
+                        )}
                         <div
                           className={cn(
                             "max-w-[80%] rounded-2xl px-4 py-3 text-xs sm:text-sm leading-relaxed",

@@ -7,51 +7,27 @@ import { Separator } from "@heroui/react/separator";
 import { BrandMark } from "./BrandMark";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { isNavItemVisible, type NavFooterGroup } from "@/types/navigation";
 
-interface FooterLink {
-  label: string;
-  href: string;
-  adminOnly?: boolean;
-  managerOnly?: boolean;
-}
+/*
+ * O rodapé segue sem ícones de propósito: o contraste entre a frase da marca e
+ * uma lista sóbria de links é o que impede tudo de virar um bloco cinza. O
+ * ícone configurado em cada item existe para o menu — aqui ele é ignorado.
+ */
+const groupGridClasses: Record<number, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-2 lg:grid-cols-3",
+  4: "grid-cols-2 lg:grid-cols-4",
+};
 
-interface FooterGroup {
-  title: string;
-  links: FooterLink[];
-}
+export default function Footer({ groups }: { groups: NavFooterGroup[] }) {
+  const { profileRole, isManager, isAuthenticated } = useAuth();
+  const viewer = { isAuthenticated, isAdmin: profileRole === "admin", isManager };
 
-const footerGroups: FooterGroup[] = [
-  {
-    title: "Aprender",
-    links: [
-      { label: "Todos os cursos", href: "/cursos" },
-      { label: "Minha trilha", href: "/minha-trilha" },
-      { label: "Anotações", href: "/notas" },
-    ],
-  },
-  {
-    title: "Descobrir",
-    links: [
-      { label: "Insights", href: "/blog" },
-      { label: "Refazer onboarding", href: "/onboarding" },
-      { label: "Gestão Corporativa", href: "/empresa/gestao", managerOnly: true },
-      { label: "Painel administrativo", href: "/admin", adminOnly: true },
-    ],
-  },
-];
-
-export default function Footer() {
-  const { profileRole, isManager } = useAuth();
-  const isAdmin = profileRole === "admin";
-
-  const visibleGroups = footerGroups.map((group) => ({
-    ...group,
-    links: group.links.filter((link) => {
-      if (link.adminOnly && !isAdmin) return false;
-      if (link.managerOnly && !isManager && !isAdmin) return false;
-      return true;
-    }),
-  }));
+  const visibleGroups = groups
+    .map((group) => ({ ...group, items: group.items.filter((item) => isNavItemVisible(item, viewer)) }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <footer className="mt-24 border-t border-hairline bg-surface">
@@ -78,21 +54,28 @@ export default function Footer() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 gap-8 sm:gap-12">
+        <div className={cn("grid gap-8 sm:gap-12", groupGridClasses[visibleGroups.length] ?? "grid-cols-2")}>
           {visibleGroups.map((group) => (
-            <nav key={group.title} aria-label={group.title}>
+            <nav key={group.id} aria-label={group.title}>
               <h2 className="eyebrow">{group.title}</h2>
               <ul className="mt-5 flex flex-col">
-                {group.links.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="inline-flex min-h-11 items-center rounded-lg text-sm font-medium text-muted transition-colors duration-[var(--duration-sm)] hover:text-foreground"
-                    >
-                      <span className="underline-grow">{link.label}</span>
-                    </Link>
-                  </li>
-                ))}
+                {group.items.map((item) => {
+                  const className =
+                    "inline-flex min-h-11 items-center rounded-lg text-sm font-medium text-muted transition-colors duration-[var(--duration-sm)] hover:text-foreground";
+                  return (
+                    <li key={item.id}>
+                      {item.external ? (
+                        <a href={item.href} target="_blank" rel="noopener noreferrer" className={className}>
+                          <span className="underline-grow">{item.label}</span>
+                        </a>
+                      ) : (
+                        <Link href={item.href} className={className}>
+                          <span className="underline-grow">{item.label}</span>
+                        </Link>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </nav>
           ))}

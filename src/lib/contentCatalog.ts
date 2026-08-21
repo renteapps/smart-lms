@@ -71,6 +71,7 @@ export function createContentIndex(
           title: mapping.title,
           url: mapping.url,
           durationMin: mapping.estimatedDurationMin,
+          cover: mapping.cover,
         }];
       }
       return [];
@@ -104,7 +105,8 @@ export function createContentIndex(
       moduleName: source.moduleName,
       slug: source.slug,
       url: source.url,
-      cover: source.cover,
+      // Capa escolhida na curadoria vence a do catálogo.
+      cover: mapping.cover || source.cover,
       prerequisites: source.prerequisites?.length ? source.prerequisites : undefined,
       sequence: source.sequence,
     }];

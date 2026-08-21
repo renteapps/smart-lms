@@ -1,8 +1,12 @@
-import React, { useState, useMemo } from 'react';
+'use client';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search, Video, Folder, BookOpen, FileText, Link as LinkIcon, Check, Plus, Inbox } from 'lucide-react';
+import { X, Search, Video, Folder, BookOpen, FileText, Link as LinkIcon, Check, Plus, Inbox, LoaderCircle } from 'lucide-react';
 import type { ContentIndex } from '@/lib/contentCatalog';
 import { filterContentByType } from '@/lib/contentCatalog';
+import { ImageUpload } from '@/components/ui/ImageUpload';
+import { fetchLinkPreview } from '@/app/actions/admin/linkPreview';
 import { ContentMapping } from '@/types/trilha';
 
 interface ContentPickerModalProps {
@@ -19,8 +23,20 @@ const TABS = [
   { id: 'module', label: 'Módulos', icon: Folder },
   { id: 'lesson', label: 'Aulas', icon: Video },
   { id: 'article', label: 'Artigos', icon: FileText },
-  { id: 'external_link', label: 'Links Ext.', icon: LinkIcon },
+  { id: 'external_link', label: 'Links externos', icon: LinkIcon },
 ];
+
+/** Mesmos rótulos da lista de mapeamentos — o tipo nunca aparece em inglês para o admin. */
+/** Só vale disparar a prévia quando o endereço já parece completo. */
+const LOOKS_LIKE_URL = /^https?:\/\/\S+\.\S+/i;
+
+const TYPE_LABELS: Record<string, string> = {
+  lesson: 'Aula',
+  module: 'Módulo',
+  course: 'Curso',
+  article: 'Artigo',
+  external_link: 'Link externo',
+};
 
 export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, onClose, onAddMappings, index }) => {
   const [activeTab, setActiveTab] = useState('all');
@@ -31,6 +47,43 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
   const [customLinkTitle, setCustomLinkTitle] = useState('');
   const [customLinkUrl, setCustomLinkUrl] = useState('');
   const [customLinkDuration, setCustomLinkDuration] = useState(10);
+  const [customLinkCover, setCustomLinkCover] = useState<string | null>(null);
+  const [previewState, setPreviewState] = useState<'idle' | 'loading' | 'failed'>('idle');
+  /** Capa e título escritos à mão nunca são sobrescritos pela busca automática. */
+  const [coverIsManual, setCoverIsManual] = useState(false);
+  const [titleIsManual, setTitleIsManual] = useState(false);
+
+  /*
+   * Prévia do link: o site de destino publica a própria capa em Open Graph, e é
+   * ela que entra na trilha do aluno. Roda com atraso porque o campo dispara a
+   * cada tecla — buscar a cada caractere seria uma rajada de requisições para
+   * endereços incompletos.
+   */
+  useEffect(() => {
+    const url = customLinkUrl.trim();
+    if (!LOOKS_LIKE_URL.test(url)) return;
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setPreviewState('loading');
+      const result = await fetchLinkPreview(url);
+      if (cancelled) return;
+
+      if (!result.success) {
+        setPreviewState('failed');
+        return;
+      }
+
+      setPreviewState('idle');
+      if (result.preview.image && !coverIsManual) setCustomLinkCover(result.preview.image);
+      if (result.preview.title && !titleIsManual) setCustomLinkTitle(result.preview.title);
+    }, 700);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [customLinkUrl, coverIsManual, titleIsManual]);
 
   const contents = useMemo(() => filterContentByType(index, activeTab), [index, activeTab]);
 
@@ -81,6 +134,7 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
         url: customLinkUrl,
         learningRole: 'essential',
         estimatedDurationMin: customLinkDuration,
+        cover: customLinkCover || undefined,
       });
     }
 
@@ -91,6 +145,10 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
     setCustomLinkTitle('');
     setCustomLinkUrl('');
     setCustomLinkDuration(10);
+    setCustomLinkCover(null);
+    setCoverIsManual(false);
+    setTitleIsManual(false);
+    setPreviewState('idle');
     onClose();
   };
 
@@ -173,14 +231,17 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                 <div className="mb-6 p-4 border border-accent/30 bg-accent/5 rounded-xl flex flex-col gap-3">
                   <h3 className="text-sm font-bold text-accent flex items-center gap-2">
                     <LinkIcon size={16} />
-                    Adicionar Link Personalizado
+                    Adicionar link personalizado
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_120px] gap-3">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_110px]">
                     <input
                       type="text"
-                      placeholder="Título do Link (ex: Entrar no Grupo VIP)"
+                      placeholder="Título do link (ex.: Entrar no grupo VIP)"
                       value={customLinkTitle}
-                      onChange={e => setCustomLinkTitle(e.target.value)}
+                      onChange={e => {
+                        setCustomLinkTitle(e.target.value);
+                        setTitleIsManual(true);
+                      }}
                       className="bg-surface border border-border/60 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent"
                     />
                     <label className="flex items-center gap-2 rounded-lg border border-border/60 bg-surface px-3 text-xs font-semibold text-muted">
@@ -193,13 +254,47 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                         className="w-12 bg-transparent text-sm text-foreground outline-none"
                       /> min
                     </label>
-                    <input
-                      type="url"
-                      placeholder="https://..."
-                      value={customLinkUrl}
-                      onChange={e => setCustomLinkUrl(e.target.value)}
-                      className="bg-surface border border-border/60 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent"
+                  </div>
+
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={customLinkUrl}
+                    onChange={e => setCustomLinkUrl(e.target.value)}
+                    className="bg-surface border border-border/60 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent"
+                  />
+
+                  <div className="grid gap-2 border-t border-accent/20 pt-3">
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-foreground">
+                      Capa do link
+                      {previewState === 'loading' && (
+                        <span className="flex items-center gap-1.5 font-semibold text-muted">
+                          <LoaderCircle size={12} className="animate-spin" />
+                          buscando a imagem do site…
+                        </span>
+                      )}
+                    </div>
+
+                    <ImageUpload
+                      value={customLinkCover}
+                      onChange={(url) => {
+                        setCustomLinkCover(url);
+                        // Escolha manual manda: a próxima busca automática não a sobrescreve.
+                        setCoverIsManual(true);
+                      }}
+                      label="Capa do link"
+                      hideLabel
+                      folder="trilha"
+                      aspect="wide"
+                      className="max-w-xs"
+                      description="Puxamos a imagem que o próprio site publica. Envie outra para substituir."
                     />
+
+                    {previewState === 'failed' && LOOKS_LIKE_URL.test(customLinkUrl.trim()) && (
+                      <p className="text-xs font-semibold text-warning">
+                        Não conseguimos ler a imagem desse endereço. Envie uma capa para o conteúdo não entrar sem imagem na trilha.
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -228,7 +323,7 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                           <div className="flex items-center gap-2 mb-1">
                             {getIconForType(item.type)}
                             <span className="text-xs font-semibold uppercase tracking-wider text-muted">
-                              {item.type}
+                              {TYPE_LABELS[item.type] ?? 'Conteúdo'}
                             </span>
                             {item.estimatedDurationMin && (
                               <span className="text-xs font-semibold text-muted">· {item.estimatedDurationMin} min</span>
@@ -259,8 +354,8 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
             {/* Footer */}
             <div className="border-t border-border/40 p-5 bg-surface flex items-center justify-between">
               <span className="text-sm font-medium text-muted">
-                {selectedIds.size} item(s) selecionado(s)
-                {customLinkTitle && customLinkUrl ? ' + 1 Link Pers.' : ''}
+                {selectedIds.size === 1 ? '1 item selecionado' : `${selectedIds.size} itens selecionados`}
+                {customLinkTitle && customLinkUrl ? ' + 1 link personalizado' : ''}
               </span>
               <div className="flex gap-3">
                 <button

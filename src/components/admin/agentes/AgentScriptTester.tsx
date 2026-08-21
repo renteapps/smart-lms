@@ -95,7 +95,13 @@ export function AgentScriptTester({ agent }: { agent: Agent }) {
           </p>
 
           <div className="flex items-start gap-3">
-            <AgentAvatar avatar={agent.avatar} size="sm" />
+            <AgentAvatar 
+              avatar={agent.avatar} 
+              themeColor={agent.themeColor}
+              iconSvg={agent.iconSvg}
+              photoUrl={agent.photoUrl}
+              size="sm" 
+            />
             <div className="min-w-0 flex-1">
               <p className="max-w-lg rounded-2xl rounded-tl-sm bg-surface-secondary px-4 py-3 text-sm leading-relaxed whitespace-pre-line text-foreground">
                 {result.text}

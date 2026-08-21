@@ -106,7 +106,15 @@ export function AgentWorkspace({ agent }: { agent: Agent }) {
             </Drawer.Backdrop>
           </Drawer.Root>
 
-          <AgentAvatar avatar={agent.avatar} size="sm" isMuted={isUnavailable} className="lg:hidden" />
+          <AgentAvatar 
+            avatar={agent.avatar} 
+            themeColor={agent.themeColor}
+            iconSvg={agent.iconSvg}
+            photoUrl={agent.photoUrl}
+            size="sm" 
+            isMuted={isUnavailable} 
+            className="lg:hidden" 
+          />
 
           <div className="min-w-0 flex-1">
             <h1 className="truncate font-display text-base font-extrabold tracking-[-0.02em] text-foreground">

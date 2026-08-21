@@ -4,15 +4,15 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight, BookOpenText, CalendarDays, Check, CheckCircle2, Clock3,
-  ExternalLink, LayoutList, RefreshCw, RotateCcw, Route, Settings2, Sparkles, Target, Trash2,
+  ExternalLink, LayoutList, RefreshCw, RotateCcw, Route, Settings2, Sparkles, Target,
 } from 'lucide-react';
 import {
   Alert, AlertDialog, Button, buttonVariants, Card, Chip, Description, Drawer, EmptyState, Fieldset,
   Label, NumberField, ProgressBar, Skeleton, Tabs, ToggleButton, ToggleButtonGroup,
 } from '@heroui/react';
 import { AvailabilityMode, LearningRole, LearningTrail, LearningTrailItem, SessionLoadRating, StudyAvailability, Weekday } from '@/types/trilha';
-import { refreshTrail, saveTrail } from '@/app/actions/trail';
-import { applySessionFeedback, clampSessionMinutes, effectiveAvailability, minutesForWeekday, postponeTrailSession, removeTrailItem, restoreTrailItem, toLocalDateKey, updateTrailAvailability, weeklyMinutes } from '@/lib/matching';
+import { refreshTrail, saveTrail, setTrailItemCompletion } from '@/app/actions/trail';
+import { applySessionFeedback, clampSessionMinutes, effectiveAvailability, minutesForWeekday, postponeTrailSession, restoreTrailItem, toLocalDateKey, updateTrailAvailability, weeklyMinutes } from '@/lib/matching';
 import { contentHref } from '@/lib/studentHome';
 import { recordTrailEvent, TrailAnalyticsEvent, TrailAnalyticsEventType } from '@/lib/trailAnalytics';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -56,9 +56,11 @@ type TrailContentCardProps = {
   today: string;
   /** Dentro do card de destaque o realce já existe no contêiner — não empilhar. */
   subdued?: boolean;
+  /** Reserva a faixa inferior para o botão de concluir (artigo e link externo). */
+  withCompleteAction?: boolean;
 };
 
-function TrailContentCard({ item, today, subdued = false }: TrailContentCardProps) {
+function TrailContentCard({ item, today, subdued = false, withCompleteAction = false }: TrailContentCardProps) {
   const { triggerTransition } = useCardTransition();
   const href = contentHref(item);
   const external = item.type === 'external_link';
@@ -103,7 +105,7 @@ function TrailContentCard({ item, today, subdued = false }: TrailContentCardProp
   };
 
   const card = (
-    <Card className="lift h-full gap-0 border-hairline p-5">
+    <Card className={cn('lift h-full gap-0 border-hairline p-5', withCompleteAction && 'pb-16')}>
       <div className="flex flex-wrap items-center gap-2">
         <Chip size="sm" variant="soft" color={roleColors[item.learningRole]}>
           {roleLabels[item.learningRole]}
@@ -209,6 +211,7 @@ export default function MinhaTrilhaPage() {
   const [sessionToPostpone, setSessionToPostpone] = useState<string | null>(null);
   const [draftAvailability, setDraftAvailability] = useState<StudyAvailability>({ weekdays: [1, 3, 5], minutesPerSession: 30 });
   const [adaptationMessage, setAdaptationMessage] = useState('');
+  const [completingId, setCompletingId] = useState<string | null>(null);
   const { addNotification } = useNotifications();
   const today = toLocalDateKey(new Date());
 
@@ -352,11 +355,24 @@ export default function MinhaTrilhaPage() {
     setSessionToPostpone(null);
   };
 
-  const handleRemove = (item: LearningTrailItem) => {
-    if (!trail) return;
-    commitTrail(removeTrailItem(trail, item.id));
-    trackTrailEvent('content_removed', { contentId: item.id, title: item.title });
-    setAdaptationMessage('Conteúdo removido da agenda. Você pode restaurá-lo em “Ajustar rotina”.');
+  /**
+   * Conclusão declarada pelo próprio aluno.
+   *
+   * Vai pela action porque a trilha é do servidor: o mesmo caminho que a sala de
+   * aula usa, para o item sair da agenda e entrar no progresso de uma vez só.
+   */
+  const handleComplete = async (item: LearningTrailItem) => {
+    if (!trail || completingId) return;
+    setCompletingId(item.id);
+    try {
+      const result = await setTrailItemCompletion(item.id, true);
+      if (result.success && result.trail) {
+        setTrail(result.trail);
+        setAdaptationMessage(`“${item.title}” entrou no seu progresso e saiu da agenda.`);
+      }
+    } finally {
+      setCompletingId(null);
+    }
   };
 
   const handleRestore = (item: LearningTrailItem) => {
@@ -473,23 +489,34 @@ export default function MinhaTrilhaPage() {
             </div>
 
             <div className={cn('grid gap-4', mode === 'timeline' && 'md:grid-cols-2 xl:grid-cols-3')}>
-              {items.map((item) => (
-                <div key={item.id} className="group/item relative min-w-0">
-                  <TrailContentCard item={item} today={today} />
-                  {item.status === 'pending' && (
-                    <Button
-                      isIconOnly
-                      size="sm"
-                      variant="ghost"
-                      aria-label={`Remover ${item.title} da trilha`}
-                      onClick={() => handleRemove(item)}
-                      className="absolute right-3 top-3 text-muted opacity-100 transition-opacity hover:text-danger md:opacity-0 md:group-hover/item:opacity-100 md:group-focus-within/item:opacity-100"
-                    >
-                      <Trash2 className="size-4" aria-hidden="true" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+              {items.map((item) => {
+                /*
+                 * Aula fecha sozinha: a sala de aula grava a conclusão. Artigo e
+                 * link externo abrem fora da plataforma e não têm como avisar —
+                 * sem este botão, eles ficavam pendentes para sempre e seguravam
+                 * a agenda de quem já os tinha lido.
+                 */
+                const selfReported = item.status === 'pending'
+                  && (item.type === 'article' || item.type === 'external_link');
+
+                return (
+                  <div key={item.id} className="group/item relative min-w-0">
+                    <TrailContentCard item={item} today={today} withCompleteAction={selfReported} />
+                    {selfReported && (
+                      <Button
+                        size="sm"
+                        variant="tertiary"
+                        isDisabled={completingId === item.id}
+                        onClick={() => handleComplete(item)}
+                        className="absolute inset-x-5 bottom-4 justify-center"
+                      >
+                        <Check className="size-3.5" aria-hidden="true" />
+                        {completingId === item.id ? 'Registrando…' : 'Marcar como concluído'}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </Rise>
         );

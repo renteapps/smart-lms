@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { AlertCircle, RefreshCw, Send, X } from "lucide-react";
 import { Button, Label, Popover, Separator, TextArea, TextField } from "@heroui/react";
+import { AgentMarkdown } from "@/components/agentes/AgentMarkdown";
 import { AssistantAvatar, colorWithAlpha, getContrastText } from "@/components/platform-assistant/AssistantAvatar";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -123,7 +124,6 @@ export default function ChatSticker() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadConfig(controller.signal);
     return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isAuthLoading]);
 
   useEffect(() => {
@@ -260,21 +260,18 @@ export default function ChatSticker() {
                     {message.author === "assistant" && (
                       <AssistantAvatar config={config} className="size-7 rounded-full" />
                     )}
-                    <p
-                      className={cn(
-                        "max-w-[82%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-6 shadow-elev-1",
-                        message.author === "user"
-                          ? "rounded-br-sm"
-                          : "rounded-bl-sm border border-hairline bg-surface text-foreground",
-                      )}
-                      style={
-                        message.author === "user"
-                          ? { backgroundColor: config.primaryColor, color: foreground }
-                          : undefined
-                      }
-                    >
-                      {message.content}
-                    </p>
+                    {message.author === "assistant" ? (
+                      <div className="min-w-0 max-w-[82%] rounded-2xl rounded-bl-sm border border-hairline bg-surface px-4 py-3 text-sm text-foreground shadow-elev-1">
+                        <AgentMarkdown text={message.content} />
+                      </div>
+                    ) : (
+                      <p
+                        className="max-w-[82%] whitespace-pre-wrap rounded-2xl rounded-br-sm px-4 py-3 text-sm leading-6 shadow-elev-1"
+                        style={{ backgroundColor: config.primaryColor, color: foreground }}
+                      >
+                        {message.content}
+                      </p>
+                    )}
                   </div>
                 ))
               )}
