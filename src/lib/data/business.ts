@@ -11,7 +11,7 @@ import type {
   MemberStatus,
 } from "@/types/business";
 import { logQueryError, type DB, type Row } from "./types";
-import { getProgressByCourse } from "./courses";
+import { getProgressByCourseForUsers } from "./courses";
 
 /**
  * B2B corporativo sobre `organizations` / `organization_members`.
@@ -159,24 +159,24 @@ export async function getCompanyMembers(db: DB, companyId: string): Promise<Comp
   if (!data?.length) return [];
 
   // Progresso real de cada membro, calculado a partir do que ele concluiu.
+  const memberUserIds = data.map((row: Row) => row.user_id).filter(Boolean);
+  const progressByUserCourse = await getProgressByCourseForUsers(db, memberUserIds);
   const progressByUser = new Map<string, { average: number; completed: number }>();
-  await Promise.all(
-    data.map(async (row: Row) => {
-      if (!row.user_id) return;
-      const byCourse = await getProgressByCourse(db, row.user_id);
-      const assigned = (row.organization_member_courses ?? []).map((item: Row) => item.course_id);
-      const relevant = assigned.length
-        ? assigned.map((courseId: string) => byCourse.get(courseId) ?? 0)
-        : [...byCourse.values()];
-      const average = relevant.length
-        ? Math.round(relevant.reduce((sum: number, value: number) => sum + value, 0) / relevant.length)
-        : 0;
-      progressByUser.set(row.user_id, {
-        average,
-        completed: relevant.filter((value: number) => value >= 100).length,
-      });
-    }),
-  );
+  data.forEach((row: Row) => {
+    if (!row.user_id) return;
+    const byCourse = progressByUserCourse.get(row.user_id) ?? new Map<string, number>();
+    const assigned = (row.organization_member_courses ?? []).map((item: Row) => item.course_id);
+    const relevant = assigned.length
+      ? assigned.map((courseId: string) => byCourse.get(courseId) ?? 0)
+      : [...byCourse.values()];
+    const average = relevant.length
+      ? Math.round(relevant.reduce((sum: number, value: number) => sum + value, 0) / relevant.length)
+      : 0;
+    progressByUser.set(row.user_id, {
+      average,
+      completed: relevant.filter((value: number) => value >= 100).length,
+    });
+  });
 
   const certificates = await getCertificateCounts(db);
 
@@ -314,17 +314,13 @@ async function getWatchedHours(db: DB, companyId: string): Promise<number> {
   if (!userIds.length) return 0;
 
   const { data, error } = await db
-    .from("lesson_progress")
-    .select("lessons ( duration_in_minutes )")
-    .in("user_id", userIds)
-    .eq("is_completed", true);
+    .from("v_user_watch_time")
+    .select("completed_minutes")
+    .in("user_id", userIds);
 
   logQueryError("getWatchedHours", error);
 
-  const minutes = (data ?? []).reduce(
-    (sum: number, row: Row) => sum + (row.lessons?.duration_in_minutes ?? 0),
-    0,
-  );
+  const minutes = (data ?? []).reduce((sum: number, row: Row) => sum + (row.completed_minutes ?? 0), 0);
   return Math.round(minutes / 60);
 }
 
@@ -347,12 +343,7 @@ async function getCompanyCourseStats(
     .eq("organization_id", companyId);
   const userIds = (memberRows ?? []).map((row: Row) => row.user_id).filter(Boolean);
 
-  const progressPerUser = new Map<string, Map<string, number>>();
-  await Promise.all(
-    userIds.map(async (userId: string) => {
-      progressPerUser.set(userId, await getProgressByCourse(db, userId));
-    }),
-  );
+  const progressPerUser = await getProgressByCourseForUsers(db, userIds);
 
   return tracks.map((track: Row) => {
     const course = track.courses;

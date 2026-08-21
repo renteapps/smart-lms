@@ -309,6 +309,49 @@ export async function getProgressByCourse(db: DB, userId: string): Promise<Map<s
   return result;
 }
 
+/**
+ * Como `getProgressByCourse`, mas para vários usuários de uma vez.
+ *
+ * Existe para quem monta uma lista de pessoas (ex.: membros de uma empresa)
+ * e precisa do progresso de cada uma — chamar `getProgressByCourse` num loop
+ * vira N+1 (2 queries por pessoa); aqui são sempre 2 queries no total.
+ */
+export async function getProgressByCourseForUsers(
+  db: DB,
+  userIds: string[],
+): Promise<Map<string, Map<string, number>>> {
+  const result = new Map<string, Map<string, number>>();
+  if (userIds.length === 0) return result;
+
+  const [{ data: courses, error: coursesError }, { data: progress, error: progressError }] =
+    await Promise.all([
+      db.from("v_course_metrics").select("id, lesson_count").eq("is_published", true),
+      db.from("v_user_course_progress").select("course_id, user_id, completed_lessons").in("user_id", userIds),
+    ]);
+
+  logQueryError("getProgressByCourseForUsers:courses", coursesError);
+  logQueryError("getProgressByCourseForUsers:progress", progressError);
+
+  const lessonCountByCourse = new Map<string, number>(
+    (courses ?? []).map((course: Row) => [course.id, course.lesson_count ?? 0]),
+  );
+  const completedByUserCourse = new Map<string, number>();
+  (progress ?? []).forEach((row: Row) => {
+    completedByUserCourse.set(`${row.user_id}:${row.course_id}`, row.completed_lessons ?? 0);
+  });
+
+  userIds.forEach((userId) => {
+    const byCourse = new Map<string, number>();
+    lessonCountByCourse.forEach((total, courseId) => {
+      const done = completedByUserCourse.get(`${userId}:${courseId}`) ?? 0;
+      byCourse.set(courseId, total > 0 ? Math.round((done / total) * 100) : 0);
+    });
+    result.set(userId, byCourse);
+  });
+
+  return result;
+}
+
 export async function getCourseCategories(db: DB): Promise<string[]> {
   const { data, error } = await db
     .from("v_course_metrics")
