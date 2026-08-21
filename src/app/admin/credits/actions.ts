@@ -44,9 +44,9 @@ export async function saveBillingSettings(input: BillingSettingsInput) {
     monthly_budget_brl: input.monthlyBudgetBrl,
     warning_threshold_percent: input.warningThresholdPercent,
     critical_threshold_percent: input.criticalThresholdPercent,
-    default_daily_credits: Math.trunc(input.defaultDailyCredits),
-    default_weekly_credits: Math.trunc(input.defaultWeeklyCredits),
-    default_monthly_credits: Math.trunc(input.defaultMonthlyCredits),
+    default_daily_credits: input.defaultDailyCredits,
+    default_weekly_credits: input.defaultWeeklyCredits,
+    default_monthly_credits: input.defaultMonthlyCredits,
     manual_exchange_rate: input.manualExchangeRate,
     updated_by: user.id,
     updated_at: new Date().toISOString(),
@@ -117,9 +117,9 @@ export async function savePlanLimits(input: { planId: string; daily: number; wee
     return { success: false, message: "As cotas devem crescer de diária para mensal." };
   }
   const { error } = await adminClient.from("plans").update({
-    ai_daily_credits: Math.trunc(input.daily),
-    ai_weekly_credits: Math.trunc(input.weekly),
-    ai_monthly_credits: Math.trunc(input.monthly),
+    ai_daily_credits: input.daily,
+    ai_weekly_credits: input.weekly,
+    ai_monthly_credits: input.monthly,
     updated_at: new Date().toISOString(),
   }).eq("id", input.planId);
   if (error) return { success: false, message: error.message };

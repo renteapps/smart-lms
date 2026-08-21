@@ -114,7 +114,7 @@ export function AgentConversationList({
                     variant="ghost"
                     aria-label={`Excluir conversa ${conversation.title}`}
                     onClick={() => onDelete(conversation.id)}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted transition-opacity hover:text-danger md:opacity-0 md:group-hover/thread:opacity-100 md:group-focus-within/thread:opacity-100"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted transition-opacity hover:text-danger pointer-fine:opacity-0 pointer-fine:group-hover/thread:opacity-100 group-focus-within/thread:opacity-100"
                   >
                     <Trash2 className="size-4" aria-hidden="true" />
                   </Button>

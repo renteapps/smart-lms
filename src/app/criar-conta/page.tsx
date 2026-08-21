@@ -36,6 +36,7 @@ function CriarContaContent() {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
   const [fullName, setFullName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneDdi, setPhoneDdi] = useState("+55");
@@ -52,7 +53,7 @@ function CriarContaContent() {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!fullName.trim() || !email.trim() || !password) {
+    if (!username.trim() || !fullName.trim() || !email.trim() || !password) {
       setErrorMessage("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
@@ -90,6 +91,7 @@ function CriarContaContent() {
           password,
           options: {
             data: {
+              username: username.trim(),
               full_name: fullName.trim(),
               phone: fullFormattedPhone,
               birth_date: birthDate || null,
@@ -104,6 +106,8 @@ function CriarContaContent() {
           let message = error.message;
           if (error.message.includes("User already registered")) {
             message = "Este endereço de e-mail já possui uma conta ativa. Faça login para continuar.";
+          } else if (error.message.includes("profiles_username_key")) {
+            message = "Este nome de usuário já está em uso. Por favor, escolha outro.";
           } else if (
             error.message.includes("email rate limit exceeded") ||
             error.message.toLowerCase().includes("rate limit")
@@ -126,6 +130,7 @@ function CriarContaContent() {
             await supabase
               .from("profiles")
               .update({
+                username: username.trim(),
                 full_name: fullName.trim(),
                 phone: fullFormattedPhone,
                 birth_date: birthDate || null,
@@ -183,6 +188,30 @@ function CriarContaContent() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Username */}
+        <TextField isRequired fullWidth className="w-full space-y-1.5">
+          <Label htmlFor="username" className="text-sm font-medium text-foreground">
+            Nome de usuário
+          </Label>
+          <InputGroup fullWidth className="w-full">
+            <InputGroup.Prefix className="text-muted pl-3">
+              <span className="text-muted">@</span>
+            </InputGroup.Prefix>
+            <InputGroup.Input
+              id="username"
+              name="username"
+              type="text"
+              autoComplete="username"
+              placeholder="Ex.: carolinamendes"
+              value={username}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ""))}
+              className="w-full text-sm"
+              required
+            />
+          </InputGroup>
+          <FieldError />
+        </TextField>
+
         {/* Full Name */}
         <TextField isRequired fullWidth className="w-full space-y-1.5">
           <Label htmlFor="fullName" className="text-sm font-medium text-foreground">

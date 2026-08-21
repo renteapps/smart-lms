@@ -33,21 +33,21 @@ export default async function AdminBuscaUnificada({ searchParams }: { searchPara
   const { data: users } = await supabase
     .from("profiles")
     .select("id, full_name, email, role")
-    .or(`full_name.ilike.%${q}%,email.ilike.%${q}%`)
+    .textSearch("search_vector", q, { type: 'websearch' })
     .limit(5);
 
   // Busca em cursos
   const { data: courses } = await supabase
     .from("courses")
     .select("id, title, category, short_description")
-    .ilike("title", `%${q}%`)
+    .textSearch("search_vector", q, { type: 'websearch' })
     .limit(5);
 
   // Busca em empresas
   const { data: companies } = await supabase
     .from("companies")
     .select("id, name, cnpj")
-    .ilike("name", `%${q}%`)
+    .textSearch("search_vector", q, { type: 'websearch' })
     .limit(5);
 
   const hasResults = (users?.length || 0) > 0 || (courses?.length || 0) > 0 || (companies?.length || 0) > 0;

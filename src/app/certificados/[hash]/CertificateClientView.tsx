@@ -150,7 +150,7 @@ export default function CertificateClientView({
             </div>
           )}
 
-          <h1 className="font-serif text-3xl xs:text-4xl sm:text-5xl md:text-6xl text-[#0f172a] mb-2 tracking-[0.2em] uppercase">
+          <h1 className="font-serif text-2xl sm:text-4xl md:text-5xl lg:text-6xl text-[#0f172a] mb-2 max-w-full break-words tracking-[0.15em] sm:tracking-[0.2em] uppercase">
             Certificado
           </h1>
           <p className="font-serif text-sm sm:text-base md:text-lg text-amber-700 mb-8 sm:mb-12 tracking-[0.3em] uppercase">

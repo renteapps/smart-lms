@@ -29,7 +29,7 @@ import {
 import { Rise } from "@/components/ui/Rise";
 import { SearchResultCard } from "@/components/search/SearchResultCard";
 import { readNotes, type StoredNote } from "@/lib/agentNotes";
-import { executeUnifiedSearch } from "@/lib/search";
+// removed executeUnifiedSearch import
 import { searchContent } from "@/app/actions/search";
 import type {
   SearchFilterOptions,
@@ -75,14 +75,13 @@ export function SearchPageView() {
   const [sortBy, setSortBy] = useState<SearchSortOption>(initialSort);
 
   const [localNotes, setLocalNotes] = useState<StoredNote[]>([]);
-  const [results, setResults] = useState<SearchResponse>(() =>
-    executeUnifiedSearch({
-      query: initialQuery,
-      type: initialTab,
-      category: initialCat,
-      sortBy: initialSort,
-    })
-  );
+  const [results, setResults] = useState<SearchResponse>({
+    query: initialQuery,
+    items: [],
+    totalCount: 0,
+    countsByType: { all: 0, lesson: 0, agent: 0, article: 0, note: 0 },
+    categories: ["Todas"],
+  });
 
   const [isSearching, startTransition] = useTransition();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -139,16 +138,16 @@ export function SearchPageView() {
             localNotes: notes,
           });
           setResults(res);
-        } catch {
-          // Fallback síncrono local
-          const localRes = executeUnifiedSearch({
+        } catch (err) {
+          // Em caso de erro, definimos um estado vazio
+          console.error("Search failed:", err);
+          setResults({
             query: q,
-            type: tab,
-            category: cat,
-            sortBy: sort,
-            localNotes: notes,
+            items: [],
+            totalCount: 0,
+            countsByType: { all: 0, lesson: 0, agent: 0, article: 0, note: 0 },
+            categories: ["Todas"],
           });
-          setResults(localRes);
         }
       });
     },
@@ -258,7 +257,7 @@ export function SearchPageView() {
       <section className="editorial-container py-8 sm:py-10">
         {/* Abas de Tipos de Conteúdo */}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-hairline pb-4">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 hide-scrollbar">
+          <div className="flex flex-wrap items-center gap-1.5">
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const count = results.countsByType[tab.id];
@@ -301,7 +300,7 @@ export function SearchPageView() {
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-surface-hover focus:border-accent focus:outline-none"
+                  className="h-10 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground transition-colors hover:bg-surface-hover focus:border-accent focus:outline-none"
                   aria-label="Filtrar por categoria"
                 >
                   {results.categories.map((cat) => (
@@ -318,7 +317,7 @@ export function SearchPageView() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SearchSortOption)}
-                className="rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-surface-hover focus:border-accent focus:outline-none"
+                className="h-10 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground transition-colors hover:bg-surface-hover focus:border-accent focus:outline-none"
                 aria-label="Ordenar resultados"
               >
                 <option value="relevance">Mais relevantes</option>

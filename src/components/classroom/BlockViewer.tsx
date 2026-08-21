@@ -102,14 +102,14 @@ function ReadOnlyQuiz({ block }: { block: LessonContentBlock }) {
                 !submitted && "hover:border-accent hover:bg-accent-soft/45", chosen && !submitted && "border-accent bg-accent-soft",
                 right && "border-success bg-success-soft", wrong && "border-danger bg-danger-soft", submitted && !right && !wrong && "opacity-55")}
             >
-              <span className="font-medium">{option}</span>{right && <Check className="size-5" />}{wrong && <X className="size-5" />}
+              <span className="min-w-0 break-words font-medium">{option}</span>{right && <Check className="size-5 shrink-0" />}{wrong && <X className="size-5 shrink-0" />}
             </button>
           );
         })}
       </div>
       <div className="flex flex-col gap-3 px-6 pb-6 pt-5 sm:px-8 sm:pb-8">
         {!submitted ? (
-          <button type="button" disabled={selected === null} onClick={() => setSubmitted(true)} className="self-end rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground disabled:opacity-50">Confirmar resposta</button>
+          <button type="button" disabled={selected === null} onClick={() => setSubmitted(true)} className="self-end rounded-lg bg-accent px-5 py-3 text-sm font-medium text-accent-foreground disabled:opacity-50">Confirmar resposta</button>
         ) : explanation ? <p className="text-sm leading-relaxed text-muted">{explanation}</p> : null}
       </div>
     </div>

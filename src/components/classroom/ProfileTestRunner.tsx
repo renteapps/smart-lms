@@ -194,12 +194,12 @@ export default function ProfileTestRunner({ test, config, onComplete }: ProfileT
   return (
     <Card className="flex min-h-[30rem] flex-col gap-0 overflow-hidden p-0">
       {/* Test Runner Bar */}
-      <Card.Header className="flex-row items-center justify-between gap-4 border-b border-separator bg-background-secondary px-5 py-3.5 sm:px-7">
+      <Card.Header className="flex-col items-start gap-1 border-b border-separator bg-background-secondary px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-7">
         <p className="eyebrow flex items-center gap-2 text-accent">
           <Brain className="size-4" aria-hidden="true" />
           Avaliação de perfil
         </p>
-        <span className="max-w-[16rem] truncate text-xs font-semibold text-muted">{test.title}</span>
+        <span className="max-w-full truncate text-xs font-semibold text-muted sm:max-w-[16rem]">{test.title}</span>
       </Card.Header>
 
       {/* Runner Body */}

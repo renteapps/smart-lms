@@ -84,7 +84,7 @@ export default function CoursesCatalogClient({ courses, trail, questionnaire }: 
             </SearchField.Group>
           </SearchField>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar lg:pb-0">
+          <div className="flex flex-wrap items-center gap-2">
             <SlidersHorizontal className="mr-1 size-4 shrink-0 text-muted" aria-hidden="true" />
             <ToggleButtonGroup
               aria-label="Filtrar por categoria"

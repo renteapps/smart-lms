@@ -24,6 +24,34 @@ import { Reveal } from '@/components/ui/Reveal';
 import { Rise } from '@/components/ui/Rise';
 import { cn } from '@/lib/utils';
 
+/**
+ * As três perguntas que o plano responde — uma aba para cada.
+ *
+ * `next` = "o que eu faço agora", `calendar` = "quando eu faço",
+ * `full` = "onde eu estou". Antes havia duas abas que respondiam a mesma
+ * pergunta ("quando") em tamanhos de card diferentes, e nenhuma respondia às
+ * outras duas.
+ */
+type TrailView = 'next' | 'calendar' | 'full';
+
+/** Quantas sessões a aba de próximos passos mostra antes de mandar para a trilha completa. */
+const NEXT_SESSIONS_HORIZON = 3;
+
+const VIEW_META: Record<TrailView, { title: string; hint: string }> = {
+  next: {
+    title: 'Seus próximos passos',
+    hint: 'O que fazer nas próximas sessões, hoje inclusive. O que você concluir hoje fica visível aqui até o dia virar.',
+  },
+  calendar: {
+    title: 'Sua agenda',
+    hint: 'Quando cada conteúdo está planejado. Adie um dia inteiro se a semana apertar — o resto se reorganiza.',
+  },
+  full: {
+    title: 'Sua trilha completa',
+    hint: 'Onde você está em cada formação, do começo ao fim — incluindo o que já concluiu.',
+  },
+};
+
 const roleLabels: Record<LearningRole, string> = { essential: 'Essencial', deepening: 'Aprofundamento', extra: 'Extra' };
 const roleColors: Record<LearningRole, 'accent' | 'warning' | 'default'> = { essential: 'accent', deepening: 'warning', extra: 'default' };
 const weekdays: Array<{ value: Weekday; label: string }> = [
@@ -72,6 +100,29 @@ function typeVisual(type: LearningTrailItem['type']) {
   };
 }
 
+/**
+ * Concluído hoje.
+ *
+ * `completedAt` é a verdade; `scheduledDate` só entra como reserva para itens
+ * antigos gravados antes de existir carimbo de conclusão. Sem essa distinção,
+ * uma aula adiantada hoje mas agendada para sexta apareceria como card de
+ * concluído dentro da sessão de sexta, que ainda nem chegou.
+ */
+function completedOn(item: LearningTrailItem, dateKey: string): boolean {
+  if (item.status !== 'completed') return false;
+  if (item.completedAt) {
+    const at = new Date(item.completedAt);
+    return !Number.isNaN(at.getTime()) && toLocalDateKey(at) === dateKey;
+  }
+  return item.scheduledDate === dateKey;
+}
+
+/** "21 de ago" — data curta para as linhas densas da trilha completa. */
+function shortDate(dateKey: string): string {
+  if (!dateKey) return '—';
+  return new Date(`${dateKey}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+}
+
 function statusLabel(item: LearningTrailItem, today: string): string {
   if (item.status === 'completed') return 'Concluído';
   if (item.rescheduled) return 'Atrasado replanejado';
@@ -94,6 +145,8 @@ type TrailContentCardProps = {
   subdued?: boolean;
   /** Reserva a faixa inferior para o botão de concluir (artigo e link externo). */
   withCompleteAction?: boolean;
+  /** Usa um layout minimalista em formato de lista (sem imagem de capa). */
+  compact?: boolean;
 };
 
 /** Domínio do link, sem `www.` — é o que diz de onde o conteúdo vem. */
@@ -117,7 +170,7 @@ function hostOf(url?: string): string | null {
  * aparece quando o estado foge do normal, e o papel pedagógico só quando não é o
  * essencial.
  */
-function TrailContentCard({ item, today, subdued = false, withCompleteAction = false }: TrailContentCardProps) {
+function TrailContentCard({ item, today, subdued = false, withCompleteAction = false, compact = false }: TrailContentCardProps) {
   const { triggerTransition } = useCardTransition();
   const href = contentHref(item);
   const external = item.type === 'external_link';
@@ -170,92 +223,113 @@ function TrailContentCard({ item, today, subdued = false, withCompleteAction = f
       className={cn(
         'lift h-full gap-0 overflow-hidden border-hairline p-0',
         completed && 'border-success/35 bg-success-soft/25',
+        compact && 'flex-row items-center p-3 gap-3 min-h-0'
       )}
     >
-      <div className="relative h-24 shrink-0 overflow-hidden bg-background-secondary">
-        {item.cover ? (
-          <Image
-            src={item.cover}
-            alt=""
-            fill
-            unoptimized
-            sizes="(min-width: 1280px) 20rem, (min-width: 768px) 45vw, 90vw"
-            className={cn(
-              'object-cover transition-transform duration-[var(--duration-lg)] group-hover:scale-[1.03]',
-              completed && 'opacity-55 saturate-50',
-            )}
-          />
-        ) : (
-          <span className={cn('grid h-full w-full place-items-center', type.band)}>
-            <type.Icon className="size-7" aria-hidden="true" />
-          </span>
-        )}
-
-        <span
-          className={cn(
-            'absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.6875rem] font-extrabold uppercase tracking-[0.08em] shadow-elev-1',
-            completed ? 'bg-success text-success-foreground' : type.badge,
+      {!compact ? (
+        <div className="relative h-24 shrink-0 overflow-hidden bg-background-secondary">
+          {item.cover ? (
+            <Image
+              src={item.cover}
+              alt=""
+              fill
+              unoptimized
+              sizes="(min-width: 1280px) 20rem, (min-width: 768px) 45vw, 90vw"
+              className={cn(
+                'object-cover transition-transform duration-[var(--duration-lg)] group-hover:scale-[1.03]',
+                completed && 'opacity-55 saturate-50',
+              )}
+            />
+          ) : (
+            <span className={cn('grid h-full w-full place-items-center', type.band)}>
+              <type.Icon className="size-7" aria-hidden="true" />
+            </span>
           )}
-        >
-          {completed ? <Check className="size-3" aria-hidden="true" /> : <type.Icon className="size-3" aria-hidden="true" />}
-          {completed ? 'Concluído' : type.label}
-        </span>
-      </div>
 
-      <div className={cn('flex flex-1 flex-col p-5', withCompleteAction && 'pb-16')}>
-        {origin && (
+          <span
+            className={cn(
+              'absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.6875rem] font-extrabold uppercase tracking-[0.08em] shadow-elev-1',
+              completed ? 'bg-success text-success-foreground' : type.badge,
+            )}
+          >
+            {completed ? <Check className="size-3" aria-hidden="true" /> : <type.Icon className="size-3" aria-hidden="true" />}
+            {completed ? 'Concluído' : type.label}
+          </span>
+        </div>
+      ) : (
+        <div className={cn('flex size-10 shrink-0 items-center justify-center rounded-lg', completed ? 'bg-success text-success-foreground' : type.band)}>
+          {completed ? <Check className="size-5" aria-hidden="true" /> : <type.Icon className="size-5" aria-hidden="true" />}
+        </div>
+      )}
+
+      <div className={cn('flex flex-1 flex-col min-w-0', !compact ? 'p-5' : 'py-0.5', !compact && withCompleteAction && 'pb-16')}>
+        {!compact && origin && (
           <p className="truncate text-xs font-bold uppercase tracking-[0.08em] text-muted">{origin}</p>
         )}
 
         <h4
           className={cn(
-            'mt-1.5 font-display text-base font-extrabold leading-snug tracking-[-0.02em] sm:text-lg',
+            'font-display font-extrabold leading-snug tracking-[-0.02em] truncate',
+            compact ? 'text-sm' : 'mt-1.5 text-base sm:text-lg',
             completed ? 'text-muted line-through decoration-success/50' : 'text-foreground',
           )}
         >
           {item.title}
         </h4>
 
-        {!external && item.courseName && item.moduleName && (
+        {!compact && !external && item.courseName && item.moduleName && (
           <p className="mt-1.5 truncate text-xs text-muted">Módulo: {item.moduleName}</p>
         )}
 
-        <div
-          className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-hairline pt-3 text-xs font-semibold text-muted"
-          data-numeric
-        >
-          <span className="flex items-center gap-1.5">
-            <Clock3 className="size-3.5" aria-hidden="true" /> {item.durationMin} min
-          </span>
+        {compact ? (
+          <div className="mt-0.5 flex items-center gap-2 text-[0.6875rem] font-medium text-muted truncate" data-numeric>
+            <span className="flex items-center gap-1">
+              <Clock3 className="size-3" aria-hidden="true" /> {item.durationMin} min
+            </span>
+            {showStatus && !completed && (
+              <span className="flex items-center gap-1 truncate text-foreground/75">
+                {status.icon} {statusLabel(item, today)}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div
+            className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-hairline pt-3 text-xs font-semibold text-muted"
+            data-numeric
+          >
+            <span className="flex items-center gap-1.5">
+              <Clock3 className="size-3.5" aria-hidden="true" /> {item.durationMin} min
+            </span>
 
-          {item.learningRole !== 'essential' && (
-            <Chip size="sm" variant="soft" color={roleColors[item.learningRole]}>
-              {roleLabels[item.learningRole]}
-            </Chip>
-          )}
+            {item.learningRole !== 'essential' && (
+              <Chip size="sm" variant="soft" color={roleColors[item.learningRole]}>
+                {roleLabels[item.learningRole]}
+              </Chip>
+            )}
 
-          {showStatus && !completed && (
-            <Chip size="sm" variant="tertiary" color={status.color}>
-              {status.icon}
-              {statusLabel(item, today)}
-            </Chip>
-          )}
+            {showStatus && !completed && (
+              <Chip size="sm" variant="tertiary" color={status.color}>
+                {status.icon}
+                {statusLabel(item, today)}
+              </Chip>
+            )}
 
-          {item.overBudget && <span className="text-warning">Acima da meta</span>}
+            {item.overBudget && <span className="text-warning">Acima da meta</span>}
 
-          {!completed && (
-            <ArrowRight
-              className="ml-auto size-4 text-accent transition-transform duration-[var(--duration-md)] ease-[var(--ease-zen)] group-hover:translate-x-0.5"
-              aria-hidden="true"
-            />
-          )}
-        </div>
+            {!completed && (
+              <ArrowRight
+                className="ml-auto size-4 text-accent transition-transform duration-[var(--duration-md)] ease-[var(--ease-zen)] group-hover:translate-x-0.5"
+                aria-hidden="true"
+              />
+            )}
+          </div>
+        )}
       </div>
     </Card>
   );
 
   const body = subdued ? card : <Reveal className="h-full rounded-2xl">{card}</Reveal>;
-  const classes = 'group block h-full min-h-[188px] rounded-2xl';
+  const classes = cn('group block h-full rounded-2xl', !compact && 'min-h-[188px]');
 
   return external ? (
     <a href={href} target="_blank" rel="noreferrer" className={classes}>{body}</a>
@@ -306,7 +380,7 @@ export default function MinhaTrilhaPage() {
   const [isDemo, setIsDemo] = useState(false);
   const [storageError, setStorageError] = useState(false);
   const [replanned, setReplanned] = useState(false);
-  const [viewMode, setViewMode] = useState<'timeline' | 'calendar'>('timeline');
+  const [viewMode, setViewMode] = useState<TrailView>('next');
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [sessionToPostpone, setSessionToPostpone] = useState<string | null>(null);
   const [draftAvailability, setDraftAvailability] = useState<StudyAvailability>({ weekdays: [1, 3, 5], minutesPerSession: 30 });
@@ -360,13 +434,56 @@ export default function MinhaTrilhaPage() {
   const sessions = useMemo(() => {
     if (!trail) return [];
     const groups = trail.items.reduce<Record<string, LearningTrailItem[]>>((result, item) => {
-      const visible = item.status === 'pending' || item.scheduledDate >= today;
-      if (!visible) return result;
+      if (item.status !== 'pending' && !completedOn(item, today)) return result;
       result[item.sessionId] = [...(result[item.sessionId] || []), item];
       return result;
     }, {});
     return Object.entries(groups).sort(([, a], [, b]) => a[0].scheduledDate.localeCompare(b[0].scheduledDate));
   }, [trail, today]);
+
+  /*
+   * Horizonte curto: as próximas sessões, não o plano inteiro.
+   *
+   * Uma trilha real tem dezenas de conteúdos. Despejar todos como cards
+   * transforma o plano num backlog — a pessoa abre para saber o que fazer e
+   * recebe a conta de tudo que falta. Três sessões é o recorte que responde
+   * "esta semana" sem virar cobrança; o resto vive na aba da trilha completa.
+   * O corte é por sessão, não por data, porque quem estuda 5x por semana e quem
+   * estuda 1x precisam do mesmo número de próximos passos, não do mesmo prazo.
+   */
+  const nextSessions = useMemo(() => sessions.slice(0, NEXT_SESSIONS_HORIZON), [sessions]);
+  const sessionsBeyondHorizon = Math.max(0, sessions.length - NEXT_SESSIONS_HORIZON);
+
+  /*
+   * A trilha completa é agrupada por curso, não por dia.
+   *
+   * Vinte e cinco cabeçalhos de data são a mesma parede que a aba de próximos
+   * passos existe para evitar. Por formação, a lista responde a pergunta que
+   * realmente se faz aqui — "onde eu estou em cada curso, e quanto falta" — e
+   * é o único lugar onde ver o concluído tem valor: como progresso, não como
+   * histórico ocupando espaço.
+   */
+  const courseGroups = useMemo(() => {
+    if (!trail) return [];
+    const groups = new Map<string, LearningTrailItem[]>();
+
+    trail.items.forEach((item) => {
+      const key = item.courseName || item.moduleName || 'Conteúdos avulsos';
+      groups.set(key, [...(groups.get(key) || []), item]);
+    });
+
+    return [...groups.entries()].map(([name, items]) => {
+      const done = items.filter((item) => item.status === 'completed').length;
+      return {
+        name,
+        items: [...items].sort((a, b) => a.order - b.order),
+        done,
+        total: items.length,
+        percent: Math.round((done / items.length) * 100),
+        minutes: items.reduce((sum, item) => sum + item.durationMin, 0),
+      };
+    });
+  }, [trail]);
 
   const todayItems = trail?.items.filter((item) => item.scheduledDate === today) || [];
   const todayPending = todayItems.filter((item) => item.status === 'pending');
@@ -539,12 +656,15 @@ export default function MinhaTrilhaPage() {
     );
   }
 
-  const renderSessions = (mode: 'timeline' | 'calendar') => (
-    <div className={cn(mode === 'timeline' ? 'space-y-10' : 'grid gap-7 lg:grid-cols-2')}>
-      {sessions.map(([sessionId, items], index) => {
+  const renderSessions = (
+    mode: 'timeline' | 'calendar',
+    list: Array<[string, LearningTrailItem[]]>,
+  ) => (
+    <div className={cn(mode === 'timeline' ? 'space-y-10' : 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4')}>
+      {list.map(([sessionId, items], index) => {
         const date = new Date(`${items[0].scheduledDate}T12:00:00`);
         const isToday = items[0].scheduledDate === today;
-        const isLast = index === sessions.length - 1;
+        const isLast = index === list.length - 1;
         const pendingItems = items.filter((item) => item.status === 'pending');
         const doneItems = items.filter((item) => item.status === 'completed');
         const canPostpone = pendingItems.length > 0 && items[0].scheduledDate >= today;
@@ -553,46 +673,75 @@ export default function MinhaTrilhaPage() {
           <Rise
             as="section"
             key={sessionId}
-            className={cn('relative min-w-0', mode === 'timeline' ? 'sm:pl-[4.5rem]' : 'surface-card p-5')}
+            className={cn('relative min-w-0 flex flex-col', mode === 'timeline' ? 'sm:pl-[4.5rem]' : 'surface-card p-4 shadow-sm')}
           >
             {/* Rail da linha do tempo: vive na calha à esquerda, nunca atrás dos cards. */}
             {mode === 'timeline' && !isLast && (
               <span aria-hidden="true" className="absolute -bottom-10 left-5 top-12 hidden w-px bg-hairline sm:block" />
             )}
 
-            <div className="mb-5 flex flex-wrap items-center gap-4">
-              <span
-                data-numeric
-                className={cn(
-                  'grid size-10 shrink-0 place-items-center rounded-full text-sm font-extrabold',
-                  isToday ? 'bg-accent text-accent-foreground shadow-elev-2' : 'bg-default text-default-foreground',
-                  mode === 'timeline' && 'sm:absolute sm:left-0 sm:top-0',
-                )}
-              >
-                {index + 1}
-              </span>
-              <div className="min-w-0">
-                <h3 className="font-display font-extrabold capitalize tracking-[-0.02em] text-foreground">
-                  {date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
-                </h3>
+            <div className={cn('flex flex-wrap items-center gap-4', mode === 'timeline' ? 'mb-5' : 'mb-4')}>
+              {mode === 'timeline' && (
+                <span
+                  data-numeric
+                  className={cn(
+                    'grid size-10 shrink-0 place-items-center rounded-full text-sm font-extrabold',
+                    isToday ? 'bg-accent text-accent-foreground shadow-elev-2' : 'bg-default text-default-foreground',
+                    'sm:absolute sm:left-0 sm:top-0',
+                  )}
+                >
+                  {index + 1}
+                </span>
+              )}
+              
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className={cn("font-display font-extrabold capitalize tracking-[-0.02em] text-foreground truncate", mode === 'calendar' ? 'text-sm' : 'text-lg')}>
+                    {date.toLocaleDateString('pt-BR', mode === 'calendar' ? { weekday: 'short', day: '2-digit', month: 'short' } : { weekday: 'long', day: '2-digit', month: 'long' })}
+                  </h3>
+                  {mode === 'calendar' && (
+                    <span
+                      data-numeric
+                      className={cn(
+                        'grid size-6 shrink-0 place-items-center rounded-full text-[0.6875rem] font-extrabold',
+                        isToday ? 'bg-accent text-accent-foreground shadow-elev-2' : 'bg-default text-default-foreground',
+                      )}
+                    >
+                      {index + 1}
+                    </span>
+                  )}
+                </div>
                 {/* O cabeçalho conta o que falta; o que já foi feito aparece ao lado. */}
-                <p className="mt-1 text-xs font-semibold text-muted" data-numeric>
-                  {pendingItems.reduce((sum, item) => sum + item.durationMin, 0)} minutos ·{' '}
-                  {pendingItems.length} {pendingItems.length === 1 ? 'conteúdo' : 'conteúdos'}
+                <p className={cn("mt-0.5 font-semibold text-muted truncate", mode === 'calendar' ? 'text-[0.6875rem]' : 'text-xs')} data-numeric>
+                  {pendingItems.reduce((sum, item) => sum + item.durationMin, 0)} min ·{' '}
+                  {pendingItems.length} {mode === 'calendar' ? 'cont.' : (pendingItems.length === 1 ? 'conteúdo' : 'conteúdos')}
                   {doneItems.length > 0 && (
-                    <span className="text-success"> · {doneItems.length} concluído{doneItems.length > 1 ? 's' : ''}</span>
+                    <span className="text-success"> · {doneItems.length} {mode === 'calendar' ? 'concl.' : (doneItems.length > 1 ? 'concluídos' : 'concluído')}</span>
                   )}
                 </p>
               </div>
-              <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-hairline" />
-              {canPostpone && (
-                <Button variant="tertiary" size="sm" onClick={() => setSessionToPostpone(sessionId)}>
-                  Adiar sessão
-                </Button>
+
+              {mode === 'timeline' && (
+                <>
+                  <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-hairline" />
+                  {canPostpone && (
+                    <Button variant="tertiary" size="sm" onClick={() => setSessionToPostpone(sessionId)}>
+                      Adiar sessão
+                    </Button>
+                  )}
+                </>
               )}
             </div>
 
-            <div className={cn('grid gap-4', mode === 'timeline' && 'md:grid-cols-2 xl:grid-cols-3')}>
+            {mode === 'calendar' && canPostpone && (
+              <div className="mb-4">
+                <Button variant="tertiary" size="sm" className="w-full justify-center text-xs h-8" onClick={() => setSessionToPostpone(sessionId)}>
+                  Adiar sessão
+                </Button>
+              </div>
+            )}
+
+            <div className={cn('grid gap-3 flex-1', mode === 'timeline' && 'md:grid-cols-2 xl:grid-cols-3')}>
               {items.map((item) => {
                 /*
                  * Aula fecha sozinha: a sala de aula grava a conclusão. Artigo e
@@ -604,15 +753,15 @@ export default function MinhaTrilhaPage() {
                   && (item.type === 'article' || item.type === 'external_link');
 
                 return (
-                  <div key={item.id} className="group/item relative min-w-0">
-                    <TrailContentCard item={item} today={today} withCompleteAction={selfReported} />
+                  <div key={item.id} className="group/item relative min-w-0 flex flex-col">
+                    <TrailContentCard item={item} today={today} withCompleteAction={selfReported && mode === 'timeline'} compact={mode === 'calendar'} subdued={mode === 'calendar'} />
                     {selfReported && (
                       <Button
                         size="sm"
-                        variant="tertiary"
+                        variant={mode === 'calendar' ? 'ghost' : 'tertiary'}
                         isDisabled={completingId === item.id}
                         onClick={() => handleComplete(item)}
-                        className="absolute inset-x-5 bottom-4 justify-center"
+                        className={cn(mode === 'calendar' ? 'mt-2 w-full justify-center h-8 text-xs' : 'absolute inset-x-5 bottom-4 justify-center')}
                       >
                         <Check className="size-3.5" aria-hidden="true" />
                         {completingId === item.id ? 'Registrando…' : 'Marcar como concluído'}
@@ -625,6 +774,118 @@ export default function MinhaTrilhaPage() {
           </Rise>
         );
       })}
+    </div>
+  );
+
+  const renderFullTrail = () => (
+    <div className="space-y-6">
+      {courseGroups.map((group) => (
+        <Rise as="section" key={group.name} className="surface-card p-5 sm:p-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="font-display text-lg font-extrabold tracking-[-0.02em] text-foreground">
+                {group.name}
+              </h3>
+              <p className="mt-1 text-xs font-semibold text-muted" data-numeric>
+                {group.done} de {group.total} concluídos · {group.minutes} min no total
+              </p>
+            </div>
+            <span
+              data-numeric
+              className={cn(
+                'font-display text-2xl font-extrabold tracking-[-0.03em]',
+                group.percent === 100 ? 'text-success' : 'text-accent',
+              )}
+            >
+              {group.percent}%
+            </span>
+          </div>
+
+          <div className="mt-4">
+            <ProgressBar
+              value={group.percent}
+              color={group.percent === 100 ? 'success' : 'accent'}
+              size="sm"
+              aria-label={`Progresso em ${group.name}`}
+            >
+              <ProgressBar.Track>
+                <ProgressBar.Fill />
+              </ProgressBar.Track>
+            </ProgressBar>
+          </div>
+
+          {/* Linhas, não cards: numa trilha de dezenas de conteúdos a densidade é o recurso escasso. */}
+          <ul className="mt-5 border-t border-hairline">
+            {group.items.map((item, index) => {
+              const done = item.status === 'completed';
+              const href = contentHref(item);
+              const external = item.type === 'external_link';
+              const type = typeVisual(item.type);
+
+              const row = (
+                <>
+                  <span
+                    data-numeric
+                    className={cn(
+                      'grid size-7 shrink-0 place-items-center rounded-full text-[0.6875rem] font-extrabold',
+                      done ? 'bg-success text-success-foreground' : 'bg-default text-default-foreground',
+                    )}
+                  >
+                    {done ? <Check className="size-3.5" aria-hidden="true" /> : index + 1}
+                  </span>
+
+                  <span className="min-w-0 flex-1">
+                    <span
+                      className={cn(
+                        'block truncate text-sm font-bold',
+                        done ? 'text-muted line-through decoration-success/50' : 'text-foreground',
+                      )}
+                    >
+                      {item.title}
+                    </span>
+                    <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+                      <type.Icon className="size-3 shrink-0" aria-hidden="true" />
+                      <span className="truncate">
+                        {type.label}
+                        {item.moduleName && item.moduleName !== group.name ? ` · ${item.moduleName}` : ''}
+                      </span>
+                    </span>
+                  </span>
+
+                  <span className="shrink-0 text-xs font-semibold text-muted" data-numeric>
+                    {item.durationMin} min
+                  </span>
+
+                  <span
+                    className={cn(
+                      'hidden w-24 shrink-0 text-right text-xs font-semibold sm:block',
+                      done ? 'text-success' : 'text-muted',
+                    )}
+                    data-numeric
+                  >
+                    {done ? 'Concluído' : shortDate(item.scheduledDate)}
+                  </span>
+                </>
+              );
+
+              const classes = cn(
+                'flex items-center gap-3 border-b border-hairline py-3 transition-colors',
+                done ? 'opacity-70' : 'hover:bg-background-secondary/60',
+              );
+
+              return (
+                <li key={item.id}>
+                  {external ? (
+                    <a href={href} target="_blank" rel="noreferrer" className={classes}>{row}</a>
+                  ) : (
+                    <Link href={href} className={classes}>{row}</Link>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Rise>
+      ))}
     </div>
   );
 
@@ -781,24 +1042,67 @@ export default function MinhaTrilhaPage() {
           </Card>
         )}
 
-        <Tabs.Root selectedKey={viewMode} onSelectionChange={(key) => setViewMode(String(key) as 'timeline' | 'calendar')}>
+        <Tabs.Root selectedKey={viewMode} onSelectionChange={(key) => setViewMode(String(key) as TrailView)}>
           <div className="mb-8 flex flex-col gap-5 border-b border-hairline pb-6 sm:flex-row sm:items-end sm:justify-between">
-            <div>
+            <div className="min-w-0">
               <p className="eyebrow">Plano de aprendizagem</p>
-              <h2 className="display-2 mt-2 text-foreground">Suas próximas sessões</h2>
+              <h2 className="display-2 mt-2 text-foreground">{VIEW_META[viewMode].title}</h2>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-muted">{VIEW_META[viewMode].hint}</p>
             </div>
-            <Tabs.List aria-label="Modo de visualização das sessões">
-              <Tabs.Tab id="timeline">
-                <LayoutList className="size-4" aria-hidden="true" /> Trilha
+            <Tabs.List aria-label="Como ver seu plano">
+              <Tabs.Tab id="next">
+                <LayoutList className="size-4" aria-hidden="true" /> Próximos passos
               </Tabs.Tab>
               <Tabs.Tab id="calendar">
                 <CalendarDays className="size-4" aria-hidden="true" /> Agenda
               </Tabs.Tab>
+              <Tabs.Tab id="full">
+                <Route className="size-4" aria-hidden="true" /> Trilha completa
+              </Tabs.Tab>
             </Tabs.List>
           </div>
 
-          <Tabs.Panel id="timeline">{renderSessions('timeline')}</Tabs.Panel>
-          <Tabs.Panel id="calendar">{renderSessions('calendar')}</Tabs.Panel>
+          <Tabs.Panel id="next">
+            {nextSessions.length > 0 ? (
+              <>
+                {renderSessions('timeline', nextSessions)}
+
+                {/*
+                 * O que ficou fora do horizonte não some — vira uma linha só, e
+                 * quem quiser a conta inteira escolhe vê-la.
+                 */}
+                {sessionsBeyondHorizon > 0 && (
+                  <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-hairline pt-6">
+                    <p className="text-sm font-semibold text-muted" data-numeric>
+                      Mais {sessionsBeyondHorizon} {sessionsBeyondHorizon === 1 ? 'sessão planejada' : 'sessões planejadas'} depois destas.
+                    </p>
+                    <Button variant="tertiary" onClick={() => setViewMode('full')}>
+                      Ver trilha completa <ArrowRight className="size-4" aria-hidden="true" />
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <Card className="border-hairline">
+                <EmptyState className="gap-0 px-6 py-12 text-center">
+                  <span className="grid size-12 place-items-center rounded-2xl bg-success-soft text-success-soft-foreground">
+                    <CheckCircle2 className="size-6" aria-hidden="true" />
+                  </span>
+                  <h3 className="display-3 mt-5 text-foreground">Nada pendente por aqui.</h3>
+                  <p className="mt-3 max-w-md text-sm leading-6 text-muted">
+                    Você concluiu tudo que estava planejado. Reveja seus objetivos para trazer conteúdo novo,
+                    ou acompanhe seu progresso na trilha completa.
+                  </p>
+                  <Button variant="tertiary" className="mt-6" onClick={() => setViewMode('full')}>
+                    Ver trilha completa <ArrowRight className="size-4" aria-hidden="true" />
+                  </Button>
+                </EmptyState>
+              </Card>
+            )}
+          </Tabs.Panel>
+
+          <Tabs.Panel id="calendar">{renderSessions('calendar', sessions)}</Tabs.Panel>
+          <Tabs.Panel id="full">{renderFullTrail()}</Tabs.Panel>
         </Tabs.Root>
       </main>
 

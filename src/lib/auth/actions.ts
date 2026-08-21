@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { type EmailOtpType } from "@supabase/supabase-js";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export type AuthActionResult = {
   success: boolean;
@@ -21,6 +22,17 @@ async function getOrigin() {
 }
 
 export async function signInWithPasswordAction(formData: FormData): Promise<AuthActionResult> {
+  const reqHeaders = await headers();
+  const ip = reqHeaders.get("x-forwarded-for") || "unknown-ip";
+  const { success: rateLimitSuccess } = await checkRateLimit(`login:${ip}`, 5, 60);
+
+  if (!rateLimitSuccess) {
+    return {
+      success: false,
+      error: "Muitas tentativas de login. Aguarde um minuto e tente novamente.",
+    };
+  }
+
   const email = (formData.get("email") as string)?.trim();
   const password = formData.get("password") as string;
   const next = (formData.get("next") as string) || "/minha-trilha";
@@ -95,18 +107,30 @@ export async function signInWithOtpAction(formData: FormData): Promise<AuthActio
 }
 
 export async function signUpAction(formData: FormData): Promise<AuthActionResult> {
+  const reqHeaders = await headers();
+  const ip = reqHeaders.get("x-forwarded-for") || "unknown-ip";
+  const { success: rateLimitSuccess } = await checkRateLimit(`signup:${ip}`, 3, 3600); // Max 3 signups per hour per IP
+
+  if (!rateLimitSuccess) {
+    return {
+      success: false,
+      error: "Muitas contas criadas recentemente deste dispositivo. Tente novamente mais tarde.",
+    };
+  }
+
   const email = (formData.get("email") as string)?.trim();
   const password = formData.get("password") as string;
+  const username = (formData.get("username") as string)?.trim();
   const fullName = (formData.get("fullName") as string)?.trim();
   const birthDate = (formData.get("birthDate") as string)?.trim();
   const gender = (formData.get("gender") as string)?.trim();
   const role = (formData.get("role") as string)?.trim();
   const next = (formData.get("next") as string) || "/onboarding";
 
-  if (!email || !password || !fullName) {
+  if (!email || !password || !fullName || !username) {
     return {
       success: false,
-      error: "Nome, e-mail e senha são obrigatórios.",
+      error: "Nome de usuário, nome, e-mail e senha são obrigatórios.",
     };
   }
 
@@ -126,6 +150,7 @@ export async function signUpAction(formData: FormData): Promise<AuthActionResult
     password,
     options: {
       data: {
+        username: username,
         full_name: fullName,
         birth_date: birthDate || null,
         gender: gender || null,
@@ -139,6 +164,8 @@ export async function signUpAction(formData: FormData): Promise<AuthActionResult
     let message = error.message;
     if (error.message.includes("User already registered")) {
       message = "Este endereço de e-mail já possui uma conta ativa. Faça login para continuar.";
+    } else if (error.message.includes("profiles_username_key")) {
+      message = "Este nome de usuário já está em uso. Por favor, escolha outro.";
     } else if (
       error.message.includes("email rate limit exceeded") ||
       error.message.toLowerCase().includes("rate limit")

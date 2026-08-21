@@ -179,7 +179,6 @@ export default function RecalibrationSlot({
         <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="primary"
-            size="sm"
             isDisabled={selected.length === 0}
             onClick={() => onAnswerSurvey(question.id, selected)}
           >

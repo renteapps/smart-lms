@@ -495,6 +495,7 @@ export function ProfileEditor() {
               id="username"
               label="Nome de usuário (Username)"
               value={profile.username}
+              isRequired
               placeholder="seu_usuario"
               description="Identificador único no sistema (ex: @mariana_costa)."
               autoComplete="username"

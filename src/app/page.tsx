@@ -3,6 +3,7 @@ import StudentHomeClient from "@/components/home/StudentHomeClient";
 import { StudentShell } from "@/components/shells/StudentShell";
 import { getSessionUser } from "@/lib/supabase/auth";
 import { getCatalogCourses } from "@/lib/data/courses";
+import { getAllArticles } from "@/lib/data/blog";
 
 export const metadata: Metadata = {
   title: "Início | Smart LMS",
@@ -21,7 +22,10 @@ export const metadata: Metadata = {
  */
 export default async function Home() {
   const { supabase, user } = await getSessionUser();
-  const courses = await getCatalogCourses(supabase, user?.id);
+  const [courses, articles] = await Promise.all([
+    getCatalogCourses(supabase, user?.id),
+    getAllArticles(supabase)
+  ]);
 
-  return <StudentShell><StudentHomeClient courses={courses} /></StudentShell>;
+  return <StudentShell><StudentHomeClient courses={courses} articles={articles} /></StudentShell>;
 }

@@ -118,11 +118,10 @@ export default function NavBar({ items }: { items: NavItem[] }) {
    */
   const controlRadius = isScrolled ? "rounded-full" : "rounded-lg";
 
-  const userDisplayName =
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    user?.email?.split("@")[0] ||
-    "Meu perfil";
+  const username = user?.user_metadata?.username;
+  const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name;
+  const firstName = fullName ? fullName.trim().split(" ")[0] : null;
+  const userDisplayName = username || firstName || user?.email?.split("@")[0] || "Meu perfil";
 
   return (
     /*

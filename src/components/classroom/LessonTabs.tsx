@@ -226,7 +226,6 @@ export default function LessonTabs({
               <Button
                 isIconOnly
                 variant="primary"
-                size="sm"
                 aria-label="Enviar comentário"
                 className="absolute bottom-3 right-3 rounded-lg"
                 onClick={handleSubmitComment}

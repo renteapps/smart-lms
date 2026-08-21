@@ -119,14 +119,14 @@ function ContentRow({ item, locked, completed, onComplete, isCompleting = false 
   if (!selfReported) return link;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {link}
       <button
         type="button"
         disabled={isCompleting}
         onClick={() => onComplete?.(item)}
         aria-label={`Marcar ${item.title} como concluído`}
-        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}
+        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0 max-sm:w-full max-sm:justify-center")}
       >
         <Check className="size-3.5" aria-hidden="true" />
         {isCompleting ? "…" : "Já concluí"}

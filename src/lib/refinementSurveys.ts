@@ -21,6 +21,13 @@ import { EMPTY_REFINEMENT, type RefinementState } from '@/lib/data/trail';
 const COMPLETIONS_BETWEEN_SURVEYS = 3;
 /** Dias de silêncio depois de responder uma micro-pesquisa. */
 const COOLDOWN_DAYS = 7;
+/**
+ * Dias de silêncio entre uma exibição e outra de uma pergunta ainda sem
+ * resposta. Ela continua tendo prioridade sobre tudo — falta um pedaço do
+ * perfil enquanto ninguém responder —, mas não precisa insistir em toda visita
+ * à home; espaçada, ela para de parecer uma cobrança diária.
+ */
+const UNANSWERED_RENAG_DAYS = 3;
 const DAY_IN_MS = 86_400_000;
 
 // ---------------------------------------------------------------------------
@@ -38,6 +45,8 @@ export type Recalibration =
       /** Respostas atuais, para o formulário abrir já preenchido. */
       current: string[];
       reason: string;
+      /** Pergunta que entrou no questionário depois desta pessoa — nunca respondida. */
+      isNew: boolean;
     }
   | { kind: 'profile-test'; test: ProfileTest; reason: string };
 
@@ -57,29 +66,37 @@ function surveyIsDue(
   signals: ImplicitSignals,
   refinement: RefinementState,
   now: Date,
-): { due: boolean; reason: string } {
+): { due: boolean; reason: string; isNew: boolean } {
   const answered = trail.answers?.[question.id];
 
   // Pergunta que entrou no questionário depois do onboarding desta pessoa.
   if (!answered || answered.length === 0) {
-    return { due: true, reason: 'Esta pergunta é nova desde que você montou sua trilha.' };
+    const lastShown = refinement.shownAt?.[question.id];
+    if (lastShown) {
+      const elapsed = now.getTime() - new Date(lastShown).getTime();
+      if (Number.isFinite(elapsed) && elapsed < UNANSWERED_RENAG_DAYS * DAY_IN_MS) {
+        return { due: false, reason: '', isNew: true };
+      }
+    }
+    return { due: true, reason: 'Esta pergunta é nova desde que você montou sua trilha.', isNew: true };
   }
 
   const lastAsked = refinement.answeredAt[question.id];
   if (lastAsked) {
     const elapsed = now.getTime() - new Date(lastAsked).getTime();
     if (Number.isFinite(elapsed) && elapsed < COOLDOWN_DAYS * DAY_IN_MS) {
-      return { due: false, reason: '' };
+      return { due: false, reason: '', isNew: false };
     }
   }
 
   if (signals.completedCount - refinement.completedAtLastSurvey < COMPLETIONS_BETWEEN_SURVEYS) {
-    return { due: false, reason: '' };
+    return { due: false, reason: '', isNew: false };
   }
 
   return {
     due: true,
     reason: `Você concluiu ${signals.completedCount} conteúdos desde o início. Ainda faz sentido?`,
+    isNew: false,
   };
 }
 
@@ -109,18 +126,16 @@ export function pickRecalibration({
    * Vem antes de tudo e não espera a sessão do dia: enquanto ela não for
    * respondida, a trilha está sendo montada com um pedaço a menos do perfil. As
    * demais recalibrações são refinamento de algo que já existe; esta é o que
-   * falta.
+   * falta. Mas "prioridade" não é "toda visita" — `surveyIsDue` espaça as
+   * exibições em `UNANSWERED_RENAG_DAYS` dias, então uma pergunta ignorada
+   * ontem não insiste hoje de novo.
    */
-  const unanswered = questions.find((question) => (
-    question.type !== 'availability' && (trail.answers?.[question.id]?.length ?? 0) === 0
-  ));
-  if (unanswered) {
-    return {
-      kind: 'survey',
-      question: unanswered,
-      current: [],
-      reason: 'Esta pergunta é nova desde que você montou sua trilha.',
-    };
+  for (const question of questions) {
+    if (question.type === 'availability') continue;
+    if ((trail.answers?.[question.id]?.length ?? 0) > 0) continue;
+
+    const { due, reason, isNew } = surveyIsDue(question, trail, signals, refinement, now);
+    if (due) return { kind: 'survey', question, current: [], reason, isNew };
   }
 
   if (state.kind === 'dia-pronto' && state.session.done.length === 0) return null;
@@ -153,9 +168,9 @@ export function pickRecalibration({
     // A disponibilidade tem tela própria em /minha-trilha ("Ajustar rotina").
     if (question.type === 'availability') continue;
 
-    const { due, reason } = surveyIsDue(question, trail, signals, refinement, now);
+    const { due, reason, isNew } = surveyIsDue(question, trail, signals, refinement, now);
     if (due) {
-      return { kind: 'survey', question, current: trail.answers?.[question.id] || [], reason };
+      return { kind: 'survey', question, current: trail.answers?.[question.id] || [], reason, isNew };
     }
   }
 
@@ -202,9 +217,32 @@ export function recordSurveyAnswer(
       formatVersion: 1,
       answeredAt: { ...current.answeredAt, [questionId]: now.toISOString() },
       completedAtLastSurvey: completedCount,
+      shownAt: current.shownAt,
     };
     window.localStorage.setItem(REFINEMENT_STORAGE_KEY, JSON.stringify(updated));
   } catch (err) {
     console.error('Erro ao registrar resposta de pesquisa:', err);
+  }
+}
+
+/**
+ * Registra que o card de "pergunta nova" apareceu — respondida ou não.
+ *
+ * É o que dá o espaçamento: sem gravar a exibição em si, só `recordSurveyAnswer`
+ * (chamado ao responder) atualizaria o relógio, e quem ignora o card continuaria
+ * vendo-o em toda visita.
+ */
+export function recordSurveyShown(questionId: string, now: Date = new Date()): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = window.localStorage.getItem(REFINEMENT_STORAGE_KEY);
+    const current = readRefinementState(raw);
+    const updated: RefinementState = {
+      ...current,
+      shownAt: { ...(current.shownAt ?? {}), [questionId]: now.toISOString() },
+    };
+    window.localStorage.setItem(REFINEMENT_STORAGE_KEY, JSON.stringify(updated));
+  } catch (err) {
+    console.error('Erro ao registrar exibição de pergunta:', err);
   }
 }

@@ -17,24 +17,35 @@ describe("calculateAiPrice", () => {
     });
   });
 
-  it("cobra pelo menos um crédito em chamadas muito baratas", () => {
+  it("respeita minimumCredits quando informado ou gera créditos fracionários proporcionais", () => {
     expect(calculateAiPrice({
       providerCostUsd: 0,
       exchangeRate: 5,
       exchangeBufferPercent: 10,
       marginPercent: 50,
       creditValueBrl: 0.01,
+      minimumCredits: 1,
     }).credits).toBe(1);
+
+    expect(calculateAiPrice({
+      providerCostUsd: 0.0001,
+      exchangeRate: 5,
+      exchangeBufferPercent: 0,
+      marginPercent: 0,
+      creditValueBrl: 0.01,
+    }).credits).toBe(0.05);
   });
 
-  it("mantém o mínimo monetário de um centavo quando o crédito vale menos", () => {
-    expect(calculateAiPrice({
-      providerCostUsd: 0,
+  it("calcula receita nominal com base nos créditos fracionários", () => {
+    const result = calculateAiPrice({
+      providerCostUsd: 0.001,
       exchangeRate: 5,
       exchangeBufferPercent: 10,
       marginPercent: 50,
-      creditValueBrl: 0.0025,
-    })).toMatchObject({ credits: 4, nominalRevenueBrl: 0.01 });
+      creditValueBrl: 0.01,
+    });
+    expect(result.credits).toBe(1.1);
+    expect(result.nominalRevenueBrl).toBeCloseTo(0.011);
   });
 
   it("estima custo por tokens e tamanho aproximado do prompt", () => {

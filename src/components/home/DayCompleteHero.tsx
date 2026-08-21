@@ -69,12 +69,14 @@ export default function DayCompleteHero({ greeting, session, next }: DayComplete
             Adiantar a próxima sessão
             <ArrowIcon size={18} />
           </Link>
-          <p className="flex items-center gap-2 text-sm text-muted">
-            <CalendarDays className="size-4" aria-hidden="true" />
-            Próxima: {longDayFormatter.format(next.date)} ·{" "}
-            <span data-numeric>
-              {next.pending.length} {next.pending.length === 1 ? "conteúdo" : "conteúdos"} ·{" "}
-              {next.remainingMinutes} min
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+            <CalendarDays className="size-4 shrink-0" aria-hidden="true" />
+            <span>
+              Próxima: {longDayFormatter.format(next.date)} ·{" "}
+              <span data-numeric>
+                {next.pending.length} {next.pending.length === 1 ? "conteúdo" : "conteúdos"} ·{" "}
+                {next.remainingMinutes} min
+              </span>
             </span>
           </p>
         </div>

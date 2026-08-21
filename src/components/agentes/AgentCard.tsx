@@ -44,7 +44,7 @@ export default function AgentCard({ agent, conversationCount, featured = false }
               isMuted={isUnavailable} 
             />
             <div className="min-w-0 flex-1">
-              <h3 className="font-display text-lg font-extrabold leading-snug tracking-[-0.025em] text-foreground">
+              <h3 className="truncate font-display text-lg font-extrabold leading-snug tracking-[-0.025em] text-foreground">
                 {agent.name}
               </h3>
               <p className="mt-0.5 truncate text-sm font-semibold text-muted">{agent.role}</p>

@@ -7,6 +7,7 @@ import { Alert, Button, Label, TextArea, TextField, toast } from "@heroui/react"
 import { AgentAvatar } from "@/components/agentes/AgentAvatar";
 import { AgentMarkdown } from "@/components/agentes/AgentMarkdown";
 import { saveAgentNote } from "@/lib/agentNotes";
+import { formatAiCredits } from "@/lib/aiCredits";
 import type { Agent, AgentConversation } from "@/types/agente";
 import { cn } from "@/lib/utils";
 
@@ -198,11 +199,11 @@ export function AgentThread({ agent, conversation, isTyping, onSend, credits, la
             <div className="flex items-center gap-3">
               {credits !== null && (
                 <span className={cn("font-semibold", credits > 0 ? "text-accent" : "text-danger")}>
-                  {credits} {credits === 1 ? "crédito" : "créditos"} de IA
+                  {formatAiCredits(credits)} {credits === 1 ? "crédito" : "créditos"} de IA
                 </span>
               )}
               {lastCreditsCharged !== null && (
-                <span>Última resposta: {lastCreditsCharged} {lastCreditsCharged === 1 ? "crédito" : "créditos"}</span>
+                <span>Última resposta: {formatAiCredits(lastCreditsCharged)} {lastCreditsCharged === 1 ? "crédito" : "créditos"}</span>
               )}
               <span>Respostas seguem o roteiro do curso.</span>
             </div>
@@ -243,7 +244,7 @@ function AgentMessage({ agent, text, onCopy, onSaveNote }: AgentMessageProps) {
           <div
             className={cn(
               "mt-1 flex flex-wrap items-center gap-1 transition-opacity",
-              "md:opacity-0 md:group-hover/message:opacity-100 md:group-focus-within/message:opacity-100",
+              "pointer-fine:opacity-0 pointer-fine:group-hover/message:opacity-100 group-focus-within/message:opacity-100",
             )}
           >
             {onCopy && (

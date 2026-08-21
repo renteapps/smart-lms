@@ -187,12 +187,19 @@ export type RefinementState = {
   answeredAt: Record<string, string>;
   /** Conclusões registradas na última vez que perguntamos algo. */
   completedAtLastSurvey: number;
+  /**
+   * questionId -> ISO da última vez que o card de "pergunta nova" apareceu,
+   * respondida ou não. Espaça a insistência: sem isso, uma pergunta ainda sem
+   * resposta reaparecia em toda visita à home, todo santo dia.
+   */
+  shownAt?: Record<string, string>;
 };
 
 export const EMPTY_REFINEMENT: RefinementState = {
   formatVersion: 1,
   answeredAt: {},
   completedAtLastSurvey: 0,
+  shownAt: {},
 };
 
 export async function getRefinementState(db: DB, userId: string): Promise<RefinementState> {

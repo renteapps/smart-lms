@@ -91,7 +91,7 @@ export function AgentWorkspace({ agent }: { agent: Agent }) {
           <Drawer.Root isOpen={isNavOpen} onOpenChange={setIsNavOpen}>
             <Drawer.Trigger
               aria-label="Abrir conversas"
-              className="press grid size-10 shrink-0 place-items-center rounded-xl text-foreground transition-colors hover:bg-surface-hover lg:hidden"
+              className="press grid size-11 shrink-0 place-items-center rounded-xl text-foreground transition-colors hover:bg-surface-hover lg:hidden"
             >
               <PanelLeft className="size-5" aria-hidden="true" />
             </Drawer.Trigger>
@@ -148,7 +148,7 @@ export function AgentWorkspace({ agent }: { agent: Agent }) {
             variant="ghost"
             aria-label="Nova conversa"
             onClick={handleNewConversation}
-            className="shrink-0 lg:hidden"
+            className="size-11 shrink-0 lg:hidden"
           >
             <SquarePen className="size-4" aria-hidden="true" />
           </Button>

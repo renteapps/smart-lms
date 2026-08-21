@@ -36,7 +36,7 @@ describe("parseAiCreditBalance", () => {
     expect(parseAiCreditBalance({ weekly_remaining: 10 })).toBeNull();
   });
 
-  it("nunca expõe saldos negativos ou fracionários", () => {
+  it("nunca expõe saldos negativos e preserva valores fracionários", () => {
     const balance = parseAiCreditBalance({
       daily_remaining: 4.9,
       daily_limit: 25,
@@ -53,10 +53,10 @@ describe("parseAiCreditBalance", () => {
 
     expect(balance).toMatchObject({
       weeklyRemaining: 0,
-      weeklyLimit: 10,
-      monthlyRemaining: 39,
+      weeklyLimit: 10.8,
+      monthlyRemaining: 39.9,
       additionalCredits: 0,
-      availableCredits: 9,
+      availableCredits: 9.7,
     });
   });
 });

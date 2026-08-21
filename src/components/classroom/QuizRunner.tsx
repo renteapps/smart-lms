@@ -306,7 +306,7 @@ export default function QuizRunner({ quiz, lessonId, onComplete }: QuizRunnerPro
       </Card.Content>
 
       {/* Navigation Footer */}
-      <Card.Footer className="flex items-center justify-between border-t border-separator bg-background-secondary/60 px-6 py-4 sm:px-8">
+      <Card.Footer className="flex flex-wrap items-center justify-between gap-3 border-t border-separator bg-background-secondary/60 px-6 py-4 sm:px-8">
         <Button
           type="button"
           variant="outline"

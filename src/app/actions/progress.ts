@@ -40,17 +40,26 @@ export async function setLessonCompletion(
 }
 
 /** Onde o vídeo parou — chamado com throttle pelo player. */
+import { redis } from "@/lib/redis";
+
 export async function saveWatchPosition(lessonId: string, second: number): Promise<ActionResult> {
   try {
-    const { supabase, user } = await requireUser();
+    const { user } = await requireUser();
 
-    const { error } = await supabase.from("lesson_progress").upsert(
-      { user_id: user.id, lesson_id: lessonId, last_watched_second: Math.max(0, Math.floor(second)) },
-      { onConflict: "user_id,lesson_id" },
-    );
+    // Em vez de sobrecarregar o Postgres (Supabase) com milhares de UPSERTs por segundo,
+    // nós apenas empurramos a atualização para uma Fila no Redis (extremamente rápido).
+    const payload = {
+      userId: user.id,
+      lessonId,
+      seconds: Math.max(0, Math.floor(second)),
+      completed: false,
+    };
 
-    return error ? { success: false, message: error.message } : { success: true };
+    await redis.lpush("progress_sync_queue", JSON.stringify(payload));
+
+    return { success: true };
   } catch (error) {
+    console.error("Falha ao salvar progresso de vídeo", error);
     return { success: false, message: (error as Error).message };
   }
 }

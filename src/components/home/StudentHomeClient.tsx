@@ -19,11 +19,13 @@ import {
   pickRecalibration,
   readRefinementState,
   recordSurveyAnswer,
+  recordSurveyShown,
   REFINEMENT_STORAGE_KEY,
 } from "@/lib/refinementSurveys";
 import RecalibrationSlot from "@/components/home/RecalibrationSlot";
 import type { LearningTrailItem, Questionnaire, SessionLoadRating } from "@/types/trilha";
 import type { CatalogCourse } from "@/types/course";
+import type { Article } from "@/types/blog";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { PROFILE_STORAGE_KEY, PROFILE_SAVED_EVENT } from "@/lib/profilePreferences";
 import DailyPill from "@/components/DailyPill";
@@ -34,8 +36,8 @@ import HomeNoCourses from "@/components/home/HomeNoCourses";
 import NextStepHero from "@/components/home/NextStepHero";
 import SessionRest from "@/components/home/SessionRest";
 import StudyLedger from "@/components/home/StudyLedger";
-import WhyThisTrail from "@/components/home/WhyThisTrail";
 import { Rise } from "@/components/ui/Rise";
+import { HomeBlogSection } from "@/components/blog/HomeBlogSection";
 
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   weekday: "long",
@@ -98,7 +100,7 @@ function HomeSkeleton() {
  * com uma normalização própria — era por isso que o "continuar aprendendo" do
  * topo e o "comece por aqui" do meio apontavam para aulas diferentes.
  */
-export default function StudentHomeClient({ courses }: { courses: CatalogCourse[] }) {
+export default function StudentHomeClient({ courses, articles = [] }: { courses: CatalogCourse[], articles?: Article[] }) {
   const { hydrated, trail, error, migrated } = useTrailStore();
   /*
    * O questionário vem do banco, e só dele.
@@ -172,6 +174,18 @@ export default function StudentHomeClient({ courses }: { courses: CatalogCourse[
     [courses, trail, questionnaire],
   );
 
+  const discoverableArticles = useMemo(() => {
+    if (!trail) return articles.slice(0, 4);
+    
+    const trailArticleSlugs = new Set(
+      trail.items
+        .filter(item => item.type === "article" && item.slug)
+        .map(item => item.slug)
+    );
+
+    return articles.filter(article => !trailArticleSlugs.has(article.slug)).slice(0, 4);
+  }, [articles, trail]);
+
   const recalibration = useMemo(() => {
     if (!trail || profileTests.length === 0) return null;
     return pickRecalibration({
@@ -182,6 +196,19 @@ export default function StudentHomeClient({ courses }: { courses: CatalogCourse[
       profileTests,
     });
   }, [trail, state, questionnaire, refinementRaw, profileTests]);
+
+  /*
+   * Uma pergunta nova ainda sem resposta tem prioridade sobre tudo, mas não
+   * precisa insistir em toda visita: assim que o card aparece, marcamos a hora.
+   * `pickRecalibration` lê essa marca na próxima chamada e espaça as próximas
+   * exibições em alguns dias — sem isso, o card voltaria a cada carregamento da
+   * home até a pessoa responder.
+   */
+  useEffect(() => {
+    if (recalibration?.kind === "survey" && recalibration.isNew) {
+      recordSurveyShown(recalibration.question.id);
+    }
+  }, [recalibration]);
 
   /** Conclusão declarada pelo aluno para conteúdo que abre fora da plataforma. */
   const handleCompleteContent = useCallback(async (item: LearningTrailItem) => {
@@ -396,9 +423,9 @@ export default function StudentHomeClient({ courses }: { courses: CatalogCourse[
         </section>
       )}
 
-      <WhyThisTrail chips={profileChips} />
-
       {stats && <StudyLedger stats={stats} />}
+
+      <HomeBlogSection articles={discoverableArticles} />
 
       <DiscoverySection courses={discovery} personalized={profileChips.length > 0} />
     </div>

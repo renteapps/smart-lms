@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { OpenRouterChatMessage, OpenRouterChatResponse } from "@/types/openrouter";
-import { calculateAiPrice, calculateTokenCostUsd, estimateMessagesTokens } from "@/lib/aiPricing";
+import { calculateAiPrice, calculateTokenCostUsd, estimateMessagesTokens, roundCredits } from "@/lib/aiPricing";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServiceRoleKey } from "@/lib/supabase/env";
 
@@ -180,7 +180,7 @@ export async function reserveAiUsage(input: {
     minimumCredits: Number(policy.minimum_credits),
   });
   const reservationFactor = 1 + asNumber(settings.reservation_buffer_percent) / 100;
-  const reservedCredits = policy.charge_user ? Math.ceil(price.credits * reservationFactor) : 0;
+  const reservedCredits = policy.charge_user ? roundCredits(price.credits * reservationFactor) : 0;
   const estimatedProviderCostBrl = price.providerCostBrl * reservationFactor;
   const requestKey = crypto.randomUUID();
 

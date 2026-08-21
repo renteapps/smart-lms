@@ -114,7 +114,7 @@ export function NotificationBell() {
                         size="sm"
                         variant="ghost"
                         aria-label={`Excluir notificação ${notification.title}`}
-                        className="absolute right-2 top-2.5 text-danger opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+                        className="absolute right-2 top-2.5 text-danger opacity-100 pointer-fine:opacity-0 transition-opacity focus-visible:opacity-100 pointer-fine:group-hover:opacity-100"
                         onClick={() => deleteNotification(notification.id)}
                       >
                         <Trash2 className="size-3.5" aria-hidden="true" />

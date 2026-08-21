@@ -124,6 +124,7 @@ export async function getCatalogCourses(db: DB, userId?: string | null): Promise
     .order("created_at", { ascending: false });
 
   logQueryError("getCatalogCourses", error);
+
   if (!data) return [];
 
   const lessonIdsByCourse = new Map<string, string[]>();

@@ -3,6 +3,7 @@ import { pickRecalibration } from './refinementSurveys';
 import { selectHomeState, type ImplicitSignals } from './studentHome';
 import { generateLearningTrail } from './matching';
 import { mockQuestionnaire, TRAIL_CONTENT_INDEX } from './seed/questionnaire';
+import { EMPTY_REFINEMENT, type RefinementState } from './data/trail';
 
 const quietSignals: ImplicitSignals = {
   completedCount: 0,
@@ -41,6 +42,45 @@ describe('recalibração da trilha', () => {
     if (recalibration?.kind !== 'survey') throw new Error('esperava uma micro-pesquisa');
     expect(recalibration.question.id).toBe('q_objetivo');
     expect(recalibration.current).toEqual([]);
+    expect(recalibration.isNew).toBe(true);
+  });
+
+  it('espaça a pergunta nova em vez de insistir em toda visita', () => {
+    // Todas as outras perguntas já respondidas: só `q_objetivo` está faltando,
+    // o que isola o efeito do espaçamento sem o loop cair na próxima pendente.
+    const answers = {
+      q_formato: ['Teoria Profunda (Conceitos base)'],
+      q_problema: [mockQuestionnaire.questions[2].options[0].label],
+      q_habilidades: [mockQuestionnaire.questions[3].options[0].label],
+    };
+    const state = selectHomeState({ ...trail, answers }, monday);
+    const shownYesterday: RefinementState = {
+      ...EMPTY_REFINEMENT,
+      shownAt: { q_objetivo: new Date(2026, 7, 9).toISOString() },
+    };
+
+    // Mostrado ontem: hoje ainda está dentro da janela de silêncio.
+    expect(pickRecalibration({
+      state,
+      questionnaire: mockQuestionnaire,
+      signals: quietSignals,
+      refinement: shownYesterday,
+      now: monday,
+    })).toBeNull();
+
+    // Quatro dias depois a janela já fechou — a pergunta continua faltando.
+    const fourDaysLater = new Date(2026, 7, 14);
+    const recalibration = pickRecalibration({
+      state,
+      questionnaire: mockQuestionnaire,
+      signals: quietSignals,
+      refinement: shownYesterday,
+      now: fourDaysLater,
+    });
+    expect(recalibration?.kind).toBe('survey');
+    if (recalibration?.kind !== 'survey') throw new Error('esperava uma micro-pesquisa');
+    expect(recalibration.question.id).toBe('q_objetivo');
+    expect(recalibration.isNew).toBe(true);
   });
 
   it('cala a boca quando tudo já foi respondido e o dia ainda não começou', () => {

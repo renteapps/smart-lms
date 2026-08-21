@@ -154,7 +154,7 @@ export default function LessonClientWrapper({
           )}
         </div>
 
-        <h1 className="display-2 mt-3 text-foreground">{lesson.title}</h1>
+        <h1 className="display-2 mt-3 break-words text-foreground">{lesson.title}</h1>
 
         {/*
           Abaixo de `lg` as ações e a navegação viram duas linhas empilhadas: no
@@ -178,7 +178,7 @@ export default function LessonClientWrapper({
                 <div
                   role="group"
                   aria-label="Avaliação da aula"
-                  className="flex min-h-11 flex-1 items-center justify-center gap-0.5 rounded-xl border border-hairline bg-surface px-1.5 sm:flex-none sm:justify-start"
+                  className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-xl border border-hairline bg-surface px-1.5 sm:flex-none sm:justify-start"
                   onMouseLeave={() => setHoveredStar(0)}
                 >
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -186,7 +186,6 @@ export default function LessonClientWrapper({
                       key={star}
                       isIconOnly
                       variant="ghost"
-                      size="sm"
                       onClick={() => handleRate(star)}
                       onHoverStart={() => setHoveredStar(star)}
                       aria-label={`Avaliar com ${star} estrela${star > 1 ? 's' : ''}`}

@@ -705,7 +705,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                                   type="button"
                                   title={note.pinned ? "Desafixar do topo" : "Fixar no topo"}
                                   onClick={(e) => handleTogglePin(note.id, e)}
-                                  className={`grid size-8 place-items-center rounded-lg transition-colors cursor-pointer ${
+                                  className={`grid size-9 place-items-center rounded-lg transition-colors cursor-pointer ${
                                     note.pinned
                                       ? "text-warning hover:bg-warning/10"
                                       : "text-muted opacity-80 hover:bg-surface-hover hover:text-foreground"
@@ -718,7 +718,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                                   type="button"
                                   title="Copiar anotação"
                                   onClick={(e) => handleCopyContent(note, e)}
-                                  className="grid size-8 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground cursor-pointer"
+                                  className="grid size-9 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground cursor-pointer"
                                 >
                                   {copiedId === note.id ? (
                                     <Check className="size-4 text-success" />
@@ -731,7 +731,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                                   type="button"
                                   title="Editar anotação"
                                   onClick={(e) => handleOpenEditModal(note, e)}
-                                  className="grid size-8 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground cursor-pointer"
+                                  className="grid size-9 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground cursor-pointer"
                                 >
                                   <Edit3 className="size-4" />
                                 </button>
@@ -743,7 +743,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                                     e.stopPropagation();
                                     setDeleteConfirmNote(note);
                                   }}
-                                  className="grid size-8 place-items-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
+                                  className="grid size-9 place-items-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
                                 >
                                   <Trash2 className="size-4" />
                                 </button>
@@ -841,7 +841,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                 type="button"
                 onClick={() => setIsCreateModalOpen(false)}
                 aria-label="Fechar modal"
-                className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 grid size-8 sm:size-9 place-items-center rounded-full bg-surface-hover/80 text-muted transition-all hover:bg-surface-hover hover:text-foreground hover:scale-105 cursor-pointer"
+                className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 grid size-9 place-items-center rounded-full bg-surface-hover/80 text-muted transition-all hover:bg-surface-hover hover:text-foreground hover:scale-105 cursor-pointer"
               >
                 <X className="size-4" />
               </button>
@@ -951,7 +951,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                 type="button"
                 onClick={() => setIsEditModalOpen(false)}
                 aria-label="Fechar modal"
-                className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 grid size-8 sm:size-9 place-items-center rounded-full bg-surface-hover/80 text-muted transition-all hover:bg-surface-hover hover:text-foreground hover:scale-105 cursor-pointer"
+                className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 grid size-9 place-items-center rounded-full bg-surface-hover/80 text-muted transition-all hover:bg-surface-hover hover:text-foreground hover:scale-105 cursor-pointer"
               >
                 <X className="size-4" />
               </button>
@@ -1055,7 +1055,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                 type="button"
                 onClick={() => setIsViewModalOpen(false)}
                 aria-label="Fechar visualização"
-                className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 grid size-8 sm:size-9 place-items-center rounded-full bg-surface-hover/80 text-muted transition-all hover:bg-surface-hover hover:text-foreground hover:scale-105 cursor-pointer"
+                className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 grid size-9 place-items-center rounded-full bg-surface-hover/80 text-muted transition-all hover:bg-surface-hover hover:text-foreground hover:scale-105 cursor-pointer"
               >
                 <X className="size-4" />
               </button>
@@ -1190,7 +1190,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                 type="button"
                 onClick={() => setDeleteConfirmNote(null)}
                 aria-label="Fechar modal"
-                className="absolute top-4 right-4 z-20 grid size-8 place-items-center rounded-full bg-surface-hover/80 text-muted transition-all hover:bg-surface-hover hover:text-foreground hover:scale-105 cursor-pointer"
+                className="absolute top-4 right-4 z-20 grid size-9 place-items-center rounded-full bg-surface-hover/80 text-muted transition-all hover:bg-surface-hover hover:text-foreground hover:scale-105 cursor-pointer"
               >
                 <X className="size-4" />
               </button>

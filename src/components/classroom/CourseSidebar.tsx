@@ -145,7 +145,7 @@ export default function CourseSidebar({ course }: { course: CourseOutline }) {
           variant="ghost"
           onClick={() => setMobileOpen(true)}
           aria-label="Abrir conteúdo do curso"
-          className="relative z-10 shrink-0"
+          className="relative z-10 size-11 shrink-0"
         >
           <Menu className="size-5" aria-hidden="true" />
         </Button>

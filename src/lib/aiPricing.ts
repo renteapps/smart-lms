@@ -16,6 +16,12 @@ export type AiPriceBreakdown = {
 
 const finiteNonNegative = (value: number) => Number.isFinite(value) && value >= 0;
 
+/** Arredonda para 4 casas decimais (mesma precisão de `numeric(14,4)` no banco). */
+export function roundCredits(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.round(value * 10000) / 10000;
+}
+
 export function calculateAiPrice(input: AiPricingInput): AiPriceBreakdown {
   if (
     !finiteNonNegative(input.providerCostUsd)
@@ -30,15 +36,11 @@ export function calculateAiPrice(input: AiPricingInput): AiPriceBreakdown {
     throw new Error("Configuração de preço de IA inválida.");
   }
 
-  const minimumCredits = Math.max(
-    1,
-    Math.trunc(input.minimumCredits ?? 1),
-    Math.ceil(0.01 / input.creditValueBrl - 1e-9),
-  );
+  const minimumCredits = Math.max(0, roundCredits(input.minimumCredits ?? 0));
   const providerCostBrl = input.providerCostUsd * input.exchangeRate;
   const protectedCostBrl = providerCostBrl * (1 + input.exchangeBufferPercent / 100);
   const targetRevenueBrl = protectedCostBrl / (1 - input.marginPercent / 100);
-  const credits = Math.max(minimumCredits, Math.ceil(targetRevenueBrl / input.creditValueBrl - 1e-9));
+  const credits = Math.max(minimumCredits, roundCredits(targetRevenueBrl / input.creditValueBrl));
 
   return {
     providerCostBrl,

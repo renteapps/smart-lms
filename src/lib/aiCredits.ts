@@ -1,4 +1,5 @@
 import type { DB } from "@/lib/data/types";
+import { roundCredits } from "@/lib/aiPricing";
 
 export type AiCreditBalance = {
   dailyRemaining: number;
@@ -15,9 +16,9 @@ export type AiCreditBalance = {
   creditValueBrl: number;
 };
 
-const asNonNegativeInteger = (value: unknown) => {
+const asNonNegativeNumber = (value: unknown) => {
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : 0;
+  return Number.isFinite(parsed) ? Math.max(0, roundCredits(parsed)) : 0;
 };
 
 export function parseAiCreditBalance(value: unknown): AiCreditBalance | null {
@@ -31,19 +32,24 @@ export function parseAiCreditBalance(value: unknown): AiCreditBalance | null {
   if (!dailyRenewsAt || !weeklyRenewsAt || !monthlyRenewsAt) return null;
 
   return {
-    dailyRemaining: asNonNegativeInteger(row.daily_remaining),
-    dailyLimit: asNonNegativeInteger(row.daily_limit),
+    dailyRemaining: asNonNegativeNumber(row.daily_remaining),
+    dailyLimit: asNonNegativeNumber(row.daily_limit),
     dailyRenewsAt,
-    weeklyRemaining: asNonNegativeInteger(row.weekly_remaining),
-    weeklyLimit: asNonNegativeInteger(row.weekly_limit),
+    weeklyRemaining: asNonNegativeNumber(row.weekly_remaining),
+    weeklyLimit: asNonNegativeNumber(row.weekly_limit),
     weeklyRenewsAt,
-    monthlyRemaining: asNonNegativeInteger(row.monthly_remaining),
-    monthlyLimit: asNonNegativeInteger(row.monthly_limit),
+    monthlyRemaining: asNonNegativeNumber(row.monthly_remaining),
+    monthlyLimit: asNonNegativeNumber(row.monthly_limit),
     monthlyRenewsAt,
-    additionalCredits: asNonNegativeInteger(row.additional_credits),
-    availableCredits: asNonNegativeInteger(row.available_credits),
+    additionalCredits: asNonNegativeNumber(row.additional_credits),
+    availableCredits: asNonNegativeNumber(row.available_credits),
     creditValueBrl: Math.max(0, Number(row.credit_value_brl) || 0.01),
   };
+}
+
+/** Formata créditos fracionários (até 4 casas), cortando zeros à direita: 25 -> "25", 0.03 -> "0,03". */
+export function formatAiCredits(value: number): string {
+  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 4 }).format(value);
 }
 
 export async function getAiCreditBalance(db: DB, userId?: string): Promise<AiCreditBalance | null> {
