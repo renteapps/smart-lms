@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle2, Clock3, LockKeyhole, PlayCircle } from "lucide-react";
 import { Card } from "@heroui/react";
-import { Reveal } from "@/components/ui/Reveal";
+
 import { useCardTransition } from "@/contexts/CardTransitionContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveDynamicSalesUrl } from "@/lib/salesUrlHelper";
@@ -130,15 +130,11 @@ export default function LessonThumbCard({
   };
 
   const content = (
-    <Reveal className="rounded-xl">
+    <Card variant="transparent" className="gap-0 p-0 border-none shadow-none bg-transparent">
       {/*
-       * `variant="transparent"` tira o `bg-surface` que o Card aplica por
-       * padrão — sem ele, a legenda (que agora mora fora da imagem, não mais
-       * sobreposta) virava uma tarja branca colada embaixo de uma capa escura.
        * A elevação/borda do "cartão" fica só na moldura da imagem.
        */}
-      <Card variant="transparent" className="gap-0 p-0">
-        <div className="lift relative aspect-2/3 overflow-hidden rounded-xl bg-background-secondary shadow-elev-1">
+        <div className="lift relative aspect-2/3 overflow-hidden rounded-xl border border-border bg-background-secondary shadow-elev-1">
           <Image
             src={imgSrc}
             alt={`Capa da aula ${lesson.title}`}
@@ -225,7 +221,6 @@ export default function LessonThumbCard({
           </p>
         </div>
       </Card>
-    </Reveal>
   );
 
   const wrapperClassName = cn(

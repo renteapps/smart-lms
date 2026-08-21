@@ -89,12 +89,12 @@ export default function CarouselRow({ title, titleIcon, action, children, label,
           size={56}
           onVisibilityChange={setEdges}
           aria-label={label ?? title ?? "Conteúdos"}
-          className="editorial-container"
+          className="editorial-container -my-6 py-6 overflow-y-hidden"
           role="region"
           tabIndex={0}
         >
           {/*
-           * O respiro vertical negativo devolve espaço para a sombra de hover
+           * O respiro vertical devolve espaço para a sombra de hover
            * dos cards: sem ele o contêiner de rolagem corta o levantamento.
            */}
           <motion.div
@@ -102,7 +102,7 @@ export default function CarouselRow({ title, titleIcon, action, children, label,
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, margin: "-50px" }}
-            className="-my-6 flex snap-x snap-mandatory gap-5 py-6 md:gap-6"
+            className="flex snap-x snap-mandatory gap-5 md:gap-6"
           >
             {React.Children.map(children, (child) => (
               <motion.div variants={itemVariants} className="shrink-0 snap-start">
