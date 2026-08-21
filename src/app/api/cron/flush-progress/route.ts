@@ -51,4 +51,4 @@ export const POST = verifySignatureAppRouter(async function POST(request: Reques
     console.error('Erro na cron de consolidação:', error)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
-}
+});

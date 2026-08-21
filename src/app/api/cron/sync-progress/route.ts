@@ -55,4 +55,4 @@ export const POST = verifySignatureAppRouter(async function POST(request: Reques
     console.error('Falha no Sync Cron:', error);
     return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
   }
-}
+});
