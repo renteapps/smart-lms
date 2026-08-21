@@ -95,17 +95,6 @@ const STATUS_OPTIONS: { value: AgentStatus; label: string; hint: string; tone: "
   { value: "Em manutenção", label: "Em manutenção", hint: "Fora do ar temporariamente com mensagem explicativa", tone: "warning" },
 ];
 
-const AVATAR_OPTIONS: { value: AgentAvatarKey; label: string; description: string }[] = [
-  { value: "padrao", label: "Padrão", description: "O ícone padrão do agente" },
-  { value: "feedback", label: "Feedback", description: "Comunicação e alinhamentos" },
-  { value: "contratacao", label: "Contratação", description: "Entrevistas e seleção" },
-  { value: "simulacao", label: "Simulação", description: "Roleplay e dinâmicas" },
-  { value: "tutor", label: "Tutoria", description: "Ensino e suporte socrático" },
-  { value: "rotina", label: "Rotina", description: "Hábitos e organização" },
-  { value: "um-a-um", label: "1:1", description: "Reuniões individuais" },
-  { value: "carreira", label: "Carreira", description: "Mentoria profissional" },
-  { value: "apresentacao", label: "Apresentação", description: "Oratória e pitch" },
-];
 
 const AI_MODELS = [
   {
@@ -1282,72 +1271,27 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
 
                   {/* Coluna Lateral: Seletor de Avatar + Live Card Preview */}
                   <div className="space-y-6 lg:col-span-5">
-                    {/* Seletor de Avatar */}
+                    {/* Identidade Visual */}
                     <Card className="border-border bg-background-secondary/50">
                       <Card.Header>
                         <Card.Title className="text-base font-bold">Identidade Visual</Card.Title>
-                        <Card.Description>Escolha o ícone e a paleta de representação</Card.Description>
+                        <Card.Description>Personalize a foto, a cor de destaque e o ícone do agente</Card.Description>
                       </Card.Header>
                       <Card.Content>
-                        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2">
-                          {AVATAR_OPTIONS.map((option) => {
-                            const isSelected = avatar === option.value && !photoUrl && !iconSvg;
-                            return (
-                              <button
-                                key={option.value}
-                                type="button"
-                                onClick={() => {
-                                  setAvatar(option.value);
-                                  setIconSvg("");
-                                  setPhotoUrl("");
-                                }}
-                                className={cn(
-                                  "group relative flex items-center gap-3 rounded-xl border p-3 text-left transition-all",
-                                  isSelected
-                                    ? "border-accent bg-accent-soft shadow-sm"
-                                    : "border-border bg-surface hover:border-accent/40 hover:bg-surface-hover",
-                                )}
-                              >
-                                <AgentAvatar avatar={option.value} size="sm" />
-                                <div className="min-w-0 flex-1">
-                                  <p
-                                    className={cn(
-                                      "truncate text-xs font-bold",
-                                      isSelected ? "text-accent-soft-foreground" : "text-foreground",
-                                    )}
-                                  >
-                                    {option.label}
-                                  </p>
-                                  <p className="truncate text-[10px] text-muted">{option.description}</p>
-                                </div>
-                                {isSelected && (
-                                  <span className="absolute top-2 right-2 flex size-4 items-center justify-center rounded-full bg-accent text-accent-foreground text-[10px]">
-                                    ✓
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        
-                        <Separator className="my-5" />
-
                         <div className="space-y-4">
-                          <h4 className="text-sm font-bold text-foreground">Identidade Personalizada</h4>
-                          
                           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <TextField value={themeColor} onChange={setThemeColor} fullWidth>
-                              <Label>Cor (Hex)</Label>
+                              <Label>Cor de Destaque (Hex)</Label>
                               <div className="flex gap-2 items-center">
                                 <input 
                                   type="color" 
-                                  value={themeColor || "#000000"} 
+                                  value={themeColor || "#3B82F6"} 
                                   onChange={(e) => setThemeColor(e.target.value)} 
-                                  className="w-8 h-8 rounded cursor-pointer border-0 p-0"
+                                  className="w-9 h-9 rounded-lg cursor-pointer border border-border p-0.5 bg-background shrink-0"
                                 />
-                                <Input placeholder="#FF0000" />
+                                <Input placeholder="#3B82F6" />
                               </div>
-                              <Description>Cor personalizada do agente.</Description>
+                              <Description>Cor de fundo e destaque visual do agente.</Description>
                             </TextField>
 
                             <div>
@@ -1380,7 +1324,7 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                                   }
                                 }}
                               />
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 pt-1">
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
@@ -1401,6 +1345,7 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                                   </Button>
                                 )}
                               </div>
+                              <p className="mt-1 text-xs text-muted">Formatos JPG, PNG ou WebP.</p>
                             </div>
                           </div>
 
@@ -1409,8 +1354,8 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                             if (val) setPhotoUrl(""); // Remove foto se adicionar SVG
                           }} fullWidth>
                             <Label>Ícone SVG Customizado</Label>
-                            <TextArea rows={3} placeholder="<svg>...</svg>" />
-                            <Description>Cole o código SVG de um ícone personalizado.</Description>
+                            <TextArea rows={3} placeholder="<svg viewBox='0 0 24 24'>...</svg>" />
+                            <Description>Cole o código SVG de um ícone personalizado (usado caso não tenha foto).</Description>
                           </TextField>
                         </div>
                       </Card.Content>

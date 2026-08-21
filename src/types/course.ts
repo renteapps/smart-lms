@@ -103,6 +103,7 @@ export type Course = {
   status?: CourseStatus;
   isFeatured?: boolean;
   instructorNames?: string[];
+  coordinatorName?: string;
   createdAt?: string;
   updatedAt?: string;
   modules: Module[];

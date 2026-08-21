@@ -67,10 +67,12 @@ export async function getCourseCertificate(
 
 export type ValidatedCertificate = {
   id: string;
+  userId?: string;
   studentName: string;
   courseTitle: string;
   courseDurationHours: number;
   instructorNames: string[];
+  coordinatorName?: string;
   issueDate: string;
   validationHash: string;
 };
@@ -82,7 +84,7 @@ export async function getCertificateByHash(
   const { data, error } = await db
     .from('certificates')
     .select(
-      'id, course_id, issue_date, validation_hash, courses!inner(title, duration, instructor_names), profiles:user_id(full_name)',
+      'id, user_id, course_id, issue_date, validation_hash, courses!inner(title, duration, instructor_names, coordinator_name), profiles:user_id(full_name)',
     )
     .eq('validation_hash', hash)
     .single();
@@ -124,10 +126,12 @@ export async function getCertificateByHash(
 
   return {
     id: data.id,
+    userId: data.user_id,
     studentName: profile?.full_name ?? 'Estudante',
     courseTitle: course?.title ?? 'Curso',
     courseDurationHours: totalHours,
     instructorNames: course?.instructor_names ?? [],
+    coordinatorName: course?.coordinator_name ?? undefined,
     issueDate: data.issue_date,
     validationHash: data.validation_hash,
   };

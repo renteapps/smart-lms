@@ -89,9 +89,8 @@ export function AgentAvatar({ avatar, themeColor, iconSvg, photoUrl, size = "md"
     >
       {iconSvg && !isMuted ? (
         <div 
-          className={iconSizes[size]} 
+          className={cn("flex items-center justify-center [&>svg]:size-full [&>svg]:max-w-full [&>svg]:max-h-full", iconSizes[size])} 
           dangerouslySetInnerHTML={{ __html: iconSvg }} 
-          style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
         />
       ) : avatarConfig ? (
         <avatarConfig.icon className={iconSizes[size]} />

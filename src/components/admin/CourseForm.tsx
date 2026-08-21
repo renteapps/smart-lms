@@ -140,6 +140,7 @@ export function CourseForm({
         isPublished: status === "Publicado",
         tags: selectedTags,
         instructorNames,
+        coordinatorName: formData.get("coordinatorName") as string,
       });
 
       if (res.success) {
@@ -210,6 +211,11 @@ export function CourseForm({
                   <Label>Instrutor(es)</Label>
                   <Input placeholder="Ex.: Maria Silva, João Santos" />
                   <Description>Separe múltiplos instrutores por vírgula. Aparecerá no curso e certificado.</Description>
+                </TextField>
+                <TextField name="coordinatorName" defaultValue={course?.coordinatorName || ""}>
+                  <Label>Direção / Coordenação</Label>
+                  <Input placeholder="Ex.: Prof. Dr. João Silva" />
+                  <Description>Nome do responsável que assina o certificado (Diretor ou Coordenador).</Description>
                 </TextField>
                 <TextField name="shortDescription" defaultValue={course?.shortDescription || ""}>
                   <Label>Descrição curta</Label>

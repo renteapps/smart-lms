@@ -16,14 +16,14 @@ import type {
 import { logQueryError, type DB, type Row } from "./types";
 
 const AGENT_SELECT = `
-  id, slug, name, role, description, category, status, avatar, created_by,
+  id, slug, name, role, description, category, status, avatar, theme_color, icon_svg, photo_url, created_by,
   course_id, course_title, course_ids, plan_ids, skills, rating, avg_minutes, greeting, starters,
   replies, fallbacks, files, unavailable_note, system_prompt, ai_model, context,
   is_published, order_index, created_at, updated_at, agent_conversations(count)
 `;
 
 const AGENT_CATALOG_SELECT = `
-  id, slug, name, role, description, category, status, avatar, created_by,
+  id, slug, name, role, description, category, status, avatar, theme_color, icon_svg, photo_url, created_by,
   course_id, course_title, course_ids, plan_ids, skills, rating, avg_minutes,
   greeting, starters, unavailable_note, is_published, order_index, created_at,
   agent_conversations(count)
@@ -46,6 +46,9 @@ export function mapAgent(row: Row, conversationsCount?: number): Agent {
     category: (row.category ?? "Comunicação") as AgentCategory,
     status: (row.status ?? "Disponível") as AgentStatus,
     avatar: (row.avatar ?? "tutor") as AgentAvatarKey,
+    themeColor: row.theme_color ?? undefined,
+    iconSvg: row.icon_svg ?? undefined,
+    photoUrl: row.photo_url ?? undefined,
     createdBy: row.created_by ?? "Equipe Smart LMS",
     courseTitle: row.course_title ?? "",
     courseId: row.course_id ?? (courseIds.length > 0 ? courseIds[0] : undefined),
@@ -86,6 +89,9 @@ export function agentToRow(agent: Partial<Agent> & { courseId?: string | null })
   set("category", agent.category);
   set("status", agent.status);
   set("avatar", agent.avatar);
+  set("theme_color", agent.themeColor ?? null);
+  set("icon_svg", agent.iconSvg ?? null);
+  set("photo_url", agent.photoUrl ?? null);
   set("created_by", agent.createdBy);
 
   const validCourseIds = Array.isArray(agent.courseIds) ? agent.courseIds.filter(isUuid) : [];

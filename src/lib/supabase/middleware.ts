@@ -49,6 +49,7 @@ export async function updateSession(request: NextRequest) {
     "/empresa",
     "/cursos",
     "/blog",
+    "/certificados/",
     "/api/"
   ];
   const isPublicRoute = request.nextUrl.pathname === "/" || 

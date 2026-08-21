@@ -88,6 +88,7 @@ export function mapCourse(row: Row, modules: Module[] = []): Course {
     salesPageUrl: row.sales_page_url ?? null,
     salesConfig: row.sales_config ?? null,
     instructorNames: row.instructor_names ?? [],
+    coordinatorName: row.coordinator_name ?? undefined,
   };
 }
 

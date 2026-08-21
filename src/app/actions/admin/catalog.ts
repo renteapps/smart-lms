@@ -31,6 +31,7 @@ export type CourseInput = Partial<
     | "isPublished"
     | "isFeatured"
     | "instructorNames"
+    | "coordinatorName"
     | "enableCertificates"
     | "dripContent"
     | "enableComments"
@@ -60,6 +61,7 @@ function courseToRow(input: CourseInput): Record<string, unknown> {
   set("duration", input.duration);
   set("level", input.level);
   set("instructor_names", input.instructorNames);
+  set("coordinator_name", input.coordinatorName);
   set("price", input.price);
   set("tags", input.tags);
   if (input.status !== undefined) {
