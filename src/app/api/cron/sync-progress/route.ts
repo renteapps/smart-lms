@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { redis } from '@/lib/redis';
 import { createClient } from '@/lib/supabase/server';
+import { verifySignatureAppRouter } from '@upstash/qstash/nextjs';
+
+export const dynamic = 'force-dynamic'
 
 // Esta rota deve ser chamada a cada 1 minuto por um serviço de Cron
-// Ex: Vercel Cron Jobs (vercel.json) ou Upstash QStash
-export async function GET(request: Request) {
+// Ex: Upstash QStash
+export const POST = verifySignatureAppRouter(async function POST(request: Request) {
   try {
     // 1. Pega o tamanho atual da fila no Redis
     const queueLength = await redis.llen('progress_sync_queue');

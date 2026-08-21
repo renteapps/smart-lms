@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowRight, CalendarDays, Check, CheckCircle2, Clock3,
-  ExternalLink, FileText, LayoutList, PlayCircle, RefreshCw, Route, Settings2, Sparkles, Target,
+  ExternalLink, FileText, LayoutList, PlayCircle, RefreshCw, Route, Settings2, Sparkles,
 } from 'lucide-react';
 import {
   Alert, AlertDialog, Button, buttonVariants, Card, Chip, Description, Drawer, EmptyState, Fieldset,
@@ -490,7 +490,6 @@ export default function MinhaTrilhaPage() {
   const completed = trail?.items.filter((item) => item.status === 'completed').length || 0;
   const completion = trail?.items.length ? Math.round((completed / trail.items.length) * 100) : 0;
   const weeklyGoal = trail ? weeklyMinutes(effectiveAvailability(trail)) : 0;
-  const focus = trail ? Object.values(trail.answers).flat()[0] || 'Seu desenvolvimento' : 'Seu desenvolvimento';
   const todaySessionId = todayItems[0]?.sessionId;
   const todayBudget = trail
     ? minutesForWeekday(effectiveAvailability(trail), new Date().getDay() as Weekday)
@@ -896,9 +895,9 @@ export default function MinhaTrilhaPage() {
           <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
             <Rise>
               <p className="eyebrow">Agenda personalizada</p>
-              <h1 className="display-1 mt-3 max-w-3xl text-foreground">Uma rotina clara, no seu ritmo.</h1>
+              <h1 className="display-2 mt-3 max-w-3xl text-foreground">Por que estes conteúdos</h1>
               <p className="lede mt-6">
-                Seu plano distribui o que importa nos dias que você escolheu — sem bloquear o restante do conteúdo.
+                Montamos sua sequência a partir do que você respondeu. Mudou de objetivo ou de rotina? Ajuste — a agenda se reorganiza sozinha.
               </p>
             </Rise>
 
@@ -907,17 +906,16 @@ export default function MinhaTrilhaPage() {
                 <Settings2 className="size-4" aria-hidden="true" /> Ajustar rotina
               </Button>
               <Link href="/onboarding?edit=1" className={buttonVariants({ variant: 'outline' })}>
-                Rever objetivos
+                Refazer o questionário
               </Link>
             </div>
           </div>
 
           {/* `data-numeric` herda: todas as métricas comparáveis viram tabulares. */}
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-numeric>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-numeric>
             <StatCard label="Progresso real" value={`${completion}%`} icon={Route} tone="primary" />
             <StatCard label="Concluídos" value={`${completed}/${trail.items.length}`} icon={CheckCircle2} tone="sage" />
             <StatCard label="Meta semanal" value={`${weeklyGoal} min`} icon={Clock3} tone="terracotta" />
-            <StatCard label="Foco principal" value={focus} icon={Target} tone="neutral" />
           </div>
 
           <div className="mt-6">

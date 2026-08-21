@@ -2,27 +2,21 @@ import { NextResponse } from 'next/server'
 import { getAndClearDirtyProgress } from '@/lib/redis/progress-buffer'
 import { createClient } from '@supabase/supabase-js'
 
+import { verifySignatureAppRouter } from '@upstash/qstash/nextjs'
+
 // Para Vercel Cron, garantimos que a rota não faça cache e use tempo máximo se necessário
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60 
 
 /**
- * Esta rota deve ser chamada a cada X minutos (ex: 5 em 5 min) por um Cron Job (ex: Vercel Cron).
+ * Esta rota deve ser chamada a cada X minutos (ex: 5 em 5 min) por um Cron Job (Upstash QStash).
  * Ela não tem interface. O único trabalho dela é:
  * 1. Puxar todos os "pings" de vídeo que estão no Redis.
  * 2. Limpar o Redis.
  * 3. Enviar esse pacote gigantesco em um único JSON Array para o PostgreSQL (PGMQ).
  */
-export async function GET(request: Request) {
+export const POST = verifySignatureAppRouter(async function POST(request: Request) {
   try {
-    // Proteção básica para impedir acesso externo se não for o cron da Vercel
-    const authHeader = request.headers.get('authorization')
-    if (
-      process.env.CRON_SECRET && 
-      authHeader !== `Bearer ${process.env.CRON_SECRET}`
-    ) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     // 1. Pega os dados do Redis
     const payloads = await getAndClearDirtyProgress()

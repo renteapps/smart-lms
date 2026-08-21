@@ -482,6 +482,18 @@ export function schedulePendingItems(
     ...routine.weekdays.map((weekday) => capacityFor(minutesForWeekday(routine, weekday))),
   );
 
+  const doneBudgetPerDate = new Map<string, number>();
+  done.forEach((item) => {
+    let dateKey = item.scheduledDate;
+    if (item.completedAt) {
+      const at = new Date(item.completedAt);
+      if (!Number.isNaN(at.getTime())) dateKey = toLocalDateKey(at);
+    }
+    if (dateKey) {
+      doneBudgetPerDate.set(dateKey, (doneBudgetPerDate.get(dateKey) || 0) + item.durationMin);
+    }
+  });
+
   let cursor = nextPreferredDate(startDate, routine.weekdays);
   let sessionNumber = 1;
 
@@ -507,7 +519,7 @@ export function schedulePendingItems(
     const budget = minutesForWeekday(routine, cursor.getDay() as Weekday);
     const capacity = capacityFor(budget);
     const floor = Math.round(budget * (1 - BUDGET_TOLERANCE));
-    let used = 0;
+    let used = doneBudgetPerDate.get(dateKey) || 0;
 
     while (used < floor) {
       const index = queue.findIndex((entry, position) => (
@@ -528,7 +540,9 @@ export function schedulePendingItems(
       const released = queue.findIndex((entry, position) => isReleased(entry, position, queue, queuedIds));
       // Sem nenhum liberado só num ciclo de pré-requisitos: agenda mesmo assim.
       const head = released === -1 ? 0 : released;
-      if (queue[head].item.durationMin > largestCapacity) place(head, dateKey, sessionId, capacity);
+      if (queue[head].item.durationMin > largestCapacity) {
+        used += place(head, dateKey, sessionId, capacity).durationMin;
+      }
     }
 
     cursor = nextPreferredDate(cursor, routine.weekdays, false);
