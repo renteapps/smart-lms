@@ -35,6 +35,7 @@ interface LessonTabsProps {
   initialNote?: StudentNote | null;
   initialComments?: Comment[];
   currentUser?: User | null;
+  enableComments?: boolean;
 }
 
 type TabKey = "overview" | "materials" | "comments" | "notes";
@@ -54,6 +55,7 @@ export default function LessonTabs({
   initialNote = null,
   initialComments = [],
   currentUser = null,
+  enableComments = true,
 }: LessonTabsProps) {
   const [selectedTab, setSelectedTab] = useState<TabKey>("overview");
   const [note, setNote] = useState(initialNote?.content ?? "");
@@ -79,7 +81,7 @@ export default function LessonTabs({
   const tabs: TabDefinition[] = [];
   if (hasOverview) tabs.push({ id: "overview", label: "Visão geral", icon: AlignBoxBottomLeftIcon });
   if (hasMaterials) tabs.push({ id: "materials", label: "Materiais", icon: Folder01Icon });
-  tabs.push({ id: "comments", label: "Comentários", icon: Comment01Icon, badge: commentCount });
+  if (enableComments) tabs.push({ id: "comments", label: "Comentários", icon: Comment01Icon, badge: commentCount });
   tabs.push({ id: "notes", label: "Anotações", icon: Files01Icon });
 
   // Ao trocar de aula o conjunto muda; a seleção cai na primeira aba disponível.
@@ -204,8 +206,9 @@ export default function LessonTabs({
         )}
 
         {/* --- Comentários --------------------------------------------------- */}
-        <Tabs.Panel id="comments" className={PANEL_CLASS}>
-          <h2 className="display-3 mb-5 text-foreground sm:mb-6">Comentários e dúvidas</h2>
+        {enableComments && (
+          <Tabs.Panel id="comments" className={PANEL_CLASS}>
+            <h2 className="display-3 mb-5 text-foreground sm:mb-6">Comentários e dúvidas</h2>
 
           <div className="flex max-w-[68ch] gap-3 sm:gap-4">
             <Avatar size="md" color="accent" className="mt-1 hidden shrink-0 sm:flex">
@@ -322,6 +325,7 @@ export default function LessonTabs({
             )}
           </ul>
         </Tabs.Panel>
+        )}
 
         {/* --- Anotações ----------------------------------------------------- */}
         <Tabs.Panel id="notes" className={PANEL_CLASS}>

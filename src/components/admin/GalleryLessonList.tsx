@@ -191,7 +191,7 @@ export default function GalleryLessonList({
                 onDragOver={(event) => handleDragOver(event, lesson.id)}
                 onDrop={handleDrop}
                 className={`group flex items-center justify-between gap-3 rounded-xl border p-3 transition-all hover:bg-surface-hover ${
-                  isDragged ? "opacity-45" : "border-border/60 hover:border-border"
+                  isDragged ? "opacity-45" : "border-border/60 hover:border-border bg-surface shadow-sm"
                 } ${isDropBefore ? "border-t-2 border-t-accent" : ""} ${isDropAfter ? "border-b-2 border-b-accent" : ""}`}
               >
                 <div className="flex min-w-0 items-center gap-3">

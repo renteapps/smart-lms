@@ -25,17 +25,17 @@ type LessonThumbCardSize = "default" | "lg";
  */
 const SIZE_CLASS: Record<LessonThumbCardSize, string> = {
   default: "w-[42vw] max-w-40 sm:w-44 sm:max-w-none",
-  lg: "w-[46vw] max-w-52 sm:w-56 sm:max-w-none md:w-60 lg:w-64",
+  lg: "w-[52vw] max-w-56 sm:w-56 sm:max-w-none md:w-60 lg:w-64",
 };
 
 const SIZE_IMAGE_SIZES: Record<LessonThumbCardSize, string> = {
   default: "(max-width: 768px) 42vw, 176px",
-  lg: "(max-width: 768px) 46vw, 256px",
+  lg: "(max-width: 768px) 52vw, 256px",
 };
 
 type LessonThumbCardProps = {
   lesson: GalleryLesson;
-  /** Legenda acima do título — nome do curso no carrossel da home, ausente na galeria do próprio curso. */
+  /** Legenda acima do título na legenda abaixo da thumb — nome do curso, ausente na galeria do próprio curso. */
   eyebrow?: string;
   className?: string;
   eager?: boolean;
@@ -52,12 +52,15 @@ type LessonThumbCardProps = {
  * Thumb vertical (2:3) de uma aula avulsa — a unidade visual do curso galeria e
  * do carrossel de masterclasses na home.
  *
- * Deliberadamente mais enxuto que `CourseCard`: aqui a imagem é a informação
- * principal, o texto é só o necessário para diferenciar aulas parecidas na
- * mesma fileira. Aula travada não avisa isso de cara — a thumb fica normal, e
- * só ao passar o mouse (estilo streaming) é que o cadeado aparece por cima; o
- * `sr-only` garante que quem usa leitor de tela saiba do bloqueio mesmo sem
- * hover.
+ * Título e duração ficam abaixo da imagem, não por cima dela: a capa de uma
+ * masterclass costuma já trazer o título desenhado na própria arte, e um
+ * segundo título em texto sobreposto brigava com ele. Como legenda separada,
+ * o texto continua sempre visível (funciona igual em toque e mouse) sem
+ * disputar espaço com a imagem.
+ *
+ * Aula travada não avisa isso de cara — a imagem fica normal, e só ao passar
+ * o mouse (estilo streaming) é que o cadeado aparece por cima; o `sr-only`
+ * garante que quem usa leitor de tela saiba do bloqueio mesmo sem hover.
  */
 export default function LessonThumbCard({
   lesson,
@@ -140,10 +143,6 @@ export default function LessonThumbCard({
             onError={() => setFailedCover(true)}
             className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.045]"
           />
-          <div
-            aria-hidden="true"
-            className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-foreground/85 via-foreground/25 to-transparent"
-          />
 
           {lesson.locked ? (
             <>
@@ -176,37 +175,37 @@ export default function LessonThumbCard({
               )}
             </span>
           )}
+        </div>
 
-          <div className={cn("absolute inset-x-0 bottom-0 z-10", isLarge ? "p-3.5" : "p-2.5")}>
-            {eyebrow && (
-              <p
-                className={cn(
-                  "truncate font-bold uppercase tracking-wider text-background/70",
-                  isLarge ? "text-[11px]" : "text-[10px]",
-                )}
-              >
-                {eyebrow}
-              </p>
+        <div className={cn("px-0.5", isLarge ? "pt-2.5" : "pt-2")}>
+          {eyebrow && (
+            <p
+              className={cn(
+                "truncate font-bold uppercase tracking-wider text-muted",
+                isLarge ? "text-[11px]" : "text-[10px]",
+              )}
+            >
+              {eyebrow}
+            </p>
+          )}
+          <p
+            className={cn(
+              "line-clamp-2 font-bold leading-snug text-foreground",
+              isLarge ? "text-sm" : "text-xs",
             )}
-            <p
-              className={cn(
-                "mt-0.5 line-clamp-2 font-bold leading-snug text-background",
-                isLarge ? "text-sm" : "text-xs",
-              )}
-            >
-              {lesson.title}
-            </p>
-            <p
-              className={cn(
-                "mt-1 flex items-center gap-1 font-semibold text-background/75",
-                isLarge ? "text-xs" : "text-[10px]",
-              )}
-              data-numeric
-            >
-              <Clock3 className={isLarge ? "size-3.5" : "size-3"} aria-hidden="true" />
-              {lesson.durationInMinutes} min
-            </p>
-          </div>
+          >
+            {lesson.title}
+          </p>
+          <p
+            className={cn(
+              "mt-1 flex items-center gap-1 font-semibold text-muted",
+              isLarge ? "text-xs" : "text-[10px]",
+            )}
+            data-numeric
+          >
+            <Clock3 className={isLarge ? "size-3.5" : "size-3"} aria-hidden="true" />
+            {lesson.durationInMinutes} min
+          </p>
         </div>
       </Card>
     </Reveal>

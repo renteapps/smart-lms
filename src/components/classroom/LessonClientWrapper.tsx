@@ -301,6 +301,7 @@ export default function LessonClientWrapper({
           initialNote={initialNote}
           initialComments={initialComments}
           currentUser={currentUser}
+          enableComments={course.enableComments}
         />
       )}
     </div>
