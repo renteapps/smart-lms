@@ -2,7 +2,7 @@
 
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import {
   useCreateBlockNote,
   useEditorChange,
@@ -26,6 +26,7 @@ type LessonEditor = ReturnType<typeof useCreateBlockNote<{ schema: typeof lesson
 
 interface LessonBlockEditorProps {
   initialBlocks?: LessonContentBlock[] | ContentBlock[];
+  overrideMarkdown?: string;
   onChange: (blocks: LessonContentBlock[]) => void;
 }
 
@@ -78,7 +79,7 @@ function customSlashMenuItems(editor: LessonEditor): DefaultReactSuggestionItem[
   ];
 }
 
-export default function LessonBlockEditor({ initialBlocks, onChange }: LessonBlockEditorProps) {
+export default function LessonBlockEditor({ initialBlocks, overrideMarkdown, onChange }: LessonBlockEditorProps) {
   const initialContent = useMemo<PartialLessonBlock[] | undefined>(() => {
     if (!initialBlocks || initialBlocks.length === 0) return undefined;
     return isLegacyBlock(initialBlocks[0])
@@ -97,6 +98,16 @@ export default function LessonBlockEditor({ initialBlocks, onChange }: LessonBlo
       return publicUrl;
     },
   });
+
+  useEffect(() => {
+    if (overrideMarkdown) {
+      async function applyMarkdown() {
+        const blocks = await editor.tryParseMarkdownToBlocks(overrideMarkdown!);
+        editor.replaceBlocks(editor.document, blocks);
+      }
+      applyMarkdown();
+    }
+  }, [overrideMarkdown, editor]);
 
   useEditorChange((changedEditor) => onChange(changedEditor.document as unknown as LessonContentBlock[]), editor);
 

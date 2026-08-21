@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Film, Link2, Save, Tv, Upload } from "lucide-react";
+import { ArrowLeft, Film, Link2, Save, Tv, Upload, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -8,6 +8,10 @@ import dynamic from "next/dynamic";
 import { Switch } from "@heroui/react";
 import type { Lesson, Module } from "@/types/course";
 import { saveLesson } from "@/app/actions/admin/catalog";
+import { getPandaVideoTranscription } from "@/app/actions/admin/pandavideo";
+import { generateLessonMetadataFromTranscription } from "@/app/actions/admin/ai-generation";
+import { AIGenerationModal } from "@/components/admin/AIGenerationModal";
+import { toast } from "@heroui/react";
 import { PandaVideoSelector } from "@/components/admin/integracoes/PandaVideoSelector";
 import PandaVideoPlayer from "@/components/classroom/PandaVideoPlayer";
 import TagInputField from "@/components/admin/TagInputField";
@@ -79,6 +83,10 @@ export default function AulaAdminForm({
   const [isSaving, startSaving] = useTransition();
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [isAIGenerating, setIsAIGenerating] = useState(false);
+  const [aiGeneratedMarkdown, setAiGeneratedMarkdown] = useState<string | undefined>(undefined);
+
   const [formData, setFormData] = useState<Partial<Lesson>>(
     initialLesson ? { ...EMPTY_LESSON, ...initialLesson } : EMPTY_LESSON
   );
@@ -133,6 +141,40 @@ export default function AulaAdminForm({
 
   return (
     <div className="max-w-3xl mx-auto pb-12">
+
+      <AIGenerationModal
+        isOpen={isAIModalOpen}
+        isGenerating={isAIGenerating}
+        onClose={() => setIsAIModalOpen(false)}
+        onGenerate={async (settings) => {
+          if (!formData.transcription) return;
+          setIsAIGenerating(true);
+          try {
+            const res = await generateLessonMetadataFromTranscription(formData.transcription, settings);
+            if (res.success && res.data) {
+              setAiGeneratedMarkdown(res.data.contentMarkdown);
+              setFormData((prev) => ({
+                ...prev,
+                shortDescription: res.data.shortDescription || prev.shortDescription,
+                level: res.data.level || prev.level,
+                audience: res.data.audience || prev.audience,
+                objective: res.data.objective || prev.objective,
+                topics: res.data.topics || prev.topics,
+                solves: res.data.solves || prev.solves,
+              }));
+              setIsAIModalOpen(false);
+              toast.success("Conteúdo gerado com sucesso!");
+            } else {
+              toast.danger(res.error || "Falha ao gerar o conteúdo.");
+            }
+          } catch (e: any) {
+            toast.danger(e.message || "Erro inesperado.");
+          } finally {
+            setIsAIGenerating(false);
+          }
+        }}
+      />
+
       <div className="mb-8">
         <Link
           href={`/admin/cursos/${courseId}/modulos`}
@@ -257,15 +299,34 @@ export default function AulaAdminForm({
                   <PandaVideoSelector
                     value={formData.pandavideoId}
                     currentVideoUrl={formData.videoUrl}
-                    onChange={(video) => setFormData((prev) => video
-                      ? {
-                          ...prev,
-                          pandavideoId: video.id,
-                          videoUrl: video.videoPlayer,
-                          durationInMinutes: secondsToLessonMinutes(video.length),
+                    onChange={async (video) => {
+                      if (!video) {
+                        setFormData((prev) => ({ ...prev, pandavideoId: undefined, videoUrl: "" }));
+                        return;
+                      }
+
+                      // Update basic video info immediately
+                      setFormData((prev) => ({
+                        ...prev,
+                        pandavideoId: video.id,
+                        videoUrl: video.videoPlayer,
+                        durationInMinutes: secondsToLessonMinutes(video.length),
+                      }));
+
+                      // Fetch transcription asynchronously
+                      try {
+                        const res = await getPandaVideoTranscription(video.id);
+                        if (res?.text) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            // Only overwrite transcription if it's currently empty
+                            transcription: prev.transcription ? prev.transcription : res.text
+                          }));
                         }
-                      : { ...prev, pandavideoId: undefined, videoUrl: "" }
-                    )}
+                      } catch (error) {
+                        console.error("Error fetching transcription:", error);
+                      }
+                    }}
                   />
                   {formData.videoUrl && (
                     <PandaVideoPlayer
@@ -307,15 +368,28 @@ export default function AulaAdminForm({
 
         {/* Editor de blocos */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-foreground">
-            Conteúdo da Aula
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="block text-sm font-medium text-foreground">
+              Conteúdo da Aula
+            </label>
+            {formData.transcription && formData.transcription.trim().length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIsAIModalOpen(true)}
+                className="flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent/80 transition-colors bg-accent-soft px-2.5 py-1.5 rounded-md"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Gerar com IA
+              </button>
+            )}
+          </div>
           <p className="text-xs text-muted">
             Digite <kbd className="rounded border border-border bg-background px-1 font-sans">/</kbd> para inserir vídeo, quiz, destaque, imagem, tabela e mais.
           </p>
           <div className="rounded-lg border border-border bg-surface py-2 transition-colors focus-within:border-accent">
             <LessonBlockEditor
               key={aulaId}
+              overrideMarkdown={aiGeneratedMarkdown}
               initialBlocks={initialLesson?.blocks || formData.blocks}
               onChange={(blocks) => setFormData((prev) => ({ ...prev, blocks }))}
             />
