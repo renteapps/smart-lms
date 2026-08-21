@@ -7,12 +7,18 @@ import { EmptyState, buttonVariants } from "@heroui/react";
 import { CourseIcon } from "@/components/ui/AnimatedIcon";
 import { Rise } from "@/components/ui/Rise";
 import LessonThumbCard from "@/components/LessonThumbCard";
+import { useAuth } from "@/contexts/AuthContext";
+import { resolveDynamicSalesUrl } from "@/lib/salesUrlHelper";
+import { getCourseSalesTemplate } from "@/lib/courseAccess";
+import { cn } from "@/lib/utils";
 import type { CourseOverviewData, GalleryLesson } from "@/types/course";
 
 type CourseGalleryClientProps = {
   course: CourseOverviewData;
   lessons: GalleryLesson[];
   nextLesson: GalleryLesson | null;
+  /** Sem matrícula nem plano que cubra o curso: a galeria aparece travada, com CTA de matrícula. */
+  locked?: boolean;
   totalLessons: number;
   completedLessons: number;
   progressPercentage: number;
@@ -28,20 +34,39 @@ const FALLBACK_COVER =
  * módulos. Onde `CourseOverviewClient` mostra um plano acordeão, aqui a lista
  * vira uma grade de thumbs verticais — a mesma unidade visual do carrossel da
  * home, só que todas de uma vez.
+ *
+ * Quem não tem acesso vê a mesma galeria, travada (ver `getGalleryCourse`):
+ * cada thumb com cadeado e o CTA principal virando "Realizar matrícula", em
+ * vez de uma tela vazia dizendo que não há conteúdo.
  */
 export default function CourseGalleryClient({
   course,
   lessons,
   nextLesson,
+  locked = false,
   totalLessons,
   completedLessons,
   progressPercentage,
   isCompleted = false,
   certificateUrl,
 }: CourseGalleryClientProps) {
+  const { user } = useAuth();
   const isCertificateEnabled = course.enableCertificates !== false;
   const targetCertificateUrl = certificateUrl || `/certificados?curso=${encodeURIComponent(course.id)}`;
   const heroCover = (course.coverUrl && course.coverUrl.trim() !== "") ? course.coverUrl : FALLBACK_COVER;
+
+  const salesTemplate = getCourseSalesTemplate({ salesUrl: course.salesUrl, salesConfig: course.salesConfig });
+  const resolvedSalesUrl = locked && salesTemplate
+    ? resolveDynamicSalesUrl(salesTemplate, {
+        contact: {
+          name: user?.user_metadata?.full_name || user?.user_metadata?.name || undefined,
+          email: user?.email || undefined,
+          phone: user?.user_metadata?.phone || undefined,
+          id: user?.id,
+        },
+        course: { id: course.id, title: course.title, slug: course.slug },
+      })
+    : null;
 
   return (
     <div className="min-h-screen pt-20 sm:pt-[76px]">
@@ -77,14 +102,41 @@ export default function CourseGalleryClient({
                 <BookOpen className="size-3.5 sm:size-4" aria-hidden="true" />
                 <span data-numeric>{totalLessons} aulas</span>
               </span>
-              {progressPercentage > 0 && (
+              {!locked && progressPercentage > 0 && (
                 <span className="material-thin flex items-center gap-1.5 sm:gap-2 rounded-full px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-xs sm:text-sm font-semibold text-background">
                   <span data-numeric>{progressPercentage}% assistido</span>
                 </span>
               )}
             </div>
 
-            {isCompleted && isCertificateEnabled ? (
+            {locked ? (
+              <div className="mt-7 sm:mt-9">
+                {resolvedSalesUrl ? (
+                  <a
+                    href={resolvedSalesUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={buttonVariants({
+                      variant: "primary",
+                      size: "lg",
+                      className: "press w-full sm:w-auto inline-flex items-center justify-center gap-2",
+                    })}
+                  >
+                    Realizar matrícula
+                  </a>
+                ) : (
+                  <span
+                    className={cn(
+                      buttonVariants({ variant: "primary", size: "lg" }),
+                      "w-full sm:w-auto cursor-not-allowed opacity-70",
+                    )}
+                    aria-disabled="true"
+                  >
+                    Matrícula indisponível
+                  </span>
+                )}
+              </div>
+            ) : isCompleted && isCertificateEnabled ? (
               <div className="mt-7 sm:mt-9 flex flex-wrap items-center gap-3">
                 <Link
                   href={targetCertificateUrl}
@@ -137,7 +189,15 @@ export default function CourseGalleryClient({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 md:grid-cols-4 lg:grid-cols-5">
             {lessons.map((lesson, index) => (
               <Rise key={lesson.id} delay={Math.min(index, 8) * 40}>
-                <LessonThumbCard lesson={lesson} className="w-full max-w-none" eager={index < 5} />
+                <LessonThumbCard
+                  lesson={lesson}
+                  className="w-full max-w-none"
+                  eager={index < 5}
+                  courseId={course.id}
+                  courseSlug={course.slug}
+                  courseTitle={course.title}
+                  salesUrl={salesTemplate}
+                />
               </Rise>
             ))}
           </div>

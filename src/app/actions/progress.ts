@@ -29,7 +29,8 @@ export async function setLessonCompletion(
 
     if (error) return { success: false, message: error.message };
 
-    if (courseId) revalidatePath(`/courses/${courseId}`);
+    if (courseId) revalidatePath("/courses/[slug]", "page");
+    revalidatePath("/courses/[slug]/lessons/[lessonSlug]", "page");
     revalidatePath("/cursos");
     revalidatePath("/certificados");
     revalidatePath("/");
@@ -90,7 +91,8 @@ export async function enrollInCourse(courseId: string): Promise<ActionResult> {
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/cursos");
-    revalidatePath(`/courses/${courseId}`);
+    revalidatePath("/courses/[slug]", "page");
+    revalidatePath("/courses/[slug]/lessons/[lessonSlug]", "page");
     return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };

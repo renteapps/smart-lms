@@ -601,30 +601,168 @@ function lessonHref(courseUrlId: string, lesson: Row): string {
 }
 
 /**
- * As aulas de um curso galeria, na ordem em que o admin as arrastou.
+ * Acesso a um conjunto de cursos, pelas mesmas regras do catálogo (matrícula
+ * ativa ou plano cujas `features` cubram o curso) — mais o bypass de admin,
+ * que `hasCourseAccess` sozinho não sabe: sem ele, o próprio admin veria o
+ * curso que acabou de criar como travado ao pré-visualizá-lo.
  *
- * O módulo único do curso galeria é infraestrutura (ver a migration
- * `20260821090000_gallery_courses`): aqui ele some e sobra a coleção de aulas,
- * que é o que a tela mostra.
+ * Existe separado de `getCatalogCourses` de propósito: aqui o objetivo é só
+ * "esse curso está travado?", sem montar cartão de catálogo — usado tanto
+ * pela capa do curso galeria quanto pelo carrossel da home.
  */
-export function toGalleryLessons(course: CourseOutline): GalleryLesson[] {
+async function getCourseAccessMap(
+  db: DB,
+  userId: string,
+  courseIds: string[],
+): Promise<Map<string, boolean>> {
+  const result = new Map<string, boolean>();
+  if (courseIds.length === 0) return result;
+
+  const { data: profile } = await db.from("profiles").select("role").eq("id", userId).maybeSingle();
+  if (profile?.role === "admin") {
+    courseIds.forEach((id) => result.set(id, true));
+    return result;
+  }
+
+  const now = new Date();
+  const [enrollmentsResult, subscriptionsResult] = await Promise.all([
+    db.from("enrollments").select("course_id, status, expires_at").eq("user_id", userId).in("course_id", courseIds),
+    db
+      .from("subscriptions")
+      .select("status, current_period_end, plans!inner(features, is_active)")
+      .eq("user_id", userId),
+  ]);
+  logQueryError("getCourseAccessMap:enrollments", enrollmentsResult.error);
+  logQueryError("getCourseAccessMap:subscriptions", subscriptionsResult.error);
+
+  const enrolledCourseIds = new Set(
+    (enrollmentsResult.data ?? [])
+      .filter((row: Row) => isEnrollmentActive({ status: row.status, expiresAt: row.expires_at }, now))
+      .map((row: Row) => row.course_id),
+  );
+  const activePlanFeatures = (subscriptionsResult.data ?? [])
+    .filter((row: Row) => {
+      if (!isSubscriptionActive({ status: row.status, currentPeriodEnd: row.current_period_end }, now)) return false;
+      const plan = Array.isArray(row.plans) ? row.plans[0] : row.plans;
+      return plan?.is_active !== false;
+    })
+    .map((row: Row) => {
+      const plan = Array.isArray(row.plans) ? row.plans[0] : row.plans;
+      return plan?.features;
+    });
+
+  courseIds.forEach((courseId) => {
+    result.set(courseId, hasCourseAccess({ courseId, enrolledCourseIds, activePlanFeatures }));
+  });
+  return result;
+}
+
+/**
+ * Aulas de curso(s) galeria pela `gallery_lesson_previews` — nunca pela tabela
+ * crua. `lessons`/`modules` só liberam SELECT para quem tem matrícula (ver as
+ * policies em `20260815115400_security_enhancements` e
+ * `20260820120000_add_enrollment_expiration`), então buscar direto ali faria a
+ * prévia sumir por completo para quem ainda não comprou — exatamente o
+ * contrário do que a vitrine "veja travado, compre se quiser" precisa. A view
+ * expõe só as colunas de vitrine (sem video_url/content/blocks/transcription);
+ * ver `20260821110000_gallery_lesson_previews`.
+ */
+async function getGalleryLessonPreviews(db: DB, courseIds: string[]): Promise<Map<string, Row[]>> {
+  const byCourse = new Map<string, Row[]>();
+  if (courseIds.length === 0) return byCourse;
+
+  const { data, error } = await db
+    .from("gallery_lesson_previews")
+    .select("id, course_id, title, cover_url, duration_in_minutes, short_description, slug, order_index, created_at")
+    .in("course_id", courseIds);
+
+  logQueryError("getGalleryLessonPreviews", error);
+  (data ?? []).forEach((row: Row) => {
+    const list = byCourse.get(row.course_id) ?? [];
+    list.push(row);
+    byCourse.set(row.course_id, list);
+  });
+  return byCourse;
+}
+
+const GALLERY_COURSE_SELECT = `
+  id, slug, title, description, short_description, category, cover_url, duration,
+  level, price, tags, status, layout, home_carousel, is_published, is_featured,
+  created_at, updated_at, enable_certificates, sales_url, sales_page_url, sales_config
+`;
+
+/**
+ * Sonda leve para decidir, antes de buscar o resto, se o curso é galeria ou
+ * módulos — cada tipo lê as aulas de um jeito diferente (ver `getGalleryCourse`
+ * vs. `getCourseOutline`), então a capa pública precisa saber isso primeiro.
+ */
+export async function getCourseLayoutMeta(
+  db: DB,
+  idOrSlug: string,
+): Promise<{ id: string; slug: string; status?: string; layout: CourseLayout } | null> {
+  const column = isUuid(idOrSlug) ? "id" : "slug";
+  const { data, error } = await db.from("courses").select("id, slug, status, layout").eq(column, idOrSlug).maybeSingle();
+
+  logQueryError("getCourseLayoutMeta", error);
+  if (error) throw new Error(`Não foi possível carregar o curso ${idOrSlug}: ${error.message}`);
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    slug: data.slug,
+    status: data.status ?? undefined,
+    layout: (data.layout ?? "modules") as CourseLayout,
+  };
+}
+
+/**
+ * Curso galeria completo para a capa pública (`/courses/[slug]`).
+ *
+ * Sempre lê as aulas pela prévia (ver `getGalleryLessonPreviews`) — quem não
+ * tem acesso vê a mesma galeria, só que travada, em vez de uma tela vazia.
+ * Progresso e marcação de concluído só entram quando `locked` é falso: aula
+ * travada não tem "concluída", tem "compre para assistir".
+ */
+export async function getGalleryCourse(
+  db: DB,
+  idOrSlug: string,
+  userId?: string | null,
+): Promise<{ course: Course; lessons: GalleryLesson[]; locked: boolean } | null> {
+  const column = isUuid(idOrSlug) ? "id" : "slug";
+  const { data, error } = await db.from("courses").select(GALLERY_COURSE_SELECT).eq(column, idOrSlug).maybeSingle();
+
+  logQueryError("getGalleryCourse", error);
+  if (error) throw new Error(`Não foi possível carregar o curso ${idOrSlug}: ${error.message}`);
+  if (!data) return null;
+
+  const course = mapCourse(data);
+  const accessByCourse = userId ? await getCourseAccessMap(db, userId, [course.id]) : new Map<string, boolean>();
+  const locked = !(accessByCourse.get(course.id) ?? false);
+
+  const lessonsByCourse = await getGalleryLessonPreviews(db, [course.id]);
+  const rawLessons = (lessonsByCourse.get(course.id) ?? [])
+    .slice()
+    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+
+  const progressByLesson = !locked && userId
+    ? await getLessonProgressMap(db, userId, rawLessons.map((lesson) => lesson.id))
+    : new Map<string, Row>();
+
   const courseUrlId = course.slug || course.id;
   const fallbackCover = course.coverUrl || FALLBACK_COVER;
 
-  return course.modules
-    .flatMap((mod) => mod.lessons)
-    .filter((lesson) => lesson.isPublished !== false)
-    .slice()
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-    .map((lesson) => ({
-      id: lesson.id,
-      title: lesson.title,
-      cover: lesson.coverUrl?.trim() || fallbackCover,
-      durationInMinutes: lesson.durationInMinutes,
-      shortDescription: lesson.shortDescription,
-      isCompleted: lesson.isCompleted,
-      href: lessonHref(courseUrlId, lesson),
-    }));
+  const lessons: GalleryLesson[] = rawLessons.map((lesson) => ({
+    id: lesson.id,
+    title: lesson.title,
+    cover: (lesson.cover_url ?? "").trim() || fallbackCover,
+    durationInMinutes: lesson.duration_in_minutes ?? 0,
+    shortDescription: lesson.short_description ?? undefined,
+    isCompleted: locked ? false : (progressByLesson.get(lesson.id)?.is_completed ?? false),
+    locked,
+    href: lessonHref(courseUrlId, lesson),
+  }));
+
+  return { course, lessons, locked };
 }
 
 /**
@@ -632,14 +770,13 @@ export function toGalleryLessons(course: CourseOutline): GalleryLesson[] {
  *
  * Diferente da galeria do curso, aqui a ordem é cronológica: a promessa da
  * faixa é "o que entrou por último", então quem manda é `created_at` da aula, e
- * não a ordem editorial da coleção.
+ * não a ordem editorial da coleção. Aparece para todo mundo, matriculado ou
+ * não — quem não tem acesso vê a mesma faixa travada, com CTA de matrícula.
  */
 export async function getHomeCarouselRows(db: DB, userId?: string | null): Promise<HomeCarouselRow[]> {
-  const { data, error } = await db
+  const { data: courseRows, error } = await db
     .from("courses")
-    .select(
-      "id, slug, title, cover_url, order_index, modules(lessons(id, slug, title, cover_url, short_description, duration_in_minutes, is_published, created_at))",
-    )
+    .select("id, slug, title, cover_url, order_index, sales_url, sales_config")
     .eq("layout", "gallery")
     .eq("home_carousel", true)
     .eq("is_published", true)
@@ -647,44 +784,53 @@ export async function getHomeCarouselRows(db: DB, userId?: string | null): Promi
     .order("order_index", { ascending: true });
 
   logQueryError("getHomeCarouselRows", error);
-  if (!data) return [];
+  if (!courseRows || courseRows.length === 0) return [];
 
-  const rows = data
+  const courseIds = courseRows.map((row: Row) => row.id);
+  const [lessonsByCourse, accessByCourse] = await Promise.all([
+    getGalleryLessonPreviews(db, courseIds),
+    userId ? getCourseAccessMap(db, userId, courseIds) : Promise.resolve(new Map<string, boolean>()),
+  ]);
+
+  const rowsWithLessons = courseRows
     .map((row: Row) => ({
       row,
-      lessons: (row.modules ?? [])
-        .flatMap((mod: Row) => mod.lessons ?? [])
-        .filter((lesson: Row) => lesson.is_published !== false)
+      locked: !(accessByCourse.get(row.id) ?? false),
+      lessons: (lessonsByCourse.get(row.id) ?? [])
+        .slice()
         .sort((a: Row, b: Row) => Date.parse(b.created_at) - Date.parse(a.created_at))
         .slice(0, HOME_CAROUSEL_SIZE),
     }))
     .filter((entry) => entry.lessons.length > 0);
 
-  if (rows.length === 0) return [];
+  if (rowsWithLessons.length === 0) return [];
 
-  const progressByLesson = userId
-    ? await getLessonProgressMap(
-        db,
-        userId,
-        rows.flatMap((entry) => entry.lessons.map((lesson: Row) => lesson.id)),
-      )
+  const unlockedLessonIds = rowsWithLessons
+    .filter((entry) => !entry.locked)
+    .flatMap((entry) => entry.lessons.map((lesson: Row) => lesson.id));
+  const progressByLesson = userId && unlockedLessonIds.length > 0
+    ? await getLessonProgressMap(db, userId, unlockedLessonIds)
     : new Map<string, Row>();
 
-  return rows.map(({ row, lessons }) => {
+  return rowsWithLessons.map(({ row, lessons, locked }) => {
     const courseUrlId = row.slug || row.id;
     const fallbackCover = row.cover_url || FALLBACK_COVER;
 
     return {
       courseId: row.id,
+      courseSlug: row.slug ?? undefined,
       courseTitle: row.title,
       courseHref: `/courses/${courseUrlId}`,
+      locked,
+      salesUrl: getCourseSalesTemplate({ salesUrl: row.sales_url, salesConfig: row.sales_config }),
       lessons: lessons.map((lesson: Row) => ({
         id: lesson.id,
         title: lesson.title,
         cover: (lesson.cover_url ?? "").trim() || fallbackCover,
         durationInMinutes: lesson.duration_in_minutes ?? 0,
         shortDescription: lesson.short_description ?? undefined,
-        isCompleted: progressByLesson.get(lesson.id)?.is_completed ?? false,
+        isCompleted: locked ? false : (progressByLesson.get(lesson.id)?.is_completed ?? false),
+        locked,
         href: lessonHref(courseUrlId, lesson),
       })),
     } satisfies HomeCarouselRow;
@@ -753,7 +899,7 @@ export async function getContinueLessons(db: DB, userId: string, limit = 4): Pro
   const { data, error } = await db
     .from("lesson_progress")
     .select(
-      "lesson_id, last_watched_second, lessons!inner(id, title, duration_in_minutes, modules!inner(id, title, course_id, courses!inner(id, slug, title, cover_url, status)))",
+      "lesson_id, last_watched_second, lessons!inner(id, slug, title, duration_in_minutes, modules!inner(id, title, course_id, courses!inner(id, slug, title, cover_url, status)))",
     )
     .eq("user_id", userId)
     .eq("is_completed", false)
@@ -771,7 +917,9 @@ export async function getContinueLessons(db: DB, userId: string, limit = 4): Pro
       const totalSeconds = (lesson.duration_in_minutes ?? 0) * 60;
       return {
         id: lesson.id,
+        slug: lesson.slug,
         courseId: course.id,
+        courseSlug: course.slug,
         title: lesson.title,
         moduleName: `${course.title} · ${mod.title}`,
         duration: `${lesson.duration_in_minutes ?? 0} min`,

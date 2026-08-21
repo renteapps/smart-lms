@@ -223,8 +223,15 @@ export default function GalleryLessonList({
                     </div>
                   )}
 
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-foreground">{lesson.title}</p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate text-sm font-bold text-foreground">{lesson.title}</p>
+                      {index < 8 && (
+                        <span className="shrink-0 rounded-md bg-accent/10 px-1.5 py-0.5 text-[10px] font-bold text-accent uppercase tracking-wider">
+                          Carrossel
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-0.5 text-xs text-muted">
                       {lesson.type === "quiz" ? "Quiz" : lesson.type === "text" ? "Texto" : "Vídeo"} · {lesson.durationInMinutes} min
                     </p>

@@ -8,6 +8,10 @@ import { cn } from "@/lib/utils";
 
 type CarouselRowProps = {
   title?: string;
+  /** Ícone antes do título — ex.: distinguir a fileira de um curso específico. */
+  titleIcon?: React.ReactNode;
+  /** Ação à direita do título, alinhada com ele — ex.: link "Acessar curso". */
+  action?: React.ReactNode;
   children: React.ReactNode;
   /** Rótulo acessível da região de rolagem. Cai para o título quando ausente. */
   label?: string;
@@ -45,7 +49,7 @@ const itemVariants = {
  * de visibilidade, de que lado ainda existe conteúdo — é essa informação que
  * habilita ou desabilita as setas, em vez de um listener de scroll paralelo.
  */
-export default function CarouselRow({ title, children, label, className }: CarouselRowProps) {
+export default function CarouselRow({ title, titleIcon, action, children, label, className }: CarouselRowProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState<ScrollShadowVisibility>("none");
   const reduceMotion = useReducedMotion();
@@ -68,8 +72,12 @@ export default function CarouselRow({ title, children, label, className }: Carou
   return (
     <section className={cn("group/row relative py-6", className)}>
       {title && (
-        <div className="editorial-container mb-5">
-          <h2 className="display-3 text-foreground">{title}</h2>
+        <div className="editorial-container mb-5 flex items-center justify-between gap-4">
+          <h2 className="display-3 flex items-center gap-2.5 text-foreground">
+            {titleIcon}
+            {title}
+          </h2>
+          {action}
         </div>
       )}
 

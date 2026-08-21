@@ -88,10 +88,11 @@ export function deriveStudentCourseState(input: {
 export function getStudentCourseAction(input: {
   state: StudentCourseState;
   courseId?: string;
+  courseSlug?: string;
   courseHref?: string | null;
   resolvedSalesUrl?: string | null;
 }): { label: string; href: string | null } {
-  const courseHref = input.courseHref ?? (input.courseId ? `/courses/${input.courseId}` : null);
+  const courseHref = input.courseHref ?? (input.courseId ? `/courses/${input.courseSlug || input.courseId}` : null);
 
   switch (input.state.kind) {
     case 'locked':

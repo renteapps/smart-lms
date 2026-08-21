@@ -36,9 +36,9 @@ export default async function AulasGaleriaAdminPage({ params }: { params: Promis
         </Link>
         <h1 className="text-3xl font-display font-bold">Gerenciar Aulas</h1>
         <p className="text-muted mt-2">
-          Curso galeria: uma coleção de aulas avulsas, sem módulos. A ordem daqui define a galeria em
-          <code className="mx-1 rounded bg-background-secondary px-1.5 py-0.5 text-sm">/courses/{course.slug || course.id}</code>
-          e as 8 mais recentes do carrossel da home, quando ativado.
+          Curso galeria: uma coleção de aulas avulsas, sem módulos. A ordem daqui define a galeria em{" "}
+          <strong className="mx-1 text-foreground">{course.title}</strong>
+          e as 8 primeiras aparecem em destaque no carrossel do topo, quando ativado.
         </p>
       </div>
 

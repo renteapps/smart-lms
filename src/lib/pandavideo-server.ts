@@ -72,6 +72,40 @@ export async function fetchPandaVideo(path: string, searchParams?: URLSearchPara
   return response.json();
 }
 
+export async function fetchPandaVideoSubtitleText(
+  videoId: string,
+  preferredLanguages: string[] = ["pt-BR", "pt", "en", "es"]
+): Promise<{ success: boolean; vttContent?: string; error?: string }> {
+  const apiKey = await getPandaVideoApiKey();
+  const cleanId = encodeURIComponent(videoId.trim());
+
+  for (const lang of preferredLanguages) {
+    const url = new URL(`/subtitles/${cleanId}/${encodeURIComponent(lang)}`, PANDA_VIDEO_API_URL);
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: apiKey,
+      },
+      cache: "no-store",
+    });
+
+    if (response.ok) {
+      const text = await response.text();
+      if (text && text.trim().length > 0) {
+        return { success: true, vttContent: text };
+      }
+    } else if (response.status === 401) {
+      throw new PandaVideoApiError("A chave da integração PandaVideo foi recusada.", 401, "UNAUTHORIZED");
+    }
+    // Status 400 ou 404 significa que este vídeo não tem legenda no idioma testado
+  }
+
+  return {
+    success: false,
+    error: "Nenhuma legenda encontrada para este vídeo no PandaVideo.",
+  };
+}
+
 export function pandaVideoErrorResponse(error: unknown): Response {
   if (error instanceof PandaVideoApiError) {
     return Response.json({ error: error.message, code: error.code }, { status: error.status });

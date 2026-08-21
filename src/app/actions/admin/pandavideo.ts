@@ -1,6 +1,6 @@
 "use server";
 
-import { fetchPandaVideo } from "@/lib/pandavideo-server";
+import { fetchPandaVideoSubtitleText } from "@/lib/pandavideo-server";
 import { requireAdmin } from "@/lib/supabase/auth";
 
 function parseVttToText(vtt: string): string {
@@ -55,55 +55,16 @@ export async function getPandaVideoTranscription(videoId: string): Promise<{
       return { success: false, text: null, error: "Identificador do vídeo não informado." };
     }
 
-    // Use the known PandaVideo subtitles API endpoint
-    const response = (await fetchPandaVideo(`/videos/${cleanId}/subtitles`)) as any;
-
-    const subtitles = Array.isArray(response)
-      ? response
-      : response?.subtitles || (response?.videos ? response.videos : []);
-
-    if (!Array.isArray(subtitles) || subtitles.length === 0) {
+    const result = await fetchPandaVideoSubtitleText(cleanId);
+    if (!result.success || !result.vttContent) {
       return {
         success: false,
         text: null,
-        error: "Nenhuma legenda encontrada para este vídeo no PandaVideo.",
+        error: result.error || "Nenhuma legenda encontrada para este vídeo no PandaVideo.",
       };
     }
 
-    let subtitle = subtitles.find(
-      (s: any) =>
-        s?.language === "pt-BR" ||
-        s?.language === "pt" ||
-        s?.lang === "pt-BR" ||
-        s?.lang === "pt" ||
-        s?.srclang === "pt" ||
-        s?.srclang === "pt-BR"
-    );
-    if (!subtitle) {
-      subtitle = subtitles[0];
-    }
-
-    const vttUrl = subtitle?.vtt || subtitle?.url || subtitle?.src;
-    if (!vttUrl) {
-      return {
-        success: false,
-        text: null,
-        error: "Arquivo de legenda não localizado no PandaVideo.",
-      };
-    }
-
-    const vttRes = await fetch(vttUrl);
-    if (!vttRes.ok) {
-      return {
-        success: false,
-        text: null,
-        error: "Não foi possível transferir o arquivo de legenda do PandaVideo.",
-      };
-    }
-
-    const vttContent = await vttRes.text();
-    const plainText = parseVttToText(vttContent);
-
+    const plainText = parseVttToText(result.vttContent);
     if (!plainText || !plainText.trim()) {
       return {
         success: false,

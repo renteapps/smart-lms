@@ -69,7 +69,8 @@ export async function createEnrollment(input: CreateEnrollmentInput): Promise<En
     revalidatePath("/admin/users");
     revalidatePath(`/admin/cursos/${input.courseId}`);
     revalidatePath(`/cursos/${input.courseId}`);
-    revalidatePath(`/courses/${input.courseId}`);
+    revalidatePath("/courses/[slug]", "page");
+    revalidatePath("/courses/[slug]/lessons/[lessonSlug]", "page");
     revalidatePath("/cursos");
     revalidatePath("/aluno/cursos");
     revalidatePath("/aluno");
@@ -124,7 +125,8 @@ export async function updateEnrollmentExpiration(
     if (data?.course_id) {
       revalidatePath(`/admin/cursos/${data.course_id}`);
       revalidatePath(`/cursos/${data.course_id}`);
-      revalidatePath(`/courses/${data.course_id}`);
+      revalidatePath("/courses/[slug]", "page");
+      revalidatePath("/courses/[slug]/lessons/[lessonSlug]", "page");
     }
     revalidatePath("/cursos");
     revalidatePath("/aluno/cursos");
@@ -217,7 +219,8 @@ export async function deleteEnrollment(input: DeleteEnrollmentInput): Promise<En
     if (targetCourseId) {
       revalidatePath(`/admin/cursos/${targetCourseId}`);
       revalidatePath(`/cursos/${targetCourseId}`);
-      revalidatePath(`/courses/${targetCourseId}`);
+      revalidatePath("/courses/[slug]", "page");
+      revalidatePath("/courses/[slug]/lessons/[lessonSlug]", "page");
     }
     revalidatePath("/cursos");
     revalidatePath("/aluno/cursos");

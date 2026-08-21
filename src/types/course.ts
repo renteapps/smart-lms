@@ -216,7 +216,9 @@ export type CatalogCourse = {
 /** Aula em andamento, para a faixa "continue de onde parou". */
 export type ContinueLesson = {
   id: string;
+  slug?: string;
   courseId: string;
+  courseSlug?: string;
   title: string;
   moduleName: string;
   duration: string;
@@ -233,13 +235,20 @@ export type GalleryLesson = {
   durationInMinutes: number;
   shortDescription?: string;
   isCompleted?: boolean;
+  /** Sem matrícula nem plano que cubra o curso: aparece na prévia, mas não dá para assistir. */
+  locked?: boolean;
   href: string;
 };
 
 /** Uma faixa do carrossel da home: um curso galeria e suas 8 aulas mais recentes. */
 export type HomeCarouselRow = {
   courseId: string;
+  courseSlug?: string;
   courseTitle: string;
   courseHref: string;
+  /** Curso inteiro está travado para o aluno da sessão — todas as aulas da faixa seguem o mesmo estado. */
+  locked: boolean;
+  /** Template de checkout do curso; variáveis dinâmicas resolvidas no card com os dados do aluno. */
+  salesUrl: string | null;
   lessons: GalleryLesson[];
 };

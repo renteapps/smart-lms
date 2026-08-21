@@ -85,6 +85,7 @@ export default function CourseCard({
   const action = getStudentCourseAction({
     state,
     courseId: id,
+    courseSlug: slug,
     courseHref: href,
     resolvedSalesUrl,
   });

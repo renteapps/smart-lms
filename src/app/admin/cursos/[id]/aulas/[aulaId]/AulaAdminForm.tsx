@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Film, Link2, Loader2, RefreshCw, Save, Tv, Upload, Sparkles } from "lucide-react";
+import { ArrowLeft, Film, Link2, Loader2, RefreshCw, Save, Tv, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -20,6 +20,7 @@ import { extractYouTubeId, youtubeEmbedUrl } from "@/lib/editor/youtube";
 import { secondsToLessonMinutes } from "@/lib/pandavideo";
 import { cn } from "@/lib/utils";
 import { ImageUpload } from "@/components/ui/ImageUpload";
+import { FileUpload } from "@/components/ui/FileUpload";
 
 const LessonBlockEditor = dynamic(() => import("@/components/admin/editor/LessonBlockEditor"), {
   ssr: false,
@@ -62,6 +63,7 @@ const EMPTY_LESSON: Partial<Lesson> = {
   audience: "",
   prerequisites: [],
   isEligibleForTrail: true,
+  attachments: [],
 };
 
 interface AulaAdminFormProps {
@@ -107,8 +109,9 @@ export default function AulaAdminForm({
       } else {
         toast.warning(res.error || "Nenhuma legenda encontrada para este vídeo no PandaVideo.");
       }
-    } catch (error: any) {
-      toast.danger(error?.message || "Erro ao consultar legendas no PandaVideo.");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao consultar legendas no PandaVideo.";
+      toast.danger(message);
     } finally {
       setIsFetchingTranscription(false);
     }
@@ -194,8 +197,9 @@ export default function AulaAdminForm({
             } else {
               toast.danger(res.error || "Falha ao gerar o conteúdo.");
             }
-          } catch (e: any) {
-            toast.danger(e.message || "Erro inesperado.");
+          } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : "Erro inesperado.";
+            toast.danger(message);
           } finally {
             setIsAIGenerating(false);
           }
@@ -584,18 +588,12 @@ export default function AulaAdminForm({
           </Switch>
         </div>
 
-        {/* Anexos (Mock visual) */}
+        {/* Anexos */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-foreground">Anexos e Materiais</label>
-          <div className="border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center text-center hover:border-accent transition-colors cursor-pointer group">
-            <div className="w-10 h-10 bg-surface rounded-full flex items-center justify-center text-muted group-hover:text-accent mb-3">
-              <Upload className="w-5 h-5" />
-            </div>
-            <p className="text-sm font-medium group-hover:text-accent transition-colors">
-              Clique para fazer upload de arquivos
-            </p>
-            <p className="text-xs text-muted mt-1">PDF, ZIP, Imagens (Max. 50MB)</p>
-          </div>
+          <FileUpload 
+            value={formData.attachments || []} 
+            onChange={(files) => setFormData({ ...formData, attachments: files })} 
+          />
         </div>
 
         {saveError && (
