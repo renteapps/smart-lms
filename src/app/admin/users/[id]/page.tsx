@@ -10,11 +10,14 @@ import {
   KeyRound,
   List,
   Mail,
+  MapPin,
   MonitorOff,
   Phone,
   Settings,
   ShieldCheck,
   UserRound,
+  Calendar,
+  Building,
 } from "lucide-react";
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@heroui/react";
 import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
@@ -130,18 +133,31 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Resumo do Perfil</CardTitle>
-            <CardDescription>Dados profissionais e de contato registrados</CardDescription>
+            <CardDescription>Dados profissionais, pessoais e de contato registrados</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <CardContent className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            {/* Profissional */}
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-background-secondary text-muted">
+                <Building className="size-4" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-xs text-muted">Empresa</p>
+                <p className="text-sm font-semibold text-foreground">{profile.company || "Não informado"}</p>
+              </div>
+            </div>
+            
             <div className="flex items-center gap-3">
               <span className="grid size-10 shrink-0 place-items-center rounded-full bg-background-secondary text-muted">
                 <Briefcase className="size-4" aria-hidden="true" />
               </span>
               <div>
-                <p className="text-xs text-muted">Empresa / Departamento</p>
+                <p className="text-xs text-muted">Cargo / Departamento</p>
                 <p className="text-sm font-semibold text-foreground">{profile.careerRole || "Não informado"}</p>
               </div>
             </div>
+
+            {/* Contato */}
             <div className="flex items-center gap-3">
               <span className="grid size-10 shrink-0 place-items-center rounded-full bg-background-secondary text-muted">
                 <Phone className="size-4" aria-hidden="true" />
@@ -151,6 +167,42 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
                 <p className="text-sm font-semibold text-foreground">{profile.phone || "Não informado"}</p>
               </div>
             </div>
+            
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-background-secondary text-muted">
+                <MapPin className="size-4" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-xs text-muted">Localização</p>
+                <p className="text-sm font-semibold text-foreground">
+                  {[profile.city, profile.state, profile.country].filter(Boolean).join(", ") || profile.location || "Não informado"}
+                </p>
+              </div>
+            </div>
+
+            {/* Pessoais */}
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-background-secondary text-muted">
+                <Calendar className="size-4" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-xs text-muted">Data de Nascimento</p>
+                <p className="text-sm font-semibold text-foreground">
+                  {profile.birthDate ? profile.birthDate.split('T')[0].split('-').reverse().join('/') : "Não informado"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-background-secondary text-muted">
+                <UserRound className="size-4" aria-hidden="true" />
+              </span>
+              <div>
+                <p className="text-xs text-muted">Gênero</p>
+                <p className="text-sm font-semibold text-foreground">{profile.gender || "Não informado"}</p>
+              </div>
+            </div>
+
           </CardContent>
         </Card>
 

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
-import { ArrowLeft, ArrowRight, Brain, Check, Maximize, Minimize, Star } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { ArrowLeft, ArrowRight, Brain, Check, History, Maximize, Minimize, Star } from "lucide-react";
 import { Button, Chip, Separator, Tooltip, buttonVariants } from "@heroui/react";
 import VideoPlayer from "./VideoPlayer";
 import LessonTabs from "./LessonTabs";
@@ -15,9 +15,21 @@ import type { StudentNote } from "@/lib/data/notes";
 import type { Comment } from "@/lib/data/comments";
 import type { User } from "@supabase/supabase-js";
 import { useZenMode } from "@/contexts/ZenModeContext";
-import { rateLesson, setLessonCompletion } from "@/app/actions/progress";
+import { rateLesson, saveWatchPosition, setLessonCompletion } from "@/app/actions/progress";
 import { setTrailItemCompletion } from "@/app/actions/trail";
+import { formatPandaVideoDuration } from "@/lib/pandavideo";
 import { cn } from "@/lib/utils";
+
+/**
+ * Fora do componente: `sendBeacon` precisa sobreviver ao descarregamento da
+ * página, então não pode depender de nenhum estado do React em voo — só do
+ * que já foi lido antes de chamar.
+ */
+function beaconWatchPosition(lessonId: string, second: number) {
+  if (typeof navigator === "undefined" || typeof navigator.sendBeacon !== "function") return;
+  const blob = new Blob([JSON.stringify({ lessonId, second })], { type: "application/json" });
+  navigator.sendBeacon("/api/lesson-progress", blob);
+}
 
 interface LessonClientWrapperProps {
   lesson: Lesson;
@@ -58,6 +70,79 @@ export default function LessonClientWrapper({
   const [hoveredStar, setHoveredStar] = useState(0);
   const [, startTransition] = useTransition();
   const { isZenMode, toggleZenMode } = useZenMode();
+
+  /*
+   * "Continuar assistindo" na home lê `last_watched_second`. Sem throttle,
+   * `timeupdate` dispara várias vezes por segundo — só gravamos quando o
+   * vídeo avançou pelo menos 10s desde o último envio. `latestSecondRef`
+   * guarda a posição mais recente mesmo entre um envio e outro, pra podermos
+   * forçar a gravação assim que o aluno pausa (evento do PandaVideo/`<video>`),
+   * sem esperar os próximos 10s de avanço.
+   */
+  const lastSavedSecondRef = useRef(0);
+  const latestSecondRef = useRef(0);
+
+  const persistWatchPosition = (seconds: number) => {
+    lastSavedSecondRef.current = seconds;
+    startTransition(async () => {
+      await saveWatchPosition(lesson.id, seconds);
+    });
+  };
+
+  const handleTimeUpdate = (seconds: number) => {
+    latestSecondRef.current = seconds;
+    if (seconds < 1 || Math.abs(seconds - lastSavedSecondRef.current) < 10) return;
+    persistWatchPosition(seconds);
+  };
+
+  const handleVideoPaused = () => {
+    const seconds = latestSecondRef.current;
+    if (seconds < 1 || seconds === lastSavedSecondRef.current) return;
+    persistWatchPosition(seconds);
+  };
+
+  /*
+   * "Continuar de onde parei": a aula pula pra cá assim que o player aceitar
+   * comando de seek. Aula já concluída não retoma — reabrir pra rever começa
+   * do início — e menos de 5s de vídeo não vale o salto.
+   */
+  const resumeAt = !isCompleted && (lesson.lastWatchedSecond ?? 0) > 5 ? lesson.lastWatchedSecond! : 0;
+
+  /*
+   * A cada aula (troca de `lesson.id`, sem remontar o componente — a
+   * navegação entre etapas troca só a prop), os refs de posição partem do que
+   * o servidor já sabe, não de zero.
+   */
+  useEffect(() => {
+    lastSavedSecondRef.current = lesson.lastWatchedSecond ?? 0;
+    latestSecondRef.current = lesson.lastWatchedSecond ?? 0;
+  }, [lesson.id, lesson.lastWatchedSecond]);
+
+  /*
+   * "Saiu do vídeo": aba escondida, navegador fechado ou troca de aula dentro
+   * do app. Nenhum desses dá tempo para uma Server Action normal — por isso
+   * `sendBeacon`, que o navegador entrega mesmo com a página descarregando.
+   * O cleanup (troca de `lesson.id` ou desmontagem) cobre a navegação interna;
+   * `pagehide`/`visibilitychange` cobrem fechar a aba ou trocar de app.
+   */
+  useEffect(() => {
+    const flush = () => {
+      const seconds = latestSecondRef.current;
+      if (seconds < 1 || seconds === lastSavedSecondRef.current) return;
+      beaconWatchPosition(lesson.id, seconds);
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("pagehide", flush);
+      flush();
+    };
+  }, [lesson.id]);
 
   const isProfileTest = lesson.type === 'profile_test';
 
@@ -291,7 +376,21 @@ export default function LessonClientWrapper({
           onComplete={handleMarkComplete} 
         />
       ) : (
-        <VideoPlayer lesson={lesson} onEnded={handleVideoEnded} />
+        <>
+          {resumeAt > 0 && (
+            <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-muted" data-numeric>
+              <History className="size-3.5" aria-hidden="true" />
+              Retomando de {formatPandaVideoDuration(resumeAt)}
+            </p>
+          )}
+          <VideoPlayer
+            lesson={lesson}
+            onEnded={handleVideoEnded}
+            onTimeUpdate={handleTimeUpdate}
+            onPause={handleVideoPaused}
+            startAt={resumeAt}
+          />
+        </>
       )}
 
       {/* Tabs */}

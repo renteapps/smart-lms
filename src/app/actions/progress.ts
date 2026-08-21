@@ -40,23 +40,26 @@ export async function setLessonCompletion(
   }
 }
 
-/** Onde o vídeo parou — chamado com throttle pelo player. */
-import { redis } from "@/lib/redis";
-
+/**
+ * Onde o vídeo parou — chamado com throttle pelo player (a cada ~10s de
+ * avanço, não a cada `timeupdate`). Só grava `last_watched_second`: o upsert
+ * não inclui `is_completed`, então uma aula já concluída que o aluno reabre
+ * para rever não perde a marcação.
+ */
 export async function saveWatchPosition(lessonId: string, second: number): Promise<ActionResult> {
   try {
-    const { user } = await requireUser();
+    const { supabase, user } = await requireUser();
 
-    // Em vez de sobrecarregar o Postgres (Supabase) com milhares de UPSERTs por segundo,
-    // nós apenas empurramos a atualização para uma Fila no Redis (extremamente rápido).
-    const payload = {
-      userId: user.id,
-      lessonId,
-      seconds: Math.max(0, Math.floor(second)),
-      completed: false,
-    };
+    const { error } = await supabase.from("lesson_progress").upsert(
+      {
+        user_id: user.id,
+        lesson_id: lessonId,
+        last_watched_second: Math.max(0, Math.floor(second)),
+      },
+      { onConflict: "user_id,lesson_id" },
+    );
 
-    await redis.lpush("progress_sync_queue", JSON.stringify(payload));
+    if (error) return { success: false, message: error.message };
 
     return { success: true };
   } catch (error) {

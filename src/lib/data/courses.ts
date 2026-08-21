@@ -120,9 +120,9 @@ export function formatDuration(totalMinutes: number): string {
  */
 export async function getCatalogCourses(db: DB, userId?: string | null): Promise<CatalogCourse[]> {
   const { data, error } = await db
-    .from("courses")
+    .from("v_course_metrics")
     .select(
-      "id, slug, title, category, description, short_description, cover_url, duration, level, order_index, created_at, status, is_published, sales_url, sales_config, enable_certificates, modules(id, lessons(id, duration_in_minutes, is_published))",
+      "id, slug, title, category, description, short_description, cover_url, duration, level, order_index, created_at, status, is_published, sales_url, sales_config, enable_certificates, lesson_count, total_duration_minutes",
     )
     .eq("is_published", true)
     .neq("status", "Arquivado")
@@ -133,18 +133,8 @@ export async function getCatalogCourses(db: DB, userId?: string | null): Promise
 
   if (!data) return [];
 
-  const lessonIdsByCourse = new Map<string, string[]>();
   const courses = data
     .map((row: Row) => {
-      const lessons = (row.modules ?? []).flatMap((mod: Row) =>
-        (mod.lessons ?? []).filter((lesson: Row) => lesson.is_published !== false),
-      );
-      const totalMinutes = lessons.reduce(
-        (sum: number, lesson: Row) => sum + (lesson.duration_in_minutes ?? 0),
-        0,
-      );
-      lessonIdsByCourse.set(row.id, lessons.map((lesson: Row) => lesson.id));
-
       return {
         id: row.id,
         slug: row.slug,
@@ -152,8 +142,8 @@ export async function getCatalogCourses(db: DB, userId?: string | null): Promise
         category: row.category ?? "Geral",
         description: row.short_description || row.description || "",
         cover: row.cover_url || FALLBACK_COVER,
-        duration: row.duration || formatDuration(totalMinutes),
-        lessonCount: lessons.length,
+        duration: row.duration || formatDuration(row.total_duration_minutes ?? 0),
+        lessonCount: row.lesson_count ?? 0,
         level: row.level ?? "Essencial",
         certificateEnabled: row.enable_certificates ?? true,
         studentState: deriveStudentCourseState({
@@ -173,13 +163,11 @@ export async function getCatalogCourses(db: DB, userId?: string | null): Promise
   if (!userId || courses.length === 0) return courses;
 
   const now = new Date();
-  const allLessonIds = Array.from(lessonIdsByCourse.values()).flat();
   const [progressResult, enrollmentsResult, subscriptionsResult, certificatesResult] = await Promise.all([
     db
-      .from("lesson_progress")
-      .select("lesson_id, is_completed, last_watched_second")
-      .eq("user_id", userId)
-      .in("lesson_id", allLessonIds),
+      .from("v_user_course_progress")
+      .select("course_id, completed_lessons, started_lessons")
+      .eq("user_id", userId),
     db
       .from("enrollments")
       .select("course_id, status, expires_at")
@@ -207,8 +195,8 @@ export async function getCatalogCourses(db: DB, userId?: string | null): Promise
   const issuedCertificateCourseIds = new Set(
     (certificatesResult.data ?? []).map((row: Row) => row.course_id),
   );
-  const progressByLesson = new Map(
-    (progressResult.data ?? []).map((row: Row) => [row.lesson_id, row]),
+  const progressByCourse = new Map(
+    (progressResult.data ?? []).map((row: Row) => [row.course_id, row]),
   );
   const activePlanFeatures = (subscriptionsResult.data ?? [])
     .filter((row: Row) => {
@@ -228,8 +216,7 @@ export async function getCatalogCourses(db: DB, userId?: string | null): Promise
     ...course,
     ...deriveCatalogCourseStudentData({
       course,
-      lessonIds: lessonIdsByCourse.get(course.id) ?? [],
-      progressByLesson,
+      progressRow: progressByCourse.get(course.id),
       hasAccess: hasCourseAccess({
         courseId: course.id,
         enrolledCourseIds: enrollmentCourseIds,
@@ -242,18 +229,17 @@ export async function getCatalogCourses(db: DB, userId?: string | null): Promise
 
 function deriveCatalogCourseStudentData(input: {
   course: CatalogCourse;
-  lessonIds: string[];
-  progressByLesson: Map<string, Row>;
+  progressRow?: Row;
   hasAccess: boolean;
   certificateIssued: boolean;
 }): Pick<CatalogCourse, "progress" | "studentState"> {
-  const progressRows = input.lessonIds
-    .map((lessonId) => input.progressByLesson.get(lessonId))
-    .filter(Boolean) as Row[];
-  const completedLessons = progressRows.filter((row) => row.is_completed === true).length;
-  const progress = input.lessonIds.length
-    ? Math.round((completedLessons / input.lessonIds.length) * 100)
+  const completedLessons = input.progressRow?.completed_lessons ?? 0;
+  const startedLessons = input.progressRow?.started_lessons ?? 0;
+  
+  const progress = input.course.lessonCount > 0
+    ? Math.round((completedLessons / input.course.lessonCount) * 100)
     : 0;
+    
   const lockedState = input.course.studentState?.kind === "locked"
     ? input.course.studentState
     : { kind: "locked" as const, salesUrl: null };
@@ -262,7 +248,7 @@ function deriveCatalogCourseStudentData(input: {
     progress,
     studentState: deriveStudentCourseState({
       hasAccess: input.hasAccess,
-      hasStarted: progressRows.length > 0,
+      hasStarted: startedLessons > 0,
       progress,
       certificateEnabled: input.course.certificateEnabled ?? true,
       certificateIssued: input.certificateIssued,
@@ -298,53 +284,41 @@ async function getProgressForLessonSets(
 
 /** courseId -> porcentagem concluída, para o aluno da sessão. */
 export async function getProgressByCourse(db: DB, userId: string): Promise<Map<string, number>> {
-  const [{ data: lessons, error: lessonsError }, { data: progress, error: progressError }] =
+  const [{ data: courses, error: coursesError }, { data: progress, error: progressError }] =
     await Promise.all([
-      db.from("lessons").select("id, is_published, modules!inner(course_id)").eq("is_published", true),
-      db.from("lesson_progress").select("lesson_id, is_completed").eq("user_id", userId).eq("is_completed", true),
+      db.from("v_course_metrics").select("id, lesson_count").eq("is_published", true),
+      db.from("v_user_course_progress").select("course_id, completed_lessons").eq("user_id", userId),
     ]);
 
-  logQueryError("getProgressByCourse:lessons", lessonsError);
+  logQueryError("getProgressByCourse:courses", coursesError);
   logQueryError("getProgressByCourse:progress", progressError);
 
-  const totals = new Map<string, number>();
-  const lessonToCourse = new Map<string, string>();
-  (lessons ?? []).forEach((lesson: Row) => {
-    const courseId = lesson.modules?.course_id;
-    if (!courseId) return;
-    lessonToCourse.set(lesson.id, courseId);
-    totals.set(courseId, (totals.get(courseId) ?? 0) + 1);
-  });
-
-  const done = new Map<string, number>();
-  (progress ?? []).forEach((entry: Row) => {
-    const courseId = lessonToCourse.get(entry.lesson_id);
-    if (!courseId) return;
-    done.set(courseId, (done.get(courseId) ?? 0) + 1);
-  });
-
   const result = new Map<string, number>();
-  totals.forEach((total, courseId) => {
-    result.set(courseId, total ? Math.round(((done.get(courseId) ?? 0) / total) * 100) : 0);
+  
+  const completedMap = new Map<string, number>();
+  (progress ?? []).forEach((entry: Row) => {
+    completedMap.set(entry.course_id, entry.completed_lessons ?? 0);
   });
+
+  (courses ?? []).forEach((course: Row) => {
+    const total = course.lesson_count ?? 0;
+    const done = completedMap.get(course.id) ?? 0;
+    result.set(course.id, total > 0 ? Math.round((done / total) * 100) : 0);
+  });
+
   return result;
 }
 
 export async function getCourseCategories(db: DB): Promise<string[]> {
   const { data, error } = await db
-    .from("courses")
-    .select("category, modules(lessons(id, is_published))")
+    .from("v_course_metrics")
+    .select("category, lesson_count")
     .eq("is_published", true)
     .neq("status", "Arquivado");
   logQueryError("getCourseCategories", error);
 
   const validCategories = (data ?? [])
-    .filter((row: Row) => {
-      const lessons = (row.modules ?? []).flatMap((mod: Row) =>
-        (mod.lessons ?? []).filter((l: Row) => l.is_published !== false),
-      );
-      return lessons.length > 0;
-    })
+    .filter((row: Row) => (row.lesson_count ?? 0) > 0)
     .map((row: Row) => row.category)
     .filter(Boolean);
 
@@ -843,42 +817,40 @@ export async function getHomeCarouselRows(db: DB, userId?: string | null): Promi
 
 export async function getEnrolledCourses(db: DB, userId: string): Promise<CatalogCourse[]> {
   const nowIso = new Date().toISOString();
-  const { data, error } = await db
+  
+  // 1. Get enrolled course IDs
+  const { data: enrollments, error: enrollmentsError } = await db
     .from("enrollments")
-    .select(
-      "course_id, expires_at, courses!inner(id, slug, title, category, description, short_description, cover_url, duration, level, status, is_published, modules(id, lessons(id, duration_in_minutes, is_published)))",
-    )
+    .select("course_id")
     .eq("user_id", userId)
     .eq("status", "active")
     .or(`expires_at.is.null,expires_at.gt.${nowIso}`);
 
-  logQueryError("getEnrolledCourses", error);
-  if (!data) return [];
+  logQueryError("getEnrolledCourses:enrollments", enrollmentsError);
+  if (!enrollments || enrollments.length === 0) return [];
+  const courseIds = enrollments.map((e) => e.course_id);
 
-  // Filter out any archived courses for students
-  const activeEntries = data.filter((entry: Row) => entry.courses?.status !== "Arquivado");
+  // 2. Get course metrics and user progress
+  const [coursesResult, progressResult] = await Promise.all([
+    db.from("v_course_metrics")
+      .select("id, slug, title, category, description, short_description, cover_url, duration, level, status, is_published, lesson_count, total_duration_minutes")
+      .in("id", courseIds)
+      .neq("status", "Arquivado"),
+    db.from("v_user_course_progress")
+      .select("course_id, completed_lessons")
+      .eq("user_id", userId)
+      .in("course_id", courseIds)
+  ]);
+  
+  const coursesData = coursesResult.data ?? [];
+  const progressData = progressResult.data ?? [];
+  const progressMap = new Map(progressData.map((p: Row) => [p.course_id, p.completed_lessons]));
 
-  const lessonIdsByCourse = new Map<string, string[]>();
-  for (const entry of activeEntries) {
-    const course = (entry as Row).courses;
-    const lessonIds = (course.modules ?? []).flatMap((mod: Row) =>
-      (mod.lessons ?? [])
-        .filter((lesson: Row) => lesson.is_published !== false)
-        .map((lesson: Row) => lesson.id),
-    );
-    lessonIdsByCourse.set(course.id, lessonIds);
-  }
-  const progressByCourse = await getProgressForLessonSets(db, userId, lessonIdsByCourse);
-
-  return activeEntries.map((entry: Row) => {
-    const row = entry.courses;
-    const lessons = (row.modules ?? []).flatMap((mod: Row) =>
-      (mod.lessons ?? []).filter((lesson: Row) => lesson.is_published !== false),
-    );
-    const totalMinutes = lessons.reduce(
-      (sum: number, lesson: Row) => sum + (lesson.duration_in_minutes ?? 0),
-      0,
-    );
+  return coursesData.map((row: Row) => {
+    const lessonCount = row.lesson_count ?? 0;
+    const completedLessons = progressMap.get(row.id) ?? 0;
+    const progress = lessonCount > 0 ? Math.round((completedLessons / lessonCount) * 100) : 0;
+    
     return {
       id: row.id,
       slug: row.slug,
@@ -886,10 +858,10 @@ export async function getEnrolledCourses(db: DB, userId: string): Promise<Catalo
       category: row.category ?? "Geral",
       description: row.short_description || row.description || "",
       cover: row.cover_url || FALLBACK_COVER,
-      duration: row.duration || formatDuration(totalMinutes),
-      lessonCount: lessons.length,
+      duration: row.duration || formatDuration(row.total_duration_minutes ?? 0),
+      lessonCount,
       level: row.level ?? "Essencial",
-      progress: progressByCourse.get(row.id) ?? 0,
+      progress,
     } satisfies CatalogCourse;
   });
 }

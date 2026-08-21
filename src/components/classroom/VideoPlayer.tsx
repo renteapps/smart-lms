@@ -19,9 +19,14 @@ const PandaVideoPlayer = dynamic(() => import("./PandaVideoPlayer"), {
 interface VideoPlayerProps {
   lesson: Lesson;
   onEnded?: () => void;
+  onTimeUpdate?: (seconds: number) => void;
+  /** Aula pausada — sinal melhor que o polling do timeupdate pra gravar a posição na hora. */
+  onPause?: () => void;
+  /** Segundo onde a aula parou da última vez — "continuar de onde parei". */
+  startAt?: number;
 }
 
-export default function VideoPlayer({ lesson, onEnded }: VideoPlayerProps) {
+export default function VideoPlayer({ lesson, onEnded, onTimeUpdate, onPause, startAt }: VideoPlayerProps) {
   if (lesson.type !== "video") {
     return (
       <motion.div
@@ -53,9 +58,27 @@ export default function VideoPlayer({ lesson, onEnded }: VideoPlayerProps) {
       className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-elev-4"
     >
       {lesson.pandavideoId ? (
-        <PandaVideoPlayer embedUrl={lesson.videoUrl} className="size-full" onEnded={onEnded} />
+        <PandaVideoPlayer
+          embedUrl={lesson.videoUrl}
+          className="size-full"
+          onEnded={onEnded}
+          onTimeUpdate={onTimeUpdate}
+          onPause={onPause}
+          startAt={startAt}
+        />
       ) : (
-        <ReactPlayer src={lesson.videoUrl} width="100%" height="100%" controls onEnded={onEnded} />
+        <ReactPlayer
+          src={lesson.videoUrl}
+          width="100%"
+          height="100%"
+          controls
+          onEnded={onEnded}
+          onTimeUpdate={(e) => onTimeUpdate?.(e.currentTarget.currentTime)}
+          onPause={() => onPause?.()}
+          onLoadedMetadata={(e) => {
+            if (startAt && startAt > 0) e.currentTarget.currentTime = startAt;
+          }}
+        />
       )}
     </motion.div>
   );

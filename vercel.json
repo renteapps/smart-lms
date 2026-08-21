@@ -1,8 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/flush-progress",
-      "schedule": "0 0 * * *"
-    }
-  ]
-}
+{}

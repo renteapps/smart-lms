@@ -9,7 +9,6 @@ import { saveLearningTrail } from "@/lib/trailStorage";
 import { notifyTrailChanged, useStoredValue, useTrailStore } from "@/lib/useTrailStore";
 import { recordTrailEvent } from "@/lib/trailAnalytics";
 import {
-  computeStudyStats,
   deriveImplicitSignals,
   deriveProfileSummary,
   rankCatalogByAffinity,
@@ -24,7 +23,7 @@ import {
 } from "@/lib/refinementSurveys";
 import RecalibrationSlot from "@/components/home/RecalibrationSlot";
 import type { LearningTrailItem, Questionnaire, SessionLoadRating } from "@/types/trilha";
-import type { CatalogCourse } from "@/types/course";
+import type { CatalogCourse, ContinueLesson } from "@/types/course";
 import type { Article } from "@/types/blog";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { PROFILE_STORAGE_KEY, PROFILE_SAVED_EVENT } from "@/lib/profilePreferences";
@@ -33,10 +32,10 @@ import DayCompleteHero from "@/components/home/DayCompleteHero";
 import DiscoverySection from "@/components/home/DiscoverySection";
 import HomeEmptyState from "@/components/home/HomeEmptyState";
 import HomeNoCourses from "@/components/home/HomeNoCourses";
+import ContinueWatchingCarousel from "@/components/home/ContinueWatchingCarousel";
 import MasterclassCarousel from "@/components/home/MasterclassCarousel";
 import NextStepHero from "@/components/home/NextStepHero";
 import SessionRest from "@/components/home/SessionRest";
-import StudyLedger from "@/components/home/StudyLedger";
 import { Rise } from "@/components/ui/Rise";
 import { HomeBlogSection } from "@/components/blog/HomeBlogSection";
 import type { HomeCarouselRow } from "@/types/course";
@@ -106,10 +105,12 @@ export default function StudentHomeClient({
   courses,
   articles = [],
   masterclassRows = [],
+  continueLessons = [],
 }: {
   courses: CatalogCourse[];
   articles?: Article[];
   masterclassRows?: HomeCarouselRow[];
+  continueLessons?: ContinueLesson[];
 }) {
   const { hydrated, trail, error, migrated } = useTrailStore();
   /*
@@ -174,7 +175,6 @@ export default function StudentHomeClient({
   }, [hydrated]);
 
   // `state` já foi derivado acima junto com `accessState` para evitar duplicação.
-  const stats = useMemo(() => (trail ? computeStudyStats(trail) : null), [trail]);
   const profileChips = useMemo(
     () => (trail ? deriveProfileSummary(trail, questionnaire) : []),
     [trail, questionnaire],
@@ -433,7 +433,7 @@ export default function StudentHomeClient({
         </section>
       )}
 
-      {stats && <StudyLedger stats={stats} />}
+      <ContinueWatchingCarousel lessons={continueLessons} />
 
       <MasterclassCarousel rows={masterclassRows} />
 

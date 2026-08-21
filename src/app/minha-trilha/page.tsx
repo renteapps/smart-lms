@@ -14,7 +14,8 @@ import {
 import { AvailabilityMode, LearningRole, LearningTrail, LearningTrailItem, SessionLoadRating, StudyAvailability, Weekday } from '@/types/trilha';
 import { refreshTrail, saveTrail, setTrailItemCompletion } from '@/app/actions/trail';
 import { applySessionFeedback, clampSessionMinutes, effectiveAvailability, minutesForWeekday, postponeTrailSession, toLocalDateKey, updateTrailAvailability, weeklyMinutes } from '@/lib/matching';
-import { contentHref } from '@/lib/studentHome';
+import { computeStudyStats, contentHref } from '@/lib/studentHome';
+import StudyLedger from '@/components/home/StudyLedger';
 import { recordTrailEvent, TrailAnalyticsEvent, TrailAnalyticsEventType } from '@/lib/trailAnalytics';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useCardTransition } from '@/contexts/CardTransitionContext';
@@ -485,6 +486,8 @@ export default function MinhaTrilhaPage() {
     });
   }, [trail]);
 
+  const stats = useMemo(() => (trail ? computeStudyStats(trail) : null), [trail]);
+
   const todayItems = trail?.items.filter((item) => item.scheduledDate === today) || [];
   const todayPending = todayItems.filter((item) => item.status === 'pending');
   const completed = trail?.items.filter((item) => item.status === 'completed').length || 0;
@@ -929,6 +932,8 @@ export default function MinhaTrilhaPage() {
           </div>
         </div>
       </section>
+
+      {stats && <StudyLedger stats={stats} />}
 
       <main className="editorial-container py-10 sm:py-14">
         {isDemo && (

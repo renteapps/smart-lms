@@ -102,8 +102,23 @@ function CriarContaContent() {
       return;
     }
 
+    if (!phone.trim()) {
+      setErrorMessage("Por favor, informe seu telefone ou WhatsApp.");
+      return;
+    }
+
     if (!birthDate) {
       setErrorMessage("Por favor, informe sua data de nascimento.");
+      return;
+    }
+
+    if (!gender) {
+      setErrorMessage("Por favor, informe seu gênero.");
+      return;
+    }
+
+    if (!role) {
+      setErrorMessage("Por favor, informe seu cargo ou momento de carreira.");
       return;
     }
 

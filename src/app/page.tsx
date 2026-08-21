@@ -4,7 +4,7 @@ import { StudentShell } from "@/components/shells/StudentShell";
 import { MarketingShell } from "@/components/shells/MarketingShell";
 import { LandingPage } from "@/components/marketing/LandingPage";
 import { getSessionUser } from "@/lib/supabase/auth";
-import { getCatalogCourses, getHomeCarouselRows } from "@/lib/data/courses";
+import { getCatalogCourses, getContinueLessons, getHomeCarouselRows } from "@/lib/data/courses";
 import { getAllArticles } from "@/lib/data/blog";
 
 export const metadata: Metadata = {
@@ -33,15 +33,21 @@ export default async function Home() {
     );
   }
 
-  const [courses, articles, masterclassRows] = await Promise.all([
+  const [courses, articles, masterclassRows, continueLessons] = await Promise.all([
     getCatalogCourses(supabase, user.id),
     getAllArticles(supabase),
     getHomeCarouselRows(supabase, user.id),
+    getContinueLessons(supabase, user.id, 8),
   ]);
 
   return (
     <StudentShell>
-      <StudentHomeClient courses={courses} articles={articles} masterclassRows={masterclassRows} />
+      <StudentHomeClient
+        courses={courses}
+        articles={articles}
+        masterclassRows={masterclassRows}
+        continueLessons={continueLessons}
+      />
     </StudentShell>
   );
 }

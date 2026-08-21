@@ -1,20 +1,6 @@
-import Redis from 'ioredis';
+import { redis } from './redis/client';
 
-const redisUrl = process.env.REDIS_URL;
-let redisInstance: Redis | null = null;
-
-export function getRedisClient(): Redis | null {
-  if (!redisUrl) return null;
-  if (!redisInstance) {
-    redisInstance = new Redis(redisUrl, {
-      lazyConnect: true,
-      maxRetriesPerRequest: 1,
-    });
-  }
-  return redisInstance;
-}
-
-export const redis = redisUrl ? new Redis(redisUrl, { lazyConnect: true, maxRetriesPerRequest: 1 }) : (null as unknown as Redis);
+export { redis };
 
 /**
  * Helper genérico para buscar dados em cache antes de consultar o banco (Supabase).
@@ -30,16 +16,11 @@ export async function withCache<T>(
   ttl: number = 3600
 ): Promise<T> {
   try {
-    const client = getRedisClient();
-    if (!client) {
-      return fetcher();
-    }
-
     // 1. Tenta buscar do Redis primeiro
-    const cachedData = await client.get(key);
+    const cachedData = await redis.get<T>(key);
 
     if (cachedData) {
-      return JSON.parse(cachedData) as T;
+      return cachedData;
     }
 
     // 2. Se não tem no cache, executa a query no Supabase
@@ -47,7 +28,7 @@ export async function withCache<T>(
 
     // 3. Salva no Redis para as próximas requisições
     if (freshData !== undefined && freshData !== null) {
-      await client.set(key, JSON.stringify(freshData), 'EX', ttl);
+      await redis.set(key, freshData, { ex: ttl });
     }
 
     return freshData;
@@ -55,3 +36,4 @@ export async function withCache<T>(
     return fetcher();
   }
 }
+
