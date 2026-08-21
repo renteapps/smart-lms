@@ -130,7 +130,7 @@ export default function LessonThumbCard({
   };
 
   const content = (
-    <Card variant="transparent" className="gap-0 p-0 border-none shadow-none bg-transparent">
+    <Card variant="transparent" className="gap-0 p-0 !border-none shadow-none !bg-transparent">
       {/*
        * A elevação/borda do "cartão" fica só na moldura da imagem.
        */}
