@@ -547,6 +547,13 @@ export async function getLessonProgressMap(
   return new Map((data ?? []).map((row: Row) => [row.lesson_id, row]));
 }
 
+/** 0 a 100 — quanto da aula já foi assistido, a partir do último segundo gravado. */
+function watchProgressPercent(lastWatchedSecond: number | null | undefined, durationInMinutes: number | null | undefined): number {
+  const totalSeconds = (durationInMinutes ?? 0) * 60;
+  if (!totalSeconds) return 0;
+  return Math.min(100, Math.round(((lastWatchedSecond ?? 0) / totalSeconds) * 100));
+}
+
 /** Aula única com o curso e os vizinhos necessários para a navegação. */
 export async function getLessonWithCourse(
   db: DB,
@@ -768,16 +775,26 @@ export async function getGalleryCourse(
   const courseUrlId = course.slug || course.id;
   const fallbackCover = course.coverUrl || FALLBACK_COVER;
 
-  const lessons: GalleryLesson[] = rawLessons.map((lesson) => ({
-    id: lesson.id,
-    title: lesson.title,
-    cover: (lesson.cover_url ?? "").trim() || fallbackCover,
-    durationInMinutes: lesson.duration_in_minutes ?? 0,
-    shortDescription: lesson.short_description ?? undefined,
-    isCompleted: locked ? false : (progressByLesson.get(lesson.id)?.is_completed ?? false),
-    locked,
-    href: lessonHref(courseUrlId, lesson),
-  }));
+  const lessons: GalleryLesson[] = rawLessons.map((lesson) => {
+    const progress = progressByLesson.get(lesson.id);
+    const isCompleted = locked ? false : (progress?.is_completed ?? false);
+    // Só marca "em andamento" quem não travou nem já concluiu — os dois já têm o próprio selo.
+    const watchProgress = !locked && !isCompleted
+      ? watchProgressPercent(progress?.last_watched_second, lesson.duration_in_minutes)
+      : 0;
+
+    return {
+      id: lesson.id,
+      title: lesson.title,
+      cover: (lesson.cover_url ?? "").trim() || fallbackCover,
+      durationInMinutes: lesson.duration_in_minutes ?? 0,
+      shortDescription: lesson.short_description ?? undefined,
+      isCompleted,
+      locked,
+      href: lessonHref(courseUrlId, lesson),
+      progress: watchProgress > 0 ? watchProgress : undefined,
+    };
+  });
 
   return { course, lessons, locked };
 }
@@ -840,16 +857,25 @@ export async function getHomeCarouselRows(db: DB, userId?: string | null): Promi
       courseHref: `/courses/${courseUrlId}`,
       locked,
       salesUrl: getCourseSalesTemplate({ salesUrl: row.sales_url, salesConfig: row.sales_config }),
-      lessons: lessons.map((lesson: Row) => ({
-        id: lesson.id,
-        title: lesson.title,
-        cover: (lesson.cover_url ?? "").trim() || fallbackCover,
-        durationInMinutes: lesson.duration_in_minutes ?? 0,
-        shortDescription: lesson.short_description ?? undefined,
-        isCompleted: locked ? false : (progressByLesson.get(lesson.id)?.is_completed ?? false),
-        locked,
-        href: lessonHref(courseUrlId, lesson),
-      })),
+      lessons: lessons.map((lesson: Row) => {
+        const progress = progressByLesson.get(lesson.id);
+        const isCompleted = locked ? false : (progress?.is_completed ?? false);
+        const watchProgress = !locked && !isCompleted
+          ? watchProgressPercent(progress?.last_watched_second, lesson.duration_in_minutes)
+          : 0;
+
+        return {
+          id: lesson.id,
+          title: lesson.title,
+          cover: (lesson.cover_url ?? "").trim() || fallbackCover,
+          durationInMinutes: lesson.duration_in_minutes ?? 0,
+          shortDescription: lesson.short_description ?? undefined,
+          isCompleted,
+          locked,
+          href: lessonHref(courseUrlId, lesson),
+          progress: watchProgress > 0 ? watchProgress : undefined,
+        };
+      }),
     } satisfies HomeCarouselRow;
   });
 }
@@ -929,7 +955,6 @@ export async function getContinueLessons(db: DB, userId: string, limit = 4): Pro
       const lesson = row.lessons;
       const mod = lesson.modules;
       const course = mod.courses;
-      const totalSeconds = (lesson.duration_in_minutes ?? 0) * 60;
       return {
         id: lesson.id,
         slug: lesson.slug,
@@ -939,9 +964,7 @@ export async function getContinueLessons(db: DB, userId: string, limit = 4): Pro
         moduleName: `${course.title} · ${mod.title}`,
         duration: `${lesson.duration_in_minutes ?? 0} min`,
         cover: course.cover_url || FALLBACK_COVER,
-        progress: totalSeconds
-          ? Math.min(100, Math.round(((row.last_watched_second ?? 0) / totalSeconds) * 100))
-          : 0,
+        progress: watchProgressPercent(row.last_watched_second, lesson.duration_in_minutes),
       } satisfies ContinueLesson;
     });
 }

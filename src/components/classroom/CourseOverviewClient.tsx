@@ -36,6 +36,14 @@ function lessonIcon(lesson: CourseOutlineLesson) {
   return <FileText className="size-4" aria-hidden="true" />;
 }
 
+/** 0 a 100 — só diferente de zero pra aula começada e ainda não concluída. */
+function lessonProgress(lesson: CourseOutlineLesson): number {
+  if (lesson.isCompleted) return 0;
+  const totalSeconds = lesson.durationInMinutes * 60;
+  if (!totalSeconds) return 0;
+  return Math.min(100, Math.round(((lesson.lastWatchedSecond ?? 0) / totalSeconds) * 100));
+}
+
 /**
  * Capa do curso.
  *
@@ -364,45 +372,54 @@ export default function CourseOverviewClient({
                       <Disclosure.Content>
                         <Separator />
                         <ul>
-                          {courseModule.lessons.map((lesson, lessonIndex) => (
-                            <li key={lesson.id} className="border-b border-separator last:border-b-0">
-                              <Link
-                                href={`/courses/${course.slug || course.id}/lessons/${lesson.slug || lesson.id}`}
-                                onClick={(e) => handleLessonRowClick(lesson, e)}
-                                className="group flex min-h-14 sm:min-h-18 items-center gap-3 sm:gap-4 px-3.5 py-3 sm:px-6 sm:py-4 transition-colors duration-[var(--duration-md)] hover:bg-accent-soft/40 active:bg-accent-soft/60"
-                              >
-                                <span
-                                  className={cn(
-                                    "grid size-8 sm:size-9 shrink-0 place-items-center rounded-lg transition-colors duration-[var(--duration-md)]",
-                                    lesson.isCompleted
-                                      ? "bg-success-soft text-success-soft-foreground"
-                                      : lesson.type === "profile_test"
-                                        ? "bg-accent-soft text-accent-soft-foreground"
-                                        : "bg-background-secondary text-muted group-hover:bg-accent-soft group-hover:text-accent-soft-foreground",
-                                  )}
+                          {courseModule.lessons.map((lesson, lessonIndex) => {
+                            const progress = lessonProgress(lesson);
+
+                            return (
+                              <li key={lesson.id} className="border-b border-separator last:border-b-0">
+                                <Link
+                                  href={`/courses/${course.slug || course.id}/lessons/${lesson.slug || lesson.id}`}
+                                  onClick={(e) => handleLessonRowClick(lesson, e)}
+                                  className="group flex min-h-14 sm:min-h-18 items-center gap-3 sm:gap-4 px-3.5 py-3 sm:px-6 sm:py-4 transition-colors duration-[var(--duration-md)] hover:bg-accent-soft/40 active:bg-accent-soft/60"
                                 >
-                                  {lessonIcon(lesson)}
-                                </span>
-                                <span className="min-w-0 flex-1">
                                   <span
                                     className={cn(
-                                      "block text-xs sm:text-sm font-semibold sm:font-bold leading-snug line-clamp-2",
-                                      lesson.isCompleted ? "text-muted" : "text-foreground group-hover:text-accent",
+                                      "grid size-8 sm:size-9 shrink-0 place-items-center rounded-lg transition-colors duration-[var(--duration-md)]",
+                                      lesson.isCompleted
+                                        ? "bg-success-soft text-success-soft-foreground"
+                                        : lesson.type === "profile_test"
+                                          ? "bg-accent-soft text-accent-soft-foreground"
+                                          : "bg-background-secondary text-muted group-hover:bg-accent-soft group-hover:text-accent-soft-foreground",
                                     )}
                                   >
-                                    <span data-numeric>{lessonIndex + 1}.</span> {lesson.title}
+                                    {lessonIcon(lesson)}
                                   </span>
-                                  <span className="mt-0.5 sm:mt-1 block text-[11px] sm:text-xs font-medium text-muted">
-                                    {LESSON_KIND[lesson.type] ?? "Leitura"}
+                                  <span className="min-w-0 flex-1">
+                                    <span
+                                      className={cn(
+                                        "block text-xs sm:text-sm font-semibold sm:font-bold leading-snug line-clamp-2",
+                                        lesson.isCompleted ? "text-muted" : "text-foreground group-hover:text-accent",
+                                      )}
+                                    >
+                                      <span data-numeric>{lessonIndex + 1}.</span> {lesson.title}
+                                    </span>
+                                    <span className="mt-0.5 sm:mt-1 flex flex-wrap items-center gap-x-1.5 text-[11px] sm:text-xs font-medium text-muted">
+                                      {LESSON_KIND[lesson.type] ?? "Leitura"}
+                                      {progress > 0 && (
+                                        <span className="font-semibold text-accent" data-numeric>
+                                          · {progress}% assistido
+                                        </span>
+                                      )}
+                                    </span>
                                   </span>
-                                </span>
-                                <span className="flex shrink-0 items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-muted" data-numeric>
-                                  <Clock3 className="size-3 sm:size-3.5" aria-hidden="true" />
-                                  <span>{lesson.durationInMinutes} min</span>
-                                </span>
-                              </Link>
-                            </li>
-                          ))}
+                                  <span className="flex shrink-0 items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-muted" data-numeric>
+                                    <Clock3 className="size-3 sm:size-3.5" aria-hidden="true" />
+                                    <span>{lesson.durationInMinutes} min</span>
+                                  </span>
+                                </Link>
+                              </li>
+                            );
+                          })}
                         </ul>
                       </Disclosure.Content>
                     </Disclosure>

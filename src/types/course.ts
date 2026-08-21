@@ -238,6 +238,8 @@ export type GalleryLesson = {
   /** Sem matrícula nem plano que cubra o curso: aparece na prévia, mas não dá para assistir. */
   locked?: boolean;
   href: string;
+  /** 0 a 100, só presente quando a aula foi começada e ainda não foi concluída. */
+  progress?: number;
 };
 
 /** Uma faixa do carrossel da home: um curso galeria e suas 8 aulas mais recentes. */

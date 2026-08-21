@@ -188,6 +188,13 @@ export default function LessonThumbCard({
               )}
             </span>
           )}
+
+          {/* Em andamento: nem travada, nem concluída, mas com posição salva. */}
+          {!lesson.locked && !!lesson.progress && (
+            <div className="absolute inset-x-0 bottom-0 h-1 bg-background/40">
+              <div className="h-full bg-accent" style={{ width: `${lesson.progress}%` }} />
+            </div>
+          )}
         </div>
 
         <div className={cn("px-0.5", isLarge ? "pt-2.5" : "pt-2")}>
@@ -218,6 +225,9 @@ export default function LessonThumbCard({
           >
             <Clock3 className={isLarge ? "size-3.5" : "size-3"} aria-hidden="true" />
             {lesson.durationInMinutes} min
+            {!lesson.locked && !!lesson.progress && (
+              <span className="text-accent">· {lesson.progress}% assistido</span>
+            )}
           </p>
         </div>
       </Card>
