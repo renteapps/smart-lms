@@ -13,7 +13,7 @@ const ratelimit = new Ratelimit({
 
 export async function proxy(request: NextRequest) {
   // 1. Identifica o IP do usuário
-  const ip = request.ip ?? request.headers.get("x-forwarded-for") ?? "127.0.0.1";
+  const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
 
   // 2. Passa o IP pelo Rate Limiter
   const { success, limit, reset, remaining } = await ratelimit.limit(ip);
