@@ -138,7 +138,7 @@ export default function LessonThumbCard({
        * A elevação/borda do "cartão" fica só na moldura da imagem.
        */}
       <Card variant="transparent" className="gap-0 p-0">
-        <div className="lift relative aspect-2/3 overflow-hidden rounded-xl border border-border bg-background-secondary shadow-elev-1">
+        <div className="lift relative aspect-2/3 overflow-hidden rounded-xl bg-background-secondary shadow-elev-1">
           <Image
             src={imgSrc}
             alt={`Capa da aula ${lesson.title}`}
@@ -170,12 +170,23 @@ export default function LessonThumbCard({
           ) : (
             <span
               className={cn(
-                "absolute right-2 top-2 z-10 grid place-items-center rounded-full bg-foreground/55 text-background opacity-0 backdrop-blur-xs transition-opacity duration-[var(--duration-md)] group-hover:opacity-100",
+                "absolute right-2 top-2 z-10 grid place-items-center rounded-full backdrop-blur-xs transition-opacity duration-[var(--duration-md)]",
                 isLarge ? "size-8" : "size-7",
+                /*
+                 * Assistida é um estado permanente — some junto com o resto se
+                 * ficasse preso ao hover, e ninguém passa o mouse por cima de
+                 * cada thumb só para descobrir o que já viu.
+                 */
+                lesson.isCompleted
+                  ? "bg-success text-success-foreground opacity-100 shadow-elev-1"
+                  : "bg-foreground/55 text-background opacity-0 group-hover:opacity-100",
               )}
             >
               {lesson.isCompleted ? (
-                <CheckCircle2 className={isLarge ? "size-4" : "size-3.5"} aria-hidden="true" />
+                <>
+                  <CheckCircle2 className={isLarge ? "size-4" : "size-3.5"} aria-hidden="true" />
+                  <span className="sr-only">Aula assistida</span>
+                </>
               ) : (
                 <PlayCircle className={cn(isLarge ? "size-4" : "size-3.5", "fill-current")} aria-hidden="true" />
               )}

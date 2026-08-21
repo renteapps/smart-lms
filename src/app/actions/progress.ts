@@ -74,7 +74,10 @@ export async function rateLesson(lessonId: string, rating: number): Promise<Acti
       { onConflict: "user_id,lesson_id" },
     );
 
-    return error ? { success: false, message: error.message } : { success: true };
+    if (error) return { success: false, message: error.message };
+
+    revalidatePath("/courses/[slug]/lessons/[lessonSlug]", "page");
+    return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };
   }

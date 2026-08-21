@@ -189,7 +189,7 @@ export default function LessonClientWrapper({
                       isIconOnly
                       variant="ghost"
                       onClick={() => handleRate(star)}
-                      onHoverStart={() => setHoveredStar(star)}
+                      onMouseEnter={() => setHoveredStar(star)}
                       aria-label={`Avaliar com ${star} estrela${star > 1 ? 's' : ''}`}
                       aria-pressed={rating === star}
                       className="rounded-lg"
