@@ -57,7 +57,7 @@ export default function CertificateClientView({ certificate, platformName, logoU
   };
 
   return (
-    <div className="flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8 print:p-0 print:m-0">
+    <div className="flex flex-col items-center px-4 sm:px-6 lg:px-8 print:p-0 print:m-0">
       {/* Ações (Ocultas na impressão) */}
       <div className="mb-8 flex flex-wrap w-full max-w-4xl justify-end gap-3 print:hidden">
         <button

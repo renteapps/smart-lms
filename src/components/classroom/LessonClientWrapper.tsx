@@ -163,44 +163,48 @@ export default function LessonClientWrapper({
         */}
         <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-x-6 lg:gap-y-4">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <Button
-              variant={isCompleted ? "secondary" : "primary"}
-              onClick={handleToggleComplete}
-              aria-pressed={isCompleted}
-              className="w-full gap-2 sm:w-auto"
-            >
-              <Check className={cn("size-4", isCompleted && "text-success")} aria-hidden="true" />
-              {isCompleted ? "Concluído" : "Marcar como concluído"}
-            </Button>
-
-            <div
-              role="group"
-              aria-label="Avaliação da aula"
-              className="flex min-h-11 flex-1 items-center justify-center gap-0.5 rounded-xl border border-hairline bg-surface px-1.5 sm:flex-none sm:justify-start"
-              onMouseLeave={() => setHoveredStar(0)}
-            >
-              {[1, 2, 3, 4, 5].map((star) => (
+            {lesson.type !== 'quiz' && !isProfileTest && (
+              <>
                 <Button
-                  key={star}
-                  isIconOnly
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRate(star)}
-                  onHoverStart={() => setHoveredStar(star)}
-                  aria-label={`Avaliar com ${star} estrela${star > 1 ? 's' : ''}`}
-                  aria-pressed={rating === star}
-                  className="rounded-lg"
+                  variant={isCompleted ? "secondary" : "primary"}
+                  onClick={handleToggleComplete}
+                  aria-pressed={isCompleted}
+                  className="w-full gap-2 sm:w-auto"
                 >
-                  <Star
-                    className={cn(
-                      "size-4.5 transition-colors duration-[var(--duration-sm)]",
-                      (hoveredStar || rating) >= star ? "fill-warning text-warning" : "text-muted",
-                    )}
-                    aria-hidden="true"
-                  />
+                  <Check className={cn("size-4", isCompleted && "text-success")} aria-hidden="true" />
+                  {isCompleted ? "Concluído" : "Marcar como concluído"}
                 </Button>
-              ))}
-            </div>
+
+                <div
+                  role="group"
+                  aria-label="Avaliação da aula"
+                  className="flex min-h-11 flex-1 items-center justify-center gap-0.5 rounded-xl border border-hairline bg-surface px-1.5 sm:flex-none sm:justify-start"
+                  onMouseLeave={() => setHoveredStar(0)}
+                >
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Button
+                      key={star}
+                      isIconOnly
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRate(star)}
+                      onHoverStart={() => setHoveredStar(star)}
+                      aria-label={`Avaliar com ${star} estrela${star > 1 ? 's' : ''}`}
+                      aria-pressed={rating === star}
+                      className="rounded-lg"
+                    >
+                      <Star
+                        className={cn(
+                          "size-4.5 transition-colors duration-[var(--duration-sm)]",
+                          (hoveredStar || rating) >= star ? "fill-warning text-warning" : "text-muted",
+                        )}
+                        aria-hidden="true"
+                      />
+                    </Button>
+                  ))}
+                </div>
+              </>
+            )}
 
             {/*
               O modo foco só esconde o índice do curso — que abaixo de `lg` já é

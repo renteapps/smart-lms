@@ -292,8 +292,8 @@ export default function NavBar({ items }: { items: NavItem[] }) {
             </Drawer.Trigger>
 
             <Drawer.Backdrop>
-              <Drawer.Content placement="right" className="w-[min(88vw,360px)]">
-                <Drawer.Dialog>
+              <Drawer.Content placement="right">
+                <Drawer.Dialog className="w-[min(88vw,360px)]">
                   <Drawer.Header className="gap-4">
                     <BrandMark />
                     <Drawer.Heading className="sr-only">Menu principal</Drawer.Heading>

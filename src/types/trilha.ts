@@ -96,6 +96,8 @@ export type ResolvedContent = {
   title: string;
   durationMin: number;
   courseId?: string;
+  /** Nome do curso a que a aula pertence — o card da trilha o exibe junto do módulo. */
+  courseName?: string;
   moduleId?: string;
   moduleName?: string;
   slug?: string;
@@ -160,5 +162,14 @@ export type LearningTrail = {
    */
   catalogStamp?: string;
   feedbackHistory?: SessionFeedback[];
+  /**
+   * @deprecated Conteúdo que o aluno tinha removido da agenda.
+   *
+   * Excluir conteúdo da própria trilha deixou de existir: quem decide o que é
+   * relevante é a curadoria, e uma remoção feita num dia ruim escondia para
+   * sempre uma aula que o aluno precisava. O campo continua no tipo apenas para
+   * ler trilhas antigas — nada mais o escreve, e o primeiro replanejamento
+   * devolve à agenda o que estava aqui.
+   */
   excludedItems?: LearningTrailItem[];
 };

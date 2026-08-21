@@ -40,6 +40,31 @@ export async function getStudentCertificates(
   });
 }
 
+export type CourseCertificateInfo = {
+  id: string;
+  validationHash: string;
+};
+
+export async function getCourseCertificate(
+  db: DB,
+  userId: string,
+  courseId: string,
+): Promise<CourseCertificateInfo | null> {
+  const { data, error } = await db
+    .from('certificates')
+    .select('id, validation_hash')
+    .eq('user_id', userId)
+    .eq('course_id', courseId)
+    .maybeSingle();
+
+  logQueryError('getCourseCertificate', error);
+  if (!data) return null;
+  return {
+    id: data.id,
+    validationHash: data.validation_hash,
+  };
+}
+
 export type ValidatedCertificate = {
   id: string;
   studentName: string;

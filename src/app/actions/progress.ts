@@ -152,6 +152,21 @@ export async function submitQuizResult(
       return { success: false, message: error.message };
     }
 
+    if (passed) {
+      await supabase.from("lesson_progress").upsert(
+        {
+          user_id: user.id,
+          lesson_id: lessonId,
+          is_completed: true,
+          completed_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,lesson_id" }
+      );
+      revalidatePath("/cursos");
+      revalidatePath("/certificados");
+      revalidatePath("/");
+    }
+
     return { success: true, data: { score, passed } };
   } catch (error) {
     return { success: false, message: (error as Error).message };

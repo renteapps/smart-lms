@@ -34,7 +34,7 @@ export function AiCreditsCard({ balance }: AiCreditsCardProps) {
                 <p className="font-bold text-foreground">Créditos de IA</p>
                 <p className="text-xs text-muted">
                   {balance
-                    ? `${balance.availableCredits} disponíveis · valor nominal ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(balance.availableCredits * balance.creditValueBrl)}`
+                    ? `${balance.availableCredits} disponíveis`
                     : "Saldo indisponível"}
                 </p>
               </div>

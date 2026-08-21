@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import {
-  ArrowRight, BookOpenText, CalendarDays, Check, CheckCircle2, Clock3,
-  ExternalLink, LayoutList, RefreshCw, RotateCcw, Route, Settings2, Sparkles, Target,
+  ArrowRight, CalendarDays, Check, CheckCircle2, Clock3,
+  ExternalLink, FileText, LayoutList, PlayCircle, RefreshCw, Route, Settings2, Sparkles, Target,
 } from 'lucide-react';
 import {
   Alert, AlertDialog, Button, buttonVariants, Card, Chip, Description, Drawer, EmptyState, Fieldset,
@@ -12,7 +13,7 @@ import {
 } from '@heroui/react';
 import { AvailabilityMode, LearningRole, LearningTrail, LearningTrailItem, SessionLoadRating, StudyAvailability, Weekday } from '@/types/trilha';
 import { refreshTrail, saveTrail, setTrailItemCompletion } from '@/app/actions/trail';
-import { applySessionFeedback, clampSessionMinutes, effectiveAvailability, minutesForWeekday, postponeTrailSession, restoreTrailItem, toLocalDateKey, updateTrailAvailability, weeklyMinutes } from '@/lib/matching';
+import { applySessionFeedback, clampSessionMinutes, effectiveAvailability, minutesForWeekday, postponeTrailSession, toLocalDateKey, updateTrailAvailability, weeklyMinutes } from '@/lib/matching';
 import { contentHref } from '@/lib/studentHome';
 import { recordTrailEvent, TrailAnalyticsEvent, TrailAnalyticsEventType } from '@/lib/trailAnalytics';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -35,6 +36,41 @@ const feedbackLabels: Array<{ value: SessionLoadRating; label: string; detail: s
   { value: 'right', label: 'Na medida', detail: 'mantém o ritmo' },
   { value: 'heavy', label: 'Foi pesado', detail: '-10 min nas próximas' },
 ];
+
+const DEFAULT_COVER =
+  'https://images.unsplash.com/photo-1521737711867-e3b97375f902?q=85&w=1000&auto=format&fit=crop';
+
+/**
+ * Identidade de cada tipo de conteúdo.
+ *
+ * Aula, artigo e link externo pedem coisas diferentes do aluno — assistir, ler,
+ * sair da plataforma. O card diz isso de longe, por ícone e cor, antes de
+ * qualquer leitura.
+ */
+function typeVisual(type: LearningTrailItem['type']) {
+  if (type === 'article') {
+    return {
+      label: 'Artigo',
+      Icon: FileText,
+      band: 'bg-warning-soft text-warning-soft-foreground',
+      badge: 'bg-warning-soft text-warning-soft-foreground',
+    };
+  }
+  if (type === 'external_link') {
+    return {
+      label: 'Link externo',
+      Icon: ExternalLink,
+      band: 'bg-default text-default-foreground',
+      badge: 'bg-surface text-foreground',
+    };
+  }
+  return {
+    label: 'Aula',
+    Icon: PlayCircle,
+    band: 'bg-accent-soft text-accent-soft-foreground',
+    badge: 'bg-accent text-accent-foreground',
+  };
+}
 
 function statusLabel(item: LearningTrailItem, today: string): string {
   if (item.status === 'completed') return 'Concluído';
@@ -60,12 +96,37 @@ type TrailContentCardProps = {
   withCompleteAction?: boolean;
 };
 
+/** Domínio do link, sem `www.` — é o que diz de onde o conteúdo vem. */
+function hostOf(url?: string): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Card de conteúdo da agenda.
+ *
+ * A versão anterior desenhava tudo igual: mesmo ícone azul, mesmos dois chips
+ * ("Essencial" e "Planejado") em cima de cada card e a frase "Recomendado por"
+ * ocupando o corpo. Uma sessão de três conteúdos virava três retângulos
+ * indistinguíveis. Agora o que diferencia vem primeiro — a capa, o tipo e a
+ * origem (curso da aula, site do link) — e o que se repetia saiu: "Planejado" só
+ * aparece quando o estado foge do normal, e o papel pedagógico só quando não é o
+ * essencial.
+ */
 function TrailContentCard({ item, today, subdued = false, withCompleteAction = false }: TrailContentCardProps) {
   const { triggerTransition } = useCardTransition();
   const href = contentHref(item);
   const external = item.type === 'external_link';
   const completed = item.status === 'completed';
+  const type = typeVisual(item.type);
   const status = statusVisual(item, today);
+  const showStatus = completed || item.rescheduled || item.scheduledDate === today;
+  // Aula mostra a formação a que pertence; link mostra de onde vem; artigo, o módulo se houver.
+  const origin = external ? hostOf(item.url) : item.courseName || item.moduleName || null;
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (
@@ -95,8 +156,8 @@ function TrailContentCard({ item, today, subdued = false, withCompleteAction = f
       },
       metadata: {
         title: item.title,
-        cover: item.cover || 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?q=85&w=1000&auto=format&fit=crop',
-        category: item.moduleName || roleLabels[item.learningRole],
+        cover: item.cover || DEFAULT_COVER,
+        category: item.courseName || item.moduleName || type.label,
         duration: `${item.durationMin} min`,
         type: 'lesson',
       },
@@ -105,51 +166,90 @@ function TrailContentCard({ item, today, subdued = false, withCompleteAction = f
   };
 
   const card = (
-    <Card className={cn('lift h-full gap-0 border-hairline p-5', withCompleteAction && 'pb-16')}>
-      <div className="flex flex-wrap items-center gap-2">
-        <Chip size="sm" variant="soft" color={roleColors[item.learningRole]}>
-          {roleLabels[item.learningRole]}
-        </Chip>
-        <Chip size="sm" variant="tertiary" color={status.color}>
-          {status.icon}
-          {statusLabel(item, today)}
-        </Chip>
-      </div>
+    <Card
+      className={cn(
+        'lift h-full gap-0 overflow-hidden border-hairline p-0',
+        completed && 'border-success/35 bg-success-soft/25',
+      )}
+    >
+      <div className="relative h-24 shrink-0 overflow-hidden bg-background-secondary">
+        {item.cover ? (
+          <Image
+            src={item.cover}
+            alt=""
+            fill
+            unoptimized
+            sizes="(min-width: 1280px) 20rem, (min-width: 768px) 45vw, 90vw"
+            className={cn(
+              'object-cover transition-transform duration-[var(--duration-lg)] group-hover:scale-[1.03]',
+              completed && 'opacity-55 saturate-50',
+            )}
+          />
+        ) : (
+          <span className={cn('grid h-full w-full place-items-center', type.band)}>
+            <type.Icon className="size-7" aria-hidden="true" />
+          </span>
+        )}
 
-      <div className="mt-4 flex items-start gap-3">
         <span
           className={cn(
-            'grid size-10 shrink-0 place-items-center rounded-xl',
-            completed ? 'bg-success-soft text-success-soft-foreground' : 'bg-accent-soft text-accent-soft-foreground',
+            'absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.6875rem] font-extrabold uppercase tracking-[0.08em] shadow-elev-1',
+            completed ? 'bg-success text-success-foreground' : type.badge,
           )}
         >
-          {completed ? (
-            <Check className="size-4.5" aria-hidden="true" />
-          ) : external ? (
-            <ExternalLink className="size-4.5" aria-hidden="true" />
-          ) : (
-            <BookOpenText className="size-4.5" aria-hidden="true" />
-          )}
+          {completed ? <Check className="size-3" aria-hidden="true" /> : <type.Icon className="size-3" aria-hidden="true" />}
+          {completed ? 'Concluído' : type.label}
         </span>
-        <h4 className="font-display text-base font-extrabold leading-snug tracking-[-0.02em] text-foreground sm:text-lg">
-          {item.title}
-        </h4>
       </div>
 
-      <p className="mt-3 line-clamp-3 text-xs leading-5 text-muted">{item.reason}</p>
+      <div className={cn('flex flex-1 flex-col p-5', withCompleteAction && 'pb-16')}>
+        {origin && (
+          <p className="truncate text-xs font-bold uppercase tracking-[0.08em] text-muted">{origin}</p>
+        )}
 
-      <div
-        className="mt-auto flex items-center justify-between gap-3 border-t border-hairline pt-3 text-xs font-semibold text-muted"
-        data-numeric
-      >
-        <span className="flex items-center gap-1.5">
-          <Clock3 className="size-3.5" aria-hidden="true" /> {item.durationMin} minutos
-        </span>
-        {item.overBudget && <span className="text-warning">Acima da meta</span>}
-        <ArrowRight
-          className="size-4 text-accent transition-transform duration-[var(--duration-md)] ease-[var(--ease-zen)] group-hover:translate-x-0.5"
-          aria-hidden="true"
-        />
+        <h4
+          className={cn(
+            'mt-1.5 font-display text-base font-extrabold leading-snug tracking-[-0.02em] sm:text-lg',
+            completed ? 'text-muted line-through decoration-success/50' : 'text-foreground',
+          )}
+        >
+          {item.title}
+        </h4>
+
+        {!external && item.courseName && item.moduleName && (
+          <p className="mt-1.5 truncate text-xs text-muted">Módulo: {item.moduleName}</p>
+        )}
+
+        <div
+          className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-hairline pt-3 text-xs font-semibold text-muted"
+          data-numeric
+        >
+          <span className="flex items-center gap-1.5">
+            <Clock3 className="size-3.5" aria-hidden="true" /> {item.durationMin} min
+          </span>
+
+          {item.learningRole !== 'essential' && (
+            <Chip size="sm" variant="soft" color={roleColors[item.learningRole]}>
+              {roleLabels[item.learningRole]}
+            </Chip>
+          )}
+
+          {showStatus && !completed && (
+            <Chip size="sm" variant="tertiary" color={status.color}>
+              {status.icon}
+              {statusLabel(item, today)}
+            </Chip>
+          )}
+
+          {item.overBudget && <span className="text-warning">Acima da meta</span>}
+
+          {!completed && (
+            <ArrowRight
+              className="ml-auto size-4 text-accent transition-transform duration-[var(--duration-md)] ease-[var(--ease-zen)] group-hover:translate-x-0.5"
+              aria-hidden="true"
+            />
+          )}
+        </div>
       </div>
     </Card>
   );
@@ -249,22 +349,24 @@ export default function MinhaTrilhaPage() {
   }, []);
 
   /*
-   * A agenda mostra o que falta.
+   * A agenda mostra o que falta — e o que acabou de ser feito.
    *
-   * Conteúdo concluído continua na trilha — ele é o histórico que alimenta
-   * progresso, sequência e minutos estudados — mas não volta a ocupar espaço nos
-   * cards: reencontrar na quinta-feira a aula que se assistiu na terça faz a
-   * tela parecer uma cobrança, e escondia o que ainda importa fazer.
+   * Conteúdo concluído continua na trilha como histórico (progresso, sequência,
+   * minutos), mas some dos cards dos dias que já passaram: reencontrar na
+   * quinta-feira a aula assistida na terça faz a tela parecer cobrança e esconde
+   * o que ainda importa. O concluído do dia corrente é a exceção — ele fica, com
+   * cara de concluído, porque é a prova visível de que a sessão andou.
    */
   const sessions = useMemo(() => {
     if (!trail) return [];
     const groups = trail.items.reduce<Record<string, LearningTrailItem[]>>((result, item) => {
-      if (item.status !== 'pending') return result;
+      const visible = item.status === 'pending' || item.scheduledDate >= today;
+      if (!visible) return result;
       result[item.sessionId] = [...(result[item.sessionId] || []), item];
       return result;
     }, {});
     return Object.entries(groups).sort(([, a], [, b]) => a[0].scheduledDate.localeCompare(b[0].scheduledDate));
-  }, [trail]);
+  }, [trail, today]);
 
   const todayItems = trail?.items.filter((item) => item.scheduledDate === today) || [];
   const todayPending = todayItems.filter((item) => item.status === 'pending');
@@ -375,11 +477,6 @@ export default function MinhaTrilhaPage() {
     }
   };
 
-  const handleRestore = (item: LearningTrailItem) => {
-    if (!trail) return;
-    commitTrail(restoreTrailItem(trail, item.id));
-    trackTrailEvent('content_restored', { contentId: item.id, title: item.title });
-  };
 
   useEffect(() => {
     // Conteúdo de exemplo não gera notificação: ninguém agendou essa sessão.
@@ -448,7 +545,9 @@ export default function MinhaTrilhaPage() {
         const date = new Date(`${items[0].scheduledDate}T12:00:00`);
         const isToday = items[0].scheduledDate === today;
         const isLast = index === sessions.length - 1;
-        const canPostpone = items.some((item) => item.status === 'pending') && items[0].scheduledDate >= today;
+        const pendingItems = items.filter((item) => item.status === 'pending');
+        const doneItems = items.filter((item) => item.status === 'completed');
+        const canPostpone = pendingItems.length > 0 && items[0].scheduledDate >= today;
 
         return (
           <Rise
@@ -476,8 +575,13 @@ export default function MinhaTrilhaPage() {
                 <h3 className="font-display font-extrabold capitalize tracking-[-0.02em] text-foreground">
                   {date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
                 </h3>
+                {/* O cabeçalho conta o que falta; o que já foi feito aparece ao lado. */}
                 <p className="mt-1 text-xs font-semibold text-muted" data-numeric>
-                  {items.reduce((sum, item) => sum + item.durationMin, 0)} minutos · {items.length} {items.length === 1 ? 'conteúdo' : 'conteúdos'}
+                  {pendingItems.reduce((sum, item) => sum + item.durationMin, 0)} minutos ·{' '}
+                  {pendingItems.length} {pendingItems.length === 1 ? 'conteúdo' : 'conteúdos'}
+                  {doneItems.length > 0 && (
+                    <span className="text-success"> · {doneItems.length} concluído{doneItems.length > 1 ? 's' : ''}</span>
+                  )}
                 </p>
               </div>
               <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-hairline" />
@@ -872,27 +976,6 @@ export default function MinhaTrilhaPage() {
                   </Fieldset.Group>
                 </Fieldset>
 
-                {(trail.excludedItems?.length || 0) > 0 && (
-                  <section aria-labelledby="removed-content-title">
-                    <h3 id="removed-content-title" className="font-display font-extrabold text-foreground">
-                      Conteúdos removidos
-                    </h3>
-                    <p className="mt-1 text-xs text-muted">Restaure itens que deseja reconsiderar.</p>
-                    <ul className="mt-4 space-y-2">
-                      {trail.excludedItems?.map((item) => (
-                        <li
-                          key={item.id}
-                          className="flex items-center justify-between gap-3 rounded-xl border border-hairline bg-surface p-3"
-                        >
-                          <span className="min-w-0 truncate text-sm font-semibold text-foreground">{item.title}</span>
-                          <Button size="sm" variant="tertiary" onClick={() => handleRestore(item)}>
-                            <RotateCcw className="size-3.5" aria-hidden="true" /> Restaurar
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
               </Drawer.Body>
 
               <Drawer.Footer>

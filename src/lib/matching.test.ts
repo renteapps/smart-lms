@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applySessionFeedback, generateLearningTrail, postponeTrailSession, removeTrailItem, replanLearningTrail, restoreTrailItem, schedulePendingItems, syncTrailCompletion, updateTrailAvailability, validateQuestionnaire, weeklyMinutes } from './matching';
+import { applySessionFeedback, generateLearningTrail, postponeTrailSession, replanLearningTrail, schedulePendingItems, syncTrailCompletion, updateTrailAvailability, validateQuestionnaire, weeklyMinutes } from './matching';
 import { mockQuestionnaire, TRAIL_CONTENT_INDEX } from './seed/questionnaire';
 import { ContentMapping, LearningTrailItem, Questionnaire } from '@/types/trilha';
 
@@ -252,18 +252,28 @@ describe('adaptive learning trail', () => {
     expect(postponed.items.find((item) => item.status === 'pending')!.scheduledDate).toBe('2026-08-13');
   });
 
-  it('removes and restores pending content without losing it', () => {
+  it('brings back content that an old trail had removed from the agenda', () => {
     const trail = generateLearningTrail('u1', {
-      q_formato: ['Teoria Profunda (Conceitos base)'], q_objetivo: ['Sair do zero com segurança'],
+      q_formato: ['Teoria Profunda (Conceitos base)'],
     }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
-    const target = trail.items.at(-1)!;
-    const removed = removeTrailItem(trail, target.id, new Date(2026, 7, 10));
-    expect(removed.items.some((item) => item.id === target.id)).toBe(false);
-    expect(removed.excludedItems?.some((item) => item.id === target.id)).toBe(true);
 
-    const restored = restoreTrailItem(removed, target.id, new Date(2026, 7, 10));
-    expect(restored.items.some((item) => item.id === target.id)).toBe(true);
-    expect(restored.excludedItems).toEqual([]);
+    /*
+     * Trilha gravada quando excluir conteúdo ainda existia. Regerar não pode
+     * herdar a exclusão: o aluno perderia para sempre uma aula que a curadoria
+     * considera essencial.
+     */
+    const legacy = {
+      ...trail,
+      items: trail.items.filter((item) => item.id !== 'l2'),
+      excludedItems: [trail.items.find((item) => item.id === 'l2')!],
+    };
+
+    const regenerated = generateLearningTrail('u1', {
+      q_formato: ['Teoria Profunda (Conceitos base)'],
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, legacy, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
+
+    expect(regenerated.items.some((item) => item.id === 'l2')).toBe(true);
+    expect(regenerated.excludedItems).toBeUndefined();
   });
   it('never schedules content the person already finished elsewhere', () => {
     const trail = generateLearningTrail('u1', {

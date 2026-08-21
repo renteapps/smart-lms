@@ -179,15 +179,16 @@ export default function CourseCard({
               {category}
             </span>
             {state.kind === "in-progress" && (
-              <Chip size="sm" variant="soft" color="accent" className="absolute right-3 top-3 z-20">
+              <span className="material-thick absolute right-3 top-3 z-20 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[0.6875rem] font-bold tracking-[0.02em] text-accent">
+                <span className="size-1.5 rounded-full bg-accent animate-pulse" aria-hidden="true" />
                 Em progresso
-              </Chip>
+              </span>
             )}
             {state.kind === "completed" && (
-              <Chip size="sm" variant="soft" color="success" className="absolute right-3 top-3 z-20">
-                <CheckCircle2 className="size-3.5" aria-hidden="true" />
+              <span className="material-thick absolute right-3 top-3 z-20 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[0.6875rem] font-bold tracking-[0.02em] text-success">
+                <CheckCircle2 className="size-3.5 text-success" aria-hidden="true" />
                 Finalizado
-              </Chip>
+              </span>
             )}
           </div>
 

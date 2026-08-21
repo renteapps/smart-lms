@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Card, Chip } from "@heroui/react";
+/*
+ * Subcaminho em vez do barril: `@heroui/react` reexporta react-aria-components,
+ * que é `client-only` — e estes componentes são usados por páginas de servidor.
+ * Mesmo motivo do `@heroui/react/separator` no rodapé.
+ */
+import { Card } from "@heroui/react/card";
+import { Chip } from "@heroui/react/chip";
 import { cn } from "@/lib/utils";
 
 type PageHeaderProps = {

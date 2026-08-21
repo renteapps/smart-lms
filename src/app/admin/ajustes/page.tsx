@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Bot, Home, Palette, Navigation, Plug, WalletCards } from "lucide-react";
-import { Card } from "@heroui/react";
+import { Card } from "@heroui/react/card";
 import { PageHeader } from "@/components/ui/editorial";
 import { requireAdmin } from "@/lib/supabase/auth";
 

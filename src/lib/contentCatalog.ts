@@ -26,6 +26,8 @@ export type ContentItem = {
   /** Para curso e módulo: as aulas que ele expande. */
   childIds?: string[];
   courseId?: string;
+  /** Nome do curso — o card da trilha mostra a que formação a aula pertence. */
+  courseName?: string;
   moduleId?: string;
   moduleName?: string;
   cover?: string;
@@ -101,6 +103,7 @@ export function createContentIndex(
       title: source.title,
       durationMin: mapping.estimatedDurationMin || source.estimatedDurationMin || 10,
       courseId: source.courseId,
+      courseName: source.courseName,
       moduleId: source.moduleId,
       moduleName: source.moduleName,
       slug: source.slug,

@@ -24,10 +24,11 @@ import {
   TextField,
   toast,
 } from "@heroui/react";
-import { NAV_ICON_LABELS, navIcon } from "@/components/navigation/navIcons";
+import { NAV_ICONS, NAV_ICON_LABELS } from "@/components/navigation/navIcons";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_NAVIGATION,
+  NAV_FALLBACK_ICON,
   NAV_FOOTER_MAX_GROUPS,
   NAV_ICON_KEYS,
   NAV_PAGE_CATALOG,
@@ -79,6 +80,15 @@ function moveItem<T extends { id: string }>(
 // Campos reutilizados pelas duas abas
 // ---------------------------------------------------------------------------
 
+/**
+ * Indexa o mapa direto, como `AssistantAvatar`: um componente vindo de chamada
+ * de função é lido pelo compilador do React como criado durante o render.
+ */
+function NavGlyph({ icon, className }: { icon: NavIconKey; className?: string }) {
+  const Glyph = NAV_ICONS[icon] ?? NAV_ICONS[NAV_FALLBACK_ICON];
+  return <Glyph className={className} aria-hidden="true" />;
+}
+
 function IconSelect({ value, onChange }: { value: NavIconKey; onChange: (icon: NavIconKey) => void }) {
   return (
     <Select selectedKey={value} onSelectionChange={(key) => onChange(String(key) as NavIconKey)}>
@@ -89,17 +99,14 @@ function IconSelect({ value, onChange }: { value: NavIconKey; onChange: (icon: N
       </Select.Trigger>
       <Select.Popover>
         <ListBox>
-          {NAV_ICON_KEYS.map((key) => {
-            const Icon = navIcon(key);
-            return (
-              <ListBoxItem key={key} id={key} textValue={NAV_ICON_LABELS[key]}>
-                <span className="flex items-center gap-2">
-                  <Icon className="size-4 shrink-0" aria-hidden="true" />
-                  {NAV_ICON_LABELS[key]}
-                </span>
-              </ListBoxItem>
-            );
-          })}
+          {NAV_ICON_KEYS.map((key) => (
+            <ListBoxItem key={key} id={key} textValue={NAV_ICON_LABELS[key]}>
+              <span className="flex items-center gap-2">
+                <NavGlyph icon={key} className="size-4 shrink-0" />
+                {NAV_ICON_LABELS[key]}
+              </span>
+            </ListBoxItem>
+          ))}
         </ListBox>
       </Select.Popover>
     </Select>
@@ -166,7 +173,6 @@ function NavItemRow({
   onDragEnd,
   onReorderKeyDown,
 }: RowProps) {
-  const Icon = navIcon(item.icon);
   const isCustom = item.pageKey === null;
 
   return (
@@ -245,7 +251,7 @@ function NavItemRow({
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium text-foreground">Destino</span>
                 <span className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-surface-secondary px-3 font-mono text-xs text-muted">
-                  <Icon className="size-4 shrink-0" aria-hidden="true" />
+                  <NavGlyph icon={item.icon} className="size-4 shrink-0" />
                   <span className="truncate">{item.href}</span>
                 </span>
               </div>
@@ -375,14 +381,19 @@ function AddItemModal({
 
   const reset = () => {
     setMode("page");
-    setPageKey(availablePages[0]?.key ?? NAV_PAGE_CATALOG[0].key);
+    setPageKey(NAV_PAGE_CATALOG[0].key);
     setLabel("");
     setHref("");
     setIcon("link");
     setVisibility("all");
   };
 
-  const selectedPage = NAV_PAGE_CATALOG.find((page) => page.key === pageKey);
+  /*
+   * A escolha guardada pode ter saído da lista — a página já entrou no menu,
+   * ou o modal reabriu para outra coluna. Cair na primeira disponível evita um
+   * seletor em branco que mesmo assim adicionaria um item duplicado.
+   */
+  const selectedPage = availablePages.find((page) => page.key === pageKey) ?? availablePages[0];
   const canSave = mode === "page" ? Boolean(selectedPage) : Boolean(label.trim() && href.trim());
 
   const handleAdd = () => {
@@ -451,7 +462,10 @@ function AddItemModal({
                   </p>
                 ) : (
                   <>
-                    <Select selectedKey={pageKey} onSelectionChange={(key) => setPageKey(String(key))}>
+                    <Select
+                      selectedKey={selectedPage?.key ?? null}
+                      onSelectionChange={(key) => setPageKey(String(key))}
+                    >
                       <Label>Página</Label>
                       <Select.Trigger>
                         <Select.Value />
@@ -532,19 +546,16 @@ function NavigationPreview({ menu, groups }: { menu: NavItem[]; groups: NavFoote
           <p className="eyebrow mb-3">Menu principal</p>
           <div className="flex flex-wrap gap-1.5 rounded-xl border border-border bg-surface-secondary p-3">
             {visibleMenu.length === 0 && <span className="text-xs text-muted">Nenhum item visível.</span>}
-            {visibleMenu.map((item) => {
-              const Icon = navIcon(item.icon);
-              return (
-                <span
-                  key={item.id}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-muted"
-                >
-                  <Icon className="size-3.5" aria-hidden="true" />
-                  {item.label}
-                  {item.external && <ExternalLink className="size-3" aria-hidden="true" />}
-                </span>
-              );
-            })}
+            {visibleMenu.map((item) => (
+              <span
+                key={item.id}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-muted"
+              >
+                <NavGlyph icon={item.icon} className="size-3.5" />
+                {item.label}
+                {item.external && <ExternalLink className="size-3" aria-hidden="true" />}
+              </span>
+            ))}
           </div>
         </div>
 

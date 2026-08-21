@@ -11,6 +11,16 @@ import * as trailData from "@/lib/data/trail";
 import type { ActionResult } from "./progress";
 
 /**
+ * Versão do formato do item da trilha.
+ *
+ * Entra no carimbo guardado para que uma mudança no que o motor grava em cada
+ * item — o nome do curso, por exemplo — force uma reconciliação, mesmo com o
+ * catálogo intacto. Sem isso, quem já tem trilha só veria o campo novo quando o
+ * admin mexesse em algum conteúdo.
+ */
+const PLAN_FORMAT = "v4";
+
+/**
  * Gera a trilha a partir das respostas do onboarding.
  *
  * O catálogo vem do banco a cada geração — assim um curso publicado hoje já
@@ -46,7 +56,10 @@ export async function generateTrail(
       index,
       completedIds,
     );
-    const trail: LearningTrail = { ...generated, catalogStamp: stamp ?? undefined };
+    const trail: LearningTrail = {
+      ...generated,
+      catalogStamp: stamp ? `${PLAN_FORMAT}:${stamp}` : undefined,
+    };
 
     await persistTrail(supabase, user.id, trail);
     await trailData.recordTrailEvent(supabase, user.id, "plan_generated", {
@@ -141,7 +154,8 @@ export async function refreshTrail(): Promise<{
     }
 
     let added = 0;
-    if (stamp && stamp !== trail.catalogStamp) {
+    const currentStamp = stamp ? `${PLAN_FORMAT}:${stamp}` : null;
+    if (currentStamp && currentStamp !== trail.catalogStamp) {
       const [questionnaire, index] = await Promise.all([
         Promise.resolve(published),
         getContentIndex(supabase),
@@ -160,9 +174,9 @@ export async function refreshTrail(): Promise<{
           completedIds,
         );
         added = regenerated.items.filter((item) => !before.has(item.id)).length;
-        trail = { ...regenerated, catalogStamp: stamp };
+        trail = { ...regenerated, catalogStamp: currentStamp };
       } else {
-        trail = { ...trail, catalogStamp: stamp };
+        trail = { ...trail, catalogStamp: currentStamp };
       }
       changed = true;
     }

@@ -36,6 +36,9 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
   const items: ContentItem[] = [];
   const eligibleLessons: EligibleLesson[] = [];
 
+  // Título digitado com espaço sobrando não pode virar indentação no card do aluno.
+  const clean = (value?: string | null) => (value ?? "").trim();
+
   (courses.data ?? []).forEach((course: Row) => {
     const modules = (course.modules ?? [])
       .slice()
@@ -83,12 +86,13 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
       items.push({
         id: lesson.id,
         type: "lesson",
-        title: lesson.title,
-        category: mod.title,
+        title: clean(lesson.title),
+        category: clean(mod.title),
         estimatedDurationMin: lesson.duration_in_minutes ?? 10,
         courseId: course.id,
+        courseName: clean(course.title),
         moduleId: mod.id,
-        moduleName: mod.title,
+        moduleName: clean(mod.title),
         cover: mod.cover_url || course.cover_url || FALLBACK_COVER,
         prerequisites,
         slug: lesson.slug ?? undefined,
@@ -102,7 +106,7 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
           lessonId: lesson.id,
           courseSlug: course.slug,
           moduleId: mod.id,
-          title: lesson.title,
+          title: clean(lesson.title),
           description: lesson.objective || lesson.content?.slice(0, 160) || "",
           duration: (lesson.duration_in_minutes ?? 10) * 60,
           topics: lesson.topics ?? [],
@@ -125,8 +129,8 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
       items.push({
         id: mod.id,
         type: "module",
-        title: mod.title,
-        category: course.title,
+        title: clean(mod.title),
+        category: clean(course.title),
         childIds: lessonIds,
         courseId: course.id,
       });
@@ -135,7 +139,7 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
     items.push({
       id: course.id,
       type: "course",
-      title: course.title,
+      title: clean(course.title),
       category: "Formação completa",
       childIds: courseLessonIds,
       slug: course.slug,
@@ -146,7 +150,7 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
     items.push({
       id: article.id,
       type: "article",
-      title: article.title,
+      title: clean(article.title),
       category: article.category ?? "Artigo",
       slug: article.slug,
       estimatedDurationMin: article.reading_time ?? 8,

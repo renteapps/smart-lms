@@ -367,7 +367,7 @@ const COURSE_TREE_SELECT = `
 const COURSE_OUTLINE_SELECT = `
   id, slug, title, description, short_description, category, cover_url, duration,
   level, price, tags, status, is_published, is_featured, created_at, updated_at,
-  sales_url, sales_page_url, sales_config,
+  enable_certificates, sales_url, sales_page_url, sales_config,
   modules (
     id, course_id, title, slug, description, cover_url, order_index,
     lessons (

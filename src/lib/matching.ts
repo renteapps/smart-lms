@@ -570,9 +570,8 @@ export function generateLearningTrail(
   const alreadySeen = new Set([...completedContentIds, ...existingCompleted.keys()]);
 
   const candidates = collectCandidates(answers, questionnaire, index);
-  const excludedIds = new Set((existingTrail?.excludedItems || []).map((item) => item.id));
   const draftItems: LearningTrailItem[] = candidates.filter(
-    (candidate) => !excludedIds.has(candidate.id) && !alreadySeen.has(candidate.id),
+    (candidate) => !alreadySeen.has(candidate.id),
   ).map((candidate, index) => {
     return {
       id: candidate.id,
@@ -580,6 +579,7 @@ export function generateLearningTrail(
       title: candidate.title,
       durationMin: candidate.durationMin,
       courseId: candidate.courseId,
+      courseName: candidate.courseName,
       moduleId: candidate.moduleId,
       moduleName: candidate.moduleName,
       slug: candidate.slug,
@@ -633,7 +633,6 @@ export function generateLearningTrail(
     adaptiveMinutesPerSession: existingTrail?.adaptiveMinutesPerSession,
     missedSessions: existingTrail?.missedSessions,
     feedbackHistory: existingTrail?.feedbackHistory || [],
-    excludedItems: existingTrail?.excludedItems || [],
   };
 }
 
@@ -753,30 +752,6 @@ export function postponeTrailSession(trail: LearningTrail, sessionId: string): L
       const shifted = item.status === 'pending' ? shiftedDates.get(item.scheduledDate) : undefined;
       return shifted ? { ...item, scheduledDate: shifted, sessionId: `${shifted}-postponed`, rescheduled: true } : item;
     }),
-    replannedAt: Date.now(),
-  };
-}
-
-export function removeTrailItem(trail: LearningTrail, contentId: string, startDate = new Date()): LearningTrail {
-  const removed = trail.items.find((item) => item.id === contentId);
-  if (!removed || removed.status === 'completed') return trail;
-  const remaining = trail.items.filter((item) => item.id !== contentId);
-  return {
-    ...trail,
-    items: schedulePendingItems(remaining, effectiveAvailability(trail), startDate),
-    excludedItems: [...(trail.excludedItems || []).filter((item) => item.id !== contentId), removed],
-    replannedAt: Date.now(),
-  };
-}
-
-export function restoreTrailItem(trail: LearningTrail, contentId: string, startDate = new Date()): LearningTrail {
-  const restored = trail.excludedItems?.find((item) => item.id === contentId);
-  if (!restored) return trail;
-  const items = [...trail.items, { ...restored, status: 'pending' as const, completedAt: undefined }].sort((a, b) => a.order - b.order);
-  return {
-    ...trail,
-    items: schedulePendingItems(items, effectiveAvailability(trail), startDate),
-    excludedItems: trail.excludedItems?.filter((item) => item.id !== contentId),
     replannedAt: Date.now(),
   };
 }
