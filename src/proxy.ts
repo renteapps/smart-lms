@@ -1,31 +1,46 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 import { updateSession } from "@/lib/supabase/middleware";
 
+// Inicializa o Limitador usando o Upstash Redis
+// Permite 100 requisições a cada 10 segundos por IP (bloqueia robôs sem afetar alunos)
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(100, "10 s"),
+  analytics: true,
+});
+
 export async function proxy(request: NextRequest) {
+  // 1. Identifica o IP do usuário
+  const ip = request.ip ?? request.headers.get("x-forwarded-for") ?? "127.0.0.1";
+
+  // 2. Passa o IP pelo Rate Limiter
+  const { success, limit, reset, remaining } = await ratelimit.limit(ip);
+
+  // 3. Se excedeu o limite, bloqueia com 429 Too Many Requests
+  if (!success) {
+    return new NextResponse("Muitas requisições. Por favor, tente novamente mais tarde.", {
+      status: 429,
+      headers: {
+        "X-RateLimit-Limit": limit.toString(),
+        "X-RateLimit-Remaining": remaining.toString(),
+        "X-RateLimit-Reset": reset.toString(),
+      },
+    });
+  }
+
+  // 4. Se o tráfego for legítimo, faz a validação de sessão do Supabase
   return updateSession(request);
 }
 
 /**
- * Atualiza sessão apenas onde a identidade muda a resposta ou protege a rota.
- * APIs validam autorização no próprio handler; blog e assets ficam totalmente
- * fora do caminho de rede do Supabase.
+ * Matcher configurado para rodar em todas as rotas de API e páginas, 
+ * excluindo apenas arquivos estáticos e imagens. 
+ * (O updateSession internamente já sabe filtrar rotas públicas e privadas).
  */
 export const config = {
   matcher: [
-    "/acessar/:path*",
-    "/criar-conta/:path*",
-    "/resetar-senha/:path*",
-    "/confirmar/:path*",
-    "/admin/:path*",
-    "/agentes/:path*",
-    "/analises/:path*",
-    "/busca/:path*",
-    "/courses/:path*",
-    "/cursos/:path*",
-    "/empresa/:path*",
-    "/minha-trilha/:path*",
-    "/notas/:path*",
-    "/onboarding/:path*",
-    "/perfil/:path*",
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
