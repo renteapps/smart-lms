@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Palette, Monitor, Sun, Type, Image as ImageIcon, Loader2 } from "lucide-react";
 import { Button, Card, Input, Label, TextArea, TextField } from "@heroui/react";
 import { BrandingImages } from "./BrandingImages";
 import { saveAppearance } from "./actions";
 import type { BrandingImages as BrandingImagesType } from "./actions";
+import { BrandMark } from "@/components/BrandMark";
 import { toast } from "@heroui/react";
 
 type AppearanceClientProps = {
@@ -19,9 +21,11 @@ type AppearanceClientProps = {
 };
 
 export function AppearanceClient({ initial, branding }: AppearanceClientProps) {
+  const router = useRouter();
   const [platformName, setPlatformName] = useState(initial.platformName);
   const [slogan, setSlogan] = useState(initial.slogan);
   const [primaryColor, setPrimaryColor] = useState(initial.primaryColor);
+  const [brandingState, setBrandingState] = useState<BrandingImagesType>(branding);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -29,16 +33,20 @@ export function AppearanceClient({ initial, branding }: AppearanceClientProps) {
     setLoading(true);
     const formData = new FormData(e.currentTarget);
     const result = await saveAppearance({
-      platformName: formData.get("platformName") as string,
-      slogan: formData.get("slogan") as string,
-      primaryColor: formData.get("primaryColor") as string,
+      platformName: (formData.get("platformName") as string) || platformName,
+      slogan: (formData.get("slogan") as string) || slogan,
+      primaryColor: (formData.get("primaryColor") as string) || primaryColor,
       theme: "light",
+      logoUrl: brandingState.logoUrl,
+      faviconUrl: brandingState.faviconUrl,
+      ogImageUrl: brandingState.ogImageUrl,
     });
     setLoading(false);
     if (result.error) {
       toast.danger("Erro ao salvar", { description: result.error });
     } else {
-      toast.success("Aparência salva!", { description: "As configurações foram atualizadas." });
+      toast.success("Aparência salva!", { description: "As configurações foram atualizadas em toda a plataforma." });
+      router.refresh();
     }
   };
 
@@ -60,7 +68,7 @@ export function AppearanceClient({ initial, branding }: AppearanceClientProps) {
                 name="platformName"
                 value={platformName}
                 onChange={(e) => setPlatformName(e.target.value)}
-                placeholder="Ex: Minha Academia" 
+                placeholder="Ex: Skill Academy" 
               />
             </TextField>
             <TextField>
@@ -70,7 +78,7 @@ export function AppearanceClient({ initial, branding }: AppearanceClientProps) {
                 value={slogan}
                 onChange={(e) => setSlogan(e.target.value)}
                 rows={3} 
-                placeholder="Ex: Aprenda no seu próprio ritmo." 
+                placeholder="Ex: Aprendizagem prática para transformar sua carreira." 
                 className="resize-none" 
               />
             </TextField>
@@ -136,7 +144,7 @@ export function AppearanceClient({ initial, branding }: AppearanceClientProps) {
             </Card.Title>
           </Card.Header>
           <Card.Content>
-            <BrandingImages initial={branding} />
+            <BrandingImages initial={brandingState} onChange={setBrandingState} />
           </Card.Content>
         </Card>
 
@@ -153,6 +161,32 @@ export function AppearanceClient({ initial, branding }: AppearanceClientProps) {
         <div className="sticky top-28 space-y-6">
           <Card>
             <Card.Header>
+              <Card.Title>Preview da Marca</Card.Title>
+              <Card.Description>Como o menu e o cabeçalho serão visualizados pelos alunos.</Card.Description>
+            </Card.Header>
+            <Card.Content className="space-y-4">
+              <div className="flex items-center justify-between rounded-xl border border-border bg-surface p-4 shadow-surface">
+                <BrandMark 
+                  platformName={platformName || "Smart LMS"}
+                  logoUrl={brandingState.logoUrl}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-xl border border-border bg-surface p-4 shadow-surface">
+                <BrandMark 
+                  href="/admin" 
+                  compact 
+                  subtitle="Workspace" 
+                  platformName={platformName || "Smart LMS"}
+                  logoUrl={brandingState.logoUrl}
+                />
+                <span className="text-xs font-semibold text-muted">Modo Compacto</span>
+              </div>
+            </Card.Content>
+          </Card>
+
+          <Card>
+            <Card.Header>
               <Card.Title>Preview de busca</Card.Title>
               <Card.Description>Como sua plataforma aparece no Google e nas redes sociais.</Card.Description>
             </Card.Header>
@@ -161,8 +195,8 @@ export function AppearanceClient({ initial, branding }: AppearanceClientProps) {
               <div className="space-y-1 rounded-lg border border-border bg-background-secondary p-4">
                 <div className="mb-1 flex items-center gap-2 text-xs text-muted">
                   <div className="flex size-6 items-center justify-center overflow-hidden rounded-full border border-border bg-surface shadow-elev-1">
-                    {branding.faviconUrl ? (
-                      <img src={branding.faviconUrl} alt="Favicon" className="size-full object-cover" />
+                    {brandingState.faviconUrl ? (
+                      <img src={brandingState.faviconUrl} alt="Favicon" className="size-full object-cover" />
                     ) : (
                       <div className="size-3 rounded-sm" style={{ backgroundColor: primaryColor }} />
                     )}
@@ -170,7 +204,7 @@ export function AppearanceClient({ initial, branding }: AppearanceClientProps) {
                   <span>
                     <span className="font-medium text-foreground">{platformName || "Smart LMS"}</span>
                     <br />
-                    <span className="text-[10px]">https://smart-lms.com.br</span>
+                    <span className="text-[10px]">https://plataforma.com.br</span>
                   </span>
                 </div>
                 <h4 className="truncate pt-1 text-lg font-medium text-[#1a0dab] hover:underline dark:text-[#8ab4f8]">
@@ -184,8 +218,8 @@ export function AppearanceClient({ initial, branding }: AppearanceClientProps) {
               {/* Social Preview */}
               <div className="overflow-hidden rounded-lg border border-border shadow-elev-1">
                 <div className="relative flex h-36 w-full flex-col items-center justify-center border-b border-border bg-background-secondary text-muted overflow-hidden">
-                  {branding.ogImageUrl ? (
-                    <img src={branding.ogImageUrl} alt="Open Graph" className="absolute inset-0 size-full object-cover" />
+                  {brandingState.ogImageUrl ? (
+                    <img src={brandingState.ogImageUrl} alt="Open Graph" className="absolute inset-0 size-full object-cover" />
                   ) : (
                     <>
                       <ImageIcon className="mb-2 size-10 opacity-40" aria-hidden="true" />
@@ -194,7 +228,7 @@ export function AppearanceClient({ initial, branding }: AppearanceClientProps) {
                   )}
                 </div>
                 <div className="bg-surface p-3">
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted">smart-lms.com.br</p>
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted">plataforma.com.br</p>
                   <h4 className="truncate text-sm font-semibold leading-tight text-foreground">{platformName || "Smart LMS"} - Plataforma EAD</h4>
                   <p className="mt-1 line-clamp-1 text-xs text-muted">{slogan || "A melhor plataforma de ensino a distância."}</p>
                 </div>

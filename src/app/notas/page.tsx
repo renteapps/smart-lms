@@ -5,7 +5,7 @@ import { getSessionUser } from "@/lib/supabase/auth";
 import { getNotes } from "@/lib/data/notes";
 
 export const metadata: Metadata = {
-  title: "Anotações | Smart LMS",
+  title: "Anotações",
   description: "Seu caderno de anotações de aulas, agentes e ideias soltas.",
 };
 

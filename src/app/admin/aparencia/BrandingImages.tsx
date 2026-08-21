@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button, toast } from "@heroui/react";
 import { Save } from "lucide-react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
@@ -8,20 +9,36 @@ import { saveBrandingImages, type BrandingImages as BrandingImagesValue } from "
 
 type BrandingImagesProps = {
   initial: BrandingImagesValue;
+  onChange?: (images: BrandingImagesValue) => void;
 };
 
 /**
  * Campos de imagem da identidade visual da plataforma.
  *
- * Vive separado do restante da página de aparência porque o upload é imediato —
- * a imagem já está no storage quando o admin confirma — e só o `Salvar` grava as
- * URLs em `app_settings.appearance`.
+ * Vive integrado à página de aparência: o upload sobe o arquivo para o storage
+ * e atualiza o estado em tempo real.
  */
-export function BrandingImages({ initial }: BrandingImagesProps) {
+export function BrandingImages({ initial, onChange }: BrandingImagesProps) {
+  const router = useRouter();
   const [logoUrl, setLogoUrl] = useState(initial.logoUrl);
   const [faviconUrl, setFaviconUrl] = useState(initial.faviconUrl);
   const [ogImageUrl, setOgImageUrl] = useState(initial.ogImageUrl);
   const [isSaving, setIsSaving] = useState(false);
+
+  const handleLogoChange = (url: string | null) => {
+    setLogoUrl(url);
+    onChange?.({ logoUrl: url, faviconUrl, ogImageUrl });
+  };
+
+  const handleFaviconChange = (url: string | null) => {
+    setFaviconUrl(url);
+    onChange?.({ logoUrl, faviconUrl: url, ogImageUrl });
+  };
+
+  const handleOgImageChange = (url: string | null) => {
+    setOgImageUrl(url);
+    onChange?.({ logoUrl, faviconUrl, ogImageUrl: url });
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -30,6 +47,7 @@ export function BrandingImages({ initial }: BrandingImagesProps) {
 
     if (result.success) {
       toast.success("Imagens salvas!", { description: result.message });
+      router.refresh();
     } else {
       toast.danger("Erro ao salvar", { description: result.message });
     }
@@ -41,19 +59,19 @@ export function BrandingImages({ initial }: BrandingImagesProps) {
         <ImageUpload
           label="Logo da Plataforma"
           value={logoUrl}
-          onChange={setLogoUrl}
+          onChange={handleLogoChange}
           folder="branding"
           aspect="free"
-          description="PNG ou JPG com fundo transparente, até 5 MB."
+          description="PNG, SVG ou JPG com fundo transparente, até 5 MB."
         />
 
         <ImageUpload
           label="Favicon"
           value={faviconUrl}
-          onChange={setFaviconUrl}
+          onChange={handleFaviconChange}
           folder="branding"
           aspect="square"
-          description="Formato 1:1, no mínimo 256x256px."
+          description="Formato 1:1 (PNG, ICO ou SVG), no mínimo 256x256px."
         />
       </div>
 
@@ -61,7 +79,7 @@ export function BrandingImages({ initial }: BrandingImagesProps) {
         <ImageUpload
           label="Capa de Redes Sociais (Open Graph)"
           value={ogImageUrl}
-          onChange={setOgImageUrl}
+          onChange={handleOgImageChange}
           folder="branding"
           aspect="wide"
           description="Recomendado: 1200x630px para WhatsApp, Facebook e LinkedIn."

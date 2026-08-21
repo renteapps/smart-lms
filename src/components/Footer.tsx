@@ -7,6 +7,7 @@ import { Separator } from "@heroui/react/separator";
 import { BrandMark } from "./BrandMark";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAppearance } from "@/contexts/AppearanceContext";
 import { isNavItemVisible, type NavFooterGroup } from "@/types/navigation";
 
 /*
@@ -23,6 +24,7 @@ const groupGridClasses: Record<number, string> = {
 
 export default function Footer({ groups }: { groups: NavFooterGroup[] }) {
   const { profileRole, isManager, isAuthenticated } = useAuth();
+  const { platformName } = useAppearance();
   const viewer = { isAuthenticated, isAdmin: profileRole === "admin", isManager };
 
   const visibleGroups = groups
@@ -87,7 +89,7 @@ export default function Footer({ groups }: { groups: NavFooterGroup[] }) {
       </div>
 
       <div className="editorial-container flex flex-col gap-2 py-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
-        <p>© {new Date().getFullYear()} Smart LMS. Aprender também é humano.</p>
+        <p>© {new Date().getFullYear()} {platformName || "Smart LMS"}. Aprender também é humano.</p>
         <p>Privacidade · Termos de uso</p>
       </div>
     </footer>

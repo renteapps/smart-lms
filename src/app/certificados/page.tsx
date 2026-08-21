@@ -10,7 +10,7 @@ import { getStudentCertificates } from '@/lib/data/certificates';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
-  title: 'Certificados | Smart LMS',
+  title: 'Certificados',
   description: 'Consulte os certificados emitidos para os cursos que você concluiu.',
 };
 

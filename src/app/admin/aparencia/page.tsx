@@ -1,30 +1,23 @@
 import { PageHeader } from "@/components/ui/editorial";
 import { createClient } from "@/lib/supabase/server";
+import { getAppearanceConfig } from "@/lib/data/appearance";
 import { AppearanceClient } from "./AppearanceClient";
 
 export default async function AparenciaPage() {
   const supabase = await createClient();
-  const { data: settings } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "appearance")
-    .maybeSingle();
-
-  const appearance = (settings?.value as Record<string, unknown> | null) ?? {};
-  const asString = (key: string, def = "") => (typeof appearance[key] === "string" ? (appearance[key] as string) : def);
-  const asUrl = (key: string) => (typeof appearance[key] === "string" ? (appearance[key] as string) : null);
+  const appearance = await getAppearanceConfig(supabase);
 
   const initial = {
-    platformName: asString("platformName", "Smart LMS"),
-    slogan: asString("slogan", "A melhor plataforma de ensino a distância. Aprenda no seu próprio ritmo com os melhores instrutores."),
-    primaryColor: asString("primaryColor", "#3157B7"),
-    theme: asString("theme", "light"),
+    platformName: appearance.platformName,
+    slogan: appearance.slogan,
+    primaryColor: appearance.primaryColor,
+    theme: appearance.theme,
   };
 
   const branding = {
-    logoUrl: asUrl("logoUrl"),
-    faviconUrl: asUrl("faviconUrl"),
-    ogImageUrl: asUrl("ogImageUrl"),
+    logoUrl: appearance.logoUrl ?? null,
+    faviconUrl: appearance.faviconUrl ?? null,
+    ogImageUrl: appearance.ogImageUrl ?? null,
   };
 
   return (

@@ -4,7 +4,7 @@ import { FeaturedArticle } from '@/components/blog/FeaturedArticle';
 import { ArticleCard } from '@/components/blog/ArticleCard';
 
 export const metadata = {
-  title: 'Blog | Smart LMS',
+  title: 'Blog',
   description: 'Artigos, áudios e reflexões para você acelerar seu crescimento profissional.',
 };
 

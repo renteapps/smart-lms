@@ -3,36 +3,36 @@ import { Manrope, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAppearanceConfig } from "@/lib/data/appearance";
+import { AppearanceProvider } from "@/contexts/AppearanceContext";
 
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
 
 export async function generateMetadata(): Promise<Metadata> {
   const supabase = createAdminClient();
-  const { data: settings } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "appearance")
-    .maybeSingle();
-
-  const appearance = (settings?.value as Record<string, unknown> | null) ?? {};
-  const platformName = typeof appearance.platformName === "string" ? appearance.platformName : "Smart LMS";
-  const slogan = typeof appearance.slogan === "string" ? appearance.slogan : "Aprendizagem humana para habilidades que transformam carreiras.";
-  const faviconUrl = typeof appearance.faviconUrl === "string" ? appearance.faviconUrl : undefined;
-  const ogImageUrl = typeof appearance.ogImageUrl === "string" ? appearance.ogImageUrl : undefined;
+  const appearance = await getAppearanceConfig(supabase);
 
   return {
     title: {
-      default: platformName,
-      template: `%s | ${platformName}`,
+      default: appearance.platformName,
+      template: `%s | ${appearance.platformName}`,
     },
-    description: slogan,
-    icons: faviconUrl ? { icon: faviconUrl } : undefined,
-    openGraph: ogImageUrl ? {
-      title: platformName,
-      description: slogan,
-      images: [ogImageUrl],
-    } : undefined,
+    description: appearance.slogan,
+    icons: appearance.faviconUrl
+      ? {
+          icon: appearance.faviconUrl,
+          shortcut: appearance.faviconUrl,
+          apple: appearance.faviconUrl,
+        }
+      : undefined,
+    openGraph: appearance.ogImageUrl
+      ? {
+          title: appearance.platformName,
+          description: appearance.slogan,
+          images: [appearance.ogImageUrl],
+        }
+      : undefined,
   };
 }
 
@@ -42,19 +42,21 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const supabase = createAdminClient();
-  const { data: settings } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "appearance")
-    .maybeSingle();
-
-  const appearance = (settings?.value as Record<string, unknown> | null) ?? {};
-  const primaryColor = typeof appearance.primaryColor === "string" ? appearance.primaryColor : "#3157B7";
+  const appearance = await getAppearanceConfig(supabase);
+  const primaryColor = appearance.primaryColor || "#3157B7";
 
   return (
     <html lang="pt-BR" className={cn(dmSans.variable, manrope.variable)}>
       <head>
-        <style dangerouslySetInnerHTML={{ __html: `
+        {appearance.faviconUrl && (
+          <>
+            <link rel="icon" href={appearance.faviconUrl} sizes="any" />
+            <link rel="apple-touch-icon" href={appearance.faviconUrl} />
+          </>
+        )}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
           :root, .dark, [data-theme="dark"] {
             --accent: ${primaryColor};
             --accent-hover: color-mix(in srgb, ${primaryColor} 85%, black);
@@ -65,9 +67,15 @@ export default async function RootLayout({
             --primary-pale: var(--accent-soft);
             --on-primary: var(--accent-foreground);
           }
-        ` }} />
+        `,
+          }}
+        />
       </head>
-      <body>{children}</body>
+      <body>
+        <AppearanceProvider value={appearance}>
+          {children}
+        </AppearanceProvider>
+      </body>
     </html>
   );
 }

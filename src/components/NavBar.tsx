@@ -9,6 +9,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { NotificationBell } from "./NotificationBell";
 import { BrandMark } from "./BrandMark";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAppearance } from "@/contexts/AppearanceContext";
 import { cn } from "@/lib/utils";
 import {
   PROFILE_SAVED_EVENT,
@@ -56,6 +57,7 @@ export default function NavBar({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
   const { user, isAuthenticated, signOut, profileRole, isManager } = useAuth();
+  const { platformName } = useAppearance();
 
   const viewer = { isAuthenticated, isAdmin: profileRole === "admin", isManager };
   const visibleLinks = items.filter((item) => isNavItemVisible(item, viewer));
@@ -369,7 +371,7 @@ export default function NavBar({ items }: { items: NavItem[] }) {
                           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 font-semibold text-foreground shadow-surface transition-colors hover:bg-surface-hover"
                         >
                           <LogIn className="size-4" aria-hidden="true" />
-                          <span>Entrar no Smart LMS</span>
+                          <span>Entrar no {platformName || "Smart LMS"}</span>
                         </Link>
                         <Link
                           href="/criar-conta"

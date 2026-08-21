@@ -6,6 +6,7 @@ import { ArrowLeft, CheckCircle2, Lock, ShieldCheck, Sparkles } from "lucide-rea
 import { BrandMark } from "@/components/BrandMark";
 import { Card, Chip } from "@heroui/react";
 import { Rise } from "@/components/ui/Rise";
+import { useAppearance } from "@/contexts/AppearanceContext";
 import { cn } from "@/lib/utils";
 
 interface AuthLayoutShellProps {
@@ -31,8 +32,11 @@ export function AuthLayoutShell({
   footerLinkHref,
   sideTitle = "Transforme conhecimento em prática real.",
   sideDescription = "Acesse suas trilhas personalizadas, converse com agentes de mentoria dedicados e acompanhe sua evolução contínua.",
-  sideBadge = "Smart LMS 2.0",
+  sideBadge,
 }: AuthLayoutShellProps) {
+  const { platformName } = useAppearance();
+  const name = platformName || "Smart LMS";
+  const resolvedBadge = sideBadge || `${name} 2.0`;
   return (
     <div className="relative min-h-screen flex flex-col justify-between pt-10 pb-16 sm:pt-14 sm:pb-20">
       <div className="editorial-container w-full max-w-[68rem]">
@@ -80,7 +84,7 @@ export function AuthLayoutShell({
             <div className="space-y-4">
               <Chip color="accent" variant="soft" size="sm">
                 <Sparkles className="size-3.5 mr-1" aria-hidden="true" />
-                {sideBadge}
+                {resolvedBadge}
               </Chip>
               <h2 className="display-3 text-foreground leading-snug font-bold">{sideTitle}</h2>
               <p className="text-sm text-muted leading-relaxed">{sideDescription}</p>
@@ -132,7 +136,7 @@ export function AuthLayoutShell({
           <ShieldCheck className="size-3.5 text-success" aria-hidden="true" /> Sessões seguras com tokens protegidos
         </span>
         <span className="h-3 w-px bg-border" aria-hidden="true" />
-        <span>Smart LMS © {new Date().getFullYear()}</span>
+        <span>{name} © {new Date().getFullYear()}</span>
       </div>
     </div>
   );

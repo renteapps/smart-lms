@@ -15,8 +15,8 @@ import { createClient } from "@/lib/supabase/server";
 import { LearningStats } from "./LearningStats";
 
 export const metadata: Metadata = {
-  title: "Meu perfil | Smart LMS",
-  description: "Gerencie seu perfil e suas preferências de aprendizagem no Smart LMS.",
+  title: "Meu Perfil",
+  description: "Gerencie seu perfil e suas preferências de aprendizagem.",
 };
 
 const CURRENT_STAGE_PROGRESS = 68;

@@ -16,6 +16,7 @@ import {
 import { Alert, Button, buttonVariants, Spinner, toast } from "@heroui/react";
 import { AuthLayoutShell } from "@/components/auth/AuthLayoutShell";
 import { resendSignUpEmailAction } from "@/lib/auth/actions";
+import { useAppearance } from "@/contexts/AppearanceContext";
 
 function getWebmailProviderUrl(email: string): { name: string; url: string } | null {
   const domain = email.split("@")[1]?.toLowerCase();
@@ -43,6 +44,7 @@ function getWebmailProviderUrl(email: string): { name: string; url: string } | n
 
 function ConfirmarContent() {
   const router = useRouter();
+  const { platformName } = useAppearance();
   const searchParams = useSearchParams();
   const emailParam = searchParams.get("email") || "";
   const statusParam = searchParams.get("status");
@@ -117,7 +119,7 @@ function ConfirmarContent() {
     return (
       <AuthLayoutShell
         title="Conta criada e confirmada!"
-        subtitle="Seu acesso ao Smart LMS foi ativado com sucesso. Estamos preparando seu ambiente personalizado."
+        subtitle={`Seu acesso à ${platformName || "plataforma"} foi ativado com sucesso. Estamos preparando seu ambiente personalizado.`}
         eyebrow="Tudo pronto"
         sideTitle="Sua evolução começa agora."
         sideDescription="Você será conduzido pelo Onboarding interativo para configurar suas metas, trilhas recomendadas e mentor de IA."
@@ -131,7 +133,7 @@ function ConfirmarContent() {
 
           <div className="space-y-2">
             <h2 className="display-3 font-extrabold text-foreground">
-              Seja bem-vindo ao Smart LMS!
+              Seja bem-vindo à {platformName || "nossa plataforma"}!
             </h2>
             <p className="text-sm text-muted max-w-md mx-auto leading-relaxed">
               Sua conta foi validada com sucesso. Redirecionando para o seu Onboarding em{" "}

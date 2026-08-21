@@ -5,7 +5,7 @@ import { getCatalogCourses } from "@/lib/data/courses";
 import { getLearningTrail, getPublishedQuestionnaire } from "@/lib/data/trail";
 
 export const metadata: Metadata = {
-  title: "Cursos | Smart LMS",
+  title: "Cursos",
   description: "Catálogo de cursos, ordenado pela sua afinidade.",
 };
 

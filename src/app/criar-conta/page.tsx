@@ -25,10 +25,12 @@ import { PhoneInputField } from "@/components/ui/PhoneInputField";
 import { CAREER_ROLES, GENDER_OPTIONS } from "@/lib/profilePreferences";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAppearance } from "@/contexts/AppearanceContext";
 import { composeFullPhone } from "@/lib/phoneUtils";
 
 function CriarContaContent() {
   const router = useRouter();
+  const { platformName } = useAppearance();
   const searchParams = useSearchParams();
   const next = searchParams.get("redirect") || searchParams.get("next") || "/onboarding";
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -139,7 +141,7 @@ function CriarContaContent() {
         // Se a confirmação de e-mail estiver desativada no Supabase, a sessão já é retornada ativa!
         if (data.session) {
           toast.success("Conta criada com sucesso!", {
-            description: "Seja muito bem-vindo ao Smart LMS!",
+            description: `Seja muito bem-vindo à ${platformName || "plataforma"}!`,
           });
           window.location.href = next;
         } else {
@@ -160,11 +162,11 @@ function CriarContaContent() {
       title="Crie sua conta"
       subtitle="Inicie sua jornada de aprendizagem prática com trilhas personalizadas e mentoria por IA."
       eyebrow="Novo cadastro"
-      footerText="Já tem uma conta no Smart LMS?"
+      footerText={`Já tem uma conta no ${platformName || "Smart LMS"}?`}
       footerLinkText="Acessar conta"
       footerLinkHref="/acessar"
       sideTitle="Acelere sua carreira com método comprovado."
-      sideDescription="Junte-se a milhares de profissionais que transformam teoria em execução no trabalho com o Smart LMS."
+      sideDescription={`Junte-se a milhares de profissionais que transformam teoria em execução no trabalho com ${platformName || "Smart LMS"}.`}
       sideBadge="Cadastro Gratuito"
     >
       {/* Error alert */}

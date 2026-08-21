@@ -12,7 +12,7 @@ export async function generateMetadata({
   const { supabase } = await getSessionUser();
   const agent = await getAgentBySlug(supabase, slug);
 
-  if (!agent) return { title: "Agente · Smart LMS" };
+  if (!agent) return { title: "Agente de IA" };
 
   return {
     title: `${agent.name} · ${agent.role}`,

@@ -20,9 +20,11 @@ import { AuthLayoutShell } from "@/components/auth/AuthLayoutShell";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAppearance } from "@/contexts/AppearanceContext";
 
 function AcessarContent() {
   const router = useRouter();
+  const { platformName } = useAppearance();
   const searchParams = useSearchParams();
   const next = searchParams.get("redirect") || searchParams.get("next") || "/";
   const urlError = searchParams.get("error");
@@ -138,7 +140,7 @@ function AcessarContent() {
     <AuthLayoutShell
       title="Acesse sua conta"
       subtitle="Entre com suas credenciais para continuar sua trilha de desenvolvimento e projetos."
-      footerText="Ainda não tem uma conta no Smart LMS?"
+      footerText={`Ainda não tem uma conta no ${platformName || "Smart LMS"}?`}
       footerLinkText="Criar conta gratuitamente"
       footerLinkHref="/criar-conta"
     >
@@ -272,7 +274,7 @@ function AcessarContent() {
                 </>
               ) : (
                 <>
-                  <span>Entrar no Smart LMS</span>
+                  <span>Entrar no {platformName || "Smart LMS"}</span>
                   <ArrowRight className="size-4 ml-1.5" aria-hidden="true" />
                 </>
               )}

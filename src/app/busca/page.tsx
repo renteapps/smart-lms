@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { SearchPageView } from "@/components/search/SearchPageView";
 
 export const metadata: Metadata = {
-  title: "Buscar Conteúdos | Smart LMS",
-  description: "Pesquise por aulas, agentes de IA, artigos do blog e suas anotações pessoais no Smart LMS.",
+  title: "Buscar Conteúdos",
+  description: "Pesquise por aulas, agentes de IA, artigos do blog e suas anotações pessoais.",
 };
 
 export default function BuscaPage() {
