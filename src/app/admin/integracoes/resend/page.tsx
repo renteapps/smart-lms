@@ -19,10 +19,10 @@ import {
   ExternalLink,
   ShieldCheck,
   FileCode,
-  ArrowRight,
   Sliders,
   X,
 } from "lucide-react";
+import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { CustomEmailTemplate, ResendConfig, EmailTemplateType } from "@/types/resend";
 import { DEFAULT_RESEND_CONFIG, getResendConfig, saveResendConfig } from "@/lib/resendService";
 import { getCustomTemplates } from "@/lib/emailTemplates";
@@ -295,7 +295,7 @@ export default function ResendOverviewPage() {
               </p>
             </div>
           </div>
-          <ArrowRight className="size-4 text-muted group-hover:text-accent group-hover:translate-x-1 transition-all" />
+          <ArrowRight02Icon size={16} className="text-muted group-hover:text-accent group-hover:translate-x-1 transition-all" />
         </Link>
       </div>
 

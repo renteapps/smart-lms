@@ -41,6 +41,30 @@ function inlineText(content: unknown): string {
   }).join("");
 }
 
+const pastelBackgrounds: Record<string, string> = {
+  yellow: "color-mix(in oklch, #fde047 30%, transparent)",
+  blue: "color-mix(in oklch, var(--accent) 20%, transparent)",
+  green: "color-mix(in oklch, var(--success) 20%, transparent)",
+  red: "color-mix(in oklch, var(--danger) 20%, transparent)",
+  pink: "color-mix(in oklch, #f472b6 20%, transparent)",
+  purple: "color-mix(in oklch, #c084fc 20%, transparent)",
+  orange: "color-mix(in oklch, var(--warning) 25%, transparent)",
+  brown: "color-mix(in oklch, #a8a29e 25%, transparent)",
+  gray: "var(--surface-secondary)",
+};
+
+const pastelText: Record<string, string> = {
+  yellow: "#a16207",
+  blue: "var(--accent)",
+  green: "var(--success)",
+  red: "var(--danger)",
+  pink: "#db2777",
+  purple: "#9333ea",
+  orange: "#ea580c",
+  brown: "#78716c",
+  gray: "var(--muted)",
+};
+
 function InlineContent({ content }: { content: unknown }) {
   if (typeof content === "string") return <>{stripHtml(content)}</>;
   if (!Array.isArray(content)) return null;
@@ -55,9 +79,21 @@ function InlineContent({ content }: { content: unknown }) {
     if (styles.italic) child = <em>{child}</em>;
     if (styles.underline) child = <u>{child}</u>;
     if (styles.strike) child = <s>{child}</s>;
-    const color = typeof styles.textColor === "string" ? styles.textColor : undefined;
-    const backgroundColor = typeof styles.backgroundColor === "string" ? styles.backgroundColor : undefined;
-    const styled = color || backgroundColor ? <span style={{ color, backgroundColor }}>{child}</span> : child;
+    
+    const rawColor = typeof styles.textColor === "string" ? styles.textColor : undefined;
+    const rawBg = typeof styles.backgroundColor === "string" ? styles.backgroundColor : undefined;
+    
+    const color = rawColor ? (pastelText[rawColor.toLowerCase()] || rawColor) : undefined;
+    const backgroundColor = rawBg ? (pastelBackgrounds[rawBg.toLowerCase()] || rawBg) : undefined;
+    
+    const styled = color || backgroundColor ? (
+      <span 
+        style={{ color, backgroundColor }} 
+        className={cn(backgroundColor && "px-1.5 py-0.5 rounded-md box-decoration-clone")}
+      >
+        {child}
+      </span>
+    ) : child;
     return node.type === "link" && node.href
       ? <a key={index} href={node.href} rel="noreferrer" className="text-accent underline">{styled}</a>
       : <span key={index}>{styled}</span>;

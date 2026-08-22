@@ -1,16 +1,16 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button, ScrollShadow, type ScrollShadowVisibility } from "@heroui/react";
+import { Button } from "@heroui/react";
 import { cn } from "@/lib/utils";
 
 type CarouselRowProps = {
   title?: string;
   /** Ícone antes do título — ex.: distinguir a fileira de um curso específico. */
   titleIcon?: React.ReactNode;
-  /** Ação à direita do título, alinhada com ele — ex.: link "Acessar curso". */
+  /** Ação à direita do título, alinhada com ele — ex.: link "Acessar". */
   action?: React.ReactNode;
   children: React.ReactNode;
   /** Rótulo acessível da região de rolagem. Cai para o título quando ausente. */
@@ -43,15 +43,13 @@ const itemVariants = {
 /**
  * Linha de conteúdo rolável horizontalmente.
  *
- * A mecânica é a mesma de antes — rolagem nativa com snap e entrada escalonada
- * pelo framer-motion. O que muda é a leitura das bordas: o `ScrollShadow` do
- * HeroUI aplica a máscara de esmaecimento e nos informa, pelo próprio callback
- * de visibilidade, de que lado ainda existe conteúdo — é essa informação que
- * habilita ou desabilita as setas, em vez de um listener de scroll paralelo.
+ * A mecânica é nativa com snap e entrada escalonada pelo framer-motion.
+ * O esmaecimento das bordas (gradiente) acompanha fluidamente a rolagem usando CSS mask-image 
+ * sincronizado via manipulação direta de variáveis CSS no evento onScroll para máxima performance.
  */
 export default function CarouselRow({ title, titleIcon, action, children, label, className }: CarouselRowProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const [edges, setEdges] = useState<ScrollShadowVisibility>("none");
+  const [edges, setEdges] = useState<"none" | "left" | "right" | "both">("none");
   const reduceMotion = useReducedMotion();
 
   const canScrollStart = edges === "left" || edges === "both";
@@ -69,6 +67,41 @@ export default function CarouselRow({ title, titleIcon, action, children, label,
     [reduceMotion],
   );
 
+  const handleScroll = useCallback(() => {
+    const node = scrollerRef.current;
+    if (!node) return;
+
+    const { scrollLeft, scrollWidth, clientWidth } = node;
+    const maxScroll = Math.max(0, scrollWidth - clientWidth);
+
+    // O gradiente vai de 0 até no máximo 56px de tamanho nas extremidades
+    const MAX_MASK_SIZE = 56;
+    const left = Math.min(Math.max(0, scrollLeft), MAX_MASK_SIZE);
+    const right = Math.min(Math.max(0, maxScroll - scrollLeft), MAX_MASK_SIZE);
+
+    // Atualiza o CSS diretamente para 60fps sem engasgos do React
+    node.style.setProperty("--left-mask", `${left}px`);
+    node.style.setProperty("--right-mask", `${right}px`);
+
+    // Atualiza estado das setas de navegação usando 1px de tolerância para arredondamentos
+    const hasLeftEdge = scrollLeft > 1;
+    const hasRightEdge = scrollLeft < maxScroll - 1;
+
+    let newEdges: "none" | "left" | "right" | "both" = "none";
+    if (hasLeftEdge && hasRightEdge) newEdges = "both";
+    else if (hasLeftEdge) newEdges = "left";
+    else if (hasRightEdge) newEdges = "right";
+
+    setEdges((prev) => (prev !== newEdges ? newEdges : prev));
+  }, []);
+
+  // Garante inicialização correta quando o componente monta e quando o layout ajusta
+  useEffect(() => {
+    handleScroll();
+    window.addEventListener("resize", handleScroll);
+    return () => window.removeEventListener("resize", handleScroll);
+  }, [handleScroll]);
+
   return (
     <section className={cn("group/row relative py-6", className)}>
       {title && (
@@ -82,16 +115,17 @@ export default function CarouselRow({ title, titleIcon, action, children, label,
       )}
 
       <div className="relative">
-        <ScrollShadow
+        <div
           ref={scrollerRef}
-          orientation="horizontal"
-          hideScrollBar
-          size={56}
-          onVisibilityChange={setEdges}
+          onScroll={handleScroll}
           aria-label={label ?? title ?? "Conteúdos"}
-          className="editorial-container -my-6 py-6 overflow-y-hidden"
+          className="editorial-container -my-6 py-6 overflow-y-hidden overflow-x-auto hide-scrollbar"
           role="region"
           tabIndex={0}
+          style={{
+            maskImage: `linear-gradient(to right, transparent 0, black var(--left-mask, 0px), black calc(100% - var(--right-mask, 0px)), transparent 100%)`,
+            WebkitMaskImage: `linear-gradient(to right, transparent 0, black var(--left-mask, 0px), black calc(100% - var(--right-mask, 0px)), transparent 100%)`,
+          }}
         >
           {/*
            * O respiro vertical devolve espaço para a sombra de hover
@@ -110,7 +144,7 @@ export default function CarouselRow({ title, titleIcon, action, children, label,
               </motion.div>
             ))}
           </motion.div>
-        </ScrollShadow>
+        </div>
 
         {/*
          * As setas são um atalho para ponteiro fino — em toque a rolagem já é

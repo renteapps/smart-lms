@@ -35,8 +35,9 @@ type CourseCardProps = {
   level?: "Essencial" | "Intermediário" | "Avançado" | string;
   className?: string;
   eager?: boolean;
-  /** Realce de borda seguindo o cursor. Reservado ao card de destaque da tela. */
   featured?: boolean;
+  /** Oculta informações meta (duração, aulas, nível e badge de categoria). Usado na home. */
+  hideMeta?: boolean;
 };
 
 export default function CourseCard({
@@ -58,6 +59,7 @@ export default function CourseCard({
   className,
   eager = false,
   featured = false,
+  hideMeta = false,
 }: CourseCardProps) {
   const { triggerTransition } = useCardTransition();
   const { user } = useAuth();
@@ -150,7 +152,7 @@ export default function CourseCard({
                 }
               }}
               className={cn(
-                "object-cover transition-[filter,transform] duration-[var(--duration-lg)] ease-[var(--ease-zen)]",
+                "object-cover transition-[filter,transform,scale] duration-[var(--duration-lg)] ease-[var(--spring)]",
                 state.kind === "locked"
                   ? "scale-[1.02] blur-[3px]"
                   : "group-hover:scale-[1.035]",
@@ -176,9 +178,11 @@ export default function CourseCard({
              * Material sobre imagem: a capa continua visível através da etiqueta.
              * Espessura `thick` porque há texto em cima — contraste AA é obrigatório.
              */}
-            <span className="material-thick absolute bottom-3 left-3 z-20 rounded-md px-2.5 py-1 text-[0.6875rem] font-bold uppercase tracking-[0.06em] text-foreground">
-              {category}
-            </span>
+            {!hideMeta && (
+              <span className="material-thick absolute bottom-3 left-3 z-20 rounded-md px-2.5 py-1 text-[0.6875rem] font-bold uppercase tracking-[0.06em] text-foreground">
+                {category}
+              </span>
+            )}
             {state.kind === "in-progress" && (
               <span className="material-thick absolute right-3 top-3 z-20 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[0.6875rem] font-bold tracking-[0.02em] text-accent">
                 <span className="size-1.5 rounded-full bg-accent animate-pulse" aria-hidden="true" />
@@ -202,39 +206,41 @@ export default function CourseCard({
             )}
           </Card.Header>
 
-          <Card.Content className="gap-4 px-5 pt-4" data-numeric>
-            {hasMeta && (
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-muted">
-                {duration && (
-                  <span className="flex items-center gap-1.5">
-                    <Clock3 className="size-3.5" aria-hidden="true" />
-                    {duration}
-                  </span>
-                )}
-                {lessonCount !== undefined && (
-                  <span className="flex items-center gap-1.5">
-                    <Layers3 className="size-3.5" aria-hidden="true" />
-                    {lessonCount} aulas
-                  </span>
-                )}
-                {level && (
-                  <Chip size="sm" variant="soft" color="default" className="ml-auto">
-                    {level}
-                  </Chip>
-                )}
-              </div>
-            )}
+          {((hasMeta && !hideMeta) || state.kind === "in-progress") && (
+            <Card.Content className="gap-4 px-5 pt-4" data-numeric>
+              {hasMeta && !hideMeta && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-muted">
+                  {duration && (
+                    <span className="flex items-center gap-1.5">
+                      <Clock3 className="size-3.5" aria-hidden="true" />
+                      {duration}
+                    </span>
+                  )}
+                  {lessonCount !== undefined && (
+                    <span className="flex items-center gap-1.5">
+                      <Layers3 className="size-3.5" aria-hidden="true" />
+                      {lessonCount} aulas
+                    </span>
+                  )}
+                  {level && (
+                    <Chip size="sm" variant="soft" color="default" className="ml-auto">
+                      {level}
+                    </Chip>
+                  )}
+                </div>
+              )}
 
-            {state.kind === "in-progress" && (
-              <ProgressBar value={state.progress} color="accent" size="sm">
-                <Label className="text-xs font-bold text-muted">Seu progresso</Label>
-                <ProgressBar.Output className="text-xs font-bold text-accent" />
-                <ProgressBar.Track>
-                  <ProgressBar.Fill />
-                </ProgressBar.Track>
-              </ProgressBar>
-            )}
-          </Card.Content>
+              {state.kind === "in-progress" && (
+                <ProgressBar value={state.progress} color="accent" size="sm">
+                  <Label className="text-xs font-bold text-muted">Seu progresso</Label>
+                  <ProgressBar.Output className="text-xs font-bold text-accent" />
+                  <ProgressBar.Track>
+                    <ProgressBar.Fill />
+                  </ProgressBar.Track>
+                </ProgressBar>
+              )}
+            </Card.Content>
+          )}
 
           {/*
            * A hairline mora no rodapé, não na régua de meta: uma linha só, e ela
@@ -245,7 +251,7 @@ export default function CourseCard({
             <span
               aria-hidden="true"
               className={cn(
-                "grid size-8 place-items-center rounded-md bg-accent-soft text-accent-soft-foreground transition-[background-color,color,transform] duration-[var(--duration-md)]",
+                "grid size-8 place-items-center rounded-md bg-accent-soft text-accent-soft-foreground transition-[background-color,color,transform,translate] duration-[var(--duration-lg)] ease-[var(--spring)]",
                 linkUrl && "group-hover:translate-x-0.5 group-hover:bg-accent group-hover:text-accent-foreground",
                 !linkUrl && "bg-background-secondary text-muted",
               )}

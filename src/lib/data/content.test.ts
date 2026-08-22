@@ -80,3 +80,94 @@ describe("getContentIndex — pré-requisitos", () => {
     expect(index.eligibleLessons.find((l) => l.lessonId === "l3")?.prerequisitos).toEqual(["l1"]);
   });
 });
+
+describe("getContentIndex — capa e origem da aula", () => {
+  it("prefere a thumb da própria aula à capa do módulo e do curso", async () => {
+    const index = await getContentIndex(fakeDb([{
+      id: "c1",
+      slug: "curso",
+      title: "Curso",
+      cover_url: "capa-do-curso.jpg",
+      modules: [{
+        id: "m1",
+        title: "Módulo 1",
+        order_index: 0,
+        cover_url: "capa-do-modulo.jpg",
+        lessons: [
+          { ...baseLesson, id: "l1", title: "Aula 1", order_index: 0, cover_url: "thumb-da-aula.jpg" },
+          { ...baseLesson, id: "l2", title: "Aula 2", order_index: 1, cover_url: "   " },
+        ],
+      }],
+    }]));
+
+    expect(index.byId("l1")?.cover).toBe("thumb-da-aula.jpg");
+    // Sem thumb própria, a aula continua herdando a capa do módulo.
+    expect(index.byId("l2")?.cover).toBe("capa-do-modulo.jpg");
+  });
+
+  it("não põe o módulo de infraestrutura do curso galeria como origem da aula", async () => {
+    const index = await getContentIndex(fakeDb([{
+      id: "c1",
+      slug: "destaques",
+      title: "Destaques",
+      cover_url: "capa-do-curso.jpg",
+      layout: "gallery",
+      // O módulo único que a migration `gallery_courses` cria junto com o curso.
+      modules: [{
+        id: "m1",
+        title: "Aulas",
+        order_index: 0,
+        cover_url: null,
+        lessons: [{ ...baseLesson, id: "l1", title: "Masterclass", order_index: 0, cover_url: "thumb.jpg" }],
+      }],
+    }]));
+
+    const lesson = index.byId("l1");
+    expect(lesson?.cover).toBe("thumb.jpg");
+    // Coleção de avulsas: sem sequência editorial e sem corrente de pré-requisitos.
+    expect(lesson?.sequence).toBeUndefined();
+    expect(lesson?.prerequisites).toBeUndefined();
+    // "Módulo: Aulas" não diz nada: no curso galeria a origem é o próprio curso.
+    expect(lesson?.moduleName).toBeUndefined();
+    expect(lesson?.courseName).toBe("Destaques");
+    expect(lesson?.category).toBe("Destaques");
+  });
+});
+
+describe("getContentIndex — curso galeria não herda a corrente linear", () => {
+  const gallery = (lessons: Row[]): Row[] => [{
+    id: "c1",
+    slug: "destaques",
+    title: "Destaques",
+    cover_url: "capa-do-curso.jpg",
+    layout: "gallery",
+    modules: [{ id: "m1", title: "Aulas", order_index: 0, cover_url: null, lessons }],
+  }];
+
+  it("não prende uma masterclass à anterior", async () => {
+    const index = await getContentIndex(fakeDb(gallery([
+      { ...baseLesson, id: "l1", title: "Masterclass 1", order_index: 1 },
+      { ...baseLesson, id: "l2", title: "Masterclass 2", order_index: 2 },
+      { ...baseLesson, id: "l6", title: "Masterclass 6", order_index: 6 },
+    ])));
+
+    /*
+     * A regressão que isto trava: com a corrente linear, mapear a sexta
+     * masterclass numa resposta arrastava as cinco anteriores como
+     * pré-requisito e jogava para o fim do plano a aula que o admin tinha
+     * posto em primeiro lugar na curadoria.
+     */
+    expect(index.byId("l6")?.prerequisites).toBeUndefined();
+    expect(index.byId("l2")?.prerequisites).toBeUndefined();
+    expect(index.eligibleLessons.find((l) => l.lessonId === "l6")?.prerequisitos).toBeUndefined();
+  });
+
+  it("continua respeitando o pré-requisito que o admin declarou", async () => {
+    const index = await getContentIndex(fakeDb(gallery([
+      { ...baseLesson, id: "l1", title: "Masterclass 1", order_index: 1 },
+      { ...baseLesson, id: "l2", title: "Masterclass 2", order_index: 2, prerequisites: ["l1"] },
+    ])));
+
+    expect(index.byId("l2")?.prerequisites).toEqual(["l1"]);
+  });
+});

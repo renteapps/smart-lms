@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Clock3, PlayCircle } from "lucide-react";
+import { Clock3 } from "lucide-react";
 import { Card } from "@heroui/react";
+import { PlayIcon } from "@/components/ui/play";
 import { useCardTransition } from "@/contexts/CardTransitionContext";
 import { cn } from "@/lib/utils";
 import type { ContinueLesson } from "@/types/course";
@@ -71,7 +72,7 @@ export default function ContinueWatchingCard({ lesson, className, eager = false 
             loading={eager ? "eager" : "lazy"}
             sizes="(max-width: 768px) 78vw, 320px"
             onError={() => setFailedCover(true)}
-            className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.03]"
+            className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--spring)] group-hover:scale-[1.03]"
           />
 
           <div
@@ -79,9 +80,9 @@ export default function ContinueWatchingCard({ lesson, className, eager = false 
             className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/0 to-foreground/0 opacity-0 transition-opacity duration-[var(--duration-md)] group-hover:opacity-100"
           />
 
-          <span className="absolute inset-0 grid place-items-center opacity-0 transition-opacity duration-[var(--duration-md)] group-hover:opacity-100">
-            <span className="grid size-11 place-items-center rounded-full border border-background/30 bg-foreground/70 text-background shadow-elev-2">
-              <PlayCircle className="size-5 fill-current" aria-hidden="true" />
+          <span className="absolute inset-0 grid scale-75 place-items-center opacity-0 transition-[opacity,transform,scale] duration-[var(--duration-lg)] ease-[var(--spring)] group-hover:scale-100 group-hover:opacity-100">
+            <span className="grid size-11 place-items-center rounded-full border border-background/30 bg-foreground/35 text-background shadow-elev-2 backdrop-blur-xl">
+              <PlayIcon size={20} aria-hidden="true" />
             </span>
           </span>
 

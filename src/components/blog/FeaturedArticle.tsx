@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Article } from '@/types/blog';
-import { Clock, Headphones, BookOpen, ArrowRight } from 'lucide-react';
+import { Clock, Headphones, BookOpen } from 'lucide-react';
+import { ArrowRight02Icon } from '@/components/ui/arrow-right-02';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
 import Image from 'next/image';
@@ -27,14 +28,14 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
           className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.025]"
         />
         {/* Véu de baixo para cima e lateral para legibilidade perfeita do texto sem escurecer a foto inteira */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/0" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/20 to-transparent" />
       </div>
 
       <div className="relative flex min-h-[480px] flex-col justify-end p-7 sm:p-10 md:min-h-[560px] lg:p-14">
         <div className="max-w-3xl">
           <div className="flex items-center gap-3 mb-6">
-            <span className="text-sm font-bold text-accent-soft-foreground tracking-wider uppercase bg-accent-soft px-3 py-1 rounded-full">
+            <span className="text-xs font-bold text-primary tracking-wider uppercase bg-white px-3 py-1.5 rounded-full shadow-sm">
               {article.category}
             </span>
 
@@ -58,7 +59,7 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
             )}
           </div>
 
-          <h2 className="mb-6 text-3xl font-extrabold leading-[1.05] tracking-[-0.045em] text-white md:text-5xl lg:text-6xl">
+          <h2 className="mb-6 text-3xl font-extrabold leading-[1.05] tracking-[-0.045em] text-white md:text-4xl lg:text-5xl">
             {article.title}
           </h2>
           
@@ -72,7 +73,7 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
               className={cn(buttonVariants({ size: "lg" }), "min-h-12 rounded-[13px] px-6 font-bold text-base")}
             >
               Ler Artigo
-              <ArrowRight className="w-5 h-5 ml-2" />
+              <ArrowRight02Icon size={20} className="ml-2" />
             </Link>
             
             <div className="flex items-center gap-3">

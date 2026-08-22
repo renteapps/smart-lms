@@ -8,7 +8,8 @@ import { StepWizard, WizardStep } from '@/components/admin/profile-tests/StepWiz
 import { CategoryEditor } from '@/components/admin/profile-tests/CategoryEditor';
 import { QuestionEditor } from '@/components/admin/profile-tests/QuestionEditor';
 import { TestPreview } from '@/components/admin/profile-tests/TestPreview';
-import { ArrowLeft, ArrowRight, Save, Eye, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ArrowRight02Icon } from '@/components/ui/arrow-right-02';
 import { toast } from 'sonner';
 import { ImageUpload } from '@/components/ui/ImageUpload';
 
@@ -404,7 +405,7 @@ export default function NewProfileTestPage() {
                 className="bg-accent text-accent-foreground px-6 py-2.5 rounded-xl font-bold text-xs hover:bg-accent-hover transition-all flex items-center gap-2 shadow-sm"
               >
                 Próximo Passo
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight02Icon size={16} />
               </button>
             ) : (
               <button

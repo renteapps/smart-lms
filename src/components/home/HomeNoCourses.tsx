@@ -45,7 +45,7 @@ export default function HomeNoCourses({ courses }: HomeNoCoursesProps) {
         <div className="mt-[clamp(3rem,5vw,4rem)] grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {courses.map((course, index) => (
             <Rise key={course.id} delay={index * 70} className="h-full">
-              <CourseCard {...course} className="h-full" />
+              <CourseCard {...course} hideMeta className="h-full" />
             </Rise>
           ))}
         </div>

@@ -1,4 +1,4 @@
-export type SearchResultType = "lesson" | "agent" | "article" | "note";
+export type SearchResultType = "course" | "lesson" | "agent" | "article" | "note";
 
 export type SearchTabType = "all" | SearchResultType;
 
@@ -10,6 +10,8 @@ export interface SearchResultMetadata {
   moduleTitle?: string;
   duration?: string | number;
   lessonType?: "video" | "text" | "quiz" | "profile_test";
+  hasAccess?: boolean;
+  level?: string;
 
   // Agentes
   avatar?: string;
@@ -71,6 +73,7 @@ export interface SearchResponse {
   totalCount: number;
   countsByType: {
     all: number;
+    course: number;
     lesson: number;
     agent: number;
     article: number;

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ArrowLeft, ArrowRight, Brain, Check, History, Maximize, Minimize, Star } from "lucide-react";
+import { ArrowLeft, Brain, Check, History, Maximize, Minimize, Star } from "lucide-react";
+import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { Button, Chip, Separator, Tooltip, buttonVariants } from "@heroui/react";
 import VideoPlayer from "./VideoPlayer";
 import LessonTabs from "./LessonTabs";
@@ -346,14 +347,14 @@ export default function LessonClientWrapper({
                 <span>
                   Próxima<span className="hidden sm:inline">&nbsp;etapa</span>
                 </span>
-                <ArrowRight className="size-4" aria-hidden="true" />
+                <ArrowRight02Icon size={16} aria-hidden="true" />
               </Link>
             ) : (
               <Button variant="primary" isDisabled className="gap-2 max-lg:flex-1">
                 <span>
                   Próxima<span className="hidden sm:inline">&nbsp;etapa</span>
                 </span>
-                <ArrowRight className="size-4" aria-hidden="true" />
+                <ArrowRight02Icon size={16} aria-hidden="true" />
               </Button>
             )}
           </div>

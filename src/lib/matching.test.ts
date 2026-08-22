@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applySessionFeedback, generateLearningTrail, postponeTrailSession, replanLearningTrail, schedulePendingItems, syncTrailCompletion, updateTrailAvailability, validateQuestionnaire, weeklyMinutes } from './matching';
+import { applySessionFeedback, generateLearningTrail, postponeTrailItem, postponeTrailSession, replanLearningTrail, schedulePendingItems, syncTrailCompletion, updateTrailAvailability, validateQuestionnaire, weeklyMinutes } from './matching';
 import { mockQuestionnaire, TRAIL_CONTENT_INDEX } from './seed/questionnaire';
 import { ContentMapping, LearningTrailItem, Questionnaire } from '@/types/trilha';
 
@@ -38,47 +38,106 @@ describe('adaptive learning trail', () => {
     );
 
     // Meta de 20 min: o dia fecha assim que passa de 16 e aceita até 24.
+    // `c` tem 25 e não cabe em dia nenhum da rotina — na vez dele leva o dia
+    // inteiro, em vez de ceder o lugar a `d` e esperar a fila esvaziar.
     expect(result.map((item) => [item.id, item.scheduledDate])).toEqual([
-      ['a', '2026-08-10'], ['b', '2026-08-10'], ['d', '2026-08-12'], ['c', '2026-08-17'],
+      ['a', '2026-08-10'], ['b', '2026-08-10'], ['c', '2026-08-12'], ['d', '2026-08-17'],
     ]);
-    // `d` foi antecipado porque `c` não cabia em dia nenhum da rotina.
-    expect(result.find((item) => item.id === 'd')?.movedForFit).toBe(true);
     expect(result.find((item) => item.id === 'c')?.overBudget).toBe(true);
   });
 
-  it('sends longer content to the day with more time', () => {
+  it('keeps content longer than the daily target in its curated turn', () => {
     const result = schedulePendingItems(
       [
-        pending('longa', 80, { courseId: 'c1', sequence: 1 }),
-        pending('media', 20, { courseId: 'c2', sequence: 1 }),
-        pending('curta', 10, { courseId: 'c2', sequence: 2 }),
+        pending('masterclass', 60, { courseId: 'galeria', sequence: 1 }),
+        pending('aula-1', 15, { courseId: 'c1', sequence: 1 }),
+        pending('aula-2', 15, { courseId: 'c1', sequence: 2 }),
+        pending('aula-3', 15, { courseId: 'c1', sequence: 3 }),
       ],
+      { weekdays: [1, 3], minutesPerSession: 30 },
+      new Date(2026, 7, 10),
+    );
+
+    const masterclass = result.find((item) => item.id === 'masterclass');
+    /*
+     * Uma aula de curso galeria com 60 minutos numa rotina de 30 entra na
+     * agenda, e no lugar dela: antes o preenchimento sempre achava algo mais
+     * curto para pôr no dia e a empurrava até o fim da trilha.
+     */
+    expect(masterclass?.scheduledDate).toBe('2026-08-10');
+    expect(masterclass?.overBudget).toBe(true);
+    // Sozinha na sessão — é o que o aviso do card promete.
+    expect(result.filter((item) => item.sessionId === masterclass?.sessionId)).toHaveLength(1);
+    expect(result.find((item) => item.id === 'aula-1')?.scheduledDate).toBe('2026-08-12');
+  });
+
+  it('never lets shorter content from another course pass content that does not fit the day', () => {
+    /*
+     * A rotina e as durações de uma trilha real: 20/20/25 minutos por dia, uma
+     * coleção de masterclasses de 27 e 63 minutos e um curso de aulas curtas.
+     * Nenhuma masterclass cabe na meta de um dia — e enquanto o dia era montado
+     * só por encaixe, as aulas curtas passavam na frente toda semana e a
+     * coleção inteira escorregava para o fim do plano.
+     */
+    const result = schedulePendingItems(
+      [
+        pending('masterclass-1', 27, { courseId: 'galeria', sequence: 1 }),
+        pending('curta-1', 5, { courseId: 'negociacao', sequence: 1 }),
+        pending('curta-2', 6, { courseId: 'negociacao', sequence: 2 }),
+        pending('masterclass-2', 63, { courseId: 'galeria', sequence: 2 }),
+      ],
+      { weekdays: [1, 3, 6], minutesPerSession: 20, mode: 'per_day', minutesByWeekday: { 1: 20, 3: 20, 6: 25 } },
+      new Date(2026, 7, 10),
+    );
+
+    expect(result.map((item) => item.id)).toEqual(['masterclass-1', 'curta-1', 'curta-2', 'masterclass-2']);
+
+    const scheduledFor = (id: string) => result.find((item) => item.id === id)?.scheduledDate;
+    // Segunda abre com a masterclass, não com as aulas curtas que caberiam nela.
+    expect(scheduledFor('masterclass-1')).toBe('2026-08-10');
+    expect(scheduledFor('curta-1')).toBe('2026-08-12');
+    expect(scheduledFor('masterclass-2')).toBe('2026-08-15');
+
+    // O dia ficou maior que a meta, e é isso que o card avisa.
+    expect(result.find((item) => item.id === 'masterclass-1')?.overBudget).toBe(true);
+    expect(result.find((item) => item.id === 'masterclass-2')?.overBudget).toBe(true);
+    // Furar a meta é privilégio de quem abre a sessão: ela não recebe mais nada.
+    expect(result.filter((item) => item.scheduledDate === '2026-08-10')).toHaveLength(1);
+  });
+
+  it('gives the day with more declared time more content', () => {
+    const result = schedulePendingItems(
+      [1, 2, 3, 4, 5, 6].map((n) => pending(`aula-${n}`, 15, { courseId: 'c1', sequence: n })),
       { weekdays: [1, 6], minutesPerSession: 30, mode: 'per_day', minutesByWeekday: { 1: 30, 6: 90 } },
       new Date(2026, 7, 10),
     );
 
-    const scheduledFor = (id: string) => result.find((item) => item.id === id)?.scheduledDate;
-    expect(scheduledFor('media')).toBe('2026-08-10');
-    expect(scheduledFor('curta')).toBe('2026-08-10');
-    // Sábado tem 90 minutos declarados: é lá que a aula longa cabe sem estourar.
-    expect(scheduledFor('longa')).toBe('2026-08-15');
-    expect(result.find((item) => item.id === 'longa')?.overBudget).toBeFalsy();
+    const minutesOn = (date: string) => result
+      .filter((item) => item.scheduledDate === date)
+      .reduce((total, item) => total + item.durationMin, 0);
+
+    // Segunda tem 30 minutos declarados; sábado, 90. Cada dia enche até a meta dele.
+    expect(minutesOn('2026-08-10')).toBe(30);
+    expect(minutesOn('2026-08-15')).toBe(60);
     expect(weeklyMinutes({ weekdays: [1, 6], minutesPerSession: 30, mode: 'per_day', minutesByWeekday: { 1: 30, 6: 90 } })).toBe(120);
   });
 
   it('reorders across courses to fill a day but never inside a course', () => {
     const result = schedulePendingItems(
       [
-        pending('c1-aula1', 50, { courseId: 'c1', sequence: 1 }),
-        pending('c1-aula2', 5, { courseId: 'c1', sequence: 2 }),
+        pending('c1-aula1', 12, { courseId: 'c1', sequence: 1 }),
+        pending('c1-aula2', 20, { courseId: 'c1', sequence: 2 }),
         pending('artigo', 5, { type: 'article' }),
       ],
       { weekdays: [1, 3], minutesPerSession: 20 },
       new Date(2026, 7, 10),
     );
 
-    // O artigo é antecipado; a aula 2 continua depois da aula 1 do mesmo curso.
-    expect(result.map((item) => item.id)).toEqual(['artigo', 'c1-aula1', 'c1-aula2']);
+    // A aula 2 não cabia no que sobrou da segunda: o artigo é antecipado para
+    // fechar o dia, e ela continua depois da aula 1 do mesmo curso.
+    expect(result.map((item) => item.id)).toEqual(['c1-aula1', 'artigo', 'c1-aula2']);
+    expect(result.find((item) => item.id === 'artigo')?.movedForFit).toBe(true);
+    expect(result.find((item) => item.id === 'c1-aula2')?.scheduledDate).toBe('2026-08-12');
   });
 
   it('starts on the next selected weekday when today is not selected', () => {
@@ -250,6 +309,60 @@ describe('adaptive learning trail', () => {
     const firstPendingSession = adjusted.items.find((item) => item.status === 'pending')!.sessionId;
     const postponed = postponeTrailSession(adjusted, firstPendingSession);
     expect(postponed.items.find((item) => item.status === 'pending')!.scheduledDate).toBe('2026-08-13');
+  });
+
+  it('postpones a single content without moving the rest of the session', () => {
+    const trail = generateLearningTrail('u1', {
+      q_formato: ['Teoria Profunda (Conceitos base)'], q_objetivo: ['Sair do zero com segurança'],
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 60 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
+
+    const firstDate = trail.items[0].scheduledDate;
+    const sameDay = trail.items.filter((item) => item.scheduledDate === firstDate);
+    // O teste só faz sentido com mais de um conteúdo no mesmo dia.
+    expect(sameDay.length).toBeGreaterThan(1);
+
+    // Adia o último do dia: nada depois dele na sequência, então ele vai sozinho.
+    const target = sameDay[sameDay.length - 1];
+    const postponed = postponeTrailItem(trail, target.id);
+    const moved = postponed.items.find((item) => item.id === target.id)!;
+
+    expect(moved.scheduledDate).not.toBe(firstDate);
+    expect(moved.rescheduled).toBe(true);
+    // O resto do dia fica onde estava.
+    sameDay.slice(0, -1).forEach((item) => {
+      expect(postponed.items.find((next) => next.id === item.id)!.scheduledDate).toBe(firstDate);
+    });
+  });
+
+  it('drags same-course successors so postponing never breaks the lesson order', () => {
+    const trail = generateLearningTrail('u1', {
+      q_formato: ['Teoria Profunda (Conceitos base)'], q_objetivo: ['Sair do zero com segurança'],
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 60 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
+
+    const firstDate = trail.items[0].scheduledDate;
+    const sameDay = trail.items.filter((item) => item.scheduledDate === firstDate);
+    const target = sameDay[0];
+    const successors = sameDay.filter(
+      (item) => item.id !== target.id
+        && (item.courseId || item.moduleId) === (target.courseId || target.moduleId),
+    );
+
+    const postponed = postponeTrailItem(trail, target.id);
+    const movedDate = postponed.items.find((item) => item.id === target.id)!.scheduledDate;
+
+    successors.forEach((item) => {
+      expect(postponed.items.find((next) => next.id === item.id)!.scheduledDate).toBe(movedDate);
+    });
+  });
+
+  it('leaves the trail untouched when the content is not pending', () => {
+    const trail = generateLearningTrail('u1', {
+      q_formato: ['Teoria Profunda (Conceitos base)'],
+    }, mockQuestionnaire, { weekdays: [1, 3], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX);
+
+    const done = { ...trail, items: trail.items.map((item, i) => (i === 0 ? { ...item, status: 'completed' as const } : item)) };
+    expect(postponeTrailItem(done, done.items[0].id)).toBe(done);
+    expect(postponeTrailItem(trail, 'nao-existe')).toBe(trail);
   });
 
   it('brings back content that an old trail had removed from the agenda', () => {

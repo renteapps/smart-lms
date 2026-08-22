@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, Clock3, MessageSquare, Plus, Route, TrendingUp, Users } from "lucide-react";
+import { BookOpen, Clock3, MessageSquare, Plus, Route, TrendingUp, Users } from "lucide-react";
+import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { Button, Card, buttonVariants } from "@heroui/react";
 import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
 import { cn } from "@/lib/utils";
@@ -145,7 +146,7 @@ export default async function AdminDashboard() {
                   <Icon className="size-4" aria-hidden="true" />
                 </span>
                 <span className="flex-1">{label}</span>
-                <ArrowRight className="size-4 text-muted" aria-hidden="true" />
+                <ArrowRight02Icon size={16} className="text-muted" aria-hidden="true" />
               </Link>
             ))}
           </Card.Content>

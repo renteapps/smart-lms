@@ -19,7 +19,7 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
     db
       .from("courses")
       .select(
-        "id, slug, title, cover_url, status, modules(id, title, order_index, cover_url, lessons(id, title, duration_in_minutes, order_index, is_published, is_eligible_for_trail, topics, solves, level, objective, audience, prerequisites, content, slug))",
+        "id, slug, title, cover_url, layout, status, modules(id, title, order_index, cover_url, lessons(id, title, cover_url, short_description, duration_in_minutes, order_index, is_published, is_eligible_for_trail, topics, solves, level, objective, audience, prerequisites, content, slug))",
       )
       .eq("is_published", true)
       .neq("status", "Arquivado")
@@ -40,6 +40,16 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
   const clean = (value?: string | null) => (value ?? "").trim();
 
   (courses.data ?? []).forEach((course: Row) => {
+    /*
+     * Curso galeria: as aulas são avulsas e o módulo único é infraestrutura.
+     *
+     * Ele existe só para pendurar as aulas (ver a migration `gallery_courses`),
+     * chama-se sempre "Aulas" e nenhuma tela o mostra — na trilha ele virava a
+     * linha "Módulo: Aulas" embaixo do título, que não diz nada. Aqui a origem
+     * da aula passa a ser o próprio curso.
+     */
+    const isGallery = course.layout === "gallery";
+
     const modules = (course.modules ?? [])
       .slice()
       .sort((a: Row, b: Row) => (a.order_index ?? 0) - (b.order_index ?? 0));
@@ -72,6 +82,13 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
        * Só entram ids de aulas que existem neste curso — id órfão (aula
        * apagada, ou colado de outro curso) viraria aviso de "pré-requisito não
        * encontrado" na trilha do aluno.
+       *
+       * O curso galeria fica de fora da corrente: ele é uma coleção de aulas
+       * avulsas, e é essa a definição dele no banco. Herdar a linearidade fazia
+       * a curadoria dizer o contrário do que pediu — mapear a sexta masterclass
+       * numa resposta arrastava as cinco anteriores como pré-requisito e
+       * empurrava para o fim do plano justamente a aula que o admin pôs em
+       * primeiro lugar. Aqui só vale o que ele declarou de verdade.
        */
       const declared: string[] = Array.isArray(lesson.prerequisites) ? lesson.prerequisites : [];
       const validDeclared = declared.filter(
@@ -79,7 +96,7 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
       );
       const prerequisites = validDeclared.length > 0
         ? validDeclared
-        : previous
+        : previous && !isGallery
           ? [previous]
           : undefined;
 
@@ -87,18 +104,29 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
         id: lesson.id,
         type: "lesson",
         title: clean(lesson.title),
-        category: clean(mod.title),
+        category: clean(isGallery ? course.title : mod.title),
         estimatedDurationMin: lesson.duration_in_minutes ?? 10,
         courseId: course.id,
         courseName: clean(course.title),
         moduleId: mod.id,
-        moduleName: clean(mod.title),
-        cover: mod.cover_url || course.cover_url || FALLBACK_COVER,
+        moduleName: isGallery ? undefined : clean(mod.title),
+        /*
+         * A thumb da própria aula vem primeiro.
+         *
+         * No curso galeria ela é obrigatória e é a identidade da masterclass —
+         * usar a capa do curso deixava a trilha inteira com a mesma imagem
+         * repetida. Nos cursos com módulos a thumb é opcional, e quando não
+         * existe a aula continua herdando a capa do módulo e depois a do curso.
+         */
+        cover: clean(lesson.cover_url) || mod.cover_url || course.cover_url || FALLBACK_COVER,
+        // A frase que o admin escreveu na aula; sem ela, nenhuma tela inventa outra.
+        shortDescription: clean(lesson.short_description) || undefined,
         prerequisites,
         slug: lesson.slug ?? undefined,
         // Ordem editorial do curso inteiro: o agendador divide o curso pelo tempo
-        // das aulas, mas sempre seguindo esta sequência.
-        sequence: position,
+        // das aulas, mas sempre seguindo esta sequência. Curso galeria não tem
+        // sequência a preservar — quem decide a ordem dele é a curadoria.
+        sequence: isGallery ? undefined : position,
       });
 
       if (lesson.is_eligible_for_trail !== false) {
@@ -153,6 +181,7 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
       title: clean(article.title),
       category: article.category ?? "Artigo",
       slug: article.slug,
+      shortDescription: clean(article.excerpt) || undefined,
       estimatedDurationMin: article.reading_time ?? 8,
     });
   });

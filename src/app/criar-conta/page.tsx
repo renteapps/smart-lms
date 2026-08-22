@@ -3,7 +3,8 @@
 import React, { Suspense, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertCircle, ArrowRight, Calendar, Mail, User } from "lucide-react";
+import { AlertCircle, Calendar, Mail, User } from "lucide-react";
+import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import {
   Alert,
   Button,
@@ -487,7 +488,7 @@ function CriarContaContent() {
           ) : (
             <>
               <span>Finalizar cadastro</span>
-              <ArrowRight className="size-4 ml-1.5" aria-hidden="true" />
+              <ArrowRight02Icon size={16} className="ml-1.5" aria-hidden="true" />
             </>
           )}
         </Button>

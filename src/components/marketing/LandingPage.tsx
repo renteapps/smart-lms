@@ -2,7 +2,8 @@
 
 import { Card, Typography, buttonVariants } from "@heroui/react";
 import Link from "next/link";
-import { ArrowRight, Sparkles, Target, Compass, BookOpen } from "lucide-react";
+import { Sparkles, Target, Compass, BookOpen } from "lucide-react";
+import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { Rise } from "@/components/ui/Rise";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +40,7 @@ export function LandingPage() {
               className={cn(buttonVariants({ variant: "primary", size: "lg" }), "h-14 px-8 text-lg w-full sm:w-auto gap-2")}
             >
               Criar minha trilha
-              <ArrowRight className="size-5" />
+              <ArrowRight02Icon size={20} />
             </Link>
             <Link 
               href="/acessar" 

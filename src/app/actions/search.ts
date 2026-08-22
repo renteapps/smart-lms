@@ -110,6 +110,7 @@ export async function searchContent(options: SearchFilterOptions): Promise<Searc
     // Calcula contadores de todas as categorias/tipos com o termo de busca atual
     const countsByType = {
       all: 0,
+      course: 0,
       lesson: 0,
       agent: 0,
       article: 0,
@@ -139,7 +140,7 @@ export async function searchContent(options: SearchFilterOptions): Promise<Searc
       query: trimmedQuery,
       items: [],
       totalCount: 0,
-      countsByType: { all: 0, lesson: 0, agent: 0, article: 0, note: 0 },
+      countsByType: { all: 0, course: 0, lesson: 0, agent: 0, article: 0, note: 0 },
       categories: ["Todas"],
     };
   }

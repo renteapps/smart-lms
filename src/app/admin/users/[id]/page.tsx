@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
-  ArrowRight,
   BookOpen,
   Briefcase,
   Clock,
@@ -19,6 +18,7 @@ import {
   Calendar,
   Building,
 } from "lucide-react";
+import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@heroui/react";
 import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
 import { getProfile } from "@/lib/data/profiles";
@@ -235,7 +235,7 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
                   <CardFooter>
                     <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
                       Abrir
-                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                      <ArrowRight02Icon size={16} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                     </span>
                   </CardFooter>
                 </Card>

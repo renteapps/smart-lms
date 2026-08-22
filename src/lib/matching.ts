@@ -417,6 +417,10 @@ type QueueEntry = { item: LearningTrailItem; position: number };
  * É o que permite "dividir o curso pelo tempo das aulas" sem embaralhar a
  * didática: o motor pode adiantar um artigo ou uma aula de outro curso para
  * fechar um dia, mas nunca a aula 5 antes da aula 3 do mesmo curso.
+ *
+ * Sem `sequence` — o caso do curso galeria, uma coleção de avulsas — `comesFirst`
+ * cai na posição da fila, que é a ordem da curadoria. As aulas continuam sem se
+ * ultrapassar, só que obedecendo a quem o admin pôs na frente.
  */
 function sequenceKeyOf(item: LearningTrailItem): string | null {
   return item.courseId || item.moduleId || null;
@@ -460,10 +464,15 @@ function capacityFor(budget: number): number {
  *
  * Agora cada dia tem meta própria (`minutesForWeekday`) e uma faixa de ±20%: o
  * motor continua puxando conteúdo enquanto o dia estiver abaixo de 80% da meta e
- * aceita qualquer item que caiba em até 120%. Quando o próximo da fila não cabe,
- * ele procura adiante alguém que caiba — respeitando pré-requisitos e a sequência
- * do curso — em vez de deixar o dia pela metade. Conteúdo maior do que qualquer
- * dia da rotina não fica preso: ganha um dia só para ele, marcado `overBudget`.
+ * aceita qualquer item que caiba em até 120%.
+ *
+ * A ordem da curadoria, porém, vem antes do encaixe. Cada sessão abre com o
+ * primeiro conteúdo liberado da fila — se ele for maior que a meta, o dia fica
+ * maior, e é só isso que acontece. Só depois o motor procura adiante quem caiba
+ * no tempo que sobrou, respeitando pré-requisitos e a sequência do curso. Assim
+ * o dia continua sendo bem aproveitado sem que uma aula longa possa ser
+ * ultrapassada por aulas curtas até o fim do plano; quem furou a meta sai
+ * marcado `overBudget` e o card avisa antes da pessoa começar.
  */
 export function schedulePendingItems(
   items: LearningTrailItem[],
@@ -478,9 +487,6 @@ export function schedulePendingItems(
 
   const scheduled: LearningTrailItem[] = [];
   const queuedIds = new Set(queue.map((entry) => entry.item.id));
-  const largestCapacity = Math.max(
-    ...routine.weekdays.map((weekday) => capacityFor(minutesForWeekday(routine, weekday))),
-  );
 
   const doneBudgetPerDate = new Map<string, number>();
   done.forEach((item) => {
@@ -521,6 +527,32 @@ export function schedulePendingItems(
     const floor = Math.round(budget * (1 - BUDGET_TOLERANCE));
     let used = doneBudgetPerDate.get(dateKey) || 0;
 
+    /*
+     * A vez é de quem está na frente: o primeiro liberado abre a sessão, caiba
+     * ele na meta do dia ou não.
+     *
+     * Esta é a regra que a duração não pode dobrar. Enquanto o dia era montado
+     * só por encaixe, um conteúdo que não coubesse na meta era pulado — e
+     * sempre havia algo mais curto de outro curso para pôr no lugar. Numa
+     * rotina de 20 minutos, uma coleção de masterclasses de 23 a 63 minutos ia
+     * sendo empurrada uma semana por aula enquanto aulas curtas passavam na
+     * frente; a sequência que a curadoria montou para o aluno chegava
+     * embaralhada, e a aula mais longa terminava no fim do plano.
+     *
+     * Agora ela entra no lugar dela e o dia estoura a meta — uma vez, de forma
+     * visível: `overBudget` é o que faz o card avisar que hoje é mais longo.
+     * Só o primeiro item pode furar a meta; o preenchimento abaixo nunca passa
+     * da capacidade do dia.
+     */
+    if (used === 0 && queue.length > 0) {
+      const head = queue.findIndex((entry, position) => isReleased(entry, position, queue, queuedIds));
+      // `-1` só em ciclo de pré-requisitos: um defeito de curadoria não pode
+      // travar o plano, então o primeiro da fila entra mesmo bloqueado.
+      used += place(head === -1 ? 0 : head, dateKey, sessionId, capacity).durationMin;
+    }
+
+    // O resto do dia é preenchido com quem couber no que sobrou — isso adianta
+    // conteúdo de outros cursos, mas nunca atrasa quem já passou por aqui.
     while (used < floor) {
       const index = queue.findIndex((entry, position) => (
         isReleased(entry, position, queue, queuedIds)
@@ -528,21 +560,6 @@ export function schedulePendingItems(
       ));
       if (index === -1) break;
       used += place(index, dateKey, sessionId, capacity).durationMin;
-    }
-
-    /*
-     * Dia vazio tem dois motivos possíveis. Ou o próximo liberado não cabe em
-     * dia nenhum da rotina — e então ele ganha este dia inteiro, porque adiar
-     * para sempre seria pior do que estourar a meta uma vez — ou existe um dia
-     * maior à frente, e pular hoje é exatamente o que faz ele caber lá.
-     */
-    if (used === 0 && queue.length > 0) {
-      const released = queue.findIndex((entry, position) => isReleased(entry, position, queue, queuedIds));
-      // Sem nenhum liberado só num ciclo de pré-requisitos: agenda mesmo assim.
-      const head = released === -1 ? 0 : released;
-      if (queue[head].item.durationMin > largestCapacity) {
-        used += place(head, dateKey, sessionId, capacity).durationMin;
-      }
     }
 
     cursor = nextPreferredDate(cursor, routine.weekdays, false);
@@ -599,6 +616,7 @@ export function generateLearningTrail(
       slug: candidate.slug,
       url: candidate.url,
       cover: candidate.cover,
+      shortDescription: candidate.shortDescription,
       prerequisites: candidate.prerequisites,
       sequence: candidate.sequence,
       order: index + 1,
@@ -766,6 +784,52 @@ export function postponeTrailSession(trail: LearningTrail, sessionId: string): L
       const shifted = item.status === 'pending' ? shiftedDates.get(item.scheduledDate) : undefined;
       return shifted ? { ...item, scheduledDate: shifted, sessionId: `${shifted}-postponed`, rescheduled: true } : item;
     }),
+    replannedAt: Date.now(),
+  };
+}
+
+/**
+ * Adia um conteúdo só, não a sessão inteira.
+ *
+ * "Hoje eu não faço esta aula" é diferente de "hoje eu não estudo": adiar a
+ * sessão empurrava a semana inteira mesmo quando a pessoa daria conta do resto
+ * do dia. Aqui o item cai no próximo dia de rotina e o que sobrou da sessão
+ * continua valendo para hoje.
+ *
+ * A sequência do curso continua intocável: se o item adiado tem colegas do mesmo
+ * curso na mesma sessão que viriam *depois* dele, eles vão junto — deixá-los para
+ * trás colocaria a aula 5 antes da aula 4. Conteúdo de outros cursos no mesmo dia
+ * não é afetado, e as sessões seguintes ficam onde estão.
+ */
+export function postponeTrailItem(trail: LearningTrail, itemId: string): LearningTrail {
+  const target = trail.items.find((item) => item.id === itemId && item.status === 'pending');
+  if (!target || !target.scheduledDate) return trail;
+
+  const nextDate = toLocalDateKey(
+    nextPreferredDate(fromLocalDateKey(target.scheduledDate), trail.availability.weekdays, false),
+  );
+  if (nextDate === target.scheduledDate) return trail;
+
+  const key = sequenceKeyOf(target);
+  const targetEntry: QueueEntry = { item: target, position: trail.items.indexOf(target) };
+  const moving = new Set<string>([target.id]);
+
+  if (key) {
+    trail.items.forEach((item, position) => {
+      if (item.status !== 'pending' || item.id === target.id) return;
+      if (item.scheduledDate !== target.scheduledDate) return;
+      if (sequenceKeyOf(item) !== key) return;
+      if (comesFirst(targetEntry, { item, position })) moving.add(item.id);
+    });
+  }
+
+  return {
+    ...trail,
+    items: trail.items.map((item) => (
+      moving.has(item.id)
+        ? { ...item, scheduledDate: nextDate, sessionId: `${nextDate}-postponed`, rescheduled: true }
+        : item
+    )),
     replannedAt: Date.now(),
   };
 }

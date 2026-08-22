@@ -9,6 +9,7 @@ export type TrailAnalyticsEventType =
   | 'routine_adjusted'
   | 'routine_eased'
   | 'session_postponed'
+  | 'content_postponed'
   | 'session_feedback'
   | 'content_removed'
   | 'content_restored'

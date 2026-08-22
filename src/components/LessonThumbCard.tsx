@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, Clock3, LockKeyhole, PlayCircle } from "lucide-react";
+import { CheckCircle2, Clock3, LockKeyhole } from "lucide-react";
 import { Card } from "@heroui/react";
 
+import { PlayIcon } from "@/components/ui/play";
 import { useCardTransition } from "@/contexts/CardTransitionContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { resolveDynamicSalesUrl } from "@/lib/salesUrlHelper";
@@ -143,7 +144,7 @@ export default function LessonThumbCard({
             loading={eager ? "eager" : "lazy"}
             sizes={SIZE_IMAGE_SIZES[size]}
             onError={() => setFailedCover(true)}
-            className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.045]"
+            className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--spring)] group-hover:scale-[1.045]"
           />
 
           {lesson.locked ? (
@@ -166,7 +167,7 @@ export default function LessonThumbCard({
           ) : (
             <span
               className={cn(
-                "absolute right-2 top-2 z-10 grid place-items-center rounded-full backdrop-blur-xs transition-opacity duration-[var(--duration-md)]",
+                "absolute right-2 top-2 z-10 grid place-items-center rounded-full backdrop-blur-xl transition-[opacity,transform,scale] duration-[var(--duration-lg)] ease-[var(--spring)]",
                 isLarge ? "size-8" : "size-7",
                 /*
                  * Assistida é um estado permanente — some junto com o resto se
@@ -174,8 +175,8 @@ export default function LessonThumbCard({
                  * cada thumb só para descobrir o que já viu.
                  */
                 lesson.isCompleted
-                  ? "bg-success text-success-foreground opacity-100 shadow-elev-1"
-                  : "bg-foreground/55 text-background opacity-0 group-hover:opacity-100",
+                  ? "scale-100 bg-success text-success-foreground opacity-100 shadow-elev-1"
+                  : "scale-75 bg-foreground/35 text-background opacity-0 group-hover:scale-100 group-hover:opacity-100",
               )}
             >
               {lesson.isCompleted ? (
@@ -184,7 +185,7 @@ export default function LessonThumbCard({
                   <span className="sr-only">Aula assistida</span>
                 </>
               ) : (
-                <PlayCircle className={cn(isLarge ? "size-4" : "size-3.5", "fill-current")} aria-hidden="true" />
+                <PlayIcon size={isLarge ? 16 : 14} aria-hidden="true" />
               )}
             </span>
           )}

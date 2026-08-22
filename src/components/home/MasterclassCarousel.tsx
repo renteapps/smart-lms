@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { buttonVariants } from "@heroui/react";
 import CarouselRow from "@/components/CarouselRow";
 import LessonThumbCard from "@/components/LessonThumbCard";
@@ -19,7 +19,7 @@ import type { HomeCarouselRow } from "@/types/course";
  * Aparece para todo mundo, matriculado ou não: quem não tem acesso ao curso
  * vê a mesma fileira, só que as thumbs revelam um cadeado no hover (em vez de
  * um véu permanente) — o convite para conhecer o curso continua sendo a
- * própria imagem, não uma tarja "bloqueado" — e "Acessar curso" leva à capa,
+ * própria imagem, não uma tarja "bloqueado" — e "Acessar" leva à capa,
  * que se adapta sozinha a travado ou não. Ver `getHomeCarouselRows`.
  */
 export default function MasterclassCarousel({ rows }: { rows: HomeCarouselRow[] }) {
@@ -42,8 +42,8 @@ export default function MasterclassCarousel({ rows }: { rows: HomeCarouselRow[] 
               href={row.courseHref}
               className={buttonVariants({ variant: "outline", size: "sm", className: "shrink-0 gap-1.5" })}
             >
-              Acessar curso
-              <ArrowRight className="size-3.5" aria-hidden="true" />
+              Acessar
+              <ArrowRight02Icon size={14} aria-hidden="true" />
             </Link>
           }
         >

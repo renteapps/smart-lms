@@ -5,6 +5,7 @@ import { Questionnaire, StudyAvailability, Weekday } from '@/types/trilha';
 import { generateLearningTrail } from '@/lib/matching';
 import type { ContentIndex } from '@/lib/contentCatalog';
 import { CalendarDays, Clock3, Sparkles, TriangleAlert } from 'lucide-react';
+import { LONGER_CONTENT_LABEL } from '@/lib/studentHome';
 import { cn } from '@/lib/utils';
 
 interface TrailPreviewProps {
@@ -80,7 +81,7 @@ export const TrailPreview: React.FC<TrailPreviewProps> = ({ questionnaire, index
           <div className="mt-6 space-y-7">{Object.entries(sessions).map(([sessionId, items]) => (
             <div key={sessionId}>
               <div className="mb-3 flex items-center gap-3"><strong className="text-sm capitalize text-foreground">{new Date(`${items[0].scheduledDate}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' })}</strong><span className="h-px flex-1 bg-border" /><span className="text-xs font-semibold text-muted">{items.reduce((sum, item) => sum + item.durationMin, 0)} min</span></div>
-              <div className="space-y-2">{items.map((item) => <article key={item.id} className="rounded-lg border border-border bg-background p-4"><div className="flex items-start justify-between gap-3"><div><span className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-accent-soft-foreground">{roleLabels[item.learningRole]}</span><h4 className="mt-1 font-bold text-foreground">{item.title}</h4><p className="mt-1 text-xs text-muted">{item.reason}</p></div><span className="shrink-0 text-xs font-bold text-muted">{item.durationMin} min</span></div>{item.overBudget && <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-warning"><TriangleAlert size={14} /> Acima da meta; ficará sozinho nesta sessão.</p>}</article>)}</div>
+              <div className="space-y-2">{items.map((item) => <article key={item.id} className="rounded-lg border border-border bg-background p-4"><div className="flex items-start justify-between gap-3"><div><span className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-accent-soft-foreground">{roleLabels[item.learningRole]}</span><h4 className="mt-1 font-bold text-foreground">{item.title}</h4><p className="mt-1 text-xs text-muted">{item.reason}</p></div><span className="shrink-0 text-xs font-bold text-muted">{item.durationMin} min</span></div>{item.overBudget && <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-warning"><TriangleAlert size={14} /> {LONGER_CONTENT_LABEL}: maior que a meta do dia, fica sozinho nesta sessão.</p>}</article>)}</div>
             </div>
           ))}</div>
         )}

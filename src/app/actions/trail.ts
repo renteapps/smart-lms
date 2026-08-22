@@ -18,7 +18,7 @@ import type { ActionResult } from "./progress";
  * catálogo intacto. Sem isso, quem já tem trilha só veria o campo novo quando o
  * admin mexesse em algum conteúdo.
  */
-const PLAN_FORMAT = "v4";
+const PLAN_FORMAT = "v7";
 
 /**
  * Gera a trilha a partir das respostas do onboarding.

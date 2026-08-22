@@ -82,7 +82,7 @@ export default function LessonCard({
           unoptimized
           sizes="(max-width: 768px) 38vw, 180px"
           className={cn(
-            "object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.04]",
+            "object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--spring)] group-hover:scale-[1.04]",
             locked && "grayscale",
           )}
         />

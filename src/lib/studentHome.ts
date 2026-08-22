@@ -534,3 +534,18 @@ export const ROLE_CHIP_LABELS: Record<LearningRole, string> = {
   deepening: 'Aprofundamento',
   extra: 'Extra',
 };
+
+/**
+ * O aviso de conteúdo maior que a meta do dia (`item.overBudget`).
+ *
+ * Uma masterclass de 60 minutos numa rotina de 30 entra na agenda do mesmo
+ * jeito: descartá-la esconderia o conteúdo, e adiá-la para sempre é pior do que
+ * estourar a meta uma vez. O que não pode é a pessoa abrir a sessão e só então
+ * descobrir que hoje leva o dobro do tempo — por isso o aviso vem no card, e o
+ * texto vive aqui para a home e a trilha dizerem a mesma coisa.
+ */
+export const LONGER_CONTENT_LABEL = 'Conteúdo mais longo';
+/** A mesma informação onde só cabe uma linha — a lista compacta da agenda. */
+export const LONGER_CONTENT_SHORT = 'Mais longo';
+export const LONGER_CONTENT_HINT =
+  'Este conteúdo é maior que sua meta diária. Ele fica sozinho nesta sessão — reserve um tempo extra ou adie o dia.';

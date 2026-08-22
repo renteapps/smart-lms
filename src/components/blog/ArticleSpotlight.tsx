@@ -44,7 +44,7 @@ export default function ArticleSpotlight({ article, className }: ArticleSpotligh
               alt=""
               fill
               sizes="(max-width: 1024px) 100vw, 55vw"
-              className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.035]"
+              className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--spring)] group-hover:scale-[1.035]"
             />
             {/* Véu de baixo para cima: assenta o texto sem escurecer a imagem inteira. */}
             <div
@@ -103,7 +103,7 @@ export default function ArticleSpotlight({ article, className }: ArticleSpotligh
 
                 <span
                   aria-hidden="true"
-                  className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground transition-[background-color,color,transform] duration-[var(--duration-md)] group-hover:translate-x-0.5 group-hover:bg-accent group-hover:text-accent-foreground"
+                  className="grid size-10 shrink-0 place-items-center rounded-xl bg-white/15 text-white backdrop-blur-md transition-[background-color,color,transform,translate] duration-[var(--duration-lg)] ease-[var(--spring)] group-hover:translate-x-0.5 group-hover:bg-white group-hover:text-accent"
                 >
                   <ArrowIcon size={18} />
                 </span>

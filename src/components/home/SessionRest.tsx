@@ -65,7 +65,7 @@ function ContentRow({ item, locked, completed, onComplete, isCompleting = false 
       metadata: {
         title: item.title,
         cover: item.cover || DEFAULT_COVER,
-        category: item.moduleName || "Sessão de Estudos",
+        category: item.moduleName || item.courseName || "Sessão de Estudos",
         duration: `${item.durationMin} min`,
         type: "lesson",
       },

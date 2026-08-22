@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { Button, Chip, Input, Label, TextField } from "@heroui/react";
 import { AgentAvatar } from "@/components/agentes/AgentAvatar";
 import { getAgentReply, matchScriptedReply, normalizeText } from "@/lib/agentChat";
@@ -63,7 +64,7 @@ export function AgentScriptTester({ agent }: { agent: Agent }) {
                 onClick={() => runTest(starter.message)}
               >
                 {starter.label || "Sugestão sem texto"}
-                <ArrowRight className="size-3.5" aria-hidden="true" />
+                <ArrowRight02Icon size={14} aria-hidden="true" />
               </Button>
             </li>
           ))}

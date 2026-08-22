@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
-  ArrowRight,
   CheckCircle2,
   ExternalLink,
   Mail,
@@ -13,6 +12,7 @@ import {
   RefreshCw,
   Sparkles,
 } from "lucide-react";
+import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { Alert, Button, buttonVariants, Spinner, toast } from "@heroui/react";
 import { AuthLayoutShell } from "@/components/auth/AuthLayoutShell";
 import { resendSignUpEmailAction } from "@/lib/auth/actions";
@@ -152,7 +152,7 @@ function ConfirmarContent() {
               })}
             >
               <span>Ir para o Onboarding</span>
-              <ArrowRight className="size-4 ml-2" aria-hidden="true" />
+              <ArrowRight02Icon size={16} className="ml-2" aria-hidden="true" />
             </Link>
           </div>
         </div>

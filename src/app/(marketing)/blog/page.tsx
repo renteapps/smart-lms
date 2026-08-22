@@ -1,6 +1,7 @@
 import { getAllArticles } from '@/lib/data/blog';
 import { createClient } from '@/lib/supabase/server';
 import { FeaturedArticle } from '@/components/blog/FeaturedArticle';
+import { FeaturedCarousel } from '@/components/blog/FeaturedCarousel';
 import { ArticleCard } from '@/components/blog/ArticleCard';
 
 export const metadata = {
@@ -20,14 +21,18 @@ export default async function BlogIndexPage() {
     );
   }
 
-  const featured = articles.find((a) => a.featured) || articles[0];
-  const remaining = articles.filter((a) => a.slug !== featured.slug);
+  const featured = articles.filter((a) => a.featured);
+  const remaining = articles.filter((a) => !a.featured);
+  
+  // Se não houver nenhum artigo marcado como featured, usa o primeiro
+  const topFeatured = featured.length > 0 ? featured : [articles[0]];
+  const actualRemaining = featured.length > 0 ? remaining : articles.slice(1);
 
   return (
     <div className="pb-24 pt-[76px]">
       <div className="editorial-container">
         <header className="mb-12 max-w-4xl pt-14 sm:pt-20">
-          <p className="eyebrow">Revista Smart LMS</p>
+          <p className="eyebrow">Revista Skill Academy</p>
           <h1 className="mt-3 text-4xl font-extrabold tracking-[-0.05em] text-ink md:text-5xl lg:text-6xl">
             Reflexões para crescer com intenção
           </h1>
@@ -39,11 +44,11 @@ export default async function BlogIndexPage() {
 
         {/* Featured Section */}
         <section className="mb-20">
-          <FeaturedArticle article={featured} />
+          <FeaturedCarousel articles={topFeatured} />
         </section>
 
         {/* Grid Editorial Section */}
-        {remaining.length > 0 && (
+        {actualRemaining.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-12">
               <h2 className="text-2xl md:text-3xl font-bold text-foreground">
@@ -52,7 +57,7 @@ export default async function BlogIndexPage() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {remaining.map((article) => (
+              {actualRemaining.map((article) => (
                 <ArticleCard key={article.slug} article={article} />
               ))}
             </div>

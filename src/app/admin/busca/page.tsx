@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Search, User, BookOpen, Building2, ArrowRight } from "lucide-react";
+import { Search, User, BookOpen, Building2 } from "lucide-react";
+import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { Card, EmptyState } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
 import { createClient } from "@/lib/supabase/server";
@@ -95,7 +96,7 @@ export default async function AdminBuscaUnificada({ searchParams }: { searchPara
               {users.length === 5 && (
                 <Card.Footer className="bg-surface/50 border-t border-border">
                   <Link href={`/admin/users?q=${encodeURIComponent(q)}`} className="text-xs font-semibold text-accent flex items-center gap-1">
-                    Ver todos os usuários <ArrowRight className="size-3" />
+                    Ver todos os usuários <ArrowRight02Icon size={12} />
                   </Link>
                 </Card.Footer>
               )}

@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { ProfileTest, ProfileCategory } from '@/types/profileTest';
-import { X, CheckCircle2, RotateCcw, Award, ArrowRight, Play, BarChart3 } from 'lucide-react';
+import { X, CheckCircle2, RotateCcw, Award, Play, BarChart3 } from 'lucide-react';
+import { ArrowRight02Icon } from '@/components/ui/arrow-right-02';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Modal } from '@heroui/react';
 
@@ -273,7 +274,7 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
                       <span className="text-sm">
                         {currentStep < totalQuestions - 1 ? 'Próxima Pergunta' : 'Finalizar Teste'}
                       </span>
-                      <ArrowRight className="size-5" aria-hidden="true" />
+                      <ArrowRight02Icon size={20} aria-hidden="true" />
                     </Button>
                   </div>
                 </div>

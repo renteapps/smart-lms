@@ -15,14 +15,18 @@ import {
   Sparkles,
   Star,
   Tag,
+  Lock,
+  GraduationCap,
 } from "lucide-react";
 import { Chip } from "@heroui/react";
+import { motion } from "framer-motion";
 import type { SearchResultItem } from "@/types/search";
 import { cn } from "@/lib/utils";
 
 interface SearchResultCardProps {
   item: SearchResultItem;
   query?: string;
+  index?: number;
 }
 
 export function HighlightText({ text, query }: { text: string; query?: string }) {
@@ -30,56 +34,122 @@ export function HighlightText({ text, query }: { text: string; query?: string })
     return <>{text}</>;
   }
 
-  const terms = query
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .split(/\s+/)
-    .filter((t) => t.length > 1);
+  const removeDiacritics = (str: string) =>
+    str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const normalizedQuery = removeDiacritics(query.toLowerCase());
+  const terms = normalizedQuery.split(/\s+/).filter((t) => t.length > 1);
 
   if (terms.length === 0) return <>{text}</>;
 
-  // Regex para achar qualquer um dos termos ignorando acentos
-  const regexPattern = `(${terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`;
-  
-  try {
-    const parts = text.split(new RegExp(regexPattern, "gi"));
-    return (
-      <>
-        {parts.map((part, index) => {
-          const normPart = part
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "");
-          const isMatch = terms.some((t) => normPart.includes(t) || t.includes(normPart));
+  const normalizedText = removeDiacritics(text.toLowerCase());
+  const regexPattern = new RegExp(
+    `(${terms.map((t) => t.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")).join("|")})`,
+    "gi"
+  );
 
-          return isMatch ? (
-            <mark
-              key={index}
-              className="rounded bg-accent-soft px-1 font-semibold text-accent-soft-foreground"
-            >
-              {part}
-            </mark>
-          ) : (
-            <span key={index}>{part}</span>
-          );
-        })}
-      </>
-    );
-  } catch {
-    return <>{text}</>;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regexPattern.exec(normalizedText)) !== null) {
+    const startIndex = match.index;
+    const length = match[0].length;
+
+    if (startIndex > lastIndex) {
+      parts.push({ text: text.substring(lastIndex, startIndex), highlight: false });
+    }
+
+    parts.push({ text: text.substring(startIndex, startIndex + length), highlight: true });
+    lastIndex = startIndex + length;
   }
+
+  if (lastIndex < text.length) {
+    parts.push({ text: text.substring(lastIndex), highlight: false });
+  }
+
+  return (
+    <>
+      {parts.map((part, index) =>
+        part.highlight ? (
+          <mark
+            key={index}
+            className="rounded bg-accent-soft px-1 font-semibold text-accent-soft-foreground"
+          >
+            {part.text}
+          </mark>
+        ) : (
+          <span key={index}>{part.text}</span>
+        )
+      )}
+    </>
+  );
 }
 
-export function SearchResultCard({ item, query }: SearchResultCardProps) {
+export function SearchResultCard({ item, query, index = 0 }: SearchResultCardProps) {
   const { type, title, description, category, url, metadata } = item;
 
   // Renderizador específico por tipo de resultado
-  switch (type) {
-    case "lesson":
+  let content = null;
+
+  const renderAccessBadge = () => {
+    if (metadata?.hasAccess === false) {
       return (
+        <span className="flex items-center gap-1 rounded-full bg-danger/10 px-2 py-0.5 text-xs font-bold text-danger">
+          <Lock className="size-3 fill-current" aria-hidden="true" />
+          Bloqueado
+        </span>
+      );
+    }
+    return null;
+  };
+
+  switch (type) {
+    case "course":
+      content = (
         <Link
-          href={url}
+          href={url || "#"}
+          className="group relative flex flex-col justify-between rounded-2xl border border-border/70 bg-surface p-5 shadow-surface transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-md sm:p-6"
+        >
+          <div>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="grid size-8 place-items-center rounded-xl bg-accent text-accent-foreground">
+                  <GraduationCap className="size-4" aria-hidden="true" />
+                </span>
+                <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                  Curso · {category || "Geral"}
+                </span>
+              </div>
+              {renderAccessBadge()}
+            </div>
+
+            <h3 className="text-base font-bold text-foreground transition-colors group-hover:text-accent sm:text-lg">
+              <HighlightText text={title} query={query} />
+            </h3>
+
+            <p className="mt-2 text-sm leading-relaxed text-muted line-clamp-2">
+              <HighlightText text={description} query={query} />
+            </p>
+          </div>
+
+          <div className="mt-4 flex items-center justify-between border-t border-hairline pt-3">
+            <span className="text-xs font-medium text-muted">
+              {metadata?.level ? `Nível: ${metadata.level}` : "Disponível na plataforma"}
+            </span>
+            <span className="flex items-center gap-1 text-xs font-bold text-accent transition-transform group-hover:translate-x-0.5">
+              {metadata?.hasAccess === false ? "Ver detalhes" : "Acessar curso"}
+              <ArrowUpRight className="size-3.5" aria-hidden="true" />
+            </span>
+          </div>
+        </Link>
+      );
+      break;
+
+    case "lesson":
+      content = (
+        <Link
+          href={url || "#"}
           className="group relative flex flex-col justify-between rounded-2xl border border-border/70 bg-surface p-5 shadow-surface transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-md sm:p-6"
         >
           <div>
@@ -92,12 +162,12 @@ export function SearchResultCard({ item, query }: SearchResultCardProps) {
                   Aula · {metadata?.courseTitle || "Curso"}
                 </span>
               </div>
-              {metadata?.duration && (
+              {renderAccessBadge() || (metadata?.duration && (
                 <span className="flex items-center gap-1 text-xs font-semibold text-muted">
                   <Clock className="size-3.5" aria-hidden="true" />
                   {metadata.duration}
                 </span>
-              )}
+              ))}
             </div>
 
             <h3 className="text-base font-bold text-foreground transition-colors group-hover:text-accent sm:text-lg">
@@ -114,17 +184,18 @@ export function SearchResultCard({ item, query }: SearchResultCardProps) {
               {category ? `Módulo: ${category}` : "Disponível na plataforma"}
             </span>
             <span className="flex items-center gap-1 text-xs font-bold text-accent transition-transform group-hover:translate-x-0.5">
-              Acessar aula
+              {metadata?.hasAccess === false ? "Ver detalhes" : "Acessar aula"}
               <ArrowUpRight className="size-3.5" aria-hidden="true" />
             </span>
           </div>
         </Link>
       );
+      break;
 
     case "agent":
-      return (
+      content = (
         <Link
-          href={url}
+          href={url || "#"}
           className="group relative flex flex-col justify-between rounded-2xl border border-border/70 bg-surface p-5 shadow-surface transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-md sm:p-6"
         >
           <div>
@@ -182,11 +253,12 @@ export function SearchResultCard({ item, query }: SearchResultCardProps) {
           </div>
         </Link>
       );
+      break;
 
     case "article":
-      return (
+      content = (
         <Link
-          href={url}
+          href={url || "#"}
           className="group relative flex flex-col justify-between rounded-2xl border border-border/70 bg-surface p-5 shadow-surface transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-md sm:p-6"
         >
           <div>
@@ -231,11 +303,12 @@ export function SearchResultCard({ item, query }: SearchResultCardProps) {
           </div>
         </Link>
       );
+      break;
 
     case "note":
-      return (
+      content = (
         <Link
-          href={url}
+          href={url || "#"}
           className="group relative flex flex-col justify-between rounded-2xl border border-border/70 bg-surface p-5 shadow-surface transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/30 hover:shadow-md sm:p-6"
         >
           <div>
@@ -293,8 +366,22 @@ export function SearchResultCard({ item, query }: SearchResultCardProps) {
           </div>
         </Link>
       );
+      break;
 
     default:
-      return null;
+      content = null;
+      break;
   }
+
+  if (!content) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.5) }}
+    >
+      {content}
+    </motion.div>
+  );
 }

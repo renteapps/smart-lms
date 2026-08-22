@@ -29,7 +29,7 @@ export function ArticleCard({ article, className }: ArticleCardProps) {
           alt={article.title}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-          className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--ease-zen)] group-hover:scale-[1.035]"
+          className="object-cover transition-transform duration-[var(--duration-lg)] ease-[var(--spring)] group-hover:scale-[1.035]"
         />
 
         {/* Format Badges */}
@@ -57,7 +57,7 @@ export function ArticleCard({ article, className }: ArticleCardProps) {
 
       <div className="flex flex-grow flex-col p-5 sm:p-6">
         <div className="flex items-center gap-3 mb-3">
-          <span className="text-xs font-medium text-accent tracking-wider uppercase">
+          <span className="text-xs font-bold text-primary tracking-wider uppercase">
             {article.category}
           </span>
           <span className="text-xs text-muted">

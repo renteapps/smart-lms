@@ -1,25 +1,29 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
-  ArrowRight, CalendarDays, Check, CheckCircle2, Clock3,
-  ExternalLink, FileText, LayoutList, PlayCircle, RefreshCw, Route, Settings2, Sparkles,
+  CalendarDays, Check, CheckCircle2, Clock3,
+  ExternalLink, FileText, LayoutList, PlayCircle, RefreshCw, Route, Settings2, Sparkles, TriangleAlert,
 } from 'lucide-react';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { CalendarCheckOut01Icon } from '@hugeicons/core-free-icons';
+import { ArrowRight02Icon } from '@/components/ui/arrow-right-02';
+import { UndoIcon, type UndoIconHandle } from '@/components/ui/undo';
 import {
   Alert, AlertDialog, Button, buttonVariants, Card, Chip, Description, Drawer, EmptyState, Fieldset,
-  Label, NumberField, ProgressBar, Skeleton, Tabs, ToggleButton, ToggleButtonGroup,
+  Label, NumberField, Skeleton, Tabs, ToggleButton, ToggleButtonGroup,
 } from '@heroui/react';
 import { AvailabilityMode, LearningRole, LearningTrail, LearningTrailItem, SessionLoadRating, StudyAvailability, Weekday } from '@/types/trilha';
 import { refreshTrail, saveTrail, setTrailItemCompletion } from '@/app/actions/trail';
-import { applySessionFeedback, clampSessionMinutes, effectiveAvailability, minutesForWeekday, postponeTrailSession, toLocalDateKey, updateTrailAvailability, weeklyMinutes } from '@/lib/matching';
-import { computeStudyStats, contentHref } from '@/lib/studentHome';
+import { applySessionFeedback, clampSessionMinutes, effectiveAvailability, fromLocalDateKey, minutesForWeekday, postponeTrailItem, postponeTrailSession, toLocalDateKey, updateTrailAvailability, weeklyMinutes } from '@/lib/matching';
+import { computeStudyStats, contentHref, LONGER_CONTENT_HINT, LONGER_CONTENT_LABEL, LONGER_CONTENT_SHORT } from '@/lib/studentHome';
 import StudyLedger from '@/components/home/StudyLedger';
+import TrailProgressPanel from '@/components/home/TrailProgressPanel';
 import { recordTrailEvent, TrailAnalyticsEvent, TrailAnalyticsEventType } from '@/lib/trailAnalytics';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useCardTransition } from '@/contexts/CardTransitionContext';
-import { StatCard } from '@/components/ui/editorial';
 import { TrailIcon } from '@/components/ui/AnimatedIcon';
 import { Reveal } from '@/components/ui/Reveal';
 import { Rise } from '@/components/ui/Rise';
@@ -35,8 +39,29 @@ import { cn } from '@/lib/utils';
  */
 type TrailView = 'next' | 'calendar' | 'full';
 
+/**
+ * O que está para ser adiado.
+ *
+ * Sessão e conteúdo compartilham o mesmo diálogo porque a pergunta é a mesma
+ * ("adiar?") e só a consequência muda — duas caixas idênticas com textos
+ * diferentes seriam duas fontes de verdade para o mesmo estado.
+ */
+type PostponeTarget =
+  | { kind: 'session'; sessionId: string }
+  | { kind: 'item'; item: LearningTrailItem };
+
 /** Quantas sessões a aba de próximos passos mostra antes de mandar para a trilha completa. */
 const NEXT_SESSIONS_HORIZON = 3;
+
+/**
+ * Janela do aviso de "sessão mais longa chegando": os 14 dias depois de hoje.
+ *
+ * Não usa limite de semana civil de propósito — quem abre a trilha numa sexta
+ * quer saber tanto do que sobra desta semana quanto do começo da próxima, e um
+ * corte no domingo partiria esse aviso ao meio. Só olha para a frente: o
+ * conteúdo de hoje, se for mais longo, já aparece no card de hoje logo abaixo.
+ */
+const LONGER_CONTENT_HORIZON_DAYS = 14;
 
 const VIEW_META: Record<TrailView, { title: string; hint: string }> = {
   next: {
@@ -49,7 +74,7 @@ const VIEW_META: Record<TrailView, { title: string; hint: string }> = {
   },
   full: {
     title: 'Sua trilha completa',
-    hint: 'Onde você está em cada formação, do começo ao fim, incluindo o que já concluiu.',
+    hint: 'Todo o seu plano na ordem em que foi montado, do começo ao fim, incluindo o que já concluiu.',
   },
 };
 
@@ -124,6 +149,11 @@ function shortDate(dateKey: string): string {
   return new Date(`${dateKey}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 }
 
+/** "sex., 28 de ago." — dia da semana + data, para o aviso de sessão mais longa. */
+function weekdayDate(dateKey: string): string {
+  return new Date(`${dateKey}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+}
+
 function statusLabel(item: LearningTrailItem, today: string): string {
   if (item.status === 'completed') return 'Concluído';
   if (item.rescheduled) return 'Atrasado replanejado';
@@ -144,8 +174,8 @@ type TrailContentCardProps = {
   today: string;
   /** Dentro do card de destaque o realce já existe no contêiner — não empilhar. */
   subdued?: boolean;
-  /** Reserva a faixa inferior para o botão de concluir (artigo e link externo). */
-  withCompleteAction?: boolean;
+  /** Reserva a faixa inferior para os botões de ação (concluir / adiar). */
+  withActionBar?: boolean;
   /** Usa um layout minimalista em formato de lista (sem imagem de capa). */
   compact?: boolean;
 };
@@ -171,7 +201,7 @@ function hostOf(url?: string): string | null {
  * aparece quando o estado foge do normal, e o papel pedagógico só quando não é o
  * essencial.
  */
-function TrailContentCard({ item, today, subdued = false, withCompleteAction = false, compact = false }: TrailContentCardProps) {
+function TrailContentCard({ item, today, subdued = false, withActionBar = false, compact = false }: TrailContentCardProps) {
   const { triggerTransition } = useCardTransition();
   const href = contentHref(item);
   const external = item.type === 'external_link';
@@ -263,7 +293,7 @@ function TrailContentCard({ item, today, subdued = false, withCompleteAction = f
         </div>
       )}
 
-      <div className={cn('flex flex-1 flex-col min-w-0', !compact ? 'p-5' : 'py-0.5', !compact && withCompleteAction && 'pb-16')}>
+      <div className={cn('flex flex-1 flex-col min-w-0', !compact ? 'p-5' : 'py-0.5', !compact && withActionBar && 'pb-16')}>
         {!compact && origin && (
           <p className="truncate text-xs font-bold uppercase tracking-[0.08em] text-muted">{origin}</p>
         )}
@@ -287,6 +317,11 @@ function TrailContentCard({ item, today, subdued = false, withCompleteAction = f
             <span className="flex items-center gap-1">
               <Clock3 className="size-3" aria-hidden="true" /> {item.durationMin} min
             </span>
+            {item.overBudget && !completed && (
+              <span className="flex shrink-0 items-center gap-1 text-warning" title={LONGER_CONTENT_HINT}>
+                <TriangleAlert className="size-3" aria-hidden="true" /> {LONGER_CONTENT_SHORT}
+              </span>
+            )}
             {showStatus && !completed && (
               <span className="flex items-center gap-1 truncate text-foreground/75">
                 {status.icon} {statusLabel(item, today)}
@@ -315,11 +350,17 @@ function TrailContentCard({ item, today, subdued = false, withCompleteAction = f
               </Chip>
             )}
 
-            {item.overBudget && <span className="text-warning">Acima da meta</span>}
+            {item.overBudget && !completed && (
+              <Chip size="sm" variant="soft" color="warning" title={LONGER_CONTENT_HINT}>
+                <TriangleAlert className="size-3" aria-hidden="true" />
+                {LONGER_CONTENT_LABEL}
+              </Chip>
+            )}
 
             {!completed && (
-              <ArrowRight
-                className="ml-auto size-4 text-accent transition-transform duration-[var(--duration-md)] ease-[var(--ease-zen)] group-hover:translate-x-0.5"
+              <ArrowRight02Icon
+                size={16}
+                className="ml-auto text-accent transition-transform duration-[var(--duration-md)] ease-[var(--ease-zen)] group-hover:translate-x-0.5"
                 aria-hidden="true"
               />
             )}
@@ -348,24 +389,38 @@ type SessionFeedbackProps = {
 
 function SessionFeedback({ title, hint, selected, onSelect }: SessionFeedbackProps) {
   return (
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-      <div>
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+      <div className="min-w-0">
         <p className="text-sm font-bold text-foreground">{title}</p>
         <p className="mt-1 text-xs text-muted">{hint}</p>
       </div>
+      {/*
+       * Uma coluna no mobile.
+       *
+       * `.toggle-button` é `white-space: nowrap` e `width: fit-content`, então em
+       * três colunas de ~110px o detalhe ("+10 min nas próximas") não encolhia
+       * nem quebrava: vazava por cima do vizinho e o terceiro botão saía do card.
+       * Empilhado, cada opção vira uma linha com o rótulo à esquerda e o efeito à
+       * direita, e sobra largura para os dois.
+       */}
       <ToggleButtonGroup
         aria-label={title}
         selectionMode="single"
         isDetached
+        fullWidth
         selectedKeys={selected ? [selected] : []}
         onSelectionChange={(keys) => {
           const [next] = Array.from(keys);
           if (next !== undefined) onSelect(String(next) as SessionLoadRating);
         }}
-        className="grid grid-cols-3 gap-2"
+        className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-3 lg:shrink-0"
       >
         {feedbackLabels.map((feedback) => (
-          <ToggleButton key={feedback.value} id={feedback.value} className="h-auto flex-col items-start gap-0.5 py-2">
+          <ToggleButton
+            key={feedback.value}
+            id={feedback.value}
+            className="h-auto w-full min-w-0 flex-row items-center justify-between gap-3 whitespace-normal px-3.5 py-2.5 text-left sm:flex-col sm:items-start sm:justify-center sm:gap-0.5"
+          >
             <span className="text-xs font-bold">{feedback.label}</span>
             <span className="text-[0.625rem] font-medium opacity-75">{feedback.detail}</span>
           </ToggleButton>
@@ -383,7 +438,7 @@ export default function MinhaTrilhaPage() {
   const [replanned, setReplanned] = useState(false);
   const [viewMode, setViewMode] = useState<TrailView>('next');
   const [adjustOpen, setAdjustOpen] = useState(false);
-  const [sessionToPostpone, setSessionToPostpone] = useState<string | null>(null);
+  const [postponeTarget, setPostponeTarget] = useState<PostponeTarget | null>(null);
   const [draftAvailability, setDraftAvailability] = useState<StudyAvailability>({ weekdays: [1, 3, 5], minutesPerSession: 30 });
   const [adaptationMessage, setAdaptationMessage] = useState('');
   const [completingId, setCompletingId] = useState<string | null>(null);
@@ -456,37 +511,67 @@ export default function MinhaTrilhaPage() {
   const sessionsBeyondHorizon = Math.max(0, sessions.length - NEXT_SESSIONS_HORIZON);
 
   /*
-   * A trilha completa é agrupada por curso, não por dia.
+   * Aviso antecipado de sessão mais longa, para além do card de hoje.
    *
-   * Vinte e cinco cabeçalhos de data são a mesma parede que a aba de próximos
-   * passos existe para evitar. Por formação, a lista responde a pergunta que
-   * realmente se faz aqui — "onde eu estou em cada curso, e quanto falta" — e
-   * é o único lugar onde ver o concluído tem valor: como progresso, não como
-   * histórico ocupando espaço.
+   * O card "Hoje" só fala do dia atual — quem estuda 20 minutos por sessão não
+   * tinha como saber, chegando na quinta, que a quinta reserva uma masterclass
+   * de 60. `overBudget` já marca esses dias (ver `schedulePendingItems`); aqui
+   * só se junta o que está pendente e mais longo dentro das duas próximas
+   * semanas, um por dia, para dar tempo da pessoa se programar.
    */
-  const courseGroups = useMemo(() => {
+  const upcomingLongerSessions = useMemo(() => {
     if (!trail) return [];
-    const groups = new Map<string, LearningTrailItem[]>();
+    const horizonEnd = fromLocalDateKey(today);
+    horizonEnd.setDate(horizonEnd.getDate() + LONGER_CONTENT_HORIZON_DAYS);
+    const horizonEndKey = toLocalDateKey(horizonEnd);
 
+    const byDate = new Map<string, number>();
     trail.items.forEach((item) => {
-      const key = item.courseName || item.moduleName || 'Conteúdos avulsos';
-      groups.set(key, [...(groups.get(key) || []), item]);
+      if (item.status !== 'pending' || !item.overBudget) return;
+      if (item.scheduledDate <= today || item.scheduledDate > horizonEndKey) return;
+      byDate.set(item.scheduledDate, (byDate.get(item.scheduledDate) || 0) + item.durationMin);
     });
 
-    return [...groups.entries()].map(([name, items]) => {
-      const done = items.filter((item) => item.status === 'completed').length;
-      return {
-        name,
-        items: [...items].sort((a, b) => a.order - b.order),
-        done,
-        total: items.length,
-        percent: Math.round((done / items.length) * 100),
-        minutes: items.reduce((sum, item) => sum + item.durationMin, 0),
-      };
-    });
-  }, [trail]);
+    return [...byDate.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, minutes]) => ({ date, minutes }));
+  }, [trail, today]);
+
+  /*
+   * Cada aba carrega o seu número. Sem eles a pessoa precisa abrir as três para
+   * descobrir onde está o volume — e "Agenda" e "Trilha completa" mostram contas
+   * diferentes (sessões planejadas x conteúdos da trilha).
+   */
+  const tabItems = useMemo(
+    () => [
+      { id: 'next' as const, label: 'Próximos passos', count: nextSessions.length, icon: LayoutList },
+      { id: 'calendar' as const, label: 'Agenda', count: sessions.length, icon: CalendarDays },
+      { id: 'full' as const, label: 'Trilha completa', count: trail?.items.length ?? 0, icon: Route },
+    ],
+    [nextSessions.length, sessions.length, trail?.items.length],
+  );
+
+  /*
+   * A trilha completa é uma lista só, na ordem do plano.
+   *
+   * Antes era agrupada por curso, e isso confundia de duas maneiras. Uma aula
+   * avulsa de "Negociação" virava um card com o nome do curso, barra de
+   * progresso e numeração começando em 1 — indistinguível do curso inteiro estar
+   * na trilha. E o agrupamento embaralhava a sequência: tudo de um curso saía
+   * junto, "de uma vez", mesmo quando o plano intercalava formações.
+   *
+   * `order` é a ordem que o motor montou a partir da curadoria (essencial antes
+   * de aprofundamento antes de extra e, dentro de cada faixa, a ordem que o
+   * admin mapeou no onboarding, com os pré-requisitos resolvidos). O curso de
+   * origem vira legenda da linha em vez de cabeçalho de bloco.
+   */
+  const fullTrailItems = useMemo(
+    () => (trail ? [...trail.items].sort((a, b) => a.order - b.order) : []),
+    [trail],
+  );
 
   const stats = useMemo(() => (trail ? computeStudyStats(trail) : null), [trail]);
+  const undoIconRef = useRef<UndoIconHandle>(null);
 
   const todayItems = trail?.items.filter((item) => item.scheduledDate === today) || [];
   const todayPending = todayItems.filter((item) => item.status === 'pending');
@@ -498,6 +583,16 @@ export default function MinhaTrilhaPage() {
     ? minutesForWeekday(effectiveAvailability(trail), new Date().getDay() as Weekday)
     : 0;
   const todayFeedback = trail?.feedbackHistory?.find((item) => item.sessionId === todaySessionId);
+
+  /*
+   * Orçamento do dia. `todayBudget` é 0 fora da rotina, então o medidor precisa
+   * tratar "sem reserva" como barra cheia em vez de dividir por zero.
+   */
+  const todayPendingMinutes = todayPending.reduce((sum, item) => sum + item.durationMin, 0);
+  const overBudget = todayPendingMinutes > todayBudget;
+  const budgetPercent = todayBudget > 0
+    ? Math.min(100, Math.round((todayPendingMinutes / todayBudget) * 100))
+    : 100;
 
   /** No modo exemplo os ajustes valem para a sessão atual, mas nada é gravado. */
   const commitTrail = async (updated: LearningTrail) => {
@@ -573,7 +668,35 @@ export default function MinhaTrilhaPage() {
     commitTrail(updated);
     trackTrailEvent('session_postponed', { sessionId });
     setAdaptationMessage('Sessão adiada. As próximas datas foram ajustadas sem alterar o que você já concluiu.');
-    setSessionToPostpone(null);
+    setPostponeTarget(null);
+  };
+
+  /**
+   * Adiar um conteúdo só.
+   *
+   * Sem confirmação, ao contrário de adiar a sessão: aqui a mudança é local — um
+   * item cai para o próximo dia da rotina e o resto do dia continua de pé — e o
+   * aviso em `aria-live` já conta o que aconteceu, inclusive quando a sequência
+   * do curso obrigou colegas do mesmo dia a irem junto.
+   */
+  const handlePostponeItem = (item: LearningTrailItem) => {
+    if (!trail) return;
+    const updated = postponeTrailItem(trail, item.id);
+    if (updated === trail) return;
+
+    const movedTogether = updated.items.filter(
+      (next) => next.id !== item.id
+        && next.scheduledDate !== trail.items.find((prev) => prev.id === next.id)?.scheduledDate,
+    ).length;
+
+    commitTrail(updated);
+    trackTrailEvent('content_postponed', { itemId: item.id });
+    setPostponeTarget(null);
+    setAdaptationMessage(
+      movedTogether > 0
+        ? `“${item.title}” foi para o próximo dia da sua rotina, junto com ${movedTogether} ${movedTogether === 1 ? 'conteúdo que vem' : 'conteúdos que vêm'} depois dele no curso. O resto da sessão continua valendo.`
+        : `“${item.title}” foi para o próximo dia da sua rotina. O resto da sessão continua valendo.`,
+    );
   };
 
   /**
@@ -649,7 +772,7 @@ export default function MinhaTrilhaPage() {
                 Responda algumas perguntas e receba sessões organizadas pelos seus objetivos e pelo tempo disponível.
               </p>
               <Link href="/onboarding" className={cn(buttonVariants({ variant: 'primary' }), 'mt-8')}>
-                Criar minha trilha <ArrowRight className="size-4" aria-hidden="true" />
+                Criar minha trilha <ArrowRight02Icon size={16} aria-hidden="true" />
               </Link>
             </EmptyState>
           </Card>
@@ -682,7 +805,18 @@ export default function MinhaTrilhaPage() {
               <span aria-hidden="true" className="absolute -bottom-10 left-5 top-12 hidden w-px bg-hairline sm:block" />
             )}
 
-            <div className={cn('flex flex-wrap items-center gap-4', mode === 'timeline' ? 'mb-5' : 'mb-4')}>
+            {/*
+             * No mobile o cabeçalho é uma coluna: número + data em cima, ação
+             * embaixo. Tudo na mesma linha espremia o título entre o filete e o
+             * botão, e "Sábado, 23 de agosto" virava "Sába…".
+             */}
+            <div
+              className={cn(
+                'flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4',
+                mode === 'timeline' ? 'mb-5' : 'mb-4',
+              )}
+            >
+              <div className="flex min-w-0 items-center gap-4 sm:contents">
               {mode === 'timeline' && (
                 <span
                   data-numeric
@@ -695,10 +829,10 @@ export default function MinhaTrilhaPage() {
                   {index + 1}
                 </span>
               )}
-              
+
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className={cn("font-display font-extrabold capitalize tracking-[-0.02em] text-foreground truncate", mode === 'calendar' ? 'text-sm' : 'text-lg')}>
+                  <h3 className={cn("font-display font-extrabold first-letter:uppercase tracking-[-0.02em] text-foreground truncate", mode === 'calendar' ? 'text-sm' : 'text-lg')}>
                     {date.toLocaleDateString('pt-BR', mode === 'calendar' ? { weekday: 'short', day: '2-digit', month: 'short' } : { weekday: 'long', day: '2-digit', month: 'long' })}
                   </h3>
                   {mode === 'calendar' && (
@@ -722,12 +856,20 @@ export default function MinhaTrilhaPage() {
                   )}
                 </p>
               </div>
+              </div>
 
               {mode === 'timeline' && (
                 <>
-                  <span aria-hidden="true" className="h-px min-w-8 flex-1 bg-hairline" />
+                  {/* O filete só existe para preencher a linha; no mobile não há linha. */}
+                  <span aria-hidden="true" className="hidden h-px min-w-8 flex-1 bg-hairline sm:block" />
                   {canPostpone && (
-                    <Button variant="tertiary" size="sm" onClick={() => setSessionToPostpone(sessionId)}>
+                    <Button
+                      variant="tertiary"
+                      size="sm"
+                      className="self-start sm:self-auto"
+                      onClick={() => setPostponeTarget({ kind: 'session', sessionId })}
+                    >
+                      <HugeiconsIcon icon={CalendarCheckOut01Icon} size={16} strokeWidth={1.8} aria-hidden="true" />
                       Adiar sessão
                     </Button>
                   )}
@@ -737,7 +879,13 @@ export default function MinhaTrilhaPage() {
 
             {mode === 'calendar' && canPostpone && (
               <div className="mb-4">
-                <Button variant="tertiary" size="sm" className="w-full justify-center text-xs h-8" onClick={() => setSessionToPostpone(sessionId)}>
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  className="h-8 w-full justify-center text-xs"
+                  onClick={() => setPostponeTarget({ kind: 'session', sessionId })}
+                >
+                  <HugeiconsIcon icon={CalendarCheckOut01Icon} size={14} strokeWidth={1.8} aria-hidden="true" />
                   Adiar sessão
                 </Button>
               </div>
@@ -754,16 +902,54 @@ export default function MinhaTrilhaPage() {
                 const selfReported = item.status === 'pending'
                   && (item.type === 'article' || item.type === 'external_link');
 
+                /*
+                 * Adiar um conteúdo, não o dia inteiro. Só faz sentido para o que
+                 * ainda está pendente e para hoje ou depois — adiar o passado é
+                 * trabalho do replanejamento automático.
+                 */
+                const canPostponeItem = item.status === 'pending' && item.scheduledDate >= today;
+
                 return (
-                  <div key={item.id} className="group/item relative min-w-0 flex flex-col">
-                    <TrailContentCard item={item} today={today} withCompleteAction={selfReported && mode === 'timeline'} compact={mode === 'calendar'} subdued={mode === 'calendar'} />
+                  <div key={item.id} className="group/item lift-item relative min-w-0 flex flex-col">
+                    <TrailContentCard item={item} today={today} withActionBar={selfReported && mode === 'timeline'} compact={mode === 'calendar'} subdued={mode === 'calendar'} />
+
+                    {/*
+                     * Adiar é escape, não ação principal: mora no canto do card,
+                     * como ícone. Fica sempre visível em vez de aparecer no hover
+                     * — no toque não existe hover, e foi justamente no celular que
+                     * a tela ficou difícil de usar.
+                     *
+                     * É irmão do card, não filho: o card inteiro é um link, e
+                     * <button> dentro de <a> não é HTML válido.
+                     */}
+                    {canPostponeItem && (
+                      <button
+                        type="button"
+                        onClick={() => setPostponeTarget({ kind: 'item', item })}
+                        aria-label={`Adiar “${item.title}” para o próximo dia da rotina`}
+                        title="Adiar conteúdo"
+                        className={cn(
+                          'material-thin press absolute z-10 grid place-items-center rounded-full text-muted',
+                          'transition-colors duration-[var(--duration-md)] hover:text-foreground',
+                          mode === 'calendar' ? 'right-2 top-2 size-7' : 'right-2.5 top-2.5 size-8',
+                        )}
+                      >
+                        <HugeiconsIcon
+                          icon={CalendarCheckOut01Icon}
+                          size={mode === 'calendar' ? 13 : 15}
+                          strokeWidth={1.8}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    )}
+
                     {selfReported && (
                       <Button
                         size="sm"
                         variant={mode === 'calendar' ? 'ghost' : 'tertiary'}
                         isDisabled={completingId === item.id}
                         onClick={() => handleComplete(item)}
-                        className={cn(mode === 'calendar' ? 'mt-2 w-full justify-center h-8 text-xs' : 'absolute inset-x-5 bottom-4 justify-center')}
+                        className={cn(mode === 'calendar' ? 'mt-2 h-8 w-full justify-center text-xs' : 'absolute inset-x-5 bottom-4 justify-center')}
                       >
                         <Check className="size-3.5" aria-hidden="true" />
                         {completingId === item.id ? 'Registrando…' : 'Marcar como concluído'}
@@ -780,162 +966,151 @@ export default function MinhaTrilhaPage() {
   );
 
   const renderFullTrail = () => (
-    <div className="space-y-6">
-      {courseGroups.map((group) => (
-        <Rise as="section" key={group.name} className="surface-card p-5 sm:p-6">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div className="min-w-0">
-              <h3 className="font-display text-lg font-extrabold tracking-[-0.02em] text-foreground">
-                {group.name}
-              </h3>
-              <p className="mt-1 text-xs font-semibold text-muted" data-numeric>
-                {group.done} de {group.total} concluídos · {group.minutes} min no total
-              </p>
-            </div>
-            <span
-              data-numeric
-              className={cn(
-                'font-display text-2xl font-extrabold tracking-[-0.03em]',
-                group.percent === 100 ? 'text-success' : 'text-accent',
-              )}
-            >
-              {group.percent}%
-            </span>
-          </div>
+    <Rise as="section" className="surface-card p-5 sm:p-6">
+      {/* Linhas, não cards: numa trilha de dezenas de conteúdos a densidade é o recurso escasso. */}
+      <ul className="border-t border-hairline">
+        {fullTrailItems.map((item, index) => {
+          const done = item.status === 'completed';
+          const href = contentHref(item);
+          const external = item.type === 'external_link';
+          const type = typeVisual(item.type);
+          const origin = item.courseName || item.moduleName;
 
-          <div className="mt-4">
-            <ProgressBar
-              value={group.percent}
-              color={group.percent === 100 ? 'success' : 'accent'}
-              size="sm"
-              aria-label={`Progresso em ${group.name}`}
-            >
-              <ProgressBar.Track>
-                <ProgressBar.Fill />
-              </ProgressBar.Track>
-            </ProgressBar>
-          </div>
+          const row = (
+            <>
+              <span
+                data-numeric
+                className={cn(
+                  'grid size-7 shrink-0 place-items-center rounded-full text-[0.6875rem] font-extrabold',
+                  done ? 'bg-success text-success-foreground' : 'bg-default text-default-foreground',
+                )}
+              >
+                {done ? <Check className="size-3.5" aria-hidden="true" /> : index + 1}
+              </span>
 
-          {/* Linhas, não cards: numa trilha de dezenas de conteúdos a densidade é o recurso escasso. */}
-          <ul className="mt-5 border-t border-hairline">
-            {group.items.map((item, index) => {
-              const done = item.status === 'completed';
-              const href = contentHref(item);
-              const external = item.type === 'external_link';
-              const type = typeVisual(item.type);
-
-              const row = (
-                <>
-                  <span
-                    data-numeric
-                    className={cn(
-                      'grid size-7 shrink-0 place-items-center rounded-full text-[0.6875rem] font-extrabold',
-                      done ? 'bg-success text-success-foreground' : 'bg-default text-default-foreground',
-                    )}
-                  >
-                    {done ? <Check className="size-3.5" aria-hidden="true" /> : index + 1}
-                  </span>
-
-                  <span className="min-w-0 flex-1">
-                    <span
-                      className={cn(
-                        'block truncate text-sm font-bold',
-                        done ? 'text-muted line-through decoration-success/50' : 'text-foreground',
-                      )}
-                    >
-                      {item.title}
-                    </span>
-                    <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
-                      <type.Icon className="size-3 shrink-0" aria-hidden="true" />
-                      <span className="truncate">
-                        {type.label}
-                        {item.moduleName && item.moduleName !== group.name ? ` · ${item.moduleName}` : ''}
-                      </span>
-                    </span>
-                  </span>
-
-                  <span className="shrink-0 text-xs font-semibold text-muted" data-numeric>
-                    {item.durationMin} min
-                  </span>
-
-                  <span
-                    className={cn(
-                      'hidden w-24 shrink-0 text-right text-xs font-semibold sm:block',
-                      done ? 'text-success' : 'text-muted',
-                    )}
-                    data-numeric
-                  >
-                    {done ? 'Concluído' : shortDate(item.scheduledDate)}
-                  </span>
-                </>
-              );
-
-              const classes = cn(
-                'flex items-center gap-3 border-b border-hairline py-3 transition-colors',
-                done ? 'opacity-70' : 'hover:bg-background-secondary/60',
-              );
-
-              return (
-                <li key={item.id}>
-                  {external ? (
-                    <a href={href} target="_blank" rel="noreferrer" className={classes}>{row}</a>
-                  ) : (
-                    <Link href={href} className={classes}>{row}</Link>
+              <span className="min-w-0 flex-1">
+                <span
+                  className={cn(
+                    'block truncate text-sm font-bold',
+                    done ? 'text-muted line-through decoration-success/50' : 'text-foreground',
                   )}
-                </li>
-              );
-            })}
-          </ul>
-        </Rise>
-      ))}
-    </div>
+                >
+                  {item.title}
+                </span>
+                {/*
+                 * A origem vira legenda da linha. É o que responde "de onde veio
+                 * isto" sem sugerir que o curso inteiro entrou na trilha.
+                 */}
+                <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+                  <type.Icon className="size-3 shrink-0" aria-hidden="true" />
+                  <span className="truncate">
+                    {type.label}
+                    {origin ? ` · ${origin}` : ''}
+                    {item.moduleName && item.moduleName !== origin ? ` · ${item.moduleName}` : ''}
+                  </span>
+                </span>
+              </span>
+
+              <span className="shrink-0 text-xs font-semibold text-muted" data-numeric>
+                {item.durationMin} min
+              </span>
+
+              <span
+                className={cn(
+                  'hidden w-24 shrink-0 text-right text-xs font-semibold sm:block',
+                  done ? 'text-success' : 'text-muted',
+                )}
+                data-numeric
+              >
+                {done ? 'Concluído' : shortDate(item.scheduledDate)}
+              </span>
+            </>
+          );
+
+          const classes = cn(
+            'flex items-center gap-3 border-b border-hairline py-3 transition-colors',
+            done ? 'opacity-70' : 'hover:bg-background-secondary/60',
+          );
+
+          return (
+            <li key={item.id}>
+              {external ? (
+                <a href={href} target="_blank" rel="noreferrer" className={classes}>{row}</a>
+              ) : (
+                <Link href={href} className={classes}>{row}</Link>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </Rise>
   );
 
   return (
     <div className="pt-[76px]">
-      <section className="border-b border-hairline">
-        <div className="editorial-container py-12 sm:py-16">
-          <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
+      <section className="relative isolate overflow-hidden">
+        {/*
+         * Aura local da abertura.
+         *
+         * O `ambient-canvas` do RouteShell é fixo e propositalmente discreto —
+         * bom de fundo, fraco de abertura. Estas três manchas desfocadas ancoram
+         * o topo desta página e, principalmente, dão ao vidro do painel de
+         * progresso algo de colorido para refratar.
+         */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 -top-40 -z-10 h-[46rem] [mask-image:linear-gradient(to_bottom,black_45%,transparent_95%)]"
+        >
+          <div className="absolute -left-32 top-0 size-[36rem] rounded-full bg-accent/16 blur-[130px]" />
+          <div className="absolute -right-28 top-16 size-[32rem] rounded-full bg-warning/10 blur-[130px]" />
+          <div className="absolute left-1/2 top-64 size-[30rem] -translate-x-1/2 rounded-full bg-success/10 blur-[140px]" />
+        </div>
+
+        <div className="editorial-container pb-10 pt-14 sm:pb-12 sm:pt-20">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-16">
             <Rise>
               <p className="eyebrow">Agenda personalizada</p>
-              <h1 className="display-2 mt-3 max-w-3xl text-foreground">Por que estes conteúdos</h1>
-              <p className="lede mt-6">
+              <h1 className="display-2 mt-3 max-w-2xl text-foreground">Por que estes conteúdos</h1>
+              <p className="lede mt-5">
                 Montamos sua sequência a partir do que você respondeu. Mudou de objetivo ou de rotina? Ajuste, a agenda se reorganiza sozinha.
               </p>
+
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Button variant="outline" onClick={() => setAdjustOpen(true)}>
+                  <Settings2 className="size-4" aria-hidden="true" /> Ajustar rotina
+                </Button>
+                {/*
+                 * O ícone é controlado por ref: com o handle montado, o próprio
+                 * componente para de escutar o mouse e a volta acontece no hover
+                 * do botão inteiro, não só nos 16px do desenho.
+                 */}
+                <Link
+                  href="/onboarding?edit=1"
+                  className={buttonVariants({ variant: 'outline' })}
+                  onMouseEnter={() => undoIconRef.current?.startAnimation()}
+                  onMouseLeave={() => undoIconRef.current?.stopAnimation()}
+                >
+                  <UndoIcon ref={undoIconRef} size={16} aria-hidden="true" />
+                  Reajustar trilha
+                </Link>
+              </div>
             </Rise>
 
-            <div className="flex flex-wrap gap-3">
-              <Button variant="outline" onClick={() => setAdjustOpen(true)}>
-                <Settings2 className="size-4" aria-hidden="true" /> Ajustar rotina
-              </Button>
-              <Link href="/onboarding?edit=1" className={buttonVariants({ variant: 'outline' })}>
-                Refazer o questionário
-              </Link>
-            </div>
+            <Rise delay={90} className="min-w-0">
+              <TrailProgressPanel
+                completion={completion}
+                completed={completed}
+                total={trail.items.length}
+                weeklyGoal={weeklyGoal}
+              />
+            </Rise>
           </div>
 
-          {/* `data-numeric` herda: todas as métricas comparáveis viram tabulares. */}
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" data-numeric>
-            <StatCard label="Progresso real" value={`${completion}%`} icon={Route} tone="primary" />
-            <StatCard label="Concluídos" value={`${completed}/${trail.items.length}`} icon={CheckCircle2} tone="sage" />
-            <StatCard label="Meta semanal" value={`${weeklyGoal} min`} icon={Clock3} tone="terracotta" />
-          </div>
-
-          <div className="mt-6">
-            <ProgressBar value={completion} color="accent" size="md" data-numeric>
-              <Label className="text-xs font-semibold text-muted">Trilha concluída</Label>
-              <ProgressBar.Output className="text-xs font-bold text-accent" />
-              <ProgressBar.Track>
-                <ProgressBar.Fill />
-              </ProgressBar.Track>
-            </ProgressBar>
-          </div>
+          {stats && <StudyLedger stats={stats} />}
         </div>
       </section>
 
-      {stats && <StudyLedger stats={stats} />}
-
-      <main className="editorial-container py-10 sm:py-14">
+      <main className="editorial-container pb-10 pt-6 sm:pb-14 sm:pt-8">
         {isDemo && (
           <Alert status="accent" className="mb-8 items-center gap-3 sm:gap-4">
             <Alert.Indicator>
@@ -948,7 +1123,7 @@ export default function MinhaTrilhaPage() {
               </Alert.Description>
             </Alert.Content>
             <Link href="/onboarding" className={cn(buttonVariants({ variant: 'primary', size: 'sm' }), 'ml-auto shrink-0')}>
-              Criar minha trilha <ArrowRight className="size-4" aria-hidden="true" />
+              Criar minha trilha <ArrowRight02Icon size={16} aria-hidden="true" />
             </Link>
           </Alert>
         )}
@@ -980,32 +1155,86 @@ export default function MinhaTrilhaPage() {
           </Alert>
         )}
 
+        {upcomingLongerSessions.length > 0 && (
+          <Alert status="warning" className="mb-8">
+            <Alert.Indicator>
+              <TriangleAlert className="size-5" aria-hidden="true" />
+            </Alert.Indicator>
+            <Alert.Content>
+              <Alert.Title>
+                {upcomingLongerSessions.length === 1
+                  ? 'Uma sessão mais longa está chegando.'
+                  : `${upcomingLongerSessions.length} sessões mais longas estão chegando.`}
+              </Alert.Title>
+              <Alert.Description data-numeric>
+                {upcomingLongerSessions.slice(0, 3).map((session, index) => (
+                  <span key={session.date}>
+                    {index > 0 && ' · '}
+                    <span className="font-semibold text-foreground first-letter:uppercase">
+                      {weekdayDate(session.date)}
+                    </span>
+                    {' '}({session.minutes} min)
+                  </span>
+                ))}
+                {upcomingLongerSessions.length > 3 && ` e mais ${upcomingLongerSessions.length - 3}`}
+                {' '}— reserve um tempo extra nesses dias, ou adie a sessão se não encaixar.
+              </Alert.Description>
+            </Alert.Content>
+          </Alert>
+        )}
+
         {todayPending.length > 0 ? (
           /*
            * Banner, não card de destaque: "o que eu faço agora" é a pergunta da
            * home. Repetir aqui a mesma sessão em tamanho grande fazia as duas
            * telas competirem — esta é o plano completo, e é só isso.
+           *
+           * Onde havia um botão "Ir para o painel" agora mora o medidor do dia.
+           * O botão mandava embora de uma tela que a pessoa acabou de abrir, e o
+           * texto ("seu próximo passo fica no painel") só existia para explicá-lo.
            */
-          <Card className="mb-12 gap-0 overflow-hidden border-hairline p-0">
-            <div className="flex flex-col gap-5 bg-accent-soft/45 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <div className="material-thin mb-12 overflow-hidden rounded-[1.75rem]">
+            <div className="flex flex-col gap-7 p-6 sm:flex-row sm:items-center sm:justify-between sm:gap-12 sm:p-8">
               <div className="min-w-0">
                 <p className="eyebrow">Hoje</p>
                 <p
-                  className="mt-2 flex items-center gap-2 font-display text-lg font-extrabold tracking-[-0.02em] text-foreground"
+                  className="mt-2 flex items-start gap-2.5 font-display text-xl font-extrabold tracking-[-0.02em] text-foreground"
                   data-numeric
                 >
-                  <Clock3 className="size-4 shrink-0" aria-hidden="true" />
+                  {/* `mt-[3px]`: com o título quebrando em duas linhas, centralizar o ícone o deixava boiando entre elas. */}
+                  <Clock3 className="mt-[3px] size-5 shrink-0 text-accent" aria-hidden="true" />
                   {todayPending.length} {todayPending.length === 1 ? 'conteúdo' : 'conteúdos'} ·{' '}
-                  {todayPending.reduce((sum, item) => sum + item.durationMin, 0)} min pendentes
+                  {todayPendingMinutes} min pendentes
                 </p>
-                <p className="mt-2 max-w-xl text-sm leading-6 text-muted" data-numeric>
+                <p className="mt-2.5 max-w-xl text-sm leading-6 text-muted" data-numeric>
                   O plano reservou {todayBudget} minutos para hoje, com folga de 20% para não cortar
-                  uma aula ao meio. Seu próximo passo fica no painel.
+                  uma aula ao meio.
                 </p>
               </div>
-              <Link href="/" className={cn(buttonVariants({ variant: 'primary' }), 'shrink-0')}>
-                Ir para o painel <ArrowRight className="size-4" aria-hidden="true" />
-              </Link>
+
+              <div className="w-full shrink-0 sm:w-60" data-numeric>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="eyebrow">Reservado hoje</span>
+                  <span className="font-display text-sm font-bold text-foreground">
+                    {todayPendingMinutes}
+                    <span className="text-muted">/{todayBudget} min</span>
+                  </span>
+                </div>
+                <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-hairline-strong">
+                  <div
+                    className={cn(
+                      'h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none',
+                      overBudget ? 'bg-warning' : 'bg-accent',
+                    )}
+                    style={{ width: `${budgetPercent}%` }}
+                  />
+                </div>
+                <p className="mt-2.5 text-xs leading-5 text-muted">
+                  {overBudget
+                    ? 'Passou do reservado. Adie o excedente se o dia apertar.'
+                    : `Ainda cabem ${todayBudget - todayPendingMinutes} min na sua rotina de hoje.`}
+                </p>
+              </div>
             </div>
 
             <div className="border-t border-hairline px-6 py-5 sm:px-8">
@@ -1016,11 +1245,11 @@ export default function MinhaTrilhaPage() {
                 onSelect={handleFeedback}
               />
             </div>
-          </Card>
+          </div>
         ) : (
-          <Card className="mb-12 gap-0 overflow-hidden border-hairline p-0">
-            <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
-              <div>
+          <div className="material-thin mb-12 overflow-hidden rounded-[1.75rem]">
+            <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+              <div className="min-w-0">
                 <p className="eyebrow">Hoje</p>
                 <h2 className="display-3 mt-2 text-foreground">Nenhuma sessão pendente para hoje.</h2>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-muted">
@@ -1033,7 +1262,7 @@ export default function MinhaTrilhaPage() {
             </div>
 
             {todayItems.length > 0 && (
-              <div className="border-t border-hairline bg-background-secondary/50 px-6 py-5 sm:px-8">
+              <div className="border-t border-hairline px-6 py-5 sm:px-8">
                 <SessionFeedback
                   title="Como foi a sessão concluída?"
                   hint="Isso calibra o tamanho das próximas sessões."
@@ -1042,29 +1271,59 @@ export default function MinhaTrilhaPage() {
                 />
               </div>
             )}
-          </Card>
+          </div>
         )}
 
-        <Tabs.Root selectedKey={viewMode} onSelectionChange={(key) => setViewMode(String(key) as TrailView)}>
-          <div className="mb-8 flex flex-col gap-5 border-b border-hairline pb-6 sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex-1 min-w-0">
-              <p className="eyebrow">Plano de aprendizagem</p>
-              <h2 className="display-2 mt-2 text-foreground">{VIEW_META[viewMode].title}</h2>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-muted">{VIEW_META[viewMode].hint}</p>
+        <Tabs.Root
+          selectedKey={viewMode}
+          onSelectionChange={(key) => setViewMode(String(key) as TrailView)}
+          className="gap-0"
+        >
+          <div className="mb-8 border-b border-hairline pb-6">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between sm:gap-10">
+              <div className="min-w-0">
+                <p className="eyebrow">Plano de aprendizagem</p>
+                {/*
+                 * `display-3`, não `display-2`: o h1 da página já é display-2 e
+                 * dois títulos do mesmo tamanho deixavam a tela sem hierarquia.
+                 */}
+                <h2 className="display-3 mt-2 text-foreground">{VIEW_META[viewMode].title}</h2>
+              </div>
+
+              {/*
+               * O `ListContainer` é o que traz a trilha do controle segmentado e
+               * o scroller; sem ele (e sem o `Indicator` dentro de cada aba) as
+               * abas viravam três rótulos soltos, sem nem dizer qual estava ativa.
+               * Mesmo arranjo de `LessonTabs`.
+               */}
+              <Tabs.ListContainer className="material-thin w-full shrink-0 rounded-full px-1 sm:w-auto">
+                <Tabs.List aria-label="Como ver seu plano">
+                  {tabItems.map(({ id, label, count, icon: Icon }) => (
+                    <Tabs.Tab
+                      key={id}
+                      id={id}
+                      // Sem isto o contador entra no nome acessível como "Agenda8".
+                      aria-label={`${label} (${count})`}
+                      className="group h-11 w-auto shrink-0 gap-2 rounded-full px-4 text-sm font-semibold"
+                    >
+                      <Icon className="size-4 shrink-0" aria-hidden="true" />
+                      <span>{label}</span>
+                      <span
+                        aria-hidden="true"
+                        className="rounded-full bg-default px-1.5 py-0.5 text-[0.6875rem] font-bold text-muted transition-colors group-data-[selected]:bg-accent-soft group-data-[selected]:text-accent-soft-foreground"
+                        data-numeric
+                      >
+                        {count}
+                      </span>
+                      <Tabs.Indicator className="rounded-full" />
+                    </Tabs.Tab>
+                  ))}
+                </Tabs.List>
+              </Tabs.ListContainer>
             </div>
-            <div className="w-full overflow-x-auto no-scrollbar sm:w-auto">
-              <Tabs.List aria-label="Como ver seu plano" className="flex-nowrap w-max sm:w-auto">
-                <Tabs.Tab id="next">
-                  <LayoutList className="size-4" aria-hidden="true" /> Próximos passos
-                </Tabs.Tab>
-                <Tabs.Tab id="calendar">
-                  <CalendarDays className="size-4" aria-hidden="true" /> Agenda
-                </Tabs.Tab>
-                <Tabs.Tab id="full">
-                  <Route className="size-4" aria-hidden="true" /> Trilha completa
-                </Tabs.Tab>
-              </Tabs.List>
-            </div>
+
+            {/* A dica ganha a largura inteira embaixo, em vez de espremer o título. */}
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-muted">{VIEW_META[viewMode].hint}</p>
           </div>
 
           <Tabs.Panel id="next">
@@ -1082,7 +1341,7 @@ export default function MinhaTrilhaPage() {
                       Mais {sessionsBeyondHorizon} {sessionsBeyondHorizon === 1 ? 'sessão planejada' : 'sessões planejadas'} depois destas.
                     </p>
                     <Button variant="tertiary" onClick={() => setViewMode('full')}>
-                      Ver trilha completa <ArrowRight className="size-4" aria-hidden="true" />
+                      Ver trilha completa <ArrowRight02Icon size={16} aria-hidden="true" />
                     </Button>
                   </div>
                 )}
@@ -1099,7 +1358,7 @@ export default function MinhaTrilhaPage() {
                     ou acompanhe seu progresso na trilha completa.
                   </p>
                   <Button variant="tertiary" className="mt-6" onClick={() => setViewMode('full')}>
-                    Ver trilha completa <ArrowRight className="size-4" aria-hidden="true" />
+                    Ver trilha completa <ArrowRight02Icon size={16} aria-hidden="true" />
                   </Button>
                 </EmptyState>
               </Card>
@@ -1112,9 +1371,9 @@ export default function MinhaTrilhaPage() {
       </main>
 
       <AlertDialog.Root
-        isOpen={sessionToPostpone !== null}
+        isOpen={postponeTarget !== null}
         onOpenChange={(open) => {
-          if (!open) setSessionToPostpone(null);
+          if (!open) setPostponeTarget(null);
         }}
       >
         <AlertDialog.Backdrop>
@@ -1122,29 +1381,41 @@ export default function MinhaTrilhaPage() {
             <AlertDialog.Dialog>
               <AlertDialog.Header>
                 <AlertDialog.Icon status="warning">
-                  <CalendarDays className="size-5" aria-hidden="true" />
+                  <HugeiconsIcon icon={CalendarCheckOut01Icon} size={20} strokeWidth={1.8} aria-hidden="true" />
                 </AlertDialog.Icon>
-                <AlertDialog.Heading>Adiar esta sessão?</AlertDialog.Heading>
+                <AlertDialog.Heading>
+                  {postponeTarget?.kind === 'item' ? 'Adiar este conteúdo?' : 'Adiar esta sessão?'}
+                </AlertDialog.Heading>
               </AlertDialog.Header>
 
               <AlertDialog.Body>
-                <p>
-                  Deseja realmente adiar esta sessão? As próximas datas serão reorganizadas automaticamente,
-                  sem alterar o que você já concluiu.
-                </p>
+                {postponeTarget?.kind === 'item' ? (
+                  <p>
+                    “{postponeTarget.item.title}” vai para o próximo dia da sua rotina e o resto da
+                    sessão de hoje continua valendo. Conteúdos do mesmo curso que vêm depois dele
+                    acompanham, para não quebrar a ordem das aulas.
+                  </p>
+                ) : (
+                  <p>
+                    Deseja realmente adiar esta sessão? As próximas datas serão reorganizadas automaticamente,
+                    sem alterar o que você já concluiu.
+                  </p>
+                )}
               </AlertDialog.Body>
 
               <AlertDialog.Footer>
-                <Button variant="tertiary" onClick={() => setSessionToPostpone(null)}>
+                <Button variant="tertiary" onClick={() => setPostponeTarget(null)}>
                   Cancelar
                 </Button>
                 <Button
                   variant="primary"
                   onClick={() => {
-                    if (sessionToPostpone) handlePostpone(sessionToPostpone);
+                    if (!postponeTarget) return;
+                    if (postponeTarget.kind === 'item') handlePostponeItem(postponeTarget.item);
+                    else handlePostpone(postponeTarget.sessionId);
                   }}
                 >
-                  Sim, adiar sessão
+                  {postponeTarget?.kind === 'item' ? 'Sim, adiar conteúdo' : 'Sim, adiar sessão'}
                 </Button>
               </AlertDialog.Footer>
             </AlertDialog.Dialog>

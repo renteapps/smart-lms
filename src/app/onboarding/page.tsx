@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion';
-import { ArrowLeft, ArrowRight, CalendarDays, Check, Clock3, LoaderCircle, Sparkles } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, Clock3, LoaderCircle, Sparkles } from 'lucide-react';
+import { ArrowRight02Icon } from '@/components/ui/arrow-right-02';
 import { AvailabilityMode, LearningTrail, Questionnaire, StudyAvailability, Weekday } from '@/types/trilha';
 import { getOnboardingData, generateTrail, trackTrailEvent } from '@/app/actions/trail';
 import { clampSessionMinutes, weeklyMinutes } from '@/lib/matching';
@@ -390,7 +391,7 @@ export default function OnboardingPage() {
                       >
                         <span className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-[8px] border text-xs font-extrabold', selected ? 'border-primary bg-primary text-white' : 'border-border bg-canvas-soft text-text-mute')}>{selected ? <Check className="h-4 w-4 stroke-[3]" /> : String(index + 1).padStart(2, '0')}</span>
                         <span className={cn('flex-1 text-base font-bold sm:text-lg', selected ? 'text-primary-active' : 'text-ink')}>{option.label}</span>
-                        <ArrowRight className={cn('h-4 w-4 transition-[opacity,transform]', selected ? 'translate-x-0 text-primary opacity-100' : '-translate-x-1 text-text-mute opacity-0 group-hover:translate-x-0 group-hover:opacity-100')} />
+                        <ArrowRight02Icon size={16} className={cn('transition-[opacity,transform]', selected ? 'translate-x-0 text-primary opacity-100' : '-translate-x-1 text-text-mute opacity-0 group-hover:translate-x-0 group-hover:opacity-100')} />
                       </motion.button>
                     );
                   })}
@@ -412,7 +413,7 @@ export default function OnboardingPage() {
                 disabled={question.type === 'availability' ? availability.weekdays.length === 0 || availability.minutesPerSession < 10 : currentAnswers.length === 0}
                 className="inline-flex min-h-12 items-center gap-2 rounded-[9px] bg-primary px-6 font-bold text-on-primary shadow-md hover:bg-primary-active disabled:cursor-not-allowed disabled:opacity-35"
               >
-                {currentStep === questions.length - 1 ? 'Montar trilha' : 'Continuar'} <ArrowRight className="h-4 w-4" />
+                {currentStep === questions.length - 1 ? 'Montar trilha' : 'Continuar'} <ArrowRight02Icon size={16} />
               </motion.button>
             </footer>
           </motion.section>

@@ -31,6 +31,8 @@ export type ContentItem = {
   moduleId?: string;
   moduleName?: string;
   cover?: string;
+  /** Descrição curta cadastrada no conteúdo — vazia quando ninguém escreveu uma. */
+  shortDescription?: string;
   prerequisites?: string[];
   /** Posição da aula na ordem editorial do curso — o agendador nunca a inverte. */
   sequence?: number;
@@ -110,6 +112,7 @@ export function createContentIndex(
       url: source.url,
       // Capa escolhida na curadoria vence a do catálogo.
       cover: mapping.cover || source.cover,
+      shortDescription: source.shortDescription,
       prerequisites: source.prerequisites?.length ? source.prerequisites : undefined,
       sequence: source.sequence,
     }];

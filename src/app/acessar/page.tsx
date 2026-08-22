@@ -3,7 +3,8 @@
 import React, { Suspense, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertCircle, ArrowRight, CheckCircle2, KeyRound, Mail, Sparkles } from "lucide-react";
+import { AlertCircle, CheckCircle2, KeyRound, Mail, Sparkles } from "lucide-react";
+import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import {
   Alert,
   Button,
@@ -275,7 +276,7 @@ function AcessarContent() {
               ) : (
                 <>
                   <span>Entrar no {platformName || "Smart LMS"}</span>
-                  <ArrowRight className="size-4 ml-1.5" aria-hidden="true" />
+                  <ArrowRight02Icon size={16} className="ml-1.5" aria-hidden="true" />
                 </>
               )}
             </Button>

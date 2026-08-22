@@ -378,6 +378,13 @@
     border-radius: var(--radius-lg);
   }
 
+  .editorial-card-interactive {
+    transition:
+      transform var(--duration-lg) var(--spring),
+      box-shadow var(--duration-lg) var(--ease-precise),
+      border-color var(--duration-md) var(--ease-precise);
+  }
+
   .editorial-card-interactive:hover {
     border-color: var(--hairline-strong);
     box-shadow: var(--elev-3);
@@ -527,8 +534,8 @@
 @layer utilities {
   .lift {
     transition:
-      transform var(--duration-md) var(--ease-precise),
-      box-shadow var(--duration-md) var(--ease-precise),
+      transform var(--duration-lg) var(--spring),
+      box-shadow var(--duration-lg) var(--ease-precise),
       border-color var(--duration-md) var(--ease-precise);
   }
 
@@ -541,6 +548,33 @@
   .lift:active {
     box-shadow: var(--elev-2);
     transform: translateY(-1px);
+  }
+
+  /*
+   * Elevação de um item composto — usado no card da trilha.
+   *
+   * O botão de adiar é irmão do card, não filho: o card inteiro é um link, e
+   * <button> dentro de <a> não é HTML válido. Com a elevação presa ao `:hover`
+   * do card, o card subia e o botão ficava parado; e com o mouse sobre o botão
+   * nada subia, porque o card não é ancestral dele. Aqui o gatilho é o item
+   * inteiro, então as peças sobem juntas venha o cursor de onde vier.
+   */
+  .lift-item {
+    transition: transform var(--duration-lg) var(--spring);
+  }
+
+  .lift-item:hover {
+    transform: translateY(-3px);
+  }
+
+  .lift-item:active {
+    transform: translateY(-1px);
+  }
+
+  /* Dentro de um item que já sobe, o `.lift` do card cuida só de borda e sombra. */
+  .lift-item .lift:hover,
+  .lift-item .lift:active {
+    transform: none;
   }
 
   .press {

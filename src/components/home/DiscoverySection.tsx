@@ -51,7 +51,7 @@ export default function DiscoverySection({ courses, personalized }: DiscoverySec
       <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {courses.map((course, index) => (
           <Rise key={course.id} delay={index * 90} className="h-full">
-            <CourseCard {...course} className="h-full" />
+            <CourseCard {...course} hideMeta className="h-full" />
           </Rise>
         ))}
       </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, BookOpen, Edit3, Eye, List, Settings, ShoppingBag } from "lucide-react";
+import { ArrowLeft, BookOpen, Edit3, Eye, List, Settings, ShoppingBag } from "lucide-react";
+import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { Card, buttonVariants } from "@heroui/react";
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 import { getCourseById } from "@/lib/data/courses";
@@ -142,7 +143,7 @@ export default async function AdminCursoDashboard({ params }: { params: Promise<
                 <Card.Footer>
                   <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
                     Abrir
-                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                    <ArrowRight02Icon size={16} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                   </span>
                 </Card.Footer>
               </Card>

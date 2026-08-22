@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button, Card, Chip, ProgressBar } from "@heroui/react";
-import { CheckCircle2, Circle, AlertCircle, ArrowRight, ArrowLeft, Trophy, CheckSquare, Square, RotateCcw } from "lucide-react";
+import { CheckCircle2, Circle, AlertCircle, ArrowLeft, Trophy, CheckSquare, Square, RotateCcw } from "lucide-react";
+import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import type { Quiz, QuizQuestion } from "@/types/quiz";
 import { submitQuizResult } from "@/app/actions/progress";
 import { cn } from "@/lib/utils";
@@ -327,7 +328,7 @@ export default function QuizRunner({ quiz, lessonId, onComplete }: QuizRunnerPro
             className="gap-2 px-6"
           >
             {isSubmitting ? "Finalizando..." : "Finalizar Quiz"}
-            <ArrowRight className="size-4" aria-hidden="true" />
+            <ArrowRight02Icon size={16} aria-hidden="true" />
           </Button>
         ) : (
           <Button
@@ -338,7 +339,7 @@ export default function QuizRunner({ quiz, lessonId, onComplete }: QuizRunnerPro
             className="gap-2 px-6"
           >
             Próxima
-            <ArrowRight className="size-4" aria-hidden="true" />
+            <ArrowRight02Icon size={16} aria-hidden="true" />
           </Button>
         )}
       </Card.Footer>

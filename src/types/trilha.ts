@@ -103,6 +103,8 @@ export type ResolvedContent = {
   slug?: string;
   url?: string;
   cover?: string;
+  /** Descrição curta cadastrada no conteúdo — vazia quando ninguém escreveu uma. */
+  shortDescription?: string;
   prerequisites?: string[];
   /** Posição na ordem editorial do curso — o agendador nunca a inverte. */
   sequence?: number;

@@ -54,7 +54,7 @@ export default function MinhaTrilhaRow() {
           <LessonCard
             key={item.id}
             title={item.title}
-            moduleName={item.moduleName}
+            moduleName={item.moduleName || item.courseName}
             duration={`${item.durationMin} min`}
             cover={item.cover || 'https://images.unsplash.com/photo-1573497491765-0a15320e8b2b?q=80&w=600&auto=format&fit=crop'}
             reason={item.reason}

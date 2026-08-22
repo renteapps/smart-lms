@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  ArrowRight,
   BarChart3,
   BookOpen,
   Bot,
@@ -18,6 +17,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import {
   Button,
   Card,
@@ -270,7 +270,7 @@ export function AnalyticsHubView({ basePath = "/admin/analises", overviewData, c
                       )}
                     >
                       <span>Abrir Dash</span>
-                      <ArrowRight className="size-3.5" aria-hidden="true" />
+                      <ArrowRight02Icon size={14} aria-hidden="true" />
                     </Link>
                   </div>
                 </Card.Footer>

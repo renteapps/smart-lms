@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Button, Card, Chip, ProgressBar, Radio, RadioGroup, Separator } from "@heroui/react";
-import { ArrowRight, Award, BarChart3, Brain, Play, RotateCcw, SkipForward } from "lucide-react";
+import { Award, BarChart3, Brain, Play, RotateCcw, SkipForward } from "lucide-react";
+import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { ProfileTest, ProfileCategory } from "@/types/profileTest";
 import { buildProfileTestResult, saveProfileTestResult } from "@/lib/profileTestStorage";
 import { notifyTrailChanged } from "@/lib/useTrailStore";
@@ -293,7 +294,7 @@ export default function ProfileTestRunner({ test, config, onComplete }: ProfileT
                   className="gap-2"
                 >
                   {currentStep < totalQuestions - 1 ? "Próxima pergunta" : "Finalizar teste"}
-                  <ArrowRight className="size-4" aria-hidden="true" />
+                  <ArrowRight02Icon size={16} aria-hidden="true" />
                 </Button>
               </div>
             </motion.div>

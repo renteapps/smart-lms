@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { LogIn, LogOut, Menu, Search, User, UserPlus } from "lucide-react";
+import { LogIn, LogOut, Menu, Search, User, UserPlus, X } from "lucide-react";
 import { buttonVariants, Drawer } from "@heroui/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { NotificationBell } from "./NotificationBell";
@@ -296,7 +296,17 @@ export default function NavBar({ items }: { items: NavItem[] }) {
               <Drawer.Content placement="right">
                 <Drawer.Dialog className="w-[min(88vw,360px)]">
                   <Drawer.Header className="gap-4">
-                    <BrandMark />
+                    <div className="flex items-center justify-between">
+                      <BrandMark />
+                      <button
+                        type="button"
+                        onClick={() => setMobileOpen(false)}
+                        className="grid size-11 place-items-center rounded-xl text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+                        aria-label="Fechar menu"
+                      >
+                        <X className="size-5" aria-hidden="true" />
+                      </button>
+                    </div>
                     <Drawer.Heading className="sr-only">Menu principal</Drawer.Heading>
                     <p className="text-sm leading-6 text-muted">
                       Aprenda no seu ritmo e acompanhe cada passo da sua evolução.

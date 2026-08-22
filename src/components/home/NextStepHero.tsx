@@ -2,14 +2,20 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Check, Clock3, Lock } from "lucide-react";
+import { Check, Clock3, Lock, TriangleAlert } from "lucide-react";
 import { buttonVariants } from "@heroui/styles";
 import { Chip } from "@heroui/react/chip";
 import HeroBackdrop from "@/components/HeroBackdrop";
 import { ArrowIcon, PlayIcon } from "@/components/ui/AnimatedIcon";
 import { Reveal } from "@/components/ui/Reveal";
 import { useCardTransition } from "@/contexts/CardTransitionContext";
-import { contentHref, ROLE_CHIP_LABELS, type HomeSession } from "@/lib/studentHome";
+import {
+  contentHref,
+  LONGER_CONTENT_HINT,
+  LONGER_CONTENT_LABEL,
+  ROLE_CHIP_LABELS,
+  type HomeSession,
+} from "@/lib/studentHome";
 import type { LearningTrailItem } from "@/types/trilha";
 import { cn } from "@/lib/utils";
 
@@ -62,6 +68,8 @@ export default function NextStepHero({
 }: NextStepHeroProps) {
   const { triggerTransition } = useCardTransition();
   const cover = nextStep.cover || DEFAULT_COVER;
+  // Curso galeria não tem módulo para mostrar: a origem da aula é o curso.
+  const origin = nextStep.moduleName || nextStep.courseName;
   const locked = Boolean(nextStep.prerequisites?.some((id) => (
     session.items.some((item) => item.id === id && item.status === "pending")
   )));
@@ -99,7 +107,7 @@ export default function NextStepHero({
       metadata: {
         title: nextStep.title,
         cover,
-        category: nextStep.moduleName || "Sua Trilha",
+        category: origin || "Sua Trilha",
         duration: `${nextStep.durationMin} min`,
         type: "lesson",
       },
@@ -124,16 +132,32 @@ export default function NextStepHero({
               <Chip color="default" variant="tertiary" size="sm">
                 {ROLE_CHIP_LABELS[nextStep.learningRole]}
               </Chip>
+              {/* O dia inteiro é este conteúdo: avisar aqui evita a surpresa no play. */}
+              {nextStep.overBudget && (
+                <Chip color="warning" variant="soft" size="sm" title={LONGER_CONTENT_HINT}>
+                  <TriangleAlert className="size-3" aria-hidden="true" />
+                  {LONGER_CONTENT_LABEL}
+                </Chip>
+              )}
             </div>
 
-            {nextStep.moduleName && (
-              <p className="mt-6 text-sm font-semibold text-muted">{nextStep.moduleName}</p>
+            {origin && (
+              <p className="mt-6 text-sm font-semibold text-muted">{origin}</p>
             )}
 
             <h1 className="display-1 mt-3 max-w-3xl text-foreground">{nextStep.title}</h1>
 
-            {/* O "porquê" vem do motor de trilha, não de uma frase de marketing. */}
-            <p className="lede mt-5">{nextStep.reason}</p>
+            {/*
+              * A frase de apoio é a descrição curta cadastrada no conteúdo.
+              *
+              * Antes vinha o "porquê" do motor de trilha ("Recomendado por:
+              * pré-requisito da sua sequência"), que explica o algoritmo e não o
+              * conteúdo. Quem não escreveu descrição não ganha frase nenhuma —
+              * inventar uma aqui seria marketing.
+              */}
+            {nextStep.shortDescription && (
+              <p className="lede mt-5">{nextStep.shortDescription}</p>
+            )}
 
             <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted">
               <span className="flex items-center gap-1.5 font-semibold">
