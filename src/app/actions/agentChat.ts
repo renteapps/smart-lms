@@ -155,6 +155,34 @@ export async function appendAgentMessage(
   }
 }
 
+/**
+ * Avalia uma resposta do agente. RLS restringe o update às conversas do
+ * próprio aluno — a checagem de posse não precisa ser repetida aqui.
+ */
+export async function setMessageFeedback(
+  messageId: string,
+  feedback: "up" | "down" | null,
+): Promise<ActionResult> {
+  try {
+    const { supabase } = await requireUser();
+
+    const { data, error } = await supabase
+      .from("agent_messages")
+      .update({ feedback })
+      .eq("id", messageId)
+      .eq("author", "agent")
+      .select("id")
+      .maybeSingle();
+
+    if (error) return { success: false, message: error.message };
+    if (!data) return { success: false, message: "Mensagem não encontrada." };
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
 export async function deleteConversation(conversationId: string): Promise<ActionResult> {
   try {
     const { supabase, user } = await requireUser();

@@ -253,6 +253,7 @@ function mapConversation(row: Row): AgentConversation {
       id: message.id,
       author: message.author as AgentMessage["author"],
       text: message.text,
+      feedback: (message.feedback ?? null) as AgentMessage["feedback"],
     }));
 
   return {
@@ -300,7 +301,7 @@ function mapConversationSummary(row: Row): AgentConversationSummary {
 const CONVERSATION_SELECT = `
   id, agent_id, user_id, title, rating, status, sentiment, duration_seconds,
   tokens_used, course_title, lesson_context, ai_summary, created_at, updated_at,
-  agent_messages ( id, author, text, created_at )
+  agent_messages ( id, author, text, feedback, created_at )
 `;
 
 /** Threads do aluno da sessão, mais recentes primeiro. */

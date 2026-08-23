@@ -23,10 +23,11 @@ import { SearchResultCard } from "@/components/search/SearchResultCard";
 import { SearchSkeletons } from "@/components/search/SearchSkeletons";
 import { readNotes, type StoredNote } from "@/lib/agentNotes";
 import { searchContent } from "@/app/actions/search";
-import type {
-  SearchResponse,
-  SearchSortOption,
-  SearchTabType,
+import {
+  emptySearchResponse,
+  type SearchResponse,
+  type SearchSortOption,
+  type SearchTabType,
 } from "@/types/search";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -67,13 +68,7 @@ export function SearchPageView() {
   const [sortBy, setSortBy] = useState<SearchSortOption>(initialSort);
 
   const [localNotes, setLocalNotes] = useState<StoredNote[]>([]);
-  const [results, setResults] = useState<SearchResponse>({
-    query: initialQuery,
-    items: [],
-    totalCount: 0,
-    countsByType: { all: 0, course: 0, lesson: 0, agent: 0, article: 0, note: 0 },
-    categories: ["Todas"],
-  });
+  const [results, setResults] = useState<SearchResponse>(() => emptySearchResponse(initialQuery));
 
   const [isSearching, startTransition] = useTransition();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -134,19 +129,13 @@ export function SearchPageView() {
           query: debouncedQuery,
           type: activeTab,
           category: selectedCategory,
-          sortBy: sortBy,
-          localNotes,
+          sort: sortBy,
+          page: 1,
         });
         setResults(res);
       } catch (err) {
         console.error("Search failed:", err);
-        setResults({
-          query: debouncedQuery,
-          items: [],
-          totalCount: 0,
-          countsByType: { all: 0, course: 0, lesson: 0, agent: 0, article: 0, note: 0 },
-          categories: ["Todas"],
-        });
+        setResults(emptySearchResponse(debouncedQuery));
       }
     });
   }, [debouncedQuery, activeTab, selectedCategory, sortBy, localNotes, updateUrl]);
@@ -356,7 +345,7 @@ export function SearchPageView() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {results.categories.length > 2 && (
+            {results.categories.length > 0 && (
               <div className="flex items-center gap-1.5">
                 <Filter className="size-3.5 text-muted" aria-hidden="true" />
                 <select
@@ -364,9 +353,10 @@ export function SearchPageView() {
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="h-10 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground transition-colors hover:bg-surface-hover focus:border-accent focus:outline-none"
                 >
+                  <option value="Todas">Todas as categorias</option>
                   {results.categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat === "Todas" ? "Todas as categorias" : cat}
+                    <option key={cat.value} value={cat.value}>
+                      {cat.value} ({cat.count})
                     </option>
                   ))}
                 </select>

@@ -1,22 +1,37 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   AlertTriangle,
+  BookLock,
   Bot,
   BrainCircuit,
+  Captions,
+  Circle,
+  CircleDot,
   Clock3,
+  Compass,
+  CreditCard,
+  Globe,
   GraduationCap,
   Headphones,
+  Layers,
+  LibraryBig,
   MessageSquare,
+  Newspaper,
+  NotebookText,
   Palette,
+  Pill,
+  PlayCircle,
   Save,
   Search,
   ShieldCheck,
   Sparkles,
   Trash2,
+  Undo2,
   UserRound,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   AlertDialog,
   Button,
@@ -42,11 +57,15 @@ import type { OpenRouterModel } from "@/types/openrouter";
 import {
   ASSISTANT_ICON_KEYS,
   type AssistantConversation,
+  type AssistantCourseRule,
   type AssistantIconKey,
+  type AssistantKnowledgeMode,
+  type AssistantSourceKey,
   type PlatformAssistantSettings,
 } from "@/types/platformAssistant";
 import {
   deletePlatformAssistantConversation,
+  saveAssistantCourseRule,
   savePlatformAssistantSettings,
   type AssistantSettingsInput,
 } from "./actions";
@@ -61,6 +80,60 @@ const ICON_COMPONENTS = {
   headset: Headphones,
 };
 
+/*
+ * O que cada modo faz nas duas situações que existem: com um curso aberto e
+ * fora dele. É esse par que o admin precisa conseguir ler numa olhada — a
+ * dúvida nunca é o nome do modo, é o que muda na resposta do aluno.
+ */
+const KNOWLEDGE_MODES: Array<{
+  id: AssistantKnowledgeMode;
+  label: string;
+  tagline: string;
+  icon: typeof BookLock;
+  inCourse: string;
+  outside: string;
+}> = [
+  {
+    id: "course_strict",
+    label: "Somente o curso",
+    tagline: "O chat aberto dentro de um curso nunca sai dele.",
+    icon: BookLock,
+    inCourse: "Responde só com o material daquele curso e recusa o resto.",
+    outside: "Usa a base manual, o catálogo, artigos, planos e pílulas.",
+  },
+  {
+    id: "adaptive",
+    label: "Adaptativo",
+    tagline: "O curso vem primeiro; a plataforma entra quando a pergunta sai dele.",
+    icon: Compass,
+    inCourse: "Prioriza o curso e complementa com a plataforma quando necessário.",
+    outside: "Conhece tudo: cada aula, artigo, plano e pílula publicados.",
+  },
+  {
+    id: "platform_always",
+    label: "Plataforma inteira",
+    tagline: "Conhecimento global em qualquer tela, com o curso aberto priorizado.",
+    icon: Globe,
+    inCourse: "Responde sobre qualquer curso, apenas dando preferência ao atual.",
+    outside: "Conhece tudo: cada aula, artigo, plano e pílula publicados.",
+  },
+];
+
+const SOURCE_OPTIONS: Array<{ id: AssistantSourceKey; label: string; description: string; icon: LucideIcon }> = [
+  { id: "manual", label: "Base manual", description: "O texto que você escreve na aba IA e conhecimento.", icon: NotebookText },
+  { id: "courses", label: "Catálogo de cursos", description: "Títulos, ementas, módulos e nomes das aulas de todos os cursos publicados.", icon: LibraryBig },
+  { id: "lessons", label: "Conteúdo das aulas", description: "Texto e blocos de dentro da aula. Só de cursos que o aluno tem acesso.", icon: PlayCircle },
+  { id: "transcriptions", label: "Transcrições", description: "Transcrição dos vídeos das aulas e dos áudios dos artigos.", icon: Captions },
+  { id: "articles", label: "Artigos do blog", description: "Corpo completo dos artigos publicados.", icon: Newspaper },
+  { id: "plans", label: "Planos e preços", description: "Planos ativos, valores, frequência e benefícios.", icon: CreditCard },
+  { id: "pilulas", label: "Pílulas de conhecimento", description: "Pílulas ativas, com resumo e desafio.", icon: Pill },
+];
+
+const RULE_OPTIONS: Array<{ id: AssistantKnowledgeMode | "default"; label: string }> = [
+  { id: "default", label: "Segue o modo global" },
+  ...KNOWLEDGE_MODES.map((mode) => ({ id: mode.id, label: mode.label })),
+];
+
 function initialDraft(settings: PlatformAssistantSettings): AssistantSettingsInput {
   return {
     enabled: settings.enabled,
@@ -73,6 +146,8 @@ function initialDraft(settings: PlatformAssistantSettings): AssistantSettingsInp
     systemPrompt: settings.systemPrompt,
     model: settings.model,
     platformKnowledge: settings.platformKnowledge,
+    knowledgeMode: settings.knowledgeMode,
+    knowledgeSources: settings.knowledgeSources,
   };
 }
 
@@ -88,12 +163,21 @@ export function ChatAdminClient({
   settings,
   conversations,
   models,
+  courses,
+  courseRules,
 }: {
   settings: PlatformAssistantSettings;
   conversations: AssistantConversation[];
   models: OpenRouterModel[];
+  courses: Array<{ id: string; title: string; category: string }>;
+  courseRules: AssistantCourseRule[];
 }) {
   const [draft, setDraft] = useState<AssistantSettingsInput>(() => initialDraft(settings));
+  // Referência do que está salvo no banco. Compará-la com `draft` é o que
+  // decide se a barra de "alterações não salvas" aparece — sem isso, os quatro
+  // botões de salvar espalhados pelas abas prometiam salvamentos parciais que
+  // não existiam: qualquer um deles já gravava a configuração inteira.
+  const [savedDraft, setSavedDraft] = useState<AssistantSettingsInput>(() => initialDraft(settings));
   const [history, setHistory] = useState(conversations);
   const [selectedId, setSelectedId] = useState(conversations[0]?.id ?? "");
   const [search, setSearch] = useState("");
@@ -102,13 +186,22 @@ export function ChatAdminClient({
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<AssistantConversation | null>(null);
+  const [rules, setRules] = useState<Record<string, AssistantKnowledgeMode>>(() =>
+    Object.fromEntries(courseRules.map((rule) => [rule.courseId, rule.knowledgeMode])),
+  );
+  const [ruleSearch, setRuleSearch] = useState("");
+  const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
   const [isSaving, startSaving] = useTransition();
   const [isDeleting, startDeleting] = useTransition();
+  const [, startRuleSaving] = useTransition();
 
   const previewColor = /^#[0-9a-f]{6}$/i.test(draft.primaryColor) ? draft.primaryColor : "#3157B7";
   const previewConfig = { ...draft, primaryColor: previewColor };
   const selectedModel = models.find((model) => model.id === draft.model) ?? models[0];
-  const courses = useMemo(
+  const isDirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(savedDraft), [draft, savedDraft]);
+  const activeSourceCount = Object.values(draft.knowledgeSources).filter(Boolean).length;
+  const activeRuleCount = Object.keys(rules).length;
+  const historyCourses = useMemo(
     () =>
       Array.from(
         new Map(
@@ -140,13 +233,68 @@ export function ChatAdminClient({
     setDraft((current) => ({ ...current, [key]: value }));
   };
 
+  const ruleCourses = useMemo(() => {
+    const query = ruleSearch.trim().toLocaleLowerCase("pt-BR");
+    const list = query
+      ? courses.filter((course) =>
+          `${course.title} ${course.category}`.toLocaleLowerCase("pt-BR").includes(query),
+        )
+      : courses;
+    // Cursos com exceção sobem: são eles que o admin volta para conferir.
+    return [...list].sort((a, b) => Number(Boolean(rules[b.id])) - Number(Boolean(rules[a.id])));
+  }, [courses, ruleSearch, rules]);
+
+  const toggleSource = (key: AssistantSourceKey, enabled: boolean) => {
+    setDraft((current) => ({
+      ...current,
+      knowledgeSources: { ...current.knowledgeSources, [key]: enabled },
+    }));
+  };
+
+  const applyRule = (courseId: string, mode: AssistantKnowledgeMode | "default") => {
+    setSavingRuleId(courseId);
+    startRuleSaving(async () => {
+      const result = await saveAssistantCourseRule(courseId, mode);
+      setSavingRuleId(null);
+      if (!result.success) {
+        toast.danger("Não foi possível salvar a exceção", { description: result.message });
+        return;
+      }
+      setRules((current) => {
+        const next = { ...current };
+        if (mode === "default") delete next[courseId];
+        else next[courseId] = mode;
+        return next;
+      });
+      toast.success(result.message);
+    });
+  };
+
   const save = () => {
     startSaving(async () => {
       const result = await savePlatformAssistantSettings(draft);
-      if (result.success) toast.success(result.message);
-      else toast.danger("Não foi possível salvar", { description: result.message });
+      if (result.success) {
+        setSavedDraft(draft);
+        toast.success(result.message);
+      } else {
+        toast.danger("Não foi possível salvar", { description: result.message });
+      }
     });
   };
+
+  const discard = () => setDraft(savedDraft);
+
+  // Fechar a aba com alterações pendentes perderia identidade, prompt e
+  // fontes sem aviso — o mesmo aviso nativo já usado no editor de trilhas.
+  useEffect(() => {
+    const handler = (event: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
   const confirmDelete = () => {
     if (!deleteTarget) return;
@@ -168,6 +316,7 @@ export function ChatAdminClient({
     <Tabs.Root defaultSelectedKey="identity">
       <Tabs.List aria-label="Configurações do Assistente IA">
         <Tabs.Tab id="identity">Identidade</Tabs.Tab>
+        <Tabs.Tab id="scope">Escopo e alcance</Tabs.Tab>
         <Tabs.Tab id="knowledge">IA e conhecimento</Tabs.Tab>
         <Tabs.Tab id="history">Histórico</Tabs.Tab>
       </Tabs.List>
@@ -334,17 +483,193 @@ export function ChatAdminClient({
                   </p>
                 </div>
               </Card.Content>
-              <Card.Footer className="flex justify-between gap-3">
+              <Card.Footer className="flex flex-wrap items-center justify-between gap-3">
                 <Chip size="sm" color={draft.enabled ? "success" : "default"} variant="soft">
                   {draft.enabled ? "Ativo" : "Desativado"}
                 </Chip>
-                <Button onClick={save} isPending={isSaving}>
-                  <Save className="size-4" aria-hidden="true" />
-                  Salvar identidade
-                </Button>
+                <Chip size="sm" color={isDirty ? "warning" : "success"} variant="soft">
+                  {isDirty ? "Alterações pendentes" : "Tudo salvo"}
+                </Chip>
               </Card.Footer>
             </Card>
           </aside>
+        </div>
+      </Tabs.Panel>
+
+      <Tabs.Panel id="scope" className="pt-6">
+        <div className="space-y-6">
+          <Card>
+            <Card.Header>
+              <Card.Title className="flex items-center gap-2"><Compass className="size-5 text-accent" /> Modo de conhecimento</Card.Title>
+              <Card.Description>
+                Define o que o assistente enxerga em cada tela. Vale para todos os cursos, exceto os que tiverem exceção abaixo.
+              </Card.Description>
+            </Card.Header>
+            <Card.Content>
+              {/*
+                Cada modo é um cartão só, com os dois cenários lado a lado —
+                antes eram cartões de seleção acima de uma tabela que só
+                mostrava o modo já escolhido, então comparar exigia clicar em
+                cada opção. Aqui os três ficam legíveis ao mesmo tempo, e a
+                escolha e a comparação são a mesma ação.
+              */}
+              <div role="radiogroup" aria-label="Modo de conhecimento" className="grid gap-3 sm:grid-cols-3">
+                {KNOWLEDGE_MODES.map((mode) => {
+                  const Icon = mode.icon;
+                  const isSelected = draft.knowledgeMode === mode.id;
+                  return (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      onClick={() => updateDraft("knowledgeMode", mode.id)}
+                      className={cn(
+                        "flex h-full flex-col gap-3 rounded-xl border p-4 text-left transition-colors",
+                        isSelected
+                          ? "border-accent bg-accent-soft text-accent-soft-foreground"
+                          : "border-border bg-surface hover:bg-surface-hover",
+                      )}
+                    >
+                      <span className="flex items-center gap-2">
+                        {isSelected ? (
+                          <CircleDot className="size-4 shrink-0 text-accent" aria-hidden="true" />
+                        ) : (
+                          <Circle className="size-4 shrink-0 text-muted" aria-hidden="true" />
+                        )}
+                        <Icon className="size-4 shrink-0" aria-hidden="true" />
+                        <strong className="font-display text-sm font-extrabold tracking-tight">{mode.label}</strong>
+                      </span>
+                      <p className={cn("text-xs leading-5", isSelected ? "" : "text-muted")}>{mode.tagline}</p>
+                      <dl className="mt-1 space-y-2.5 border-t border-current/10 pt-3 text-xs leading-5">
+                        <div>
+                          <dt className="flex items-center gap-1.5 font-bold uppercase tracking-wide opacity-70">
+                            <Layers className="size-3" aria-hidden="true" /> Dentro de um curso
+                          </dt>
+                          <dd className={cn("mt-0.5", isSelected ? "" : "text-muted")}>{mode.inCourse}</dd>
+                        </div>
+                        <div>
+                          <dt className="flex items-center gap-1.5 font-bold uppercase tracking-wide opacity-70">
+                            <Globe className="size-3" aria-hidden="true" /> Fora de um curso
+                          </dt>
+                          <dd className={cn("mt-0.5", isSelected ? "" : "text-muted")}>{mode.outside}</dd>
+                        </div>
+                      </dl>
+                    </button>
+                  );
+                })}
+              </div>
+            </Card.Content>
+          </Card>
+
+          <Card>
+            <Card.Header className="flex flex-row flex-wrap items-start justify-between gap-3">
+              <div>
+                <Card.Title className="flex items-center gap-2"><ShieldCheck className="size-5 text-accent" /> Fontes autorizadas</Card.Title>
+                <Card.Description className="mt-1">
+                  O que o agente pode ler. Uma fonte desligada some do contexto em todos os modos — inclusive dentro do curso.
+                </Card.Description>
+              </div>
+              <Chip size="sm" variant="soft" color={activeSourceCount === SOURCE_OPTIONS.length ? "success" : "default"}>
+                {activeSourceCount}/{SOURCE_OPTIONS.length} ativas
+              </Chip>
+            </Card.Header>
+            <Card.Content className="grid gap-3 md:grid-cols-2">
+              {SOURCE_OPTIONS.map((source) => {
+                const Icon = source.icon;
+                return (
+                  <div
+                    key={source.id}
+                    className="flex items-start justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3"
+                  >
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-background-secondary">
+                        <Icon className="size-4 text-muted" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-foreground">{source.label}</p>
+                        <p className="mt-0.5 text-xs leading-5 text-muted">{source.description}</p>
+                      </div>
+                    </div>
+                    <Switch
+                      aria-label={source.label}
+                      isSelected={draft.knowledgeSources[source.id]}
+                      onChange={(selected) => toggleSource(source.id, selected)}
+                      className="mt-0.5 shrink-0"
+                    >
+                      <Switch.Control><Switch.Thumb /></Switch.Control>
+                    </Switch>
+                  </div>
+                );
+              })}
+            </Card.Content>
+            <Card.Footer>
+              <p className="text-xs leading-5 text-muted">
+                O conteúdo interno das aulas só é usado nos cursos em que o aluno tem acesso ativo. Nos demais, o agente vê apenas título e ementa.
+              </p>
+            </Card.Footer>
+          </Card>
+
+          <Card>
+            <Card.Header className="space-y-4">
+              <div>
+                <Card.Title className="flex flex-wrap items-center gap-2">
+                  <BookLock className="size-5 text-accent" /> Exceções por curso
+                  {activeRuleCount > 0 && (
+                    <Chip size="sm" variant="soft" color="accent">{activeRuleCount} ativa(s)</Chip>
+                  )}
+                </Card.Title>
+                <Card.Description>
+                  Um curso pode ter alcance próprio. A exceção é salva na hora e vale só quando o chat é aberto dentro dele.
+                </Card.Description>
+              </div>
+              <SearchField value={ruleSearch} onChange={setRuleSearch} aria-label="Buscar curso">
+                <SearchField.Group>
+                  <SearchField.SearchIcon />
+                  <SearchField.Input placeholder="Buscar por nome ou categoria…" />
+                  <SearchField.ClearButton />
+                </SearchField.Group>
+              </SearchField>
+            </Card.Header>
+            <Card.Content className="space-y-3">
+              {ruleCourses.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted">Nenhum curso encontrado.</p>
+              ) : (
+                <ul className="divide-y divide-separator">
+                  {ruleCourses.map((course) => {
+                    const rule = rules[course.id];
+                    return (
+                      <li key={course.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-foreground">{course.title}</p>
+                          <p className="mt-0.5 flex items-center gap-2 text-xs text-muted">
+                            {course.category}
+                            {rule && <Chip size="sm" variant="soft" color="accent">Exceção ativa</Chip>}
+                          </p>
+                        </div>
+                        <Select
+                          selectedKey={rule ?? "default"}
+                          onSelectionChange={(key) => applyRule(course.id, String(key) as AssistantKnowledgeMode | "default")}
+                          isDisabled={savingRuleId === course.id}
+                          aria-label={`Alcance do curso ${course.title}`}
+                          className="w-full sm:w-60"
+                        >
+                          <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+                          <Select.Popover>
+                            <ListBox>
+                              {RULE_OPTIONS.map((option) => (
+                                <ListBoxItem key={option.id} id={option.id}>{option.label}</ListBoxItem>
+                              ))}
+                            </ListBox>
+                          </Select.Popover>
+                        </Select>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Card.Content>
+          </Card>
         </div>
       </Tabs.Panel>
 
@@ -408,12 +733,6 @@ export function ChatAdminClient({
                 <p className="text-right text-xs text-muted">{draft.platformKnowledge.length.toLocaleString("pt-BR")}/120.000</p>
               </TextField>
             </Card.Content>
-            <Card.Footer className="justify-end">
-              <Button onClick={save} isPending={isSaving}>
-                <Save className="size-4" aria-hidden="true" />
-                Salvar IA e conhecimento
-              </Button>
-            </Card.Footer>
           </Card>
         </div>
       </Tabs.Panel>
@@ -443,7 +762,7 @@ export function ChatAdminClient({
                 <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
                 <Select.Popover><ListBox>
                   <ListBoxItem id="all">Todos os cursos</ListBoxItem>
-                  {courses.map(([id, title]) => <ListBoxItem key={id} id={id}>{title}</ListBoxItem>)}
+                  {historyCourses.map(([id, title]) => <ListBoxItem key={id} id={id}>{title}</ListBoxItem>)}
                 </ListBox></Select.Popover>
               </Select>
               <label className="text-xs font-semibold text-muted">De
@@ -532,6 +851,32 @@ export function ChatAdminClient({
           </Card.Content>
         </Card>
       </Tabs.Panel>
+
+      {/*
+        Fonte única de "salvar" para as três abas de configuração — antes eram
+        quatro botões rotulados por seção ("Salvar identidade", "Salvar
+        escopo"...) que na prática gravavam a mesma configuração inteira, o
+        que prometia um recorte que não existia. `sticky` mantém a barra à
+        vista mesmo trocando de aba, sem cobrir a sidebar do admin.
+      */}
+      {isDirty && (
+        <div className="sticky bottom-4 z-10 mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/30 bg-surface px-5 py-3 shadow-elev-3">
+          <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <AlertTriangle className="size-4 text-warning" aria-hidden="true" />
+            Você tem alterações não salvas
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="tertiary" onClick={discard} isDisabled={isSaving}>
+              <Undo2 className="size-4" aria-hidden="true" />
+              Descartar
+            </Button>
+            <Button onClick={save} isPending={isSaving}>
+              <Save className="size-4" aria-hidden="true" />
+              Salvar alterações
+            </Button>
+          </div>
+        </div>
+      )}
 
       <AlertDialog.Root isOpen={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialog.Backdrop>

@@ -122,7 +122,7 @@ export async function getCatalogCourses(db: DB, userId?: string | null): Promise
   const { data, error } = await db
     .from("v_course_metrics")
     .select(
-      "id, slug, title, category, description, short_description, cover_url, duration, level, order_index, created_at, status, is_published, sales_url, sales_config, enable_certificates, lesson_count, total_duration_minutes",
+      "id, slug, title, category, description, short_description, cover_url, duration, level, order_index, is_featured, created_at, status, is_published, sales_url, sales_config, enable_certificates, lesson_count, total_duration_minutes",
     )
     .eq("is_published", true)
     .neq("status", "Arquivado")
@@ -145,6 +145,8 @@ export async function getCatalogCourses(db: DB, userId?: string | null): Promise
         duration: row.duration || formatDuration(row.total_duration_minutes ?? 0),
         lessonCount: row.lesson_count ?? 0,
         level: row.level ?? "Essencial",
+        isFeatured: row.is_featured ?? false,
+        orderIndex: row.order_index ?? 0,
         certificateEnabled: row.enable_certificates ?? true,
         studentState: deriveStudentCourseState({
           hasAccess: false,

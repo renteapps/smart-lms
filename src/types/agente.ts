@@ -107,11 +107,14 @@ export type AgentCatalogItem = Omit<
 export type AgentFormPayload = Omit<Agent, 'id' | 'conversationsCount' | 'rating'> & { id?: string };
 
 export type AgentMessageAuthor = 'student' | 'agent';
+export type AgentMessageFeedback = 'up' | 'down';
 
 export interface AgentMessage {
   id: string;
   author: AgentMessageAuthor;
   text: string;
+  /** Avaliação do aluno sobre uma resposta do agente. Só se aplica a `author: 'agent'`. */
+  feedback?: AgentMessageFeedback | null;
 }
 
 export type ConversationStatus = 'resolvida' | 'em_andamento' | 'atencao' | 'duvida_pedagogica';

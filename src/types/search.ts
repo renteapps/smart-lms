@@ -2,16 +2,34 @@ export type SearchResultType = "course" | "lesson" | "agent" | "article" | "note
 
 export type SearchTabType = "all" | SearchResultType;
 
+export const SEARCH_RESULT_TYPES: readonly SearchResultType[] = [
+  "course",
+  "lesson",
+  "agent",
+  "article",
+  "note",
+] as const;
+
+export type SearchSortOption = "relevance" | "recent" | "az";
+
+export const SEARCH_SORT_OPTIONS: readonly SearchSortOption[] = ["relevance", "recent", "az"] as const;
+
+/** Rótulo neutro de "sem filtro de categoria". Vale para a URL e para o select. */
+export const ALL_CATEGORIES = "Todas";
+
 export interface SearchResultMetadata {
-  // Aulas e Cursos
+  // Curso e aula
   courseId?: string;
+  courseSlug?: string;
   courseTitle?: string;
-  moduleId?: string;
   moduleTitle?: string;
   duration?: string | number;
   lessonType?: "video" | "text" | "quiz" | "profile_test";
-  hasAccess?: boolean;
   level?: string;
+  cover?: string;
+  tags?: string[];
+  isFeatured?: boolean;
+  hasAccess?: boolean;
 
   // Agentes
   avatar?: string;
@@ -19,18 +37,18 @@ export interface SearchResultMetadata {
   skills?: string[];
   agentStatus?: string;
   rating?: number;
+  themeColor?: string;
 
-  // Blog
+  // Revista / blog
   author?: string;
   readingTime?: number;
   hasAudio?: boolean;
-  cover?: string;
 
   // Anotações
-  tags?: string[];
   pinned?: boolean;
   updatedAt?: string;
   noteKind?: "lesson" | "agent" | "personal";
+  lessonId?: string;
 }
 
 export interface SearchResultItem {
@@ -40,44 +58,88 @@ export interface SearchResultItem {
   description: string;
   category?: string;
   url: string;
+  /** Pontuação combinada devolvida pelo banco (0..1+), só para depuração/ordem. */
   score?: number;
+  hasAccess?: boolean;
+  /**
+   * Trecho do corpo do documento com os termos marcados por `<b>`, vindo do
+   * `ts_headline`. As tags do conteúdo original são removidas no banco antes
+   * da marcação, então este texto é fatiado — nunca injetado como HTML.
+   */
+  snippet?: string | null;
   metadata?: SearchResultMetadata;
-  highlights?: {
-    title?: string;
-    description?: string;
-  };
+  /** Resultado que só existe no navegador (anotação em localStorage). */
+  isLocal?: boolean;
 }
 
-export type SearchSortOption = "relevance" | "recent" | "az";
+export interface SearchCategoryFacet {
+  value: string;
+  count: number;
+}
 
-export interface SearchFilterOptions {
-  query: string;
-  type?: SearchTabType;
-  category?: string;
-  sortBy?: SearchSortOption;
-  userId?: string;
-  localNotes?: Array<{
-    lessonId: string;
-    courseId?: string;
-    lessonTitle: string;
-    content: string;
-    updatedAt: string;
-    pinned?: boolean;
-    tags?: string[];
-  }>;
+export interface SearchCountsByType {
+  all: number;
+  course: number;
+  lesson: number;
+  agent: number;
+  article: number;
+  note: number;
+}
+
+export interface SearchPageInfo {
+  size: number;
+  offset: number;
+  hasMore: boolean;
 }
 
 export interface SearchResponse {
   query: string;
   items: SearchResultItem[];
   totalCount: number;
-  countsByType: {
-    all: number;
-    course: number;
-    lesson: number;
-    agent: number;
-    article: number;
-    note: number;
+  countsByType: SearchCountsByType;
+  categories: SearchCategoryFacet[];
+  /** O termo exato não achou nada e estes resultados vêm da busca aproximada. */
+  didYouMean: boolean;
+  page: SearchPageInfo;
+}
+
+export interface SearchSuggestion {
+  title: string;
+  type: SearchResultType;
+  url: string;
+  category?: string;
+}
+
+/** Estado completo de uma busca — o mesmo objeto que a URL representa. */
+export interface SearchQueryState {
+  query: string;
+  type: SearchTabType;
+  category: string;
+  sort: SearchSortOption;
+  page: number;
+}
+
+export interface SearchRequest extends SearchQueryState {
+  pageSize?: number;
+}
+
+export const EMPTY_COUNTS: SearchCountsByType = {
+  all: 0,
+  course: 0,
+  lesson: 0,
+  agent: 0,
+  article: 0,
+  note: 0,
+};
+
+export function emptySearchResponse(query = "", pageSize = 24): SearchResponse {
+  return {
+    query,
+    items: [],
+    totalCount: 0,
+    countsByType: { ...EMPTY_COUNTS },
+    categories: [],
+    didYouMean: false,
+    page: { size: pageSize, offset: 0, hasMore: false },
   };
-  categories: string[];
 }

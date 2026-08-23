@@ -21,8 +21,11 @@ export default async function AdminCursosList() {
       status,
       is_published,
       updated_at,
-      lesson_count
+      lesson_count,
+      order_index,
+      is_featured
     `)
+    .order('order_index', { ascending: true })
     .order('updated_at', { ascending: false });
 
   const courses: AdminCourseListItem[] = (coursesData || []).map((course) => {
@@ -43,6 +46,8 @@ export default async function AdminCursosList() {
       lessons: course.lesson_count || 0,
       status: (course.status as CourseStatus) || (course.is_published ? "Publicado" : "Rascunho"),
       updated: formattedDate,
+      orderIndex: course.order_index || 0,
+      isFeatured: course.is_featured || false,
     };
   });
 

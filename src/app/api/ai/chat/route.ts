@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   let providerResponse: OpenRouterChatResponse | null = null;
   try {
     const body = parseAgentChatRequest(await req.json());
-    const { agentId, message } = body;
+    const { agentId, message, regenerate, editMessageId } = body;
 
     const { supabase, user } = await requireUser();
     const agent = await getAgentById(supabase, agentId);
@@ -57,6 +57,61 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // `regenerate` troca a última resposta do agente; `editMessageId` descarta a
+    // mensagem do aluno indicada e tudo que veio depois, para reenviar no lugar.
+    // Os dois preparam o terreno aqui e caem no mesmo fluxo de envio abaixo.
+    let regeneratedMessageId: string | null = null;
+
+    if (regenerate) {
+      const { data: lastMessage, error: lastMessageError } = await supabase
+        .from("agent_messages")
+        .select("id, author")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (lastMessageError) throw new Error(lastMessageError.message);
+      if (!lastMessage || lastMessage.author !== "agent") {
+        return NextResponse.json(
+          { success: false, error: "Não há uma resposta para regenerar nesta conversa." },
+          { status: 400 },
+        );
+      }
+      regeneratedMessageId = lastMessage.id;
+    } else if (editMessageId) {
+      const { data: target, error: targetError } = await supabase
+        .from("agent_messages")
+        .select("id, author, created_at")
+        .eq("id", editMessageId)
+        .eq("conversation_id", conversationId)
+        .maybeSingle();
+      if (targetError) throw new Error(targetError.message);
+      if (!target || target.author !== "student") {
+        return NextResponse.json({ success: false, error: "Mensagem não encontrada." }, { status: 404 });
+      }
+
+      const { count: earlierCount } = await supabase
+        .from("agent_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("conversation_id", conversationId)
+        .lt("created_at", target.created_at);
+      const wasFirstMessage = (earlierCount ?? 0) === 0;
+
+      const { error: deleteError } = await supabase
+        .from("agent_messages")
+        .delete()
+        .eq("conversation_id", conversationId)
+        .gte("created_at", target.created_at);
+      if (deleteError) throw new Error(deleteError.message);
+
+      if (wasFirstMessage) {
+        await supabase
+          .from("agent_conversations")
+          .update({ title: deriveConversationTitle(message) })
+          .eq("id", conversationId);
+      }
+    }
+
     if (!conversationId) {
       const { data: created, error } = await supabase
         .from("agent_conversations")
@@ -75,11 +130,15 @@ export async function POST(req: NextRequest) {
 
     const { data: history, error: historyError } = await supabase
       .from("agent_messages")
-      .select("author, text")
+      .select("id, author, text")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true })
       .limit(40);
     if (historyError) throw new Error(historyError.message);
+
+    const promptHistory = regeneratedMessageId
+      ? (history ?? []).filter((item) => item.id !== regeneratedMessageId)
+      : (history ?? []);
 
     const formattedMessages: OpenRouterChatMessage[] = [];
     const systemParts = [agent.systemPrompt?.trim(), agent.context?.trim()]
@@ -92,11 +151,13 @@ export async function POST(req: NextRequest) {
           : systemParts[0],
       });
     }
-    formattedMessages.push(...(history ?? []).map((item) => ({
+    formattedMessages.push(...promptHistory.map((item) => ({
       role: item.author === "agent" ? "assistant" as const : "user" as const,
       content: item.text,
     })));
-    formattedMessages.push({ role: "user", content: message });
+    if (!regenerate) {
+      formattedMessages.push({ role: "user", content: message });
+    }
 
     const selectedModel = agent.aiModel || config.defaultModel || "google/gemini-2.0-flash-001";
     reservation = await reserveAiUsage({
@@ -107,12 +168,16 @@ export async function POST(req: NextRequest) {
       maxOutputTokens: config.maxTokens ?? 1500,
     });
 
-    const { data: userMessage, error: userMessageError } = await supabase
-      .from("agent_messages")
-      .insert({ conversation_id: conversationId, author: "student", text: message })
-      .select("id, author, text")
-      .single();
-    if (userMessageError || !userMessage) throw new Error(userMessageError?.message || "Falha ao salvar a mensagem.");
+    let userMessage: { id: string; author: "student"; text: string } | null = null;
+    if (!regenerate) {
+      const { data: inserted, error: userMessageError } = await supabase
+        .from("agent_messages")
+        .insert({ conversation_id: conversationId, author: "student", text: message })
+        .select("id, author, text")
+        .single();
+      if (userMessageError || !inserted) throw new Error(userMessageError?.message || "Falha ao salvar a mensagem.");
+      userMessage = inserted;
+    }
 
     const aiResult = await sendOpenRouterChatCompletion(
       {
@@ -146,6 +211,14 @@ export async function POST(req: NextRequest) {
         conversationId,
         userMessage,
       }, { status: 502 });
+    }
+
+    if (regeneratedMessageId) {
+      const { error: deleteAssistantError } = await supabase
+        .from("agent_messages")
+        .delete()
+        .eq("id", regeneratedMessageId);
+      if (deleteAssistantError) throw new Error(deleteAssistantError.message);
     }
 
     const [{ data: assistantMessage, error: assistantError }] = await Promise.all([
@@ -189,7 +262,7 @@ export async function POST(req: NextRequest) {
     const message = error instanceof Error ? error.message : "Erro interno no processamento de IA.";
     const status = message.includes("Sessão")
       ? 401
-      : message.includes("obrigatórios") || message.includes("4.000")
+      : message.includes("obrigat") || message.includes("caracteres")
         ? 400
         : 500;
     return NextResponse.json({ success: false, error: message }, { status });

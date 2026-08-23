@@ -179,10 +179,24 @@ export default function StudentHomeClient({
     () => (trail ? deriveProfileSummary(trail, questionnaire) : []),
     [trail, questionnaire],
   );
-  const discovery = useMemo(
-    () => rankCatalogByAffinity<CatalogCourse>(courses, trail, questionnaire).slice(0, 3),
-    [courses, trail, questionnaire],
-  );
+  const discovery = useMemo(() => {
+    const featured = courses
+      .filter((c) => c.isFeatured)
+      .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+    
+    if (featured.length >= 3) {
+      return featured.slice(0, 3);
+    }
+
+    const featuredIds = new Set(featured.map(c => c.id));
+    const remainingSlots = 3 - featured.length;
+
+    const affinityCourses = rankCatalogByAffinity<CatalogCourse>(courses, trail, questionnaire)
+      .filter(c => !featuredIds.has(c.id))
+      .slice(0, remainingSlots);
+
+    return [...featured, ...affinityCourses];
+  }, [courses, trail, questionnaire]);
 
   const discoverableArticles = useMemo(() => {
     if (!trail) return articles.slice(0, 4);

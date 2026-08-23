@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
-import { Button, EmptyState, Label, SearchField, Separator, ToggleButton, ToggleButtonGroup } from "@heroui/react";
+import { Button, EmptyState, Label, SearchField, Separator, ToggleButton, ToggleButtonGroup, Select, ListBox, ListBoxItem } from "@heroui/react";
 import CourseCard from "@/components/CourseCard";
 import { CourseIcon } from "@/components/ui/AnimatedIcon";
 import { Rise } from "@/components/ui/Rise";
@@ -16,26 +16,22 @@ type Props = {
   questionnaire: Questionnaire | null;
 };
 
-/**
- * Vitrine do catálogo.
- *
- * O ranking por afinidade acontece aqui porque depende de filtro e busca, que
- * são estado de tela; os dados em si — cursos, trilha e questionário — chegam
- * prontos do servidor, lidos do Supabase.
- */
 export default function CoursesCatalogClient({ courses, trail, questionnaire }: Props) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Todos");
+  const [sortMode, setSortMode] = useState<"catalog" | "affinity">("catalog");
 
   const categories = useMemo(
     () => ["Todos", ...Array.from(new Set(courses.map((course) => course.category)))],
     [courses],
   );
 
-  const rankedCourses = useMemo(
-    () => rankCatalogByAffinity(courses, trail, questionnaire),
-    [courses, trail, questionnaire],
-  );
+  const rankedCourses = useMemo(() => {
+    if (sortMode === "affinity" && trail) {
+      return rankCatalogByAffinity(courses, trail, questionnaire);
+    }
+    return [...courses].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+  }, [courses, sortMode, trail, questionnaire]);
 
   const filteredCourses = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("pt-BR");
@@ -69,11 +65,6 @@ export default function CoursesCatalogClient({ courses, trail, questionnaire }: 
       </section>
 
       <section className="editorial-container py-10 sm:py-14">
-        {/*
-         * Painel de filtros em acrílico: a malha de gradiente do RouteShell passa
-         * por trás, então o material tem o que refratar. `thick` porque carrega
-         * campo e rótulos.
-         */}
         <div className="material-thick mb-8 grid gap-4 rounded-2xl p-4 lg:grid-cols-[minmax(260px,1fr)_auto] lg:items-center">
           <SearchField value={query} onChange={setQuery}>
             <Label className="sr-only">Buscar cursos</Label>
@@ -89,36 +80,54 @@ export default function CoursesCatalogClient({ courses, trail, questionnaire }: 
             <div className="flex-1 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
               <ToggleButtonGroup
                 aria-label="Filtrar por categoria"
-              selectionMode="single"
-              disallowEmptySelection
-              isDetached
-              selectedKeys={[category]}
-              onSelectionChange={(keys) => {
-                const [next] = Array.from(keys);
-                if (next !== undefined) setCategory(String(next));
-              }}
-              className="flex w-max flex-nowrap"
-            >
-              {categories.map((item) => (
-                <ToggleButton key={item} id={item} className="shrink-0">
-                  {item}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
+                selectionMode="single"
+                disallowEmptySelection
+                isDetached
+                selectedKeys={[category]}
+                onSelectionChange={(keys) => {
+                  const [next] = Array.from(keys);
+                  if (next !== undefined) setCategory(String(next));
+                }}
+                className="flex w-max flex-nowrap"
+              >
+                {categories.map((item) => (
+                  <ToggleButton key={item} id={item} className="shrink-0">
+                    {item}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
             </div>
           </div>
         </div>
 
-        <div className="mb-7 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="mb-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <p className="text-sm text-muted" aria-live="polite" data-numeric>
             <strong className="font-bold text-foreground">{filteredCourses.length}</strong>{" "}
             {filteredCourses.length === 1 ? "curso encontrado" : "cursos encontrados"}
             {category !== "Todos" && <span className="text-muted"> · {category}</span>}
           </p>
-          <div className="flex items-center gap-3">
-            <p className="hidden text-xs font-semibold text-muted sm:block">
-              {trail ? "Ordenados pela sua afinidade" : "Ordenados pelo catálogo"}
-            </p>
+          
+          <div className="flex items-center gap-3 self-end sm:self-auto">
+            {trail && (
+              <Select
+                aria-label="Ordenar por"
+                selectedKey={sortMode}
+                onSelectionChange={(k) => setSortMode(k as "catalog" | "affinity")}
+                className="w-48"
+              >
+                <Select.Trigger>
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    <ListBoxItem id="catalog">Ordem do catálogo</ListBoxItem>
+                    <ListBoxItem id="affinity">Para você (Afinidade)</ListBoxItem>
+                  </ListBox>
+                </Select.Popover>
+              </Select>
+            )}
+            
             {isFiltered && (
               <>
                 <Separator orientation="vertical" className="hidden h-4 sm:block" />

@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { Course, Lesson } from "@/types/course";
 import type { AssistantMessage } from "@/types/platformAssistant";
 import {
+  assistantQueryTerms,
   buildCourseAssistantContext,
   buildPlatformAssistantContext,
   conversationTitle,
+  mergeAssistantContexts,
+  rankSources,
   stripMarkup,
   trimAssistantHistory,
   type AssistantContextSource,
@@ -118,6 +121,63 @@ describe("contexto do Assistente IA", () => {
       { id: "3", author: "user", content: "pergunta recente", createdAt: "2026-01-01" },
     ];
     expect(trimAssistantHistory(messages, 80).map((message) => message.id)).toEqual(["3"]);
+  });
+
+  it("descarta stopwords da pergunta e mantém os termos que discriminam", () => {
+    expect(assistantQueryTerms("Como funciona o certificado do curso?")).toEqual(["funciona", "certificado"]);
+  });
+
+  it("volta aos termos brutos quando a pergunta só tem stopwords", () => {
+    expect(assistantQueryTerms("Como posso ajuda?")).toEqual(["como", "posso", "ajuda"]);
+  });
+
+  it("prefere a fonte que cobre mais termos da pergunta", () => {
+    const cobre: AssistantContextSource = {
+      id: "cobre",
+      kind: "article",
+      title: "Prazo e valor do certificado digital",
+      content: "Explicação",
+    };
+    const repete: AssistantContextSource = {
+      id: "repete",
+      kind: "article",
+      title: "Certificados",
+      content: "certificado ".repeat(40),
+    };
+    expect(rankSources([repete, cobre], "prazo do certificado digital", 2)[0].id).toBe("cobre");
+  });
+
+  it("não lê o corpo da aula quando a fonte de conteúdo está desligada", () => {
+    const fixture = courseFixture();
+    fixture.modules[0].lessons[1].content = "CORPO_INTERNO_DA_AULA";
+    fixture.modules[0].lessons[1].transcription = "TRANSCRICAO_DA_AULA";
+    fixture.modules[0].lessons[1].shortDescription = "Ementa pública da aula";
+
+    const context = buildCourseAssistantContext(fixture, "feedback", "lesson-current", 120_000, {
+      includeLessonBody: false,
+    });
+    expect(context.text).not.toContain("CORPO_INTERNO_DA_AULA");
+    expect(context.text).not.toContain("TRANSCRICAO_DA_AULA");
+    expect(context.text).toContain("Ementa pública da aula");
+  });
+
+  it("mantém a aula e corta só a transcrição quando ela é desligada", () => {
+    const fixture = courseFixture();
+    fixture.modules[0].lessons[1].content = "CORPO_INTERNO_DA_AULA";
+    fixture.modules[0].lessons[1].transcription = "TRANSCRICAO_DA_AULA";
+
+    const context = buildCourseAssistantContext(fixture, "feedback", "lesson-current", 120_000, {
+      includeTranscriptions: false,
+    });
+    expect(context.text).toContain("CORPO_INTERNO_DA_AULA");
+    expect(context.text).not.toContain("TRANSCRICAO_DA_AULA");
+  });
+
+  it("une blocos empacotados sem repetir a mesma fonte", () => {
+    const bloco = { text: "[Fonte: A]\nconteúdo", sources: [{ id: "a", kind: "course" as const, title: "A", characters: 8 }] };
+    const merged = mergeAssistantContexts(bloco, bloco);
+    expect(merged.sources).toHaveLength(1);
+    expect(merged.text).toContain("[Fonte: A]");
   });
 
   it("gera títulos curtos sem carregar marcação", () => {

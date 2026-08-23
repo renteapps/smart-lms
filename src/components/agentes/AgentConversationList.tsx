@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
@@ -7,6 +8,7 @@ import { ptBR } from "date-fns/locale";
 import { ArrowLeft, ChevronsUpDown, SquarePen, Trash2 } from "lucide-react";
 import { Button, Dropdown, Separator, Skeleton } from "@heroui/react";
 import { AgentAvatar } from "@/components/agentes/AgentAvatar";
+import { ConversationDeleteDialog } from "@/components/agentes/ConversationDeleteDialog";
 import { useAgentCatalog } from "@/contexts/AgentCatalogContext";
 import type { Agent, AgentConversation } from "@/types/agente";
 import { cn } from "@/lib/utils";
@@ -37,6 +39,7 @@ export function AgentConversationList({
   const router = useRouter();
   const { agents } = useAgentCatalog();
   const otherAgents = agents.filter((item) => item.id !== agent.id && item.status !== "Em manutenção");
+  const [conversationToDelete, setConversationToDelete] = useState<AgentConversation | null>(null);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -113,7 +116,7 @@ export function AgentConversationList({
                     size="sm"
                     variant="ghost"
                     aria-label={`Excluir conversa ${conversation.title}`}
-                    onClick={() => onDelete(conversation.id)}
+                    onClick={() => setConversationToDelete(conversation)}
                     className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted transition-opacity hover:text-danger pointer-fine:opacity-0 pointer-fine:group-hover/thread:opacity-100 group-focus-within/thread:opacity-100"
                   >
                     <Trash2 className="size-4" aria-hidden="true" />
@@ -180,6 +183,15 @@ export function AgentConversationList({
           </Dropdown.Popover>
         </Dropdown.Root>
       </div>
+
+      <ConversationDeleteDialog
+        conversation={conversationToDelete}
+        onClose={() => setConversationToDelete(null)}
+        onConfirm={(id) => {
+          onDelete(id);
+          setConversationToDelete(null);
+        }}
+      />
     </div>
   );
 }

@@ -1,147 +1,198 @@
 "use server";
 
 import { getSessionUser } from "@/lib/supabase/auth";
-import type { SearchFilterOptions, SearchResponse, SearchResultItem, SearchResultType } from "@/types/search";
+import { SEARCH_PAGE_SIZE } from "@/lib/searchQueryState";
+import {
+  ALL_CATEGORIES,
+  EMPTY_COUNTS,
+  emptySearchResponse,
+  SEARCH_RESULT_TYPES,
+  SEARCH_SORT_OPTIONS,
+  type SearchCategoryFacet,
+  type SearchCountsByType,
+  type SearchRequest,
+  type SearchResponse,
+  type SearchResultItem,
+  type SearchResultType,
+  type SearchSuggestion,
+} from "@/types/search";
 
-export async function searchContent(options: SearchFilterOptions): Promise<SearchResponse> {
-  const { query = "", type = "all", category = "Todas", sortBy = "relevance" } = options;
-  const trimmedQuery = query.trim();
+/**
+ * Camada fina sobre `search_unified`.
+ *
+ * Toda a busca — pontuação, facetas, ordenação, paginação e recorte de acesso
+ * — acontece no Postgres, em uma ida só (ver
+ * `supabase/migrations/20260823140000_search_engine_v2.sql`). O que sobra aqui
+ * é o que de fato é responsabilidade da aplicação: validar a entrada,
+ * converter `snake_case` do banco no formato da tela e nunca deixar um erro de
+ * busca derrubar a página.
+ */
 
-  // Se a busca estiver vazia, podemos retornar vazio ou buscar os estáticos.
-  // Como agora o motor é o DB, podemos simplesmente passar a string vazia para retornar tudo 
-  // (a RPC trata string vazia retornando os mais recentes/populares se não houver query).
-  
+const MAX_QUERY_LENGTH = 160;
+
+function clampQuery(value: string | undefined): string {
+  return (value ?? "").trim().slice(0, MAX_QUERY_LENGTH);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function toCounts(raw: unknown): SearchCountsByType {
+  if (!isRecord(raw)) return { ...EMPTY_COUNTS };
+
+  const read = (key: keyof SearchCountsByType): number => {
+    const value = raw[key];
+    return typeof value === "number" && Number.isFinite(value) ? value : 0;
+  };
+
+  return {
+    all: read("all"),
+    course: read("course"),
+    lesson: read("lesson"),
+    agent: read("agent"),
+    article: read("article"),
+    note: read("note"),
+  };
+}
+
+function toCategories(raw: unknown): SearchCategoryFacet[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.flatMap((entry): SearchCategoryFacet[] => {
+    if (!isRecord(entry)) return [];
+    const value = typeof entry.value === "string" ? entry.value : null;
+    if (!value) return [];
+    const count = typeof entry.count === "number" ? entry.count : 0;
+    return [{ value, count }];
+  });
+}
+
+function toItems(raw: unknown): SearchResultItem[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.flatMap((entry): SearchResultItem[] => {
+    if (!isRecord(entry)) return [];
+
+    const type = entry.type;
+    if (typeof type !== "string" || !(SEARCH_RESULT_TYPES as readonly string[]).includes(type)) {
+      return [];
+    }
+
+    const id = typeof entry.id === "string" ? entry.id : null;
+    const title = typeof entry.title === "string" ? entry.title : null;
+    const url = typeof entry.url === "string" ? entry.url : null;
+    if (!id || !title || !url) return [];
+
+    return [
+      {
+        id,
+        type: type as SearchResultType,
+        title,
+        url,
+        description: typeof entry.description === "string" ? entry.description : "",
+        category: typeof entry.category === "string" ? entry.category : undefined,
+        score: typeof entry.score === "number" ? entry.score : undefined,
+        hasAccess: typeof entry.hasAccess === "boolean" ? entry.hasAccess : undefined,
+        snippet: typeof entry.snippet === "string" ? entry.snippet : null,
+        metadata: isRecord(entry.metadata) ? (entry.metadata as SearchResultItem["metadata"]) : undefined,
+      },
+    ];
+  });
+}
+
+function toResponse(raw: unknown, fallbackQuery: string, pageSize: number): SearchResponse {
+  if (!isRecord(raw)) return emptySearchResponse(fallbackQuery, pageSize);
+
+  const page = isRecord(raw.page) ? raw.page : {};
+
+  return {
+    query: typeof raw.query === "string" ? raw.query : fallbackQuery,
+    items: toItems(raw.items),
+    totalCount: typeof raw.totalCount === "number" ? raw.totalCount : 0,
+    countsByType: toCounts(raw.countsByType),
+    categories: toCategories(raw.categories),
+    didYouMean: raw.didYouMean === true,
+    page: {
+      size: typeof page.size === "number" ? page.size : pageSize,
+      offset: typeof page.offset === "number" ? page.offset : 0,
+      hasMore: page.hasMore === true,
+    },
+  };
+}
+
+export async function searchContent(request: SearchRequest): Promise<SearchResponse> {
+  const query = clampQuery(request.query);
+  const pageSize = Math.min(Math.max(request.pageSize ?? SEARCH_PAGE_SIZE, 1), 60);
+  const page = Math.max(request.page ?? 1, 1);
+
+  const type =
+    request.type && (["all", ...SEARCH_RESULT_TYPES] as readonly string[]).includes(request.type)
+      ? request.type
+      : "all";
+  const sort =
+    request.sort && (SEARCH_SORT_OPTIONS as readonly string[]).includes(request.sort)
+      ? request.sort
+      : "relevance";
+  const category = request.category && request.category !== ALL_CATEGORIES ? request.category : null;
+
   try {
-    const { supabase, user } = await getSessionUser();
+    const { supabase } = await getSessionUser();
 
-    // Invocar a RPC de Full-Text Search unificada
-    const { data: results, error } = await supabase.rpc("search_unified", {
-      query_text: trimmedQuery,
+    const { data, error } = await supabase.rpc("search_unified", {
+      query_text: query,
+      filter_type: type,
+      filter_category: category,
+      sort_by: sort,
+      page_size: pageSize,
+      page_offset: (page - 1) * pageSize,
     });
 
-    if (error) {
-      console.error("Erro na busca unificada via RPC:", error);
-      throw error;
-    }
+    if (error) throw error;
 
-    let items: SearchResultItem[] = (results || []).map((row: any) => ({
-      id: row.id,
-      type: row.type as SearchResultType,
-      title: row.title,
-      description: row.description,
-      category: row.category,
-      url: row.url,
-      score: row.rank,
-      metadata: row.metadata,
-    }));
+    return toResponse(data, query, pageSize);
+  } catch (error) {
+    console.error("[search] search_unified falhou:", error);
+    // A tela precisa continuar utilizável: melhor "nenhum resultado" com o
+    // campo funcionando do que um erro que derruba a rota inteira.
+    return emptySearchResponse(query, pageSize);
+  }
+}
 
-    // Merge com notas locais que ainda não estão no banco (ou usuário deslogado)
-    if (options.localNotes && options.localNotes.length > 0) {
-      const existingIds = new Set(items.map((i) => i.id));
-      for (const note of options.localNotes) {
-        if (!existingIds.has(note.lessonId)) {
-          // Filtragem simples para notas locais
-          if (
-            !trimmedQuery ||
-            note.lessonTitle.toLowerCase().includes(trimmedQuery.toLowerCase()) ||
-            note.content.toLowerCase().includes(trimmedQuery.toLowerCase())
-          ) {
-            const isAgent = note.lessonId.startsWith("agente-");
-            const isPersonal = note.lessonId.startsWith("pessoal-");
-            let noteUrl = "/notas";
-            if (!isPersonal && !isAgent) {
-              noteUrl = note.courseId && note.lessonId
-                ? `/courses/${note.courseId}/lessons/${note.lessonId}`
-                : `/courses/c1/lessons/${note.lessonId}`;
-            } else if (isAgent) {
-              noteUrl = "/agentes";
-            }
+export async function getSearchSuggestions(query: string, limit = 6): Promise<SearchSuggestion[]> {
+  const term = clampQuery(query);
+  if (term.length < 2) return [];
 
-            items.push({
-              id: note.lessonId,
-              type: "note",
-              title: note.lessonTitle || "Anotação sem título",
-              description: note.content,
-              category: "Minhas Anotações",
-              url: noteUrl,
-              score: trimmedQuery ? 0.1 : 0, // Score baixo artificial para notas locais
-              metadata: {
-                tags: note.tags || [],
-                pinned: note.pinned || false,
-                updatedAt: note.updatedAt,
-                noteKind: isAgent ? "agent" : isPersonal ? "personal" : "lesson",
-              },
-            });
-          }
-        }
+  try {
+    const { supabase } = await getSessionUser();
+
+    const { data, error } = await supabase.rpc("search_suggest", {
+      query_text: term,
+      max_results: Math.min(Math.max(limit, 1), 12),
+    });
+
+    if (error) throw error;
+    if (!Array.isArray(data)) return [];
+
+    return data.flatMap((entry): SearchSuggestion[] => {
+      if (!isRecord(entry)) return [];
+      const title = typeof entry.title === "string" ? entry.title : null;
+      const url = typeof entry.url === "string" ? entry.url : null;
+      const type = typeof entry.type === "string" ? entry.type : null;
+      if (!title || !url || !type || !(SEARCH_RESULT_TYPES as readonly string[]).includes(type)) {
+        return [];
       }
-    }
-
-    // Aplica filtro de aba (tipo)
-    if (type !== "all") {
-      items = items.filter((item) => item.type === type);
-    }
-
-    // Coleta categorias únicas antes do filtro de categoria
-    const uniqueCategories = new Set<string>();
-    for (const item of items) {
-      if (item.category && item.category !== "Minhas Anotações") {
-        uniqueCategories.add(item.category);
-      }
-    }
-
-    // Aplica filtro de categoria
-    if (category && category !== "Todas") {
-      items = items.filter((item) => item.category === category);
-    }
-
-    // Ordenação (O Postgres já retorna ordenado por rank)
-    if (sortBy === "az") {
-      items.sort((a, b) => a.title.localeCompare(b.title, "pt-BR"));
-    } else if (sortBy === "recent") {
-      items.sort((a, b) => {
-        const dateA = a.metadata?.updatedAt ? new Date(a.metadata.updatedAt).getTime() : 0;
-        const dateB = b.metadata?.updatedAt ? new Date(b.metadata.updatedAt).getTime() : 0;
-        if (dateA !== dateB) return dateB - dateA;
-        return (b.score || 0) - (a.score || 0);
-      });
-    }
-
-    // Calcula contadores de todas as categorias/tipos com o termo de busca atual
-    const countsByType = {
-      all: 0,
-      course: 0,
-      lesson: 0,
-      agent: 0,
-      article: 0,
-      note: 0,
-    };
-
-    const rawItems = results || [];
-    for (const row of rawItems) {
-      countsByType.all += 1;
-      const t = row.type as SearchResultType;
-      if (t in countsByType) {
-        countsByType[t] += 1;
-      }
-    }
-
-    return {
-      query: trimmedQuery,
-      items,
-      totalCount: items.length,
-      countsByType,
-      categories: ["Todas", ...Array.from(uniqueCategories).sort((a, b) => a.localeCompare(b, "pt-BR"))],
-    };
-  } catch (err) {
-    console.error("Fallback ou erro crítico:", err);
-    // Em caso de erro absoluto, retorna estrutura vazia em vez de quebrar a tela
-    return {
-      query: trimmedQuery,
-      items: [],
-      totalCount: 0,
-      countsByType: { all: 0, course: 0, lesson: 0, agent: 0, article: 0, note: 0 },
-      categories: ["Todas"],
-    };
+      return [
+        {
+          title,
+          url,
+          type: type as SearchResultType,
+          category: typeof entry.category === "string" ? entry.category : undefined,
+        },
+      ];
+    });
+  } catch (error) {
+    console.error("[search] search_suggest falhou:", error);
+    return [];
   }
 }
