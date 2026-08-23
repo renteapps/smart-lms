@@ -337,7 +337,11 @@ export function ChatAdminClient({
                   isSelected={draft.enabled}
                   onChange={(selected) => updateDraft("enabled", selected)}
                 >
-                  <Switch.Control><Switch.Thumb /></Switch.Control>
+                  <Switch.Content>
+                    <Switch.Control>
+                      <Switch.Thumb />
+                    </Switch.Control>
+                  </Switch.Content>
                 </Switch>
               </Card.Header>
             </Card>
@@ -578,28 +582,28 @@ export function ChatAdminClient({
               {SOURCE_OPTIONS.map((source) => {
                 const Icon = source.icon;
                 return (
-                  <div
+                  <Switch
                     key={source.id}
-                    className="flex items-start justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3"
+                    aria-label={source.label}
+                    isSelected={draft.knowledgeSources[source.id]}
+                    onChange={(selected) => toggleSource(source.id, selected)}
+                    className="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3 transition-colors hover:bg-surface-hover"
                   >
-                    <div className="flex min-w-0 items-start gap-3">
-                      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-background-secondary">
-                        <Icon className="size-4 text-muted" aria-hidden="true" />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-foreground">{source.label}</p>
-                        <p className="mt-0.5 text-xs leading-5 text-muted">{source.description}</p>
+                    <Switch.Content className="flex w-full items-start justify-between gap-3 text-left">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-background-secondary">
+                          <Icon className="size-4 text-muted" aria-hidden="true" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-foreground">{source.label}</p>
+                          <p className="mt-0.5 text-xs leading-5 text-muted">{source.description}</p>
+                        </div>
                       </div>
-                    </div>
-                    <Switch
-                      aria-label={source.label}
-                      isSelected={draft.knowledgeSources[source.id]}
-                      onChange={(selected) => toggleSource(source.id, selected)}
-                      className="mt-0.5 shrink-0"
-                    >
-                      <Switch.Control><Switch.Thumb /></Switch.Control>
-                    </Switch>
-                  </div>
+                      <Switch.Control className="mt-0.5 shrink-0">
+                        <Switch.Thumb />
+                      </Switch.Control>
+                    </Switch.Content>
+                  </Switch>
                 );
               })}
             </Card.Content>
