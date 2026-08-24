@@ -442,6 +442,7 @@ export default function StudentHomeClient({
               pillId={dailyPill.id}
               title={dailyPill.title}
               challenge={dailyPill.challenge}
+              initialLikes={dailyPill.likesCount ?? 0}
             />
           </Rise>
         </section>

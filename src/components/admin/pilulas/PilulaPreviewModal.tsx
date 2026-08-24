@@ -1,21 +1,58 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Pilula } from '@/types/pilula';
-import { Lightbulb, Clock, CheckCircle2, Heart, BookOpen, Play, Volume2, Target, Sparkles } from 'lucide-react';
+import { Lightbulb, Clock, CheckCircle2, Heart, BookOpen, Play, Volume2, Target, Sparkles, AlertCircle } from 'lucide-react';
 import { StatusBadge } from '@/components/ui/editorial';
-import { Button, Chip, Modal, ProgressBar, Separator } from '@heroui/react';
+import { Button, Chip, Modal, Separator } from '@heroui/react';
 
 interface PilulaPreviewModalProps {
   pilula: Pilula | null;
   onClose: () => void;
 }
 
+function getYouTubeEmbedUrl(url: string): string | null {
+  try {
+    if (url.includes('youtube.com/watch')) {
+      const parsed = new URL(url);
+      const v = parsed.searchParams.get('v');
+      return v ? `https://www.youtube.com/embed/${v}` : null;
+    }
+    if (url.includes('youtu.be/')) {
+      const id = url.split('youtu.be/')[1]?.split('?')[0];
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+    if (url.includes('youtube.com/embed/')) {
+      return url;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function getVimeoEmbedUrl(url: string): string | null {
+  try {
+    const match = url.match(/vimeo\.com\/(?:video\/)?([0-9]+)/);
+    return match && match[1] ? `https://player.vimeo.com/video/${match[1]}` : null;
+  } catch {
+    return null;
+  }
+}
+
 export function PilulaPreviewModal({ pilula, onClose }: PilulaPreviewModalProps) {
   const [completed, setCompleted] = useState(false);
   const [liked, setLiked] = useState(false);
 
+  useEffect(() => {
+    setCompleted(false);
+    setLiked(false);
+  }, [pilula?.id]);
+
   if (!pilula) return null;
+
+  const ytEmbed = pilula.mediaUrl ? getYouTubeEmbedUrl(pilula.mediaUrl) : null;
+  const vimeoEmbed = pilula.mediaUrl ? getVimeoEmbedUrl(pilula.mediaUrl) : null;
 
   return (
     <Modal.Root
@@ -26,7 +63,7 @@ export function PilulaPreviewModal({ pilula, onClose }: PilulaPreviewModalProps)
     >
       <Modal.Backdrop>
         <Modal.Container size="lg" scroll="inside">
-          <Modal.Dialog>
+          <Modal.Dialog className="max-w-2xl sm:w-[42rem]">
             <Modal.Header>
               <div className="flex items-center gap-2">
                 <Sparkles className="size-4 text-accent" aria-hidden="true" />
@@ -48,7 +85,7 @@ export function PilulaPreviewModal({ pilula, onClose }: PilulaPreviewModalProps)
 
                 <div className="flex items-center gap-1.5 text-xs font-medium text-muted">
                   <Clock className="size-3.5" aria-hidden="true" />
-                  <span>{pilula.estimatedMinutes} min de leitura</span>
+                  <span>{pilula.estimatedMinutes} min de prática</span>
                 </div>
               </div>
 
@@ -63,30 +100,66 @@ export function PilulaPreviewModal({ pilula, onClose }: PilulaPreviewModalProps)
                 )}
               </div>
 
-              {/* Media mock (video / audio) */}
+              {/* Media renderer (video / audio) */}
               {pilula.format === 'video' && (
-                <div className="relative flex aspect-video flex-col items-center justify-center gap-3 overflow-hidden rounded-xl bg-background-secondary">
-                  <span className="grid size-12 place-items-center rounded-full bg-accent text-accent-foreground shadow-surface">
-                    <Play className="size-6 fill-current" aria-hidden="true" />
-                  </span>
-                  <p className="text-xs font-medium text-muted">Vídeo demonstrativo da pílula</p>
+                <div className="overflow-hidden rounded-xl bg-background-secondary border border-border">
+                  {ytEmbed ? (
+                    <iframe
+                      src={ytEmbed}
+                      className="aspect-video w-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title={pilula.title}
+                    />
+                  ) : vimeoEmbed ? (
+                    <iframe
+                      src={vimeoEmbed}
+                      className="aspect-video w-full"
+                      allow="autoplay; fullscreen; picture-in-picture"
+                      allowFullScreen
+                      title={pilula.title}
+                    />
+                  ) : pilula.mediaUrl ? (
+                    <video
+                      controls
+                      className="aspect-video w-full bg-black"
+                      src={pilula.mediaUrl}
+                    >
+                      Seu navegador não suporta a tag de vídeo.
+                    </video>
+                  ) : (
+                    <div className="relative flex aspect-video flex-col items-center justify-center gap-3 p-6 text-center">
+                      <span className="grid size-12 place-items-center rounded-full bg-accent text-accent-foreground shadow-surface">
+                        <Play className="size-6 fill-current" aria-hidden="true" />
+                      </span>
+                      <p className="text-xs font-medium text-muted">Vídeo da pílula (adicione uma URL na edição para reproduzir)</p>
+                    </div>
+                  )}
                 </div>
               )}
 
               {pilula.format === 'audio' && (
-                <div className="flex items-center gap-4 rounded-xl border border-border bg-background-secondary p-4">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent text-accent-foreground">
-                    <Volume2 className="size-5" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold text-foreground">Áudio explicativo</p>
-                    <ProgressBar value={33} color="accent" size="sm" aria-label="Progresso do áudio" className="mt-2">
-                      <ProgressBar.Track>
-                        <ProgressBar.Fill />
-                      </ProgressBar.Track>
-                    </ProgressBar>
+                <div className="space-y-3 rounded-xl border border-border bg-background-secondary p-4">
+                  <div className="flex items-center gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent text-accent-foreground">
+                      <Volume2 className="size-5" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-foreground">Áudio / Podpill da Prática</p>
+                      <p className="text-[11px] text-muted">{pilula.estimatedMinutes} min de escuta guiada</p>
+                    </div>
                   </div>
-                  <span className="text-xs tabular-nums text-muted">01:30</span>
+
+                  {pilula.mediaUrl ? (
+                    <audio controls className="w-full mt-2" src={pilula.mediaUrl}>
+                      Seu navegador não suporta o elemento de áudio.
+                    </audio>
+                  ) : (
+                    <p className="flex items-center gap-1.5 text-xs text-muted">
+                      <AlertCircle className="size-3.5 text-warning" />
+                      Nenhuma URL de áudio informada para esta pílula.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -96,7 +169,7 @@ export function PilulaPreviewModal({ pilula, onClose }: PilulaPreviewModalProps)
                   <Lightbulb className="size-3.5 text-warning" aria-hidden="true" />
                   Conceito chave
                 </h4>
-                <p className="text-sm leading-relaxed text-foreground">{pilula.summary}</p>
+                <p className="text-sm leading-relaxed text-foreground whitespace-pre-line">{pilula.summary}</p>
               </div>
 
               {/* Practical challenge */}
@@ -111,34 +184,26 @@ export function PilulaPreviewModal({ pilula, onClose }: PilulaPreviewModalProps)
                   </Chip>
                 </div>
 
-                <p className="text-sm leading-relaxed font-medium text-foreground">{pilula.challenge}</p>
-
-                <Button
-                  variant={completed ? 'primary' : 'outline'}
-                  fullWidth
-                  onClick={() => setCompleted(!completed)}
-                >
-                  <CheckCircle2 className="size-4" aria-hidden="true" />
-                  {completed ? 'Prática concluída!' : 'Marcar prática como feita'}
-                </Button>
+                <p className="text-sm leading-relaxed font-medium text-foreground whitespace-pre-line">{pilula.challenge}</p>
               </div>
 
               <Separator />
 
-              {/* Interactive footer (likes & completions) */}
+              {/* Interactive footer (likes) */}
               <div className="flex items-center justify-between gap-3">
                 <Button
-                  variant="ghost"
+                  variant={liked ? "danger-soft" : "outline"}
                   size="sm"
                   onClick={() => setLiked(!liked)}
                   aria-pressed={liked}
-                  className={liked ? 'text-danger' : 'text-muted'}
+                  className="flex items-center gap-2"
                 >
-                  <Heart className={`size-4 ${liked ? 'fill-current' : ''}`} aria-hidden="true" />
-                  {(pilula.likesCount || 0) + (liked ? 1 : 0)} curtidas
+                  <Heart className={`size-4 ${liked ? 'fill-current text-danger' : 'text-muted'}`} aria-hidden="true" />
+                  <span className="font-semibold">{(pilula.likesCount || 0) + (liked ? 1 : 0)}</span>
+                  <span className="text-xs text-muted">curtidas</span>
                 </Button>
 
-                <span className="text-xs text-muted">{pilula.completionsCount || 0} alunos concluíram</span>
+                <span className="text-xs text-muted">Prévia interativa de curtida</span>
               </div>
             </Modal.Body>
 

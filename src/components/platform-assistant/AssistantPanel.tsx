@@ -77,6 +77,7 @@ export function AssistantPanel({
   const listRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const nearBottomRef = useRef(true);
+  const hasSettledRef = useRef(false);
   const reduceMotion = useReducedMotion();
 
   const foreground = getContrastText(config.primaryColor);
@@ -109,14 +110,28 @@ export function AssistantPanel({
 
   useEffect(() => {
     // Só puxa pro fim quem já estava lá — quem subiu pra reler continua onde está.
-    if (nearBottomRef.current) scrollToBottom(reduceMotion ? "auto" : "smooth");
-    else setShowJumpToBottom(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (nearBottomRef.current) {
+      // A primeira ida ao fim é posicionamento, não movimento: nunca é animada.
+      scrollToBottom(reduceMotion || !hasSettledRef.current ? "auto" : "smooth");
+      hasSettledRef.current = true;
+    } else {
+      setShowJumpToBottom(true);
+    }
   }, [messages.length, isSending, isLoading, reduceMotion]);
 
   useEffect(() => {
     const field = composerRef.current;
     if (!field) return;
+    if (!draft) {
+      /*
+       * Campo vazio volta para a altura natural de uma linha em vez de ser
+       * medido: no primeiro render, antes de o CSS assentar, `scrollHeight`
+       * chega a devolver a altura de uma caixa esticada — e o campo em branco
+       * nascia ocupando o máximo.
+       */
+      field.style.height = "";
+      return;
+    }
     field.style.height = "auto";
     field.style.height = `${Math.min(field.scrollHeight, MAX_COMPOSER_HEIGHT)}px`;
   }, [draft]);
@@ -125,7 +140,6 @@ export function AssistantPanel({
     // O teclado encurta a folha: sem isto a última mensagem ficaria escondida
     // logo depois de o aluno tocar no campo.
     if (nearBottomRef.current) scrollToBottom("auto");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keyboardInset]);
 
   useEffect(() => {
@@ -188,8 +202,8 @@ export function AssistantPanel({
           "sm:inset-x-auto sm:top-auto sm:right-6 sm:rounded-3xl sm:border sm:border-hairline sm:pt-0",
           "sm:bottom-[calc(var(--assistant-anchor)+4.25rem)]",
           isExpanded
-            ? "sm:h-[min(44rem,calc(100dvh-9rem))] sm:w-[min(32rem,calc(100vw-3rem))]"
-            : "sm:h-[min(36rem,calc(100dvh-9rem))] sm:w-[min(25rem,calc(100vw-3rem))]",
+            ? "sm:h-[min(44rem,calc(100dvh-10rem))] sm:w-[min(32rem,calc(100vw-3rem))]"
+            : "sm:h-[min(36rem,calc(100dvh-10rem))] sm:w-[min(25rem,calc(100vw-3rem))]",
         )}
       >
         <header className="flex items-center gap-3 px-4 py-3 sm:px-5 sm:py-4">
@@ -468,10 +482,10 @@ function AssistantBubble({
   };
 
   return (
-    <div className="group/bubble flex items-end gap-2">
-      <AssistantAvatar config={config} className="size-7 rounded-full" />
+    <div className="group/bubble flex items-start gap-2">
+      <AssistantAvatar config={config} className="mt-1 size-7 rounded-full" />
       <div className="min-w-0 max-w-[85%]">
-        <div className="rounded-2xl rounded-bl-sm border border-hairline bg-surface px-4 py-3 text-sm text-foreground shadow-elev-1">
+        <div className="rounded-2xl rounded-tl-sm border border-hairline bg-surface px-4 py-3 text-sm text-foreground shadow-elev-1">
           {children}
         </div>
         {copyText && (

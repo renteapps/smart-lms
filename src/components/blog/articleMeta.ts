@@ -1,15 +1,21 @@
 import type { Article } from "@/types/blog";
+import { PLATFORM_TIMEZONE, PLATFORM_LOCALE } from "@/lib/timezone";
 
 /*
- * Formatadores no escopo do módulo: `Intl.DateTimeFormat` é caro de construir e
- * o custo não se justifica a cada linha da lista.
+ * Formatadores no escopo do módulo com fuso horário padrão de São Paulo:
+ * `Intl.DateTimeFormat` é caro de construir e o custo não se justifica a cada linha da lista.
  */
-const longDateFormatter = new Intl.DateTimeFormat("pt-BR", {
+const longDateFormatter = new Intl.DateTimeFormat(PLATFORM_LOCALE, {
+  timeZone: PLATFORM_TIMEZONE,
   day: "numeric",
   month: "long",
   year: "numeric",
 });
-const shortDateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "short" });
+const shortDateFormatter = new Intl.DateTimeFormat(PLATFORM_LOCALE, {
+  timeZone: PLATFORM_TIMEZONE,
+  day: "numeric",
+  month: "short",
+});
 
 export function longDate(publishedAt: number) {
   return longDateFormatter.format(new Date(publishedAt));

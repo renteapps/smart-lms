@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -128,6 +128,34 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
     setSyncedFrom(initialNotes);
     setNotes(initialNotes);
   }
+
+  /*
+   * `?nota=<id>` abre a anotação direto — é assim que um resultado da busca
+   * (`/busca`) chega até a nota específica em vez de largar a pessoa na lista
+   * inteira. O parâmetro sai da URL depois de aberto para não reabrir o modal
+   * a cada `router.refresh()`.
+   */
+  const searchParams = useSearchParams();
+  const requestedNoteId = searchParams.get("nota");
+  const [openedFromUrl, setOpenedFromUrl] = useState<string | null>(null);
+
+  // Mesmo padrão de ajuste-durante-o-render usado logo acima para `syncedFrom`:
+  // abrir o modal por efeito faria a lista renderizar fechada primeiro e só
+  // então abrir, com um piscar visível.
+  if (requestedNoteId && requestedNoteId !== openedFromUrl) {
+    setOpenedFromUrl(requestedNoteId);
+    const target = notes.find((note) => note.id === requestedNoteId);
+    if (target) {
+      setViewingNote(target);
+      setIsViewModalOpen(true);
+    }
+  }
+
+  // Limpar a URL é atualização de sistema externo — aí sim, efeito.
+  useEffect(() => {
+    if (!requestedNoteId) return;
+    router.replace("/notas", { scroll: false });
+  }, [requestedNoteId, router]);
 
   const refreshNotes = () => router.refresh();
 

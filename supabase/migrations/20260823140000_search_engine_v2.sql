@@ -63,6 +63,40 @@ AS $$
 $$;
 
 /*
+ * Nota de cada termo digitado contra o texto do documento, resumida pelo
+ * **pior** termo (`min`). Exigir que todos passem é a mesma semântica "E" da
+ * busca estrita — o contrário faria "comunicação futebol" casar com qualquer
+ * aula de comunicação.
+ *
+ * Termos de até dois caracteres saem fora: são preposição e artigo, e num
+ * texto longo qualquer sequência curta encontra parecença.
+ *
+ * Com um termo só, `min` é o próprio `word_similarity` — o comportamento
+ * anterior continua valendo.
+ */
+CREATE OR REPLACE FUNCTION public.search_fuzzy_score(p_norm text, p_target text)
+RETURNS real
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+SET search_path = ''
+AS $$
+  -- Função total: nunca devolve NULL. A nota entra numa soma ponderada, e um
+  -- NULL ali zeraria a pontuação inteira do documento, não só esta parcela.
+  SELECT CASE
+    WHEN coalesce(p_norm, '') = '' OR coalesce(p_target, '') = '' THEN 0::real
+    ELSE coalesce(
+      (
+        SELECT min(extensions.word_similarity(tok, p_target))::real
+        FROM regexp_split_to_table(p_norm, '[^[:alnum:]]+') AS tok
+        WHERE length(tok) >= 3
+      ),
+      0::real
+    )
+  END;
+$$;
+
+/*
  * Configuração de busca do produto: stemmer português + remoção de acento.
  * Criada condicionalmente porque um DROP levaria junto (CASCADE) todas as
  * colunas geradas que dependem dela.
@@ -369,8 +403,12 @@ AS $$
   ) t;
 $$;
 
-REVOKE ALL ON FUNCTION public.user_entitled_course_ids() FROM public;
-GRANT EXECUTE ON FUNCTION public.user_entitled_course_ids() TO authenticated;
+/*
+ * Auxiliar interno: só `search_documents` chama. O Supabase concede EXECUTE a
+ * anon/authenticated por privilégio padrão na criação, e `REVOKE ... FROM
+ * PUBLIC` não desfaz concessão nominal — daí revogar os papéis por nome.
+ */
+REVOKE ALL ON FUNCTION public.user_entitled_course_ids() FROM PUBLIC, anon, authenticated;
 
 -- -----------------------------------------------------------------------------
 -- 5. Candidatos: um documento por conteúdo pesquisável
@@ -386,11 +424,11 @@ GRANT EXECUTE ON FUNCTION public.user_entitled_course_ids() TO authenticated;
  *     conteúdo nem transcrição de aula paga;
  *   - anotação: `user_id = auth.uid()`, sem exceção.
  *
- * A tolerância a erro de digitação usa `word_similarity(termo, titulo)`, não
- * `similarity`: esta compara as duas strings inteiras, então um termo curto
- * contra um título longo dá quase zero e o fallback nunca dispararia.
- * `word_similarity` procura a melhor extensão contínua de trigramas dentro do
- * título, que é exatamente a pergunta certa aqui.
+ * A tolerância a erro de digitação usa `search_fuzzy_score`, que aplica
+ * `word_similarity` **por termo digitado** e fica com o pior deles (ver
+ * 20260824100000). Comparar a frase inteira de uma vez fazia
+ * `comunicaçao assertva` devolver zero: a média de duas palavras erradas
+ * afunda abaixo do limiar mesmo quando cada uma, sozinha, casaria.
  *
  * `p_query NULL` + `p_fuzzy false` = modo navegação (vitrine sem termo).
  * `p_query NULL` + `p_fuzzy true`  = passada por trigrama (tolerância a erro
@@ -455,14 +493,14 @@ BEGIN
       )),
       CASE WHEN v_ts IS NULL THEN 0::real ELSE ts_rank_cd(v_weights, c.search_vector, v_ts, 32) END,
       CASE WHEN v_norm = '' THEN 0::real
-           ELSE extensions.word_similarity(v_norm, public.f_unaccent(lower(c.title))) END
+           ELSE public.search_fuzzy_score(v_norm, public.f_unaccent(lower(c.title || ' ' || coalesce(c.short_description, '')))) END
     FROM public.courses c
     WHERE c.is_published = true
       AND coalesce(c.status, '') <> 'Arquivado'
       AND (
         (v_ts IS NOT NULL AND c.search_vector @@ v_ts)
         OR (v_ts IS NULL AND NOT p_fuzzy)
-        OR (p_fuzzy AND v_norm <> '' AND extensions.word_similarity(v_norm, public.f_unaccent(lower(c.title))) >= 0.45)
+        OR (p_fuzzy AND v_norm <> '' AND public.search_fuzzy_score(v_norm, public.f_unaccent(lower(c.title || ' ' || coalesce(c.short_description, '')))) >= 0.45)
       )
     ORDER BY CASE WHEN v_ts IS NULL THEN 0::real ELSE ts_rank_cd(v_weights, c.search_vector, v_ts, 32) END DESC
     LIMIT v_cap
@@ -496,7 +534,9 @@ BEGIN
         'lessonType',  l.type,
         'level',       l.level,
         'cover',       coalesce(l.cover_url, c.cover_url),
-        'hasAccess',   (v_admin OR c.id = ANY(v_owned))
+        'hasAccess',   (v_admin OR c.id = ANY(v_owned)),
+        -- Aula já concluída não deve parecer idêntica a uma nunca vista.
+        'isCompleted', coalesce(lp.is_completed, false)
       )),
       CASE WHEN v_ts IS NULL THEN 0::real
            ELSE ts_rank_cd(
@@ -504,10 +544,13 @@ BEGIN
              CASE WHEN (v_admin OR c.id = ANY(v_owned)) THEN l.search_vector ELSE l.search_vector_public END,
              v_ts, 32) END,
       CASE WHEN v_norm = '' THEN 0::real
-           ELSE extensions.word_similarity(v_norm, public.f_unaccent(lower(l.title))) END
+           ELSE public.search_fuzzy_score(v_norm, public.f_unaccent(lower(l.title || ' ' || coalesce(l.short_description::text, '')))) END
     FROM public.lessons l
     JOIN public.modules m ON m.id = l.module_id
     JOIN public.courses c ON c.id = m.course_id
+    -- LEFT: a aula existe para quem nunca a abriu.
+    LEFT JOIN public.lesson_progress lp
+           ON lp.lesson_id = l.id AND lp.user_id = v_uid
     WHERE l.is_published = true
       AND c.is_published = true
       AND coalesce(c.status, '') <> 'Arquivado'
@@ -515,7 +558,7 @@ BEGIN
         (v_ts IS NOT NULL AND
           CASE WHEN (v_admin OR c.id = ANY(v_owned)) THEN l.search_vector ELSE l.search_vector_public END @@ v_ts)
         OR (v_ts IS NULL AND NOT p_fuzzy)
-        OR (p_fuzzy AND v_norm <> '' AND extensions.word_similarity(v_norm, public.f_unaccent(lower(l.title))) >= 0.45)
+        OR (p_fuzzy AND v_norm <> '' AND public.search_fuzzy_score(v_norm, public.f_unaccent(lower(l.title || ' ' || coalesce(l.short_description::text, '')))) >= 0.45)
       )
     ORDER BY CASE WHEN v_ts IS NULL THEN 0::real
                   ELSE ts_rank_cd(v_weights,
@@ -549,13 +592,13 @@ BEGIN
       )),
       CASE WHEN v_ts IS NULL THEN 0::real ELSE ts_rank_cd(v_weights, a.search_vector, v_ts, 32) END,
       CASE WHEN v_norm = '' THEN 0::real
-           ELSE extensions.word_similarity(v_norm, public.f_unaccent(lower(a.name))) END
+           ELSE public.search_fuzzy_score(v_norm, public.f_unaccent(lower(a.name || ' ' || coalesce(a.role, '')))) END
     FROM public.agents a
     WHERE a.is_published = true
       AND (
         (v_ts IS NOT NULL AND a.search_vector @@ v_ts)
         OR (v_ts IS NULL AND NOT p_fuzzy)
-        OR (p_fuzzy AND v_norm <> '' AND extensions.word_similarity(v_norm, public.f_unaccent(lower(a.name))) >= 0.45)
+        OR (p_fuzzy AND v_norm <> '' AND public.search_fuzzy_score(v_norm, public.f_unaccent(lower(a.name || ' ' || coalesce(a.role, '')))) >= 0.45)
       )
     ORDER BY CASE WHEN v_ts IS NULL THEN 0::real ELSE ts_rank_cd(v_weights, a.search_vector, v_ts, 32) END DESC
     LIMIT v_cap
@@ -584,13 +627,13 @@ BEGIN
       )),
       CASE WHEN v_ts IS NULL THEN 0::real ELSE ts_rank_cd(v_weights, ar.search_vector, v_ts, 32) END,
       CASE WHEN v_norm = '' THEN 0::real
-           ELSE extensions.word_similarity(v_norm, public.f_unaccent(lower(ar.title))) END
+           ELSE public.search_fuzzy_score(v_norm, public.f_unaccent(lower(ar.title || ' ' || coalesce(ar.excerpt, '')))) END
     FROM public.articles ar
     WHERE ar.is_published = true
       AND (
         (v_ts IS NOT NULL AND ar.search_vector @@ v_ts)
         OR (v_ts IS NULL AND NOT p_fuzzy)
-        OR (p_fuzzy AND v_norm <> '' AND extensions.word_similarity(v_norm, public.f_unaccent(lower(ar.title))) >= 0.45)
+        OR (p_fuzzy AND v_norm <> '' AND public.search_fuzzy_score(v_norm, public.f_unaccent(lower(ar.title || ' ' || coalesce(ar.excerpt, '')))) >= 0.45)
       )
     ORDER BY CASE WHEN v_ts IS NULL THEN 0::real ELSE ts_rank_cd(v_weights, ar.search_vector, v_ts, 32) END DESC
     LIMIT v_cap
@@ -619,14 +662,14 @@ BEGIN
       )),
       CASE WHEN v_ts IS NULL THEN 0::real ELSE ts_rank_cd(v_weights, n.search_vector, v_ts, 32) END,
       CASE WHEN v_norm = '' THEN 0::real
-           ELSE extensions.word_similarity(v_norm, public.f_unaccent(lower(coalesce(n.lesson_title, '')))) END
+           ELSE public.search_fuzzy_score(v_norm, public.f_unaccent(lower(coalesce(n.lesson_title, '') || ' ' || left(coalesce(n.content, ''), 400)))) END
     FROM public.student_notes n
     WHERE v_uid IS NOT NULL
       AND n.user_id = v_uid
       AND (
         (v_ts IS NOT NULL AND n.search_vector @@ v_ts)
         OR (v_ts IS NULL AND NOT p_fuzzy)
-        OR (p_fuzzy AND v_norm <> '' AND extensions.word_similarity(v_norm, public.f_unaccent(lower(coalesce(n.lesson_title, '')))) >= 0.45)
+        OR (p_fuzzy AND v_norm <> '' AND public.search_fuzzy_score(v_norm, public.f_unaccent(lower(coalesce(n.lesson_title, '') || ' ' || left(coalesce(n.content, ''), 400)))) >= 0.45)
       )
     ORDER BY CASE WHEN v_ts IS NULL THEN 0::real ELSE ts_rank_cd(v_weights, n.search_vector, v_ts, 32) END DESC
     LIMIT v_cap
@@ -634,8 +677,12 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.search_documents(text, text, boolean) FROM public;
-GRANT EXECUTE ON FUNCTION public.search_documents(text, text, boolean) TO anon, authenticated;
+/*
+ * Também interno. Quem busca chama `search_unified`; deixar o montador de
+ * candidatos exposto na API REST só ampliaria a superfície sem dar nada em
+ * troca (ver o aviso 0028 do linter do Supabase).
+ */
+REVOKE ALL ON FUNCTION public.search_documents(text, text, boolean) FROM PUBLIC, anon, authenticated;
 
 -- -----------------------------------------------------------------------------
 -- 6. Busca unificada: pontuação, facetas, ordenação e paginação
@@ -668,7 +715,10 @@ CREATE OR REPLACE FUNCTION public.search_unified(
 RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
-SECURITY INVOKER
+-- DEFINER para alcançar `search_documents` e `user_entitled_course_ids`, que
+-- não são mais executáveis pelos papéis da API. O recorte de visibilidade
+-- continua inteiro dentro de `search_documents`.
+SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
@@ -811,6 +861,21 @@ BEGIN
       FROM category_counts
     ), '[]'::jsonb),
     'didYouMean', (SELECT EXISTS (SELECT 1 FROM fuzzy_docs)),
+    /*
+     * A palavra que a pessoa provavelmente quis escrever. Vem do título dos
+     * resultados aproximados, com o acento original preservado — "Liderança",
+     * não "lideranca" —, porque é ela que vai aparecer na tela como sugestão
+     * clicável. Nulo quando a busca casou de forma exata.
+     */
+    'suggestedTerm', (
+      SELECT tok
+      FROM fuzzy_docs f,
+           LATERAL regexp_split_to_table(f.doc_title, '[^[:alnum:]]+') AS tok
+      WHERE length(tok) >= 3
+      ORDER BY extensions.word_similarity(v_norm, public.f_unaccent(lower(tok))) DESC,
+               length(tok) ASC
+      LIMIT 1
+    ),
     'page', jsonb_build_object(
       'size',    v_limit,
       'offset',  v_offset,
@@ -838,7 +903,10 @@ CREATE OR REPLACE FUNCTION public.search_suggest(
 RETURNS jsonb
 LANGUAGE plpgsql
 STABLE
-SECURITY INVOKER
+-- DEFINER para alcançar `search_documents` e `user_entitled_course_ids`, que
+-- não são mais executáveis pelos papéis da API. O recorte de visibilidade
+-- continua inteiro dentro de `search_documents`.
+SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
@@ -852,11 +920,11 @@ BEGIN
 
   SELECT coalesce(jsonb_agg(
            jsonb_build_object(
-             'title',    top.doc_title,
-             'type',     top.doc_type,
-             'url',      top.url,
-             'category', top.category
-           ) ORDER BY top.affinity DESC, top.doc_title ASC
+             'title',    sug.doc_title,
+             'type',     sug.doc_type,
+             'url',      sug.url,
+             'category', sug.category
+           ) ORDER BY sug.affinity DESC, sug.doc_title ASC
          ), '[]'::jsonb)
   INTO v_out
   FROM (
@@ -882,7 +950,7 @@ BEGIN
     ) uniq
     ORDER BY uniq.affinity DESC, uniq.doc_title ASC
     LIMIT v_limit
-  ) top;
+  ) sug;
 
   RETURN v_out;
 END;

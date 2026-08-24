@@ -1,32 +1,37 @@
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/supabase/auth";
+import { getPilulas } from "@/lib/data/pilulas";
+import { listCoursesShallow } from "@/lib/data/courses";
+import { getPublishedQuestionnaire } from "@/lib/data/trail";
 import { AdminPilulasClient } from "./AdminPilulasClient";
 
 export default async function AdminPilulasPage() {
-  const supabase = await createClient();
+  const { adminClient } = await requireAdmin();
 
-  const { data: dbPilulas } = await supabase
-    .from("pilulas")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const [initialPilulas, courses, questionnaire] = await Promise.all([
+    getPilulas(adminClient),
+    listCoursesShallow(adminClient, true),
+    getPublishedQuestionnaire(adminClient),
+  ]);
 
-  // Map to the format expected by the frontend
-  const initialPilulas = (dbPilulas || []).map((dbPilula) => ({
-    id: dbPilula.id,
-    title: dbPilula.title,
-    category: dbPilula.category,
-    format: dbPilula.format,
-    summary: dbPilula.summary,
-    challenge: dbPilula.challenge,
-    estimatedMinutes: dbPilula.estimated_minutes,
-    courseTitle: dbPilula.course_title,
-    status: dbPilula.status,
-    mediaUrl: dbPilula.media_url,
-    publishDate: dbPilula.publish_date,
-    completionsCount: dbPilula.completions_count || 0,
-    likesCount: dbPilula.likes_count || 0,
-    createdAt: dbPilula.created_at,
-    updatedAt: dbPilula.updated_at,
+  const shallowCourses = courses.map((c) => ({
+    id: c.id,
+    title: c.title,
+    category: c.category,
   }));
 
-  return <AdminPilulasClient initialPilulas={initialPilulas} />;
+  const availableTags = Array.from(
+    new Set(
+      (questionnaire?.questions || []).flatMap((q) =>
+        q.options.flatMap((opt) => opt.tags || [])
+      )
+    )
+  ).sort();
+
+  return (
+    <AdminPilulasClient
+      initialPilulas={initialPilulas}
+      courses={shallowCourses}
+      availableTags={availableTags}
+    />
+  );
 }

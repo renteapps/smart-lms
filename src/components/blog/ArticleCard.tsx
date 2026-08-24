@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Article } from '@/types/blog';
+import { formatPlatformDate } from '@/lib/timezone';
 import { Clock, Headphones, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -61,7 +62,7 @@ export function ArticleCard({ article, className }: ArticleCardProps) {
             {article.category}
           </span>
           <span className="text-xs text-muted">
-            {new Date(article.publishedAt).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
+            {formatPlatformDate(article.publishedAt, { day: 'numeric', month: 'short' })}
           </span>
         </div>
 
@@ -74,10 +75,27 @@ export function ArticleCard({ article, className }: ArticleCardProps) {
         </p>
 
         <div className="flex items-center gap-3 mt-auto pt-4 border-t border-hairline">
-          <div className="w-8 h-8 rounded-full bg-background-secondary flex items-center justify-center text-sm font-medium text-muted">
-            {article.author.charAt(0)}
+          {article.authorDetails?.avatarUrl ? (
+            <div className="relative size-8 rounded-full overflow-hidden bg-background-secondary shrink-0 border border-border/40">
+              <Image
+                src={article.authorDetails.avatarUrl}
+                alt={article.author}
+                fill
+                sizes="32px"
+                className="object-cover"
+              />
+            </div>
+          ) : (
+            <div className="size-8 rounded-full bg-background-secondary flex items-center justify-center text-sm font-medium text-muted shrink-0">
+              {article.author.charAt(0)}
+            </div>
+          )}
+          <div className="min-w-0">
+            <span className="truncate block text-sm font-medium text-foreground">{article.author}</span>
+            {article.authorDetails?.title && (
+              <span className="truncate block text-[11px] text-muted">{article.authorDetails.title}</span>
+            )}
           </div>
-          <span className="text-sm font-medium text-foreground">{article.author}</span>
         </div>
       </div>
     </Link>

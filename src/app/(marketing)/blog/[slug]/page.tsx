@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getArticleBySlug, getAllArticles } from '@/lib/data/blog';
+import { formatPlatformDate } from '@/lib/timezone';
 import { createClient } from '@/lib/supabase/server';
 import BlockViewer from '@/components/classroom/BlockViewer';
 import { Clock, Headphones, BookOpen, ArrowLeft } from 'lucide-react';
@@ -61,7 +62,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           </span>
           
           <span className="text-sm text-muted-foreground">
-            {new Date(article.publishedAt).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
+            {formatPlatformDate(article.publishedAt, { day: 'numeric', month: 'long', year: 'numeric' })}
           </span>
         </div>
 
@@ -71,11 +72,25 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
         <div className="flex flex-wrap items-center gap-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-muted border border-border/50 flex items-center justify-center font-bold text-muted-foreground text-lg">
-              {article.author.charAt(0)}
-            </div>
+            {article.authorDetails?.avatarUrl ? (
+              <div className="relative w-12 h-12 rounded-full overflow-hidden border border-border/50 bg-muted shrink-0">
+                <Image
+                  src={article.authorDetails.avatarUrl}
+                  alt={article.author}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-muted border border-border/50 flex items-center justify-center font-bold text-muted-foreground text-lg shrink-0">
+                {article.author.charAt(0)}
+              </div>
+            )}
             <div>
               <p className="text-base font-bold text-foreground">{article.author}</p>
+              {article.authorDetails?.title && (
+                <p className="text-xs text-muted-foreground">{article.authorDetails.title}</p>
+              )}
             </div>
           </div>
           
@@ -139,6 +154,36 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         <div className="max-w-none">
           <BlockViewer blocks={article.blocks ?? []} />
         </div>
+
+        {/* Author Bio Box */}
+        {article.authorDetails && (
+          <div className="mt-16 p-6 sm:p-8 rounded-[var(--radius-xl)] bg-card border border-border/40 shadow-sm flex flex-col sm:flex-row items-center sm:items-start gap-5">
+            {article.authorDetails.avatarUrl ? (
+              <div className="relative size-16 sm:size-20 rounded-full overflow-hidden border border-border/60 bg-muted shrink-0">
+                <Image
+                  src={article.authorDetails.avatarUrl}
+                  alt={article.author}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <div className="size-16 sm:size-20 rounded-full bg-muted border border-border/60 flex items-center justify-center font-bold text-muted-foreground text-2xl shrink-0">
+                {article.author.charAt(0)}
+              </div>
+            )}
+            <div className="space-y-1.5 text-center sm:text-left flex-1">
+              <span className="text-xs font-semibold text-primary uppercase tracking-wider">Sobre o autor</span>
+              <h4 className="text-lg font-bold text-foreground">{article.author}</h4>
+              {article.authorDetails.title && (
+                <p className="text-xs font-medium text-muted-foreground">{article.authorDetails.title}</p>
+              )}
+              {article.authorDetails.bio && (
+                <p className="text-sm text-muted-foreground leading-relaxed pt-1">{article.authorDetails.bio}</p>
+              )}
+            </div>
+          </div>
+        )}
         
         {/* Course CTA */}
         {relatedCourse && (

@@ -121,3 +121,18 @@ export function hasActiveFilters(state: SearchQueryState): boolean {
     state.sort !== DEFAULT_SEARCH_STATE.sort
   );
 }
+
+/**
+ * Evento que abre a paleta de busca (⌘K) de qualquer lugar da interface.
+ *
+ * Um `CustomEvent` no `window` em vez de contexto do React porque quem dispara
+ * (o botão da barra de navegação) e quem escuta (a paleta) vivem em ramos
+ * distintos da árvore e não compartilham nada além do shell — um provider só
+ * para isso seria mais peça do que problema.
+ */
+export const OPEN_SEARCH_EVENT = "smartlms:open-search";
+
+export function requestSearchPalette(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(OPEN_SEARCH_EVENT));
+}

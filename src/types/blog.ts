@@ -1,6 +1,17 @@
 import type { LessonContentBlock } from './course';
 
 export type ArticleFormat = 'text' | 'audio' | 'both';
+export type ArticleStatus = 'published' | 'scheduled' | 'draft';
+
+export type ArticleAuthor = {
+  id: string;
+  name: string;
+  slug: string;
+  title: string;
+  avatarUrl?: string;
+  bio?: string;
+  createdAt?: string;
+};
 
 export type Article = {
   slug: string;
@@ -9,6 +20,8 @@ export type Article = {
   cover: string;
   category: string;
   author: string;
+  authorId?: string;
+  authorDetails?: ArticleAuthor;
   publishedAt: number; // Timestamp
   readingTime?: number; // In minutes, for text or both formats
   format: ArticleFormat;

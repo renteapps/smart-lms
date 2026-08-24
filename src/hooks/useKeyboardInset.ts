@@ -15,10 +15,7 @@ export function useKeyboardInset(isActive: boolean): number {
 
   useEffect(() => {
     const viewport = typeof window === "undefined" ? null : window.visualViewport;
-    if (!isActive || !viewport) {
-      setInset(0);
-      return;
-    }
+    if (!isActive || !viewport) return;
     const update = () => setInset(keyboardInset(window.innerHeight, viewport));
     update();
     viewport.addEventListener("resize", update);
@@ -29,5 +26,7 @@ export function useKeyboardInset(isActive: boolean): number {
     };
   }, [isActive]);
 
-  return inset;
+  // Enquanto inativo o valor guardado é lixo da última abertura; zerar na
+  // leitura evita um setState de limpeza só para chegar ao mesmo resultado.
+  return isActive ? inset : 0;
 }

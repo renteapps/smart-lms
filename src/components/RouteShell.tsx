@@ -10,6 +10,14 @@ import { cn } from "@/lib/utils";
 import type { NavigationConfig } from "@/types/navigation";
 
 const ChatSticker = dynamic(() => import("@/components/ChatSticker"), { ssr: false });
+/*
+ * A paleta de busca (⌘K) só existe depois que alguém aperta o atalho, e ela
+ * puxa junto as sugestões — não tem por que entrar no pacote inicial.
+ */
+const GlobalSearchPalette = dynamic(
+  () => import("@/components/search/GlobalSearchPalette").then((m) => m.GlobalSearchPalette),
+  { ssr: false },
+);
 
 export function RouteShell({
   children,
@@ -43,6 +51,7 @@ export function RouteShell({
       <>
         {children}
         {showAssistant && <ChatSticker />}
+        {isAuthenticated && !isAdmin && <GlobalSearchPalette />}
       </>
     );
   }
@@ -60,6 +69,7 @@ export function RouteShell({
       <main className={cn("w-full", !isAgentWorkspace && "min-h-screen")}>{children}</main>
       {hasFloatingChrome && <Footer groups={navigation.footer.groups} />}
       {showAssistant && <ChatSticker />}
+      {isAuthenticated && !isAdmin && <GlobalSearchPalette />}
     </div>
   );
 }

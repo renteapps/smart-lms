@@ -9,10 +9,11 @@ import { getContentIndex } from "@/lib/data/content";
 import { listQuestionnaireVersions } from "@/lib/data/trail";
 import { validateQuestionnaire } from "@/lib/matching";
 import type { Agent, AgentFormPayload } from "@/types/agente";
-import type { Pilula } from "@/types/pilula";
+import type { Pilula, PilulaStatus } from "@/types/pilula";
 import type { ProfileTest } from "@/types/profileTest";
 import type { Question, QuestionnaireVersion } from "@/types/trilha";
 import type { LessonContentBlock } from "@/types/course";
+import { scheduleBlogRevalidation } from "@/lib/qstash";
 import type { ActionResult } from "../progress";
 
 type Saved<T> = { success: boolean; message?: string; data?: T };
@@ -102,7 +103,22 @@ export async function savePilula(
 ): Promise<Saved<{ id: string }>> {
   try {
     const { adminClient } = await requireAdmin();
+
+    if (!input.title || input.title.trim().length === 0) {
+      return { success: false, message: "O título da pílula é obrigatório." };
+    }
+    if (!input.summary || input.summary.trim().length === 0) {
+      return { success: false, message: "O resumo/conceito é obrigatório." };
+    }
+    if (!input.challenge || input.challenge.trim().length === 0) {
+      return { success: false, message: "A prática sugerida é obrigatória." };
+    }
+    if (input.status === "Programada" && !input.publishDate) {
+      return { success: false, message: "A data de publicação é obrigatória para pílulas programadas." };
+    }
+
     const row = pilulaToRow(input);
+    row.updated_at = new Date().toISOString();
 
     const query = input.id
       ? adminClient.from("pilulas").update(row).eq("id", input.id).select("id").single()
@@ -119,6 +135,97 @@ export async function savePilula(
   }
 }
 
+export async function duplicatePilula(id: string): Promise<Saved<{ id: string }>> {
+  try {
+    const { adminClient } = await requireAdmin();
+
+    const { data: original, error: fetchError } = await adminClient
+      .from("pilulas")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !original) {
+      return { success: false, message: "Pílula original não encontrada." };
+    }
+
+    const now = new Date().toISOString();
+    const newPilulaRow = {
+      title: `${original.title} (Cópia)`,
+      category: original.category,
+      format: original.format,
+      summary: original.summary,
+      challenge: original.challenge,
+      estimated_minutes: original.estimated_minutes,
+      media_url: original.media_url,
+      course_id: original.course_id,
+      course_title: original.course_title,
+      publish_date: null,
+      days_after_signup: original.days_after_signup,
+      target_tags: original.target_tags || [],
+      status: "Rascunho",
+      created_at: now,
+      updated_at: now,
+    };
+
+    const { data, error: insertError } = await adminClient
+      .from("pilulas")
+      .insert(newPilulaRow)
+      .select("id")
+      .single();
+
+    if (insertError) return { success: false, message: insertError.message };
+
+    revalidatePath("/admin/pilulas");
+    return { success: true, data: { id: data.id } };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+export async function dismissPilula(pillId: string): Promise<ActionResult> {
+  try {
+    const { requireUser } = await import("@/lib/supabase/auth");
+    const { supabase, user } = await requireUser();
+
+    const { error } = await supabase.from("pilula_interactions").upsert(
+      {
+        pilula_id: pillId,
+        user_id: user.id,
+        dismissed: true,
+        dismissed_at: new Date().toISOString(),
+      },
+      { onConflict: "pilula_id,user_id" },
+    );
+
+    if (error) return { success: false, message: error.message };
+
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+export async function togglePilulaStatus(id: string, newStatus: PilulaStatus): Promise<ActionResult> {
+  try {
+    const { adminClient } = await requireAdmin();
+
+    const { error } = await adminClient
+      .from("pilulas")
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (error) return { success: false, message: error.message };
+
+    revalidatePath("/admin/pilulas");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
 export async function deletePilula(id: string): Promise<ActionResult> {
   try {
     const { adminClient } = await requireAdmin();
@@ -126,6 +233,7 @@ export async function deletePilula(id: string): Promise<ActionResult> {
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/admin/pilulas");
+    revalidatePath("/");
     return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };
@@ -341,6 +449,7 @@ export type ArticleInput = {
   cover?: string;
   category?: string;
   author?: string;
+  authorId?: string | null;
   publishedAt?: string;
   readingTime?: number;
   format?: string;
@@ -374,6 +483,7 @@ export async function saveArticle(input: ArticleInput): Promise<Saved<{ id: stri
       cover: input.cover ?? null,
       category: input.category ?? "Geral",
       author: input.author ?? "Equipe",
+      author_id: input.authorId ?? null,
       reading_time: input.readingTime ?? null,
       format: input.format ?? "text",
       blocks: input.blocks ?? [],
@@ -385,16 +495,33 @@ export async function saveArticle(input: ArticleInput): Promise<Saved<{ id: stri
       premium: input.premium ?? false,
       is_published: input.isPublished ?? true,
     };
-    if (input.publishedAt) row.published_at = input.publishedAt;
+    if (input.publishedAt) {
+      row.published_at = input.publishedAt;
+    } else if (!input.id) {
+      row.published_at = new Date().toISOString();
+    }
 
     const query = input.id
-      ? adminClient.from("articles").update(row).eq("id", input.id).select("id").single()
-      : adminClient.from("articles").insert(row).select("id").single();
+      ? adminClient.from("articles").update(row).eq("id", input.id).select("id, slug").single()
+      : adminClient.from("articles").insert(row).select("id, slug").single();
 
     const { data, error } = await query;
     if (error) return { success: false, message: error.message };
 
+    const finalSlug = (data.slug as string) || slug || "";
+
+    // Se o artigo estiver publicado e a data for futura, agenda revalidação no QStash (opcional)
+    if (row.is_published && row.published_at && finalSlug) {
+      const pubTime = new Date(row.published_at as string).getTime();
+      if (pubTime > Date.now()) {
+        await scheduleBlogRevalidation(finalSlug, row.published_at as string);
+      }
+    }
+
     revalidatePath("/blog");
+    if (finalSlug) {
+      revalidatePath(`/blog/${finalSlug}`);
+    }
     revalidatePath("/admin/blog");
     return { success: true, data: { id: data.id } };
   } catch (error) {

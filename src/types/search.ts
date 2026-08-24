@@ -30,6 +30,8 @@ export interface SearchResultMetadata {
   tags?: string[];
   isFeatured?: boolean;
   hasAccess?: boolean;
+  /** Aula que este aluno já concluiu. */
+  isCompleted?: boolean;
 
   // Agentes
   avatar?: string;
@@ -100,6 +102,8 @@ export interface SearchResponse {
   categories: SearchCategoryFacet[];
   /** O termo exato não achou nada e estes resultados vêm da busca aproximada. */
   didYouMean: boolean;
+  /** Palavra que a pessoa provavelmente quis digitar, com acento. */
+  suggestedTerm: string | null;
   page: SearchPageInfo;
 }
 
@@ -140,6 +144,7 @@ export function emptySearchResponse(query = "", pageSize = 24): SearchResponse {
     countsByType: { ...EMPTY_COUNTS },
     categories: [],
     didYouMean: false,
+    suggestedTerm: null,
     page: { size: pageSize, offset: 0, hasMore: false },
   };
 }

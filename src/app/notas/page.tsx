@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import NotesClient from "@/components/notes/NotesClient";
@@ -15,5 +16,13 @@ export default async function NotasPage() {
 
   const notes = await getNotes(supabase, user.id);
 
-  return <NotesClient initialNotes={notes} />;
+  /*
+   * `NotesClient` lê `?nota=` para abrir uma anotação vinda da busca, e
+   * `useSearchParams` exige um limite de Suspense acima.
+   */
+  return (
+    <Suspense fallback={null}>
+      <NotesClient initialNotes={notes} />
+    </Suspense>
+  );
 }

@@ -3,6 +3,7 @@ import { Search, User, BookOpen, Building2 } from "lucide-react";
 import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { Card, EmptyState } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
+import { SearchInsights } from "@/components/admin/SearchInsights";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AdminBuscaUnificada({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
@@ -10,20 +11,19 @@ export default async function AdminBuscaUnificada({ searchParams }: { searchPara
   const q = params.q || "";
 
   if (!q) {
+    /*
+     * Sem termo, esta tela era só um aviso para digitar algo. O espaço rende
+     * mais mostrando o que os alunos buscaram na `/busca` — que é justamente a
+     * informação que ninguém tinha onde ver.
+     */
     return (
       <div className="space-y-7">
-        <PageHeader eyebrow="Plataforma" title="Busca" description="Encontre rapidamente pessoas, cursos e empresas." />
-        <Card>
-          <Card.Content>
-            <EmptyState className="flex flex-col items-center gap-2 px-6 py-14 text-center">
-              <span className="grid size-11 place-items-center rounded-xl bg-background-secondary">
-                <Search className="size-5 text-muted" aria-hidden="true" />
-              </span>
-              <p className="font-semibold text-foreground">Digite algo para buscar</p>
-              <p className="text-sm text-muted">Use a barra superior para pesquisar em toda a plataforma.</p>
-            </EmptyState>
-          </Card.Content>
-        </Card>
+        <PageHeader
+          eyebrow="Plataforma"
+          title="Busca"
+          description="Encontre pessoas, cursos e empresas — e veja o que os alunos estão procurando."
+        />
+        <SearchInsights />
       </div>
     );
   }
@@ -34,21 +34,21 @@ export default async function AdminBuscaUnificada({ searchParams }: { searchPara
   const { data: users } = await supabase
     .from("profiles")
     .select("id, full_name, email, role")
-    .textSearch("search_vector", q, { type: 'websearch' })
+    .textSearch("search_vector", q, { type: 'websearch', config: 'public.pt_unaccent' })
     .limit(5);
 
   // Busca em cursos
   const { data: courses } = await supabase
     .from("courses")
     .select("id, title, category, short_description")
-    .textSearch("search_vector", q, { type: 'websearch' })
+    .textSearch("search_vector", q, { type: 'websearch', config: 'public.pt_unaccent' })
     .limit(5);
 
   // Busca em empresas
   const { data: companies } = await supabase
     .from("companies")
     .select("id, name, cnpj")
-    .textSearch("search_vector", q, { type: 'websearch' })
+    .textSearch("search_vector", q, { type: 'websearch', config: 'public.pt_unaccent' })
     .limit(5);
 
   const hasResults = (users?.length || 0) > 0 || (courses?.length || 0) > 0 || (companies?.length || 0) > 0;
@@ -68,7 +68,7 @@ export default async function AdminBuscaUnificada({ searchParams }: { searchPara
               <span className="grid size-11 place-items-center rounded-xl bg-background-secondary">
                 <Search className="size-5 text-muted" aria-hidden="true" />
               </span>
-              <p className="font-semibold text-foreground">Nenhum resultado encontrado para "{q}"</p>
+              <p className="font-semibold text-foreground">Nenhum resultado encontrado para &ldquo;{q}&rdquo;</p>
               <p className="text-sm text-muted">Tente usar outros termos mais genéricos.</p>
             </EmptyState>
           </Card.Content>

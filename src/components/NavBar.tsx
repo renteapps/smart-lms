@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { requestSearchPalette } from "@/lib/searchQueryState";
 import { LogIn, LogOut, Menu, Search, User, UserPlus, X } from "lucide-react";
 import { buttonVariants, Drawer } from "@heroui/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -199,6 +200,17 @@ export default function NavBar({ items }: { items: NavItem[] }) {
         <div className="flex items-center gap-1 sm:gap-2">
           <Link
             href="/busca"
+            /*
+             * Já dentro da /busca o link continua sendo um link (o campo de lá
+             * é o destino). Fora dela, abre a paleta: buscar sem perder a tela
+             * em que se está é justamente o ganho do atalho.
+             */
+            onClick={(event) => {
+              if (pathname === "/busca") return;
+              event.preventDefault();
+              requestSearchPalette();
+            }}
+            aria-keyshortcuts="Meta+K Control+K"
             aria-label="Buscar conteúdos"
             className={cn(
               "icon-rotate press flex h-11 items-center gap-2 px-3 text-muted transition-colors hover:bg-surface-hover hover:text-foreground xl:min-w-44 xl:border",
@@ -210,6 +222,10 @@ export default function NavBar({ items }: { items: NavItem[] }) {
           >
             <Search className="size-5" aria-hidden="true" />
             <span className="hidden text-sm font-semibold xl:inline">Buscar conteúdos</span>
+            <kbd className="ml-auto hidden items-center gap-0.5 rounded-md border border-hairline px-1.5 py-0.5 text-[11px] font-semibold text-muted xl:flex">
+              <span aria-hidden="true">⌘</span>
+              <span>K</span>
+            </kbd>
           </Link>
 
           <NotificationBell />

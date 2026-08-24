@@ -20,11 +20,15 @@ export interface Pilula {
   challenge: string;
   estimatedMinutes: number;
   mediaUrl?: string;
+  courseId?: string;
   courseTitle?: string;
   publishDate?: string;
+  daysAfterSignup?: number | null;
+  targetTags?: string[];
   status: PilulaStatus;
   completionsCount: number;
   likesCount: number;
+  dismissalsCount?: number;
   createdAt: string;
   updatedAt: string;
 }

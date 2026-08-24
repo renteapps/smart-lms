@@ -27,7 +27,8 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
     db
       .from("articles")
       .select("id, slug, title, category, reading_time, excerpt")
-      .eq("is_published", true),
+      .eq("is_published", true)
+      .lte("published_at", new Date().toISOString()),
   ]);
 
   logQueryError("getContentIndex:courses", courses.error);

@@ -13,6 +13,7 @@ function fakeDb(courses: Row[], articles: Row[] = []): DB {
       error: null,
       eq: () => obj,
       neq: () => obj,
+      lte: () => obj,
       order: () => Promise.resolve({ data, error: null }),
       then: (resolve: (value: { data: Row[]; error: null }) => unknown) => resolve({ data, error: null }),
     };

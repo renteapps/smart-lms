@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useTransition } from 'react';
 import {
   Edit3,
   Lightbulb,
@@ -17,6 +17,7 @@ import {
   Sparkles,
   Clock,
   Heart,
+  BookOpen,
 } from 'lucide-react';
 import {
   Button,
@@ -35,11 +36,28 @@ import {
 } from '@heroui/react';
 import { toast } from 'sonner';
 import { PageHeader, StatCard, StatusBadge } from '@/components/ui/editorial';
-import { Pilula, PilulaStatus } from '@/types/pilula';
+import { Pilula, PilulaFormat, PilulaStatus } from '@/types/pilula';
 import { PilulaFormModal } from '@/components/admin/pilulas/PilulaFormModal';
 import { PilulaPreviewModal } from '@/components/admin/pilulas/PilulaPreviewModal';
 import { PilulaDeleteDialog } from '@/components/admin/pilulas/PilulaDeleteDialog';
-import { createClient } from '@/lib/supabase/client';
+import {
+  savePilula,
+  duplicatePilula,
+  deletePilula,
+  togglePilulaStatus,
+} from '@/app/actions/admin/content';
+
+interface ShallowCourse {
+  id: string;
+  title: string;
+  category?: string;
+}
+
+interface AdminPilulasClientProps {
+  initialPilulas: Pilula[];
+  courses?: ShallowCourse[];
+  availableTags?: string[];
+}
 
 const toneForStatus = (status: PilulaStatus) => {
   switch (status) {
@@ -71,12 +89,17 @@ const iconForFormat = (format: string) => {
   }
 };
 
-export function AdminPilulasClient({ initialPilulas }: { initialPilulas: Pilula[] }) {
+export function AdminPilulasClient({
+  initialPilulas,
+  courses = [],
+  availableTags = [],
+}: AdminPilulasClientProps) {
   const [pilulas, setPilulas] = useState<Pilula[]>(initialPilulas);
-  const supabase = createClient();
+  const [isPending, startTransition] = useTransition();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<PilulaStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [formatFilter, setFormatFilter] = useState<PilulaFormat | 'all'>('all');
 
   // Modals state
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -94,29 +117,36 @@ export function AdminPilulasClient({ initialPilulas }: { initialPilulas: Pilula[
 
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
+    const matchesFormat = formatFilter === 'all' || item.format === formatFilter;
 
-    return matchesSearch && matchesStatus && matchesCategory;
+    return matchesSearch && matchesStatus && matchesCategory && matchesFormat;
   });
 
   // Calculate Metrics
   const totalPilulas = pilulas.length;
   const activeCount = pilulas.filter((p) => p.status === 'Ativa').length;
   const scheduledCount = pilulas.filter((p) => p.status === 'Programada').length;
+  const draftCount = pilulas.filter((p) => p.status === 'Rascunho').length;
+  const archivedCount = pilulas.filter((p) => p.status === 'Arquivada').length;
   const totalCompletions = pilulas.reduce((acc, p) => acc + (p.completionsCount || 0), 0);
+  const totalLikes = pilulas.reduce((acc, p) => acc + (p.likesCount || 0), 0);
 
   // Extract available categories
   const categoriesList = Array.from(new Set(pilulas.map((p) => p.category)));
-
-  const draftCount = pilulas.filter((p) => p.status === 'Rascunho').length;
 
   const statusFilters: { id: PilulaStatus | 'all'; label: string; count: number }[] = [
     { id: 'all', label: 'Todas', count: pilulas.length },
     { id: 'Ativa', label: 'Ativas', count: activeCount },
     { id: 'Programada', label: 'Programadas', count: scheduledCount },
     { id: 'Rascunho', label: 'Rascunhos', count: draftCount },
+    { id: 'Arquivada', label: 'Arquivadas', count: archivedCount },
   ];
 
-  const isFiltering = searchTerm.trim() !== '' || statusFilter !== 'all' || categoryFilter !== 'all';
+  const isFiltering =
+    searchTerm.trim() !== '' ||
+    statusFilter !== 'all' ||
+    categoryFilter !== 'all' ||
+    formatFilter !== 'all';
 
   // Handlers
   const handleOpenCreate = () => {
@@ -129,125 +159,113 @@ export function AdminPilulasClient({ initialPilulas }: { initialPilulas: Pilula[
     setIsFormOpen(true);
   };
 
-  const handleSavePilula = async (
+  const handleSavePilula = (
     data: Omit<Pilula, 'id' | 'createdAt' | 'updatedAt' | 'completionsCount' | 'likesCount'> & { id?: string }
   ) => {
-    const now = new Date().toISOString();
+    startTransition(async () => {
+      const now = new Date().toISOString();
+      const result = await savePilula(data);
 
-    if (data.id) {
-      // Update DB
-      const { error } = await supabase
-        .from('pilulas')
-        .update({
+      if (!result.success || !result.data) {
+        toast.error(result.message || 'Erro ao salvar a pílula.');
+        return;
+      }
+
+      const savedId = result.data.id;
+
+      if (data.id) {
+        setPilulas((prev) =>
+          prev.map((item) =>
+            item.id === data.id
+              ? {
+                  ...item,
+                  ...data,
+                  updatedAt: now,
+                }
+              : item
+          )
+        );
+        toast.success('Pílula atualizada com sucesso!');
+      } else {
+        const newPilula: Pilula = {
+          id: savedId,
           title: data.title,
           category: data.category,
           format: data.format,
           summary: data.summary,
           challenge: data.challenge,
-          estimated_minutes: data.estimatedMinutes,
-          course_title: data.courseTitle,
+          estimatedMinutes: data.estimatedMinutes,
+          courseId: data.courseId,
+          courseTitle: data.courseTitle,
+          publishDate: data.publishDate,
+          mediaUrl: data.mediaUrl,
           status: data.status,
-          media_url: data.mediaUrl,
-          publish_date: data.publishDate,
-          updated_at: now
-        })
-        .eq('id', data.id);
+          completionsCount: 0,
+          likesCount: 0,
+          createdAt: now,
+          updatedAt: now,
+        };
+        setPilulas((prev) => [newPilula, ...prev]);
+        toast.success('Pílula criada com sucesso!');
+      }
 
-      if (error) {
-        toast.error('Erro ao atualizar a pílula.');
+      setIsFormOpen(false);
+    });
+  };
+
+  const handleDuplicate = (item: Pilula) => {
+    startTransition(async () => {
+      const result = await duplicatePilula(item.id);
+      if (!result.success || !result.data) {
+        toast.error(result.message || 'Erro ao duplicar pílula.');
         return;
       }
 
-      setPilulas((prev) =>
-        prev.map((item) =>
-          item.id === data.id
-            ? {
-                ...item,
-                ...data,
-                updatedAt: now,
-              }
-            : item
-        )
-      );
-      toast.success('Pílula atualizada com sucesso!');
-    } else {
-      // Create DB
-      const newId = crypto.randomUUID();
-      const { error } = await supabase
-        .from('pilulas')
-        .insert({
-          id: newId,
-          title: data.title,
-          category: data.category,
-          format: data.format,
-          summary: data.summary,
-          challenge: data.challenge,
-          estimated_minutes: data.estimatedMinutes,
-          course_title: data.courseTitle,
-          status: data.status,
-          media_url: data.mediaUrl,
-          publish_date: data.publishDate,
-        });
-
-      if (error) {
-        toast.error('Erro ao criar a pílula.');
-        return;
-      }
-
-      const newPilula: Pilula = {
-        id: newId,
-        title: data.title,
-        category: data.category,
-        format: data.format,
-        summary: data.summary,
-        challenge: data.challenge,
-        estimatedMinutes: data.estimatedMinutes,
-        courseTitle: data.courseTitle,
-        publishDate: data.publishDate,
-        mediaUrl: data.mediaUrl,
-        status: data.status,
+      const now = new Date().toISOString();
+      const duplicated: Pilula = {
+        ...item,
+        id: result.data.id,
+        title: `${item.title} (Cópia)`,
+        status: 'Rascunho',
         completionsCount: 0,
         likesCount: 0,
         createdAt: now,
         updatedAt: now,
       };
 
-      setPilulas((prev) => [newPilula, ...prev]);
-      toast.success('Pílula criada com sucesso!');
-    }
-    setIsFormOpen(false);
+      setPilulas((prev) => [duplicated, ...prev]);
+      toast.success('Pílula duplicada como rascunho!');
+    });
   };
 
-  const handleDuplicate = (item: Pilula) => {
-    const now = new Date().toISOString();
-    const duplicated: Pilula = {
-      ...item,
-      id: `pilula-${Date.now()}`,
-      title: `${item.title} (Cópia)`,
-      status: 'Rascunho',
-      completionsCount: 0,
-      likesCount: 0,
-      createdAt: now,
-      updatedAt: now,
-    };
+  const handleToggleStatus = (item: Pilula, newStatus: PilulaStatus) => {
+    if (item.status === newStatus) return;
+    startTransition(async () => {
+      const result = await togglePilulaStatus(item.id, newStatus);
+      if (!result.success) {
+        toast.error(result.message || 'Erro ao alterar status da pílula.');
+        return;
+      }
 
-    setPilulas([duplicated, ...pilulas]);
-    toast.success('Pílula duplicada como rascunho!');
+      setPilulas((prev) =>
+        prev.map((p) => (p.id === item.id ? { ...p, status: newStatus } : p)),
+      );
+      toast.success(`Status da pílula alterado para ${newStatus}!`);
+    });
   };
 
-  const handleDeleteConfirm = async (id: string) => {
-    const { error } = await supabase
-      .from('pilulas')
-      .delete()
-      .eq('id', id);
-      
-    if (error) {
-      toast.error('Erro ao excluir a pílula.');
-      return;
-    }
-    setPilulas((prev) => prev.filter((p) => p.id !== id));
-    toast.success('Pílula excluída com sucesso!');
-    setDeletePilulaTarget(null);
+  const handleDeleteConfirm = (id: string) => {
+    startTransition(async () => {
+      const result = await deletePilula(id);
+      if (!result.success) {
+        toast.error(result.message || 'Erro ao excluir a pílula.');
+        return;
+      }
+
+      setPilulas((prev) => prev.filter((p) => p.id !== id));
+      toast.success('Pílula excluída com sucesso!');
+      setDeletePilulaTarget(null);
+    });
   };
 
   return (
@@ -289,10 +307,10 @@ export function AdminPilulasClient({ initialPilulas }: { initialPilulas: Pilula[
           tone="terracotta"
         />
         <StatCard
-          label="Total de Conclusões"
-          value={totalCompletions.toLocaleString()}
-          helper="Ações práticas realizadas"
-          icon={CheckCircle2}
+          label="Total de Curtidas"
+          value={totalLikes.toLocaleString()}
+          helper="Engajamento dos alunos"
+          icon={Heart}
           tone="neutral"
         />
       </div>
@@ -313,7 +331,7 @@ export function AdminPilulasClient({ initialPilulas }: { initialPilulas: Pilula[
             <Select
               selectedKey={categoryFilter}
               onSelectionChange={(key) => setCategoryFilter(String(key))}
-              className="w-full sm:w-56"
+              className="w-full sm:w-48"
             >
               <Label>Categoria</Label>
               <Select.Trigger>
@@ -329,6 +347,33 @@ export function AdminPilulasClient({ initialPilulas }: { initialPilulas: Pilula[
                       </ListBoxItem>
                     ),
                   )}
+                </ListBox>
+              </Select.Popover>
+            </Select>
+
+            <Select
+              selectedKey={formatFilter}
+              onSelectionChange={(key) => setFormatFilter(String(key) as PilulaFormat | 'all')}
+              className="w-full sm:w-44"
+            >
+              <Label>Formato</Label>
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  {[
+                    { id: 'all', label: 'Todos os formatos' },
+                    { id: 'desafio', label: 'Desafio Prático' },
+                    { id: 'texto', label: 'Texto Curto' },
+                    { id: 'video', label: 'Vídeo' },
+                    { id: 'audio', label: 'Áudio' },
+                  ].map((opt) => (
+                    <ListBoxItem key={opt.id} id={opt.id}>
+                      {opt.label}
+                    </ListBoxItem>
+                  ))}
                 </ListBox>
               </Select.Popover>
             </Select>
@@ -407,6 +452,17 @@ export function AdminPilulasClient({ initialPilulas }: { initialPilulas: Pilula[
                                           {item.courseTitle}
                                         </span>
                                       )}
+                                      {item.daysAfterSignup !== null && item.daysAfterSignup !== undefined && (
+                                        <span className="inline-flex items-center gap-1 rounded bg-surface-secondary px-1.5 py-0.5 text-[11px] font-medium text-muted">
+                                          <Clock className="size-3" aria-hidden="true" />
+                                          +{item.daysAfterSignup}d cadastro
+                                        </span>
+                                      )}
+                                      {item.targetTags && item.targetTags.length > 0 && (
+                                        <span className="inline-flex items-center gap-1 rounded bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent-soft-foreground">
+                                          #{item.targetTags.slice(0, 2).join(', #')}{item.targetTags.length > 2 ? '…' : ''}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
@@ -426,20 +482,32 @@ export function AdminPilulasClient({ initialPilulas }: { initialPilulas: Pilula[
                                   <Clock className="size-3.5 text-muted" aria-hidden="true" />
                                   <span>{item.estimatedMinutes} min</span>
                                 </div>
-                                <div className="mt-1.5 flex items-center gap-3 text-xs text-muted">
-                                  <span className="flex items-center gap-1">
-                                    <CheckCircle2 className="size-3 text-success" aria-hidden="true" />
-                                    {item.completionsCount} conclusões
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <Heart className="size-3 text-danger" aria-hidden="true" />
-                                    {item.likesCount} curtidas
-                                  </span>
+                                <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-danger">
+                                  <Heart className="size-3.5 fill-current" aria-hidden="true" />
+                                  <span>{item.likesCount} {item.likesCount === 1 ? 'curtida' : 'curtidas'}</span>
                                 </div>
                               </Table.Cell>
 
                               <Table.Cell>
-                                <StatusBadge tone={toneForStatus(item.status)}>{item.status}</StatusBadge>
+                                <Select
+                                  aria-label={`Status de ${item.title}`}
+                                  selectedKey={item.status}
+                                  onSelectionChange={(key) => handleToggleStatus(item, String(key) as PilulaStatus)}
+                                  className="w-32"
+                                >
+                                  <Select.Trigger>
+                                    <Select.Value />
+                                    <Select.Indicator />
+                                  </Select.Trigger>
+                                  <Select.Popover>
+                                    <ListBox>
+                                      <ListBoxItem key="Ativa" id="Ativa">Ativa</ListBoxItem>
+                                      <ListBoxItem key="Programada" id="Programada">Programada</ListBoxItem>
+                                      <ListBoxItem key="Rascunho" id="Rascunho">Rascunho</ListBoxItem>
+                                      <ListBoxItem key="Arquivada" id="Arquivada">Arquivada</ListBoxItem>
+                                    </ListBox>
+                                  </Select.Popover>
+                                </Select>
                                 {item.status === 'Programada' && item.publishDate && (
                                   <p className="mt-1 text-xs tabular-nums text-muted">
                                     {new Date(item.publishDate).toLocaleDateString('pt-BR')}
@@ -534,10 +602,20 @@ export function AdminPilulasClient({ initialPilulas }: { initialPilulas: Pilula[
                             <h3 className="text-base leading-snug font-semibold text-foreground">{item.title}</h3>
                             <StatusBadge tone={toneForStatus(item.status)}>{item.status}</StatusBadge>
                           </div>
-                          <div className="mt-1">
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
                             <Chip color="default" variant="soft" size="sm">
                               {item.category}
                             </Chip>
+                            {item.daysAfterSignup !== null && item.daysAfterSignup !== undefined && (
+                              <span className="inline-flex items-center gap-1 rounded bg-surface-secondary px-1.5 py-0.5 text-[11px] font-medium text-muted">
+                                +{item.daysAfterSignup}d cadastro
+                              </span>
+                            )}
+                            {item.targetTags && item.targetTags.length > 0 && (
+                              <span className="inline-flex items-center gap-1 rounded bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent-soft-foreground">
+                                #{item.targetTags.slice(0, 2).join(', #')}
+                              </span>
+                            )}
                           </div>
                           <p className="mt-2 text-sm leading-relaxed text-muted">{item.challenge}</p>
                         </div>
@@ -548,9 +626,9 @@ export function AdminPilulasClient({ initialPilulas }: { initialPilulas: Pilula[
                           <Clock className="size-3.5" aria-hidden="true" />
                           {item.estimatedMinutes} min
                         </span>
-                        <span className="flex items-center gap-1">
-                          <CheckCircle2 className="size-3.5 text-success" aria-hidden="true" />
-                          {item.completionsCount} conclusões
+                        <span className="flex items-center gap-1 font-medium text-danger">
+                          <Heart className="size-3.5 fill-current" aria-hidden="true" />
+                          {item.likesCount} {item.likesCount === 1 ? 'curtida' : 'curtidas'}
                         </span>
                       </div>
 
@@ -602,6 +680,9 @@ export function AdminPilulasClient({ initialPilulas }: { initialPilulas: Pilula[
         onClose={() => setIsFormOpen(false)}
         onSave={handleSavePilula}
         pilulaToEdit={pilulaToEdit}
+        courses={courses}
+        availableTags={availableTags}
+        isPending={isPending}
       />
 
       {/* Preview Modal */}
@@ -615,6 +696,7 @@ export function AdminPilulasClient({ initialPilulas }: { initialPilulas: Pilula[
         pilula={deletePilulaTarget}
         onClose={() => setDeletePilulaTarget(null)}
         onConfirm={handleDeleteConfirm}
+        isPending={isPending}
       />
     </div>
   );

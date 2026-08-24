@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Article } from '@/types/blog';
+import { formatPlatformDate } from '@/lib/timezone';
 import { Clock, Headphones, BookOpen } from 'lucide-react';
 import { ArrowRight02Icon } from '@/components/ui/arrow-right-02';
 import { cn } from '@/lib/utils';
@@ -77,13 +78,26 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
             </Link>
             
             <div className="flex items-center gap-3">
-              <div className="material-thick w-10 h-10 rounded-full flex items-center justify-center font-medium text-foreground">
-                {article.author.charAt(0)}
-              </div>
+              {article.authorDetails?.avatarUrl ? (
+                <div className="relative w-10 h-10 rounded-full overflow-hidden border border-white/30 shrink-0">
+                  <Image
+                    src={article.authorDetails.avatarUrl}
+                    alt={article.author}
+                    fill
+                    sizes="40px"
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="material-thick w-10 h-10 rounded-full flex items-center justify-center font-medium text-foreground shrink-0">
+                  {article.author.charAt(0)}
+                </div>
+              )}
               <div>
                 <p className="text-sm font-medium text-white">{article.author}</p>
                 <p className="text-xs text-white/70">
-                  {new Date(article.publishedAt).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {article.authorDetails?.title ? `${article.authorDetails.title} · ` : ""}
+                  {formatPlatformDate(article.publishedAt, { day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
               </div>
             </div>

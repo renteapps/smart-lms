@@ -2,23 +2,24 @@
 
 import React from 'react';
 import { Pilula } from '@/types/pilula';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { AlertTriangle, Trash2, Loader2 } from 'lucide-react';
 import { AlertDialog, Button } from '@heroui/react';
 
 interface PilulaDeleteDialogProps {
   pilula: Pilula | null;
   onClose: () => void;
   onConfirm: (id: string) => void;
+  isPending?: boolean;
 }
 
-export function PilulaDeleteDialog({ pilula, onClose, onConfirm }: PilulaDeleteDialogProps) {
+export function PilulaDeleteDialog({ pilula, onClose, onConfirm, isPending = false }: PilulaDeleteDialogProps) {
   if (!pilula) return null;
 
   return (
     <AlertDialog.Root
       isOpen
       onOpenChange={(open) => {
-        if (!open) onClose();
+        if (!open && !isPending) onClose();
       }}
     >
       <AlertDialog.Backdrop>
@@ -41,12 +42,21 @@ export function PilulaDeleteDialog({ pilula, onClose, onConfirm }: PilulaDeleteD
             </AlertDialog.Body>
 
             <AlertDialog.Footer>
-              <Button variant="tertiary" onClick={onClose}>
+              <Button variant="tertiary" onClick={onClose} isDisabled={isPending}>
                 Cancelar
               </Button>
-              <Button variant="danger" onClick={() => onConfirm(pilula.id)}>
-                <Trash2 className="size-4" aria-hidden="true" />
-                Excluir pílula
+              <Button variant="danger" onClick={() => onConfirm(pilula.id)} isDisabled={isPending}>
+                {isPending ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    Excluindo…
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    Excluir pílula
+                  </>
+                )}
               </Button>
             </AlertDialog.Footer>
           </AlertDialog.Dialog>

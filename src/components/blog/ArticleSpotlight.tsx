@@ -82,12 +82,24 @@ export default function ArticleSpotlight({ article, className }: ArticleSpotligh
 
               <div className="mt-2 flex items-center justify-between gap-4 border-t border-white/15 pt-5">
                 <span className="flex min-w-0 items-center gap-3">
-                  <span
-                    aria-hidden="true"
-                    className="material-thick grid size-9 shrink-0 place-items-center rounded-full text-sm font-bold text-foreground"
-                  >
-                    {article.author.charAt(0)}
-                  </span>
+                  {article.authorDetails?.avatarUrl ? (
+                    <span className="relative size-9 shrink-0 overflow-hidden rounded-full border border-white/20">
+                      <Image
+                        src={article.authorDetails.avatarUrl}
+                        alt=""
+                        fill
+                        sizes="36px"
+                        className="object-cover"
+                      />
+                    </span>
+                  ) : (
+                    <span
+                      aria-hidden="true"
+                      className="material-thick grid size-9 shrink-0 place-items-center rounded-full text-sm font-bold text-foreground"
+                    >
+                      {article.author.charAt(0)}
+                    </span>
+                  )}
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold text-white">
                       {article.author}
@@ -96,6 +108,7 @@ export default function ArticleSpotlight({ article, className }: ArticleSpotligh
                       className="block text-xs text-white/70"
                       dateTime={new Date(article.publishedAt).toISOString()}
                     >
+                      {article.authorDetails?.title ? `${article.authorDetails.title} · ` : ""}
                       {longDate(article.publishedAt)}
                     </time>
                   </span>

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Edit3, FileText, Headphones, Newspaper, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Clock, Edit3, FileText, Headphones, Newspaper, Plus, Sparkles, Trash2 } from "lucide-react";
 import {
   Button,
   Card,
@@ -20,6 +20,7 @@ import {
 } from "@heroui/react";
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 import { deleteArticle } from "@/app/actions/admin/content";
+import { getArticleStatus, formatPlatformDateTime } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
 export type AdminArticleRow = {
@@ -30,6 +31,7 @@ export type AdminArticleRow = {
   cover?: string | null;
   format: string;
   isPublished: boolean;
+  publishedAt?: string | null;
   featured: boolean;
   updatedAt: string;
 };
@@ -40,21 +42,25 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
   const [articles, setArticles] = useState<AdminArticleRow[]>(initialArticles);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isPending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const categoriesList = Array.from(new Set(articles.map((a) => a.category)));
 
   const filtered = articles.filter((article) => {
+    const articleStatus = getArticleStatus(article.isPublished, article.publishedAt);
     const matchesSearch =
       article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       article.category.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === "all" || article.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesStatus = statusFilter === "all" || articleStatus === statusFilter;
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const publishedCount = articles.filter((a) => a.isPublished).length;
-  const draftCount = articles.length - publishedCount;
+  const publishedCount = articles.filter((a) => getArticleStatus(a.isPublished, a.publishedAt) === "published").length;
+  const scheduledCount = articles.filter((a) => getArticleStatus(a.isPublished, a.publishedAt) === "scheduled").length;
+  const draftCount = articles.filter((a) => getArticleStatus(a.isPublished, a.publishedAt) === "draft").length;
   const isEmpty = filtered.length === 0;
 
   const handleDelete = (article: AdminArticleRow) => {
@@ -78,9 +84,12 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
       <PageHeader
         eyebrow="Conteúdo"
         title="Blog"
-        description="Crie e gerencie os artigos publicados em /blog."
+        description="Crie e gerencie os artigos publicados em /blog com suporte a agendamento."
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/admin/blog/autores" className={buttonVariants({ variant: "secondary" })}>
+              Gerenciar Autores
+            </Link>
             <Link href="/admin/blog/categorias" className={buttonVariants({ variant: "secondary" })}>
               Gerenciar Categorias
             </Link>
@@ -93,7 +102,7 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
 
       <Card>
         <Card.Header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <SearchField value={searchTerm} onChange={setSearchTerm} className="w-full md:w-80">
+          <SearchField value={searchTerm} onChange={setSearchTerm} className="w-full md:w-72">
             <Label>Buscar artigos</Label>
             <SearchField.Group>
               <SearchField.SearchIcon />
@@ -104,9 +113,29 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
 
           <div className="flex w-full flex-wrap items-end gap-3 md:w-auto">
             <Select
+              selectedKey={statusFilter}
+              onSelectionChange={(key) => setStatusFilter(String(key))}
+              className="w-full sm:w-44"
+            >
+              <Label>Status</Label>
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBoxItem id="all">Todos os status</ListBoxItem>
+                  <ListBoxItem id="published">Publicados ({publishedCount})</ListBoxItem>
+                  <ListBoxItem id="scheduled">Agendados ({scheduledCount})</ListBoxItem>
+                  <ListBoxItem id="draft">Rascunhos ({draftCount})</ListBoxItem>
+                </ListBox>
+              </Select.Popover>
+            </Select>
+
+            <Select
               selectedKey={categoryFilter}
               onSelectionChange={(key) => setCategoryFilter(String(key))}
-              className="w-full sm:w-56"
+              className="w-full sm:w-48"
             >
               <Label>Categoria</Label>
               <Select.Trigger>
@@ -128,6 +157,7 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
 
             <div className="flex items-center gap-2">
               <StatusBadge tone="positive">{publishedCount} publicados</StatusBadge>
+              {scheduledCount > 0 && <StatusBadge tone="primary">{scheduledCount} agendados</StatusBadge>}
               <StatusBadge tone="warning">{draftCount} rascunhos</StatusBadge>
             </div>
           </div>
@@ -140,10 +170,14 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
                 <Newspaper className="size-5 text-muted" aria-hidden="true" />
               </span>
               <p className="font-semibold text-foreground">
-                {searchTerm ? `Nenhum artigo encontrado para "${searchTerm}"` : "Nenhum artigo publicado"}
+                {searchTerm || statusFilter !== "all" || categoryFilter !== "all"
+                  ? "Nenhum artigo encontrado para os filtros selecionados"
+                  : "Nenhum artigo publicado"}
               </p>
               <p className="text-sm text-muted">
-                {searchTerm ? "Tente outro termo ou limpe a busca." : "Crie o primeiro artigo para alimentar o blog."}
+                {searchTerm || statusFilter !== "all" || categoryFilter !== "all"
+                  ? "Tente alterar os termos da busca ou limpar os filtros."
+                  : "Crie o primeiro artigo para alimentar o blog."}
               </p>
               <Link href="/admin/blog/novo" className={cn(buttonVariants({ variant: "primary", size: "sm" }), "mt-2 gap-2")}>
                 <Plus className="size-4" aria-hidden="true" /> Novo artigo
@@ -160,12 +194,13 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
                         <Table.Column>Categoria</Table.Column>
                         <Table.Column>Formato</Table.Column>
                         <Table.Column>Status</Table.Column>
-                        <Table.Column>Atualização</Table.Column>
+                        <Table.Column>Data / Horário (SP)</Table.Column>
                         <Table.Column className="text-right">Ações</Table.Column>
                       </Table.Header>
                       <Table.Body>
                         {filtered.map((article) => {
                           const FormatIcon = formatIcon(article.format);
+                          const status = getArticleStatus(article.isPublished, article.publishedAt);
                           return (
                             <Table.Row key={article.id} id={article.id}>
                               <Table.Cell>
@@ -183,7 +218,14 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
                                       <Newspaper className="size-4" aria-hidden="true" />
                                     </span>
                                   )}
-                                  <span className="line-clamp-2">{article.title}</span>
+                                  <div className="min-w-0">
+                                    <span className="line-clamp-2">{article.title}</span>
+                                    {article.featured && (
+                                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-accent">
+                                        <Sparkles className="size-3" /> Destaque
+                                      </span>
+                                    )}
+                                  </div>
                                 </Link>
                               </Table.Cell>
                               <Table.Cell>
@@ -198,13 +240,33 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
                                 </div>
                               </Table.Cell>
                               <Table.Cell>
-                                <StatusBadge tone={article.isPublished ? "positive" : "warning"}>
-                                  {article.isPublished ? "Publicado" : "Rascunho"}
-                                </StatusBadge>
+                                {status === "published" ? (
+                                  <StatusBadge tone="positive">Publicado</StatusBadge>
+                                ) : status === "scheduled" ? (
+                                  <Tooltip.Root>
+                                    <Tooltip.Trigger>
+                                      <div className="inline-flex items-center gap-1">
+                                        <StatusBadge tone="primary">Agendado</StatusBadge>
+                                      </div>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Content>
+                                      Publicação: {formatPlatformDateTime(article.publishedAt)}
+                                    </Tooltip.Content>
+                                  </Tooltip.Root>
+                                ) : (
+                                  <StatusBadge tone="warning">Rascunho</StatusBadge>
+                                )}
                               </Table.Cell>
-                              <Table.Cell className="text-muted">
-                                {new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(
-                                  new Date(article.updatedAt),
+                              <Table.Cell className="text-muted text-xs">
+                                {status === "scheduled" ? (
+                                  <div className="flex items-center gap-1.5 font-medium text-accent">
+                                    <Clock className="size-3.5" />
+                                    <span>{formatPlatformDateTime(article.publishedAt)}</span>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <p className="text-foreground">{formatPlatformDateTime(article.publishedAt || article.updatedAt)}</p>
+                                  </div>
                                 )}
                               </Table.Cell>
                               <Table.Cell>
@@ -250,6 +312,7 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
               <ul className="divide-y divide-separator md:hidden">
                 {filtered.map((article) => {
                   const FormatIcon = formatIcon(article.format);
+                  const status = getArticleStatus(article.isPublished, article.publishedAt);
                   return (
                     <li key={article.id} className="p-4">
                       <div className="flex items-start gap-3">
@@ -274,16 +337,23 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
                             <FormatIcon className="size-3.5" aria-hidden="true" />
                           </p>
                         </div>
-                        <StatusBadge tone={article.isPublished ? "positive" : "warning"}>
-                          {article.isPublished ? "Publicado" : "Rascunho"}
-                        </StatusBadge>
+                        {status === "published" ? (
+                          <StatusBadge tone="positive">Publicado</StatusBadge>
+                        ) : status === "scheduled" ? (
+                          <StatusBadge tone="primary">Agendado</StatusBadge>
+                        ) : (
+                          <StatusBadge tone="warning">Rascunho</StatusBadge>
+                        )}
                       </div>
                       <div className="mt-4 flex items-center justify-between gap-3">
                         <span className="text-xs text-muted">
-                          Atualizado{" "}
-                          {new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
-                            .format(new Date(article.updatedAt))
-                            .toLowerCase()}
+                          {status === "scheduled" ? (
+                            <span className="font-medium text-accent">
+                              Agendado: {formatPlatformDateTime(article.publishedAt)}
+                            </span>
+                          ) : (
+                            <span>{formatPlatformDateTime(article.publishedAt || article.updatedAt)}</span>
+                          )}
                         </span>
                         <div className="flex items-center gap-2">
                           <Link href={`/admin/blog/${article.id}`} className={buttonVariants({ variant: "secondary", size: "sm" })}>
