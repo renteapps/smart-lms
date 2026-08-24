@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ProfileTest, ProfileCategory, ProfileQuestion, ProfileTestStatus, ProfileTestAccessType } from '@/types/profileTest';
+import { PROFILE_TEST_ACCESS_OPTIONS } from '@/lib/profileTestAccess';
 import { StepWizard, WizardStep } from '@/components/admin/profile-tests/StepWizard';
 import { CategoryEditor } from '@/components/admin/profile-tests/CategoryEditor';
 import { QuestionEditor } from '@/components/admin/profile-tests/QuestionEditor';
@@ -222,16 +223,19 @@ export function EditProfileTestClient({ initialTest, courses, plans }: { initial
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
-                    URL Curta (Slug)
+                    Link Curto (Número)
                   </label>
                   <input
                     type="text"
+                    inputMode="numeric"
                     value={slug}
-                    onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                    placeholder="Ex: meu-teste (gerado auto. se vazio)"
+                    onChange={(e) => setSlug(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                    placeholder="Gerado automaticamente"
                     className="w-full bg-background-secondary border border-border/60 rounded-xl px-4 py-3 text-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
-                  <p className="text-xs text-muted mt-1">/diagnostico/{slug || '...'}</p>
+                  <p className="text-xs text-muted mt-1">
+                    /diagnostico/{slug || 'número gerado ao salvar'} — apenas dígitos, de 6 a 12.
+                  </p>
                 </div>
 
                 <div>
@@ -240,15 +244,23 @@ export function EditProfileTestClient({ initialTest, courses, plans }: { initial
                   </label>
                   <select
                     value={accessType}
-                    onChange={(e) => setAccessType(e.target.value as ProfileTestAccessType)}
+                    onChange={(e) => {
+                      const next = e.target.value as ProfileTestAccessType;
+                      setAccessType(next);
+                      // A lista fora do modo escolhido não é salva: some da tela também.
+                      if (next !== 'course_owners') setRequiredCourseIds(new Set());
+                      if (next !== 'plan_owners') setRequiredPlanIds(new Set());
+                    }}
                     className="w-full bg-background-secondary border border-border/60 rounded-xl px-4 py-3 text-sm text-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
                     aria-label="Regra de Acesso"
                   >
-                    <option value="public">Público (Captura de Leads)</option>
-                    <option value="logged_in">Apenas Alunos Logados</option>
-                    <option value="course_owners">Restrito a Cursos Específicos</option>
-                    <option value="plan_owners">Restrito a Planos Específicos</option>
+                    {PROFILE_TEST_ACCESS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
                   </select>
+                  <p className="text-xs text-muted mt-1">
+                    {PROFILE_TEST_ACCESS_OPTIONS.find((option) => option.value === accessType)?.hint}
+                  </p>
                 </div>
               </div>
 

@@ -86,15 +86,13 @@ export function TakeTestClient({ test, isPublicFlow }: TakeTestClientProps) {
   }, [answers, currentStep, test]);
 
   const handleFinish = async () => {
-    if (isPublicFlow) {
-      // Store pending result and redirect to register
-      localStorage.setItem(`pending_diagnostic_${test.slug}`, JSON.stringify(results));
-      router.push(`/cadastro?next=/diagnostico/${test.slug}/resultado`);
-    } else {
-      // Save directly and redirect to results
-      localStorage.setItem(`pending_diagnostic_${test.slug}`, JSON.stringify(results));
-      router.push(`/diagnostico/${test.slug}/resultado`);
-    }
+    // O cálculo fica no navegador até haver conta para gravar o resultado.
+    localStorage.setItem(`pending_diagnostic_${test.slug}`, JSON.stringify(results));
+
+    const resultPath = `/diagnostico/${test.slug}/resultado`;
+    router.push(
+      isPublicFlow ? `/criar-conta?redirect=${encodeURIComponent(resultPath)}` : resultPath,
+    );
   };
 
   return (

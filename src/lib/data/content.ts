@@ -26,7 +26,7 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
       .order("order_index", { ascending: true }),
     db
       .from("articles")
-      .select("id, slug, title, category, reading_time, excerpt")
+      .select("id, slug, title, category, reading_time, excerpt, cover")
       .eq("is_published", true)
       .lte("published_at", new Date().toISOString()),
   ]);
@@ -182,6 +182,7 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
       title: clean(article.title),
       category: article.category ?? "Artigo",
       slug: article.slug,
+      cover: clean(article.cover) || undefined,
       shortDescription: clean(article.excerpt) || undefined,
       estimatedDurationMin: article.reading_time ?? 8,
     });

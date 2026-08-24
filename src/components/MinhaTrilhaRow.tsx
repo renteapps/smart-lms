@@ -8,6 +8,7 @@ import LessonCard from "./LessonCard";
 import { ArrowIcon } from "@/components/ui/AnimatedIcon";
 import { LearningTrail } from "@/types/trilha";
 import { getMyTrail } from "@/app/actions/trail";
+import { contentHref } from "@/lib/studentHome";
 
 export default function MinhaTrilhaRow() {
   const [trail, setTrail] = useState<LearningTrail | null>(null);
@@ -24,7 +25,7 @@ export default function MinhaTrilhaRow() {
     return () => { isMounted = false; };
   }, []);
 
-  const pendingLessons = trail?.items.filter((item) => item.type === 'lesson' && item.status === 'pending').slice(0, 8) || [];
+  const pendingLessons = trail?.items.filter((item) => item.status === 'pending').slice(0, 8) || [];
   if (pendingLessons.length === 0) return null;
 
   return (
@@ -58,7 +59,7 @@ export default function MinhaTrilhaRow() {
             duration={`${item.durationMin} min`}
             cover={item.cover || 'https://images.unsplash.com/photo-1573497491765-0a15320e8b2b?q=80&w=600&auto=format&fit=crop'}
             reason={item.reason}
-            href={`/courses/${item.courseId || 'c1'}/lessons/${item.slug || item.id}`}
+            href={contentHref(item)}
           />
         ))}
       </CarouselRow>

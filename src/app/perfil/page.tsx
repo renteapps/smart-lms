@@ -13,7 +13,7 @@ import { AiCreditsCard } from "@/components/profile/AiCreditsCard";
 import { StudentProfileTestsSection } from "@/components/profile/StudentProfileTestsSection";
 import { getAiCreditBalance } from "@/lib/aiCredits";
 import { requireUser } from "@/lib/supabase/auth";
-import { getMyProfileTestResults, getProfileTests } from "@/lib/data/profileTests";
+import { getAccessibleProfileTests, getMyProfileTestResults, getProfileTests } from "@/lib/data/profileTests";
 import { LearningStats } from "./LearningStats";
 import { CurrentStageCard } from "./CurrentStageCard";
 
@@ -30,6 +30,7 @@ export default async function PerfilPage() {
     getMyProfileTestResults(supabase, user.id),
     getProfileTests(supabase, true), // onlyPublished = true
   ]);
+  const availableTests = await getAccessibleProfileTests(supabase, user.id, allProfileTests);
 
   return (
     <div className="pt-[76px]">
@@ -96,7 +97,7 @@ export default async function PerfilPage() {
             {/* Profile Tests Result Section */}
             <StudentProfileTestsSection 
               completedResults={profileTestResults} 
-              availableTests={allProfileTests} 
+              availableTests={availableTests} 
             />
           </div>
         </div>

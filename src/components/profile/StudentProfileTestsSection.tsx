@@ -106,7 +106,7 @@ export function StudentProfileTestsSection({ completedResults, availableTests }:
              </p>
              <div className="mt-6 flex flex-wrap justify-center gap-2">
                 {pendingTests.slice(0, 2).map((test) => (
-                  <Link key={test.id} href={`/testes-perfil/${test.id}`}>
+                  <Link key={test.id} href={`/diagnostico/${test.slug}`}>
                     <Chip variant="soft" color="accent" size="sm" className="cursor-pointer hover:bg-accent hover:text-white transition-colors">
                       {test.title}
                     </Chip>

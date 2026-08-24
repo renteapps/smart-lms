@@ -5,6 +5,11 @@ import { requireAdmin } from "@/lib/supabase/auth";
 import { agentToRow, ensureUniqueSlug, slugifyAgentName } from "@/lib/data/agents";
 import { pilulaToRow } from "@/lib/data/pilulas";
 import { profileTestToRow } from "@/lib/data/profileTests";
+import {
+  generateProfileTestSlug,
+  normalizeProfileTestAccess,
+  normalizeProfileTestSlug,
+} from "@/lib/profileTestAccess";
 import { getContentIndex } from "@/lib/data/content";
 import { listQuestionnaireVersions } from "@/lib/data/trail";
 import { validateQuestionnaire } from "@/lib/matching";
@@ -244,28 +249,62 @@ export async function deletePilula(id: string): Promise<ActionResult> {
 // Testes de perfil
 // ---------------------------------------------------------------------------
 
+const UNIQUE_VIOLATION = "23505";
+const SLUG_ATTEMPTS = 5;
+
+/**
+ * Grava o teste garantindo um slug numérico livre.
+ *
+ * Quando o admin não escolhe a URL curta, sorteamos e reagimos ao conflito de
+ * unicidade em vez de consultar antes: a checagem prévia abre janela para duas
+ * criações simultâneas caírem no mesmo número.
+ */
 export async function saveProfileTest(
   input: Partial<ProfileTest> & { id?: string },
-): Promise<Saved<{ id: string }>> {
+): Promise<Saved<{ id: string; slug?: string }>> {
   try {
     const { adminClient } = await requireAdmin();
-    
-    if (!input.slug) {
-      input.slug = Math.random().toString(36).substring(2, 10);
+
+    const requestedSlug = normalizeProfileTestSlug(input.slug);
+    if (input.slug && !requestedSlug) {
+      return { success: false, message: "A URL curta precisa ter de 6 a 12 dígitos." };
     }
-    
-    const row = profileTestToRow(input);
+
+    // Só normaliza o escopo quando o modo veio no payload; uma atualização
+    // parcial que não fala de acesso não deve apagar a regra existente.
+    const access = input.accessType ? normalizeProfileTestAccess(input) : {};
+
+    // Sem slug pedido: gera no cadastro e preserva o atual na edição.
+    const row = profileTestToRow({
+      ...input,
+      ...access,
+      slug: requestedSlug ?? (input.id ? undefined : generateProfileTestSlug()),
+    });
     row.updated_at = new Date().toISOString();
 
-    const query = input.id
-      ? adminClient.from("profile_tests").update(row).eq("id", input.id).select("id").single()
-      : adminClient.from("profile_tests").insert(row).select("id").single();
+    for (let attempt = 0; attempt < SLUG_ATTEMPTS; attempt += 1) {
+      const query = input.id
+        ? adminClient.from("profile_tests").update(row).eq("id", input.id).select("id, slug").single()
+        : adminClient.from("profile_tests").insert(row).select("id, slug").single();
 
-    const { data, error } = await query;
-    if (error) return { success: false, message: error.message };
+      const { data, error } = await query;
 
-    revalidatePath("/admin/testes-perfil");
-    return { success: true, data: { id: data.id } };
+      if (!error) {
+        revalidatePath("/admin/testes-perfil");
+        if (data.slug) revalidatePath(`/diagnostico/${data.slug}`);
+        return { success: true, data: { id: data.id, slug: data.slug } };
+      }
+
+      const slugTaken = error.code === UNIQUE_VIOLATION && String(error.message).includes("slug");
+      if (!slugTaken) return { success: false, message: error.message };
+      if (requestedSlug) {
+        return { success: false, message: `A URL curta ${requestedSlug} já está em uso por outro teste.` };
+      }
+
+      row.slug = generateProfileTestSlug();
+    }
+
+    return { success: false, message: "Não foi possível reservar uma URL curta. Tente novamente." };
   } catch (error) {
     return { success: false, message: (error as Error).message };
   }
@@ -285,6 +324,12 @@ export async function duplicateProfileTest(id: string): Promise<Saved<{ id: stri
       return { success: false, message: "Teste de perfil original não encontrado." };
     }
 
+    const originalAccess = normalizeProfileTestAccess({
+      accessType: original.access_type,
+      requiredCourseIds: original.required_course_ids,
+      requiredPlanIds: original.required_plan_ids,
+    });
+
     const now = new Date().toISOString();
     const newRow = {
       title: `${original.title} (Cópia)`,
@@ -292,19 +337,34 @@ export async function duplicateProfileTest(id: string): Promise<Saved<{ id: stri
       cover_url: original.cover_url,
       status: "draft",
       result_type: original.result_type,
+      // A cópia herda a regra de acesso, mas nunca o slug: o link é único.
+      slug: generateProfileTestSlug(),
+      access_type: originalAccess.accessType,
+      required_course_ids: originalAccess.requiredCourseIds,
+      required_plan_ids: originalAccess.requiredPlanIds,
       categories: original.categories,
       questions: original.questions,
       created_at: now,
       updated_at: now,
     };
 
-    const { data, error: insertError } = await adminClient
-      .from("profile_tests")
-      .insert(newRow)
-      .select("id")
-      .single();
+    let data: { id: string } | null = null;
+    let insertError: { code?: string; message: string } | null = null;
 
-    if (insertError) return { success: false, message: insertError.message };
+    for (let attempt = 0; attempt < SLUG_ATTEMPTS; attempt += 1) {
+      const result = await adminClient.from("profile_tests").insert(newRow).select("id").single();
+      data = result.data;
+      insertError = result.error;
+
+      if (!insertError) break;
+      if (!(insertError.code === UNIQUE_VIOLATION && insertError.message.includes("slug"))) break;
+
+      newRow.slug = generateProfileTestSlug();
+    }
+
+    if (insertError || !data) {
+      return { success: false, message: insertError?.message ?? "Falha ao duplicar o teste de perfil." };
+    }
 
     revalidatePath("/admin/testes-perfil");
     return { success: true, data: { id: data.id } };

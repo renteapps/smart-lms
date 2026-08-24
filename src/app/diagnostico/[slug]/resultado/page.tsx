@@ -19,6 +19,7 @@ export default function DiagnosticResultPage({ params }: { params: Promise<{ slu
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<ResultPayload | null>(null);
+  const [testMeta, setTestMeta] = useState<{ id: string; title: string } | null>(null);
 
   useEffect(() => {
     async function processResult() {
@@ -29,10 +30,15 @@ export default function DiagnosticResultPage({ params }: { params: Promise<{ slu
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
-        // Should not happen as middleware/router should protect this route if not public flow,
-        // but if public flow completed, user must be registered/logged in to see result.
-        toast.error('Você precisa estar logado para ver o resultado.');
-        router.push(`/login?next=/diagnostico/${resolvedParams.slug}/resultado`);
+        // Fluxo livre: as respostas já estão no navegador e só falta a conta
+        // para liberar (e guardar) o diagnóstico.
+        const target = encodeURIComponent(`/diagnostico/${resolvedParams.slug}/resultado`);
+        if (storedResult) {
+          toast.info('Crie sua conta gratuita para ver o seu diagnóstico.');
+          router.push(`/criar-conta?redirect=${target}`);
+        } else {
+          router.push(`/acessar?redirect=${target}`);
+        }
         return;
       }
 
@@ -47,6 +53,8 @@ export default function DiagnosticResultPage({ params }: { params: Promise<{ slu
               .select('id, title')
               .eq('slug', resolvedParams.slug)
               .single();
+
+          if (testData) setTestMeta(testData);
 
           if (parsedResult.winner && testData) {
             // Save to DB
@@ -86,6 +94,7 @@ export default function DiagnosticResultPage({ params }: { params: Promise<{ slu
             .single();
 
           if (testData) {
+            setTestMeta(testData);
             const { data: existingResult } = await supabase
               .from('profile_test_results')
               .select('category_id, category_name, scores')
@@ -269,8 +278,8 @@ export default function DiagnosticResultPage({ params }: { params: Promise<{ slu
               const toastId = toast.loading("Enviando e-mail...");
               
               const payload = {
-                testId: "N/A", 
-                testTitle: "Teste de Perfil", 
+                testId: testMeta?.id ?? '',
+                testTitle: testMeta?.title ?? 'Teste de Perfil',
                 categoryId: winner.id,
                 categoryName: winner.name,
                 scores: percentages.map(p => ({

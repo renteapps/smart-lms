@@ -1,4 +1,6 @@
 import type { ProfileCategory, ProfileQuestion, ProfileTest } from "@/types/profileTest";
+import { hasCourseAccess, isEnrollmentActive, isSubscriptionActive } from "@/lib/courseAccess";
+import { evaluateProfileTestAccess } from "@/lib/profileTestAccess";
 import { logQueryError, type DB, type Row } from "./types";
 
 const TEST_SELECT = `
@@ -89,10 +91,18 @@ export async function getProfileTestById(db: DB, id: string): Promise<ProfileTes
   return data ? mapProfileTest(data) : null;
 }
 
+/**
+ * Lê o teste pelo link compartilhável.
+ *
+ * Via RPC, e não pela tabela, porque a RLS esconde a linha de quem não tem
+ * acesso — a função devolve o cabeçalho para a página conseguir dizer "acesso
+ * restrito" em vez de "não encontrado", e só entrega as perguntas a quem pode
+ * responder.
+ */
 export async function getProfileTestBySlug(db: DB, slug: string): Promise<ProfileTest | null> {
-  const { data, error } = await db.from("profile_tests").select(TEST_SELECT).eq("slug", slug).maybeSingle();
+  const { data, error } = await db.rpc("profile_test_by_slug", { p_slug: slug }).maybeSingle();
   logQueryError("getProfileTestBySlug", error);
-  return data ? mapProfileTest(data) : null;
+  return data ? mapProfileTest(data as Row) : null;
 }
 
 function mapResult(row: Row): ProfileTestResult {
@@ -143,4 +153,109 @@ export function buildProfileTestResult(
     })),
     completedAt: now.toISOString(),
   };
+}
+
+export type ProfileTestAccessContext = {
+  isAdmin: boolean;
+  /** Cursos que o usuário realmente pode assistir hoje. */
+  courseIds: Set<string>;
+  /** Planos com assinatura ativa. */
+  planIds: Set<string>;
+};
+
+export const EMPTY_ACCESS_CONTEXT: ProfileTestAccessContext = {
+  isAdmin: false,
+  courseIds: new Set<string>(),
+  planIds: new Set<string>(),
+};
+
+/**
+ * Reúne o que a política de acesso precisa saber sobre o usuário.
+ *
+ * Usa a mesma regra das vitrines — matrícula ativa ou plano que libera o curso
+ * — para o teste nunca trancar quem a plataforma já deixa entrar no conteúdo.
+ */
+export async function getProfileTestAccessContext(
+  db: DB,
+  userId: string,
+  requiredCourseIds: readonly string[] = [],
+  now = new Date(),
+): Promise<ProfileTestAccessContext> {
+  const [profile, enrollments, subscriptions] = await Promise.all([
+    db.from("profiles").select("role").eq("id", userId).maybeSingle(),
+    requiredCourseIds.length > 0
+      ? db.from("enrollments").select("course_id, status, expires_at").eq("user_id", userId)
+      : Promise.resolve({ data: [], error: null }),
+    db
+      .from("subscriptions")
+      .select("plan_id, status, current_period_end, plans(features, is_active)")
+      .eq("user_id", userId),
+  ]);
+
+  logQueryError("getProfileTestAccessContext:profile", profile.error);
+  logQueryError("getProfileTestAccessContext:enrollments", enrollments.error);
+  logQueryError("getProfileTestAccessContext:subscriptions", subscriptions.error);
+
+  const activeSubscriptions = (subscriptions.data ?? []).filter((row: Row) => {
+    if (!isSubscriptionActive({ status: row.status, currentPeriodEnd: row.current_period_end }, now)) {
+      return false;
+    }
+    const plan = Array.isArray(row.plans) ? row.plans[0] : row.plans;
+    return plan?.is_active !== false;
+  });
+
+  // `subscriptions` é a única fonte de plano do usuário: `profiles` não guarda plano.
+  const planIds = new Set<string>(
+    activeSubscriptions.map((row: Row) => row.plan_id).filter((id: string | null): id is string => Boolean(id)),
+  );
+
+  const enrolledCourseIds = new Set<string>(
+    (enrollments.data ?? [])
+      .filter((row: Row) => isEnrollmentActive({ status: row.status, expiresAt: row.expires_at }, now))
+      .map((row: Row) => row.course_id),
+  );
+
+  const activePlanFeatures = activeSubscriptions.map((row: Row) => {
+    const plan = Array.isArray(row.plans) ? row.plans[0] : row.plans;
+    return plan?.features;
+  });
+
+  const courseIds = new Set<string>();
+  for (const courseId of requiredCourseIds) {
+    if (hasCourseAccess({ courseId, enrolledCourseIds, activePlanFeatures })) courseIds.add(courseId);
+  }
+
+  return {
+    isAdmin: profile.data?.role === "admin",
+    courseIds,
+    planIds,
+  };
+}
+
+/**
+ * Filtra a vitrine de testes pelo que o usuário pode de fato abrir.
+ *
+ * Sem isso o aluno veria o card de um teste exclusivo de outro curso ou plano
+ * e só descobriria a restrição depois de clicar.
+ */
+export async function getAccessibleProfileTests(
+  db: DB,
+  userId: string,
+  tests: ProfileTest[],
+): Promise<ProfileTest[]> {
+  if (tests.length === 0) return [];
+
+  const requiredCourseIds = [...new Set(tests.flatMap((test) => test.requiredCourseIds ?? []))];
+  const context = await getProfileTestAccessContext(db, userId, requiredCourseIds);
+
+  return tests.filter(
+    (test) =>
+      evaluateProfileTestAccess({
+        test,
+        isLoggedIn: true,
+        isAdmin: context.isAdmin,
+        courseIds: context.courseIds,
+        planIds: context.planIds,
+      }).allowed,
+  );
 }

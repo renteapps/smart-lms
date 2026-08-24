@@ -50,6 +50,8 @@ export async function updateSession(request: NextRequest) {
     "/cursos",
     "/blog",
     "/certificados/",
+    // Teste de perfil livre: a pessoa responde sem conta e só cria login no resultado.
+    "/diagnostico",
     "/api/"
   ];
   const isPublicRoute = request.nextUrl.pathname === "/" || 

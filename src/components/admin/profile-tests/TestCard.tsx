@@ -107,7 +107,7 @@ export const TestCard: React.FC<TestCardProps> = ({ test, onPreview, onDelete, o
           <div className="flex flex-col">
             <span className="text-[10px] font-bold text-muted uppercase tracking-wider mb-0.5">Acesso</span>
             <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-              {test.accessType === 'public' && <><Globe className="w-3.5 h-3.5 text-success" /> Captura de Leads</>}
+              {test.accessType === 'public' && <><Globe className="w-3.5 h-3.5 text-success" /> Livre (sem conta)</>}
               {(!test.accessType || test.accessType === 'logged_in') && <><Lock className="w-3.5 h-3.5 text-accent" /> Apenas Logados</>}
               {test.accessType === 'course_owners' && <><GraduationCap className="w-3.5 h-3.5 text-warning" /> Restrito (Cursos)</>}
               {test.accessType === 'plan_owners' && <><CreditCard className="w-3.5 h-3.5 text-warning" /> Restrito (Planos)</>}

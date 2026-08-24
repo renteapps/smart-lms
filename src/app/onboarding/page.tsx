@@ -7,6 +7,7 @@ import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer
 import { ArrowLeft, CalendarDays, Check, Clock3, LoaderCircle, Sparkles } from 'lucide-react';
 import { ArrowRight02Icon } from '@/components/ui/arrow-right-02';
 import { AvailabilityMode, LearningTrail, Questionnaire, StudyAvailability, Weekday } from '@/types/trilha';
+import { OnboardingIntro } from '@/components/onboarding/OnboardingIntro';
 import { getOnboardingData, generateTrail, trackTrailEvent } from '@/app/actions/trail';
 import { clampSessionMinutes, weeklyMinutes } from '@/lib/matching';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ const WEEKDAYS: Array<{ value: Weekday; short: string; label: string }> = [
 export default function OnboardingPage() {
   const router = useRouter();
   const reduceMotion = useReducedMotion();
+  const [hasStarted, setHasStarted] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
@@ -41,6 +43,8 @@ export default function OnboardingPage() {
   const question = questions[currentStep];
   const currentAnswers = question ? answers[question.id] || [] : [];
   const progress = questions.length ? ((currentStep + 1) / questions.length) * 100 : 0;
+  /** Meio minuto por pergunta é o ritmo real de quem só marca opções. */
+  const estimatedMinutes = Math.max(2, Math.ceil(questions.length / 2));
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
@@ -67,12 +71,13 @@ export default function OnboardingPage() {
   }, []);
 
   useEffect(() => {
-    if (!question?.text) return;
+    // Só conta como etapa vista depois que ela sai da abertura e entra no questionário.
+    if (!hasStarted || !question?.text) return;
     trackTrailEvent('onboarding_step_viewed', {
       step: currentStep + 1,
       label: question.text,
     }).catch(() => {});
-  }, [currentStep, question?.text]);
+  }, [hasStarted, currentStep, question?.text]);
 
   const handleToggleSelect = (optionLabel: string) => {
     if (question.type === 'availability') return;
@@ -151,8 +156,17 @@ export default function OnboardingPage() {
     handleFinish();
   };
 
+  const handleStart = () => {
+    setDirection(1);
+    setHasStarted(true);
+  };
+
   const handlePrevious = () => {
     setDirection(-1);
+    if (currentStep === 0) {
+      setHasStarted(false);
+      return;
+    }
     setCurrentStep((step) => Math.max(0, step - 1));
   };
 
@@ -168,7 +182,7 @@ export default function OnboardingPage() {
         exit: (travelDirection: number) => ({ opacity: 0, x: travelDirection * -24, filter: 'blur(4px)', transition: { duration: 0.2 } }),
       };
 
-  if (isGenerating || !questionnaire) {
+  if (isGenerating) {
     return (
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-bg px-4 pt-[76px] text-text">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(49,87,183,0.12),transparent_40%)]" />
@@ -200,6 +214,20 @@ export default function OnboardingPage() {
       </div>
     );
   }
+
+  if (!hasStarted) {
+    return (
+      <OnboardingIntro
+        questionCount={questions.length}
+        estimatedMinutes={estimatedMinutes}
+        isPreparing={!questionnaire || questions.length === 0}
+        hasExistingTrail={Boolean(existingTrail)}
+        onStart={handleStart}
+      />
+    );
+  }
+
+  if (!questionnaire || !question) return null;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-bg pt-[76px] text-text">
@@ -400,7 +428,7 @@ export default function OnboardingPage() {
             </div>
 
             <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-border/70 bg-canvas-soft/45 px-5 py-4 sm:px-8">
-              <button onClick={handlePrevious} disabled={currentStep === 0} className="inline-flex min-h-11 items-center gap-2 rounded-[8px] px-3 text-sm font-bold text-text-soft hover:bg-surface hover:text-ink disabled:invisible"><ArrowLeft className="h-4 w-4" /> Voltar</button>
+              <button onClick={handlePrevious} className="inline-flex min-h-11 items-center gap-2 rounded-[8px] px-3 text-sm font-bold text-text-soft hover:bg-surface hover:text-ink"><ArrowLeft className="h-4 w-4" /> Voltar</button>
               <p className="order-first w-full text-center text-xs font-semibold text-text-mute sm:order-none sm:w-auto">
                 {question.type === 'availability'
                   ? availability.weekdays.length > 0 ? `${availability.weekdays.length} ${availability.weekdays.length === 1 ? 'dia escolhido' : 'dias escolhidos'} · ${weeklyMinutes(availability)} min por semana` : 'Escolha ao menos um dia'
