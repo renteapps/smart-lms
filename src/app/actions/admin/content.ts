@@ -249,7 +249,13 @@ export async function saveProfileTest(
 ): Promise<Saved<{ id: string }>> {
   try {
     const { adminClient } = await requireAdmin();
+    
+    if (!input.slug) {
+      input.slug = Math.random().toString(36).substring(2, 10);
+    }
+    
     const row = profileTestToRow(input);
+    row.updated_at = new Date().toISOString();
 
     const query = input.id
       ? adminClient.from("profile_tests").update(row).eq("id", input.id).select("id").single()
@@ -257,6 +263,48 @@ export async function saveProfileTest(
 
     const { data, error } = await query;
     if (error) return { success: false, message: error.message };
+
+    revalidatePath("/admin/testes-perfil");
+    return { success: true, data: { id: data.id } };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+export async function duplicateProfileTest(id: string): Promise<Saved<{ id: string }>> {
+  try {
+    const { adminClient } = await requireAdmin();
+
+    const { data: original, error: fetchError } = await adminClient
+      .from("profile_tests")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !original) {
+      return { success: false, message: "Teste de perfil original não encontrado." };
+    }
+
+    const now = new Date().toISOString();
+    const newRow = {
+      title: `${original.title} (Cópia)`,
+      description: original.description,
+      cover_url: original.cover_url,
+      status: "draft",
+      result_type: original.result_type,
+      categories: original.categories,
+      questions: original.questions,
+      created_at: now,
+      updated_at: now,
+    };
+
+    const { data, error: insertError } = await adminClient
+      .from("profile_tests")
+      .insert(newRow)
+      .select("id")
+      .single();
+
+    if (insertError) return { success: false, message: insertError.message };
 
     revalidatePath("/admin/testes-perfil");
     return { success: true, data: { id: data.id } };

@@ -87,8 +87,55 @@ export async function saveProfileTestResult(result: ProfileTestResult): Promise<
 
     revalidatePath("/perfil");
     revalidatePath("/");
+    revalidatePath("/admin/testes-perfil");
+    revalidatePath("/admin/notificacoes");
     return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };
+  }
+}
+
+export async function sendProfileTestResultEmail(result: ProfileTestResult): Promise<ActionResult> {
+  try {
+    const { user } = await requireUser();
+    
+    if (!user.email) {
+      return { success: false, message: "Usuário não possui e-mail cadastrado." };
+    }
+
+    const percentagesHtml = result.scores?.map(s => (
+      `<li><strong>${s.categoryName}</strong>: ${s.percentage}%</li>`
+    )).join('') || '';
+
+    const htmlContent = `
+      <h2>Seu resultado do teste: ${result.testTitle}</h2>
+      <p>Olá,</p>
+      <p>Seu perfil dominante identificado foi: <strong>${result.categoryName}</strong>.</p>
+      ${percentagesHtml ? `
+        <h3>Análise completa:</h3>
+        <ul>
+          ${percentagesHtml}
+        </ul>
+      ` : ''}
+      <br />
+      <p>Acesse a plataforma para ver mais detalhes e continuar sua jornada de aprendizado.</p>
+    `;
+
+    const { sendEmail } = await import("@/lib/resendService");
+    
+    const emailResult = await sendEmail({
+      to: user.email,
+      subject: `Seu resultado do teste: ${result.testTitle}`,
+      html: htmlContent,
+    });
+
+    if (!emailResult.success) {
+      return { success: false, message: emailResult.error || "Erro ao enviar e-mail." };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Erro em sendProfileTestResultEmail:", error);
+    return { success: false, message: "Ocorreu um erro ao enviar o e-mail." };
   }
 }

@@ -30,6 +30,67 @@ import {
 } from "@/lib/emailTemplates";
 
 import { createNotificationCampaign, deleteNotificationCampaign } from "./actions";
+import { createBrowserClient } from "@supabase/ssr";
+
+function ProfileTestSelector({ targetAudience, value, onChange }: { targetAudience: string; value: string; onChange: (v: string) => void }) {
+  const [tests, setTests] = useState<any[]>([]);
+  
+  useEffect(() => {
+    async function loadTests() {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      const { data } = await supabase.from("profile_tests").select("id, title, categories").eq("status", "published");
+      if (data) setTests(data);
+    }
+    loadTests();
+  }, []);
+
+  if (targetAudience === "profile_test_category") {
+    return (
+      <div>
+        <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
+          Categoria de Perfil (Resultado Dominante)
+        </label>
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="min-h-11 w-full rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground focus:border-accent focus:bg-surface focus:outline-none"
+          required
+        >
+          <option value="">Selecione o perfil...</option>
+          {tests.map(test => (
+            <optgroup key={test.id} label={test.title}>
+              {(test.categories || []).map((cat: any) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
+        Selecione o Teste de Perfil
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="min-h-11 w-full rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground focus:border-accent focus:bg-surface focus:outline-none"
+        required
+      >
+        <option value="">Selecione o teste...</option>
+        {tests.map(test => (
+          <option key={test.id} value={test.id}>{test.title}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 export default function NotificacoesClient({ initialCampaigns, initialAutomations }: { initialCampaigns: any[], initialAutomations: any[] }) {
   const [activeTab, setActiveTab] = useState<"manual" | "automations">("manual");
@@ -133,9 +194,9 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
       return;
     }
 
-    const requiresId = ["course", "user", "course_completed", "course_abandoned"].includes(targetAudience);
+    const requiresId = ["course", "user", "course_completed", "course_abandoned", "profile_test_category", "profile_test_completed", "profile_test_not_completed"].includes(targetAudience);
     if (requiresId && !targetId) {
-      toast.error("Informe o ID ou E-mail necessário para este público.");
+      toast.error("Informe o ID ou Seleção necessária para este público.");
       return;
     }
 
@@ -365,6 +426,11 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                         <option value="inactive_7d">Ausentes há 7 dias (Reativação)</option>
                         <option value="inactive_30d">Ausentes há 30+ dias (Risco de Churn)</option>
                       </optgroup>
+                      <optgroup label="Testes de Perfil & Diagnósticos">
+                        <option value="profile_test_category">Alunos com um perfil específico</option>
+                        <option value="profile_test_completed">Concluíram um teste específico</option>
+                        <option value="profile_test_not_completed">Não concluíram um teste específico</option>
+                      </optgroup>
                     </select>
                   </div>
 
@@ -384,6 +450,14 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                         required
                       />
                     </div>
+                  )}
+
+                  {["profile_test_category", "profile_test_completed", "profile_test_not_completed"].includes(targetAudience) && (
+                    <ProfileTestSelector 
+                      targetAudience={targetAudience}
+                      value={targetId}
+                      onChange={setTargetId}
+                    />
                   )}
 
                   {/* Channels Selection */}

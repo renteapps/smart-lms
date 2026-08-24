@@ -5,11 +5,15 @@ import type { ProfileTest } from "@/types/profileTest";
 type DailyPillData = { id: string; title: string; challenge: string; likesCount?: number };
 type ProfileTestRow = {
   id: string;
+  slug: string;
   title: string;
   description: string;
   cover_url?: string;
   status: ProfileTest["status"];
   result_type?: ProfileTest["resultType"];
+  access_type?: ProfileTest["accessType"];
+  required_course_ids?: string[];
+  required_plan_ids?: string[];
   categories: ProfileTest["categories"];
   questions: ProfileTest["questions"];
   created_at: string;
@@ -129,11 +133,15 @@ export function useSupabaseData() {
         if (!testsError && testsData) {
           const mappedTests = (testsData as ProfileTestRow[]).map((t) => ({
             id: t.id,
+            slug: t.slug,
             title: t.title,
             description: t.description,
             coverUrl: t.cover_url,
             status: t.status,
             resultType: t.result_type,
+            accessType: t.access_type || 'logged_in',
+            requiredCourseIds: t.required_course_ids || [],
+            requiredPlanIds: t.required_plan_ids || [],
             categories: t.categories,
             questions: t.questions,
             createdAt: t.created_at,

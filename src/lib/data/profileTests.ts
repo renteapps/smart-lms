@@ -2,8 +2,9 @@ import type { ProfileCategory, ProfileQuestion, ProfileTest } from "@/types/prof
 import { logQueryError, type DB, type Row } from "./types";
 
 const TEST_SELECT = `
-  id, title, description, cover_url, status, result_type, categories, questions,
-  created_at, updated_at
+  id, slug, title, description, cover_url, status, result_type, 
+  access_type, required_course_ids, required_plan_ids,
+  categories, questions, created_at, updated_at
 `;
 
 export type ProfileTestScore = {
@@ -25,11 +26,15 @@ export type ProfileTestResult = {
 export function mapProfileTest(row: Row, completions = 0): ProfileTest {
   return {
     id: row.id,
+    slug: row.slug,
     title: row.title,
     description: row.description ?? "",
     coverUrl: row.cover_url ?? undefined,
     status: (row.status ?? "draft") as ProfileTest["status"],
     resultType: (row.result_type ?? "single") as ProfileTest["resultType"],
+    accessType: (row.access_type ?? "logged_in") as ProfileTest["accessType"],
+    requiredCourseIds: row.required_course_ids ?? [],
+    requiredPlanIds: row.required_plan_ids ?? [],
     categories: (row.categories ?? []) as ProfileCategory[],
     questions: (row.questions ?? []) as ProfileQuestion[],
     createdAt: row.created_at,
@@ -44,11 +49,15 @@ export function profileTestToRow(test: Partial<ProfileTest>): Row {
     if (value !== undefined) row[key] = value;
   };
 
+  set("slug", test.slug);
   set("title", test.title);
   set("description", test.description);
   set("cover_url", test.coverUrl ?? null);
   set("status", test.status);
   set("result_type", test.resultType);
+  set("access_type", test.accessType);
+  set("required_course_ids", test.requiredCourseIds);
+  set("required_plan_ids", test.requiredPlanIds);
   set("categories", test.categories);
   set("questions", test.questions);
   return row;
@@ -76,6 +85,12 @@ export async function getProfileTests(db: DB, onlyPublished = false): Promise<Pr
 export async function getProfileTestById(db: DB, id: string): Promise<ProfileTest | null> {
   const { data, error } = await db.from("profile_tests").select(TEST_SELECT).eq("id", id).maybeSingle();
   logQueryError("getProfileTestById", error);
+  return data ? mapProfileTest(data) : null;
+}
+
+export async function getProfileTestBySlug(db: DB, slug: string): Promise<ProfileTest | null> {
+  const { data, error } = await db.from("profile_tests").select(TEST_SELECT).eq("slug", slug).maybeSingle();
+  logQueryError("getProfileTestBySlug", error);
   return data ? mapProfileTest(data) : null;
 }
 

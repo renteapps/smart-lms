@@ -10,20 +10,26 @@ import { Rise } from "@/components/ui/Rise";
 import { ProfileEditor } from "@/components/profile/ProfileEditor";
 import { ProfileSummary } from "@/components/profile/ProfileSummary";
 import { AiCreditsCard } from "@/components/profile/AiCreditsCard";
+import { StudentProfileTestsSection } from "@/components/profile/StudentProfileTestsSection";
 import { getAiCreditBalance } from "@/lib/aiCredits";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/supabase/auth";
+import { getMyProfileTestResults, getProfileTests } from "@/lib/data/profileTests";
 import { LearningStats } from "./LearningStats";
+import { CurrentStageCard } from "./CurrentStageCard";
 
 export const metadata: Metadata = {
   title: "Meu Perfil",
   description: "Gerencie seu perfil e suas preferências de aprendizagem.",
 };
 
-const CURRENT_STAGE_PROGRESS = 68;
-
 export default async function PerfilPage() {
-  const supabase = await createClient();
+  const { supabase, user } = await requireUser();
   const aiCreditBalance = await getAiCreditBalance(supabase);
+  
+  const [profileTestResults, allProfileTests] = await Promise.all([
+    getMyProfileTestResults(supabase, user.id),
+    getProfileTests(supabase, true), // onlyPublished = true
+  ]);
 
   return (
     <div className="pt-[76px]">
@@ -76,35 +82,23 @@ export default async function PerfilPage() {
 
             <AiCreditsCard balance={aiCreditBalance} />
 
-            <Card className="border-hairline">
-              <Card.Content className="gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-success-soft text-success-soft-foreground">
-                    <Route className="size-5" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-muted">Etapa atual</p>
-                    <p className="truncate font-bold text-foreground">Comunicação consciente</p>
-                  </div>
-                </div>
-
-                <ProgressBar value={CURRENT_STAGE_PROGRESS} color="accent" size="sm" data-numeric>
-                  <Label className="text-xs font-semibold text-muted">Progresso</Label>
-                  <ProgressBar.Output className="text-xs font-bold text-accent" />
-                  <ProgressBar.Track>
-                    <ProgressBar.Fill />
-                  </ProgressBar.Track>
-                </ProgressBar>
-              </Card.Content>
-            </Card>
+            <CurrentStageCard />
           </aside>
 
-          <section aria-labelledby="profile-data-title">
-            <h2 id="profile-data-title" className="sr-only">
-              Dados e preferências
-            </h2>
-            <ProfileEditor />
-          </section>
+          <div>
+            <section aria-labelledby="profile-data-title">
+              <h2 id="profile-data-title" className="sr-only">
+                Dados e preferências
+              </h2>
+              <ProfileEditor />
+            </section>
+
+            {/* Profile Tests Result Section */}
+            <StudentProfileTestsSection 
+              completedResults={profileTestResults} 
+              availableTests={allProfileTests} 
+            />
+          </div>
         </div>
       </div>
     </div>

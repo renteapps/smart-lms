@@ -172,7 +172,7 @@ export function CourseSettingsForm({ course }: { course: Course }) {
                 isSelected={config.homeCarousel}
                 onChange={() => handleToggle("homeCarousel")}
                 title="Carrossel na Home"
-                description="Mostra as 8 aulas mais recentes deste curso num carrossel de streaming na home do aluno."
+                description="Mostra as 8 primeiras aulas deste curso (conforme ordenadas no painel) num carrossel na home do aluno."
               />
             </Card.Content>
           </Card>

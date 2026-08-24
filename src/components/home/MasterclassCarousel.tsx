@@ -10,11 +10,7 @@ import type { HomeCarouselRow } from "@/types/course";
 
 /**
  * Vitrine de masterclasses na home — uma fileira por curso galeria com o
- * carrossel ativado, sempre com as 8 aulas mais recentes daquele curso.
- *
- * A ordenação por `created_at` (feita em `getHomeCarouselRows`) é proposital:
- * a promessa da fileira é "o que entrou por último", diferente da galeria do
- * próprio curso, que segue a ordem editorial escolhida pelo admin.
+ * carrossel ativado, com as 8 primeiras aulas na ordem definida no painel admin.
  *
  * Aparece para todo mundo, matriculado ou não: quem não tem acesso ao curso
  * vê a mesma fileira, só que as thumbs revelam um cadeado no hover (em vez de
@@ -31,7 +27,7 @@ export default function MasterclassCarousel({ rows }: { rows: HomeCarouselRow[] 
         <CarouselRow
           key={row.courseId}
           title={row.courseTitle}
-          label={`Aulas recentes de ${row.courseTitle}`}
+          label={`Aulas de ${row.courseTitle}`}
           titleIcon={
             <span className="icon-draw grid size-8 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-soft-foreground">
               <CourseIcon size={18} />

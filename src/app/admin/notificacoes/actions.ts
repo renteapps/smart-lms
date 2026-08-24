@@ -47,6 +47,53 @@ export async function createNotificationCampaign(campaignData: any) {
     throw new Error(error.message);
   }
 
+  // Handle platform notifications
+  if (campaignData.channels?.includes("platform")) {
+    let targetUserIds: string[] = [];
+
+    if (campaignData.targetAudience === "profile_test_category") {
+      const { data: results } = await supabase
+        .from("profile_test_results")
+        .select("user_id")
+        .eq("category_id", campaignData.targetId);
+      if (results) targetUserIds = results.map(r => r.user_id);
+    } else if (campaignData.targetAudience === "profile_test_completed") {
+      const { data: results } = await supabase
+        .from("profile_test_results")
+        .select("user_id")
+        .eq("test_id", campaignData.targetId);
+      if (results) targetUserIds = results.map(r => r.user_id);
+    } else if (campaignData.targetAudience === "profile_test_not_completed") {
+      const { data: profiles } = await supabase.from("profiles").select("id");
+      const { data: results } = await supabase
+        .from("profile_test_results")
+        .select("user_id")
+        .eq("test_id", campaignData.targetId);
+      
+      const completedUserIds = new Set(results?.map(r => r.user_id) || []);
+      if (profiles) {
+        targetUserIds = profiles.map(p => p.id).filter(id => !completedUserIds.has(id));
+      }
+    }
+
+    if (targetUserIds.length > 0) {
+      const notifications = targetUserIds.map(id => ({
+        user_id: id,
+        title: campaignData.title,
+        message: campaignData.message,
+        type: "campaign",
+        link: campaignData.emailDetails?.buttonUrl || null,
+      }));
+
+      // Insert in chunks
+      const chunkSize = 1000;
+      for (let i = 0; i < notifications.length; i += chunkSize) {
+        const chunk = notifications.slice(i, i + chunkSize);
+        await supabase.from("notifications").insert(chunk);
+      }
+    }
+  }
+
   return data;
 }
 

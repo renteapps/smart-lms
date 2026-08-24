@@ -6,7 +6,8 @@ import { Button, Card, Chip, ProgressBar, Radio, RadioGroup, Separator } from "@
 import { Award, BarChart3, Brain, Play, RotateCcw, SkipForward } from "lucide-react";
 import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { ProfileTest, ProfileCategory } from "@/types/profileTest";
-import { buildProfileTestResult, saveProfileTestResult } from "@/lib/profileTestStorage";
+import { buildProfileTestResult } from "@/lib/data/profileTests";
+import { saveProfileTestResult } from "@/app/actions/profile";
 import { notifyTrailChanged } from "@/lib/useTrailStore";
 
 interface ProfileTestRunnerProps {

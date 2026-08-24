@@ -804,10 +804,9 @@ export async function getGalleryCourse(
 /**
  * As faixas do carrossel da home — um curso galeria marcado, uma faixa.
  *
- * Diferente da galeria do curso, aqui a ordem é cronológica: a promessa da
- * faixa é "o que entrou por último", então quem manda é `created_at` da aula, e
- * não a ordem editorial da coleção. Aparece para todo mundo, matriculado ou
- * não — quem não tem acesso vê a mesma faixa travada, com CTA de matrícula.
+ * Exibe até 8 aulas do curso galeria respeitando a ordenação definida pelo admin
+ * no painel (as 8 primeiras marcadas com o selo "Carrossel" em aulas-galeria).
+ * Aparece para todo mundo, matriculado ou não — quem não tem acesso vê a mesma faixa travada, com CTA de matrícula.
  */
 export async function getHomeCarouselRows(db: DB, userId?: string | null): Promise<HomeCarouselRow[]> {
   const { data: courseRows, error } = await db
@@ -834,7 +833,7 @@ export async function getHomeCarouselRows(db: DB, userId?: string | null): Promi
       locked: !(accessByCourse.get(row.id) ?? false),
       lessons: (lessonsByCourse.get(row.id) ?? [])
         .slice()
-        .sort((a: Row, b: Row) => Date.parse(b.created_at) - Date.parse(a.created_at))
+        .sort((a: Row, b: Row) => (a.order_index ?? 0) - (b.order_index ?? 0) || Date.parse(b.created_at) - Date.parse(a.created_at))
         .slice(0, HOME_CAROUSEL_SIZE),
     }))
     .filter((entry) => entry.lessons.length > 0);

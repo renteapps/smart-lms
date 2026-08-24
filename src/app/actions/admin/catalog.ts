@@ -309,6 +309,10 @@ export async function saveLesson(
     }
 
     revalidatePath("/admin/cursos");
+    revalidatePath("/");
+    revalidatePath("/courses");
+    revalidatePath("/courses/[slug]", "page");
+    revalidatePath("/minha-trilha");
     return { success: true, data: { id: data.id } };
   } catch (error) {
     return { success: false, message: (error as Error).message };
@@ -322,6 +326,10 @@ export async function deleteLesson(id: string): Promise<ActionResult> {
     if (error) return { success: false, message: error.message };
 
     revalidatePath("/admin/cursos");
+    revalidatePath("/");
+    revalidatePath("/courses");
+    revalidatePath("/courses/[slug]", "page");
+    revalidatePath("/minha-trilha");
     return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };
@@ -344,8 +352,12 @@ export async function reorderLessons(
     if (error) return { success: false, message: error.message };
 
     revalidatePath(`/admin/cursos/${courseId}/modulos`);
+    revalidatePath(`/admin/cursos/${courseId}/aulas-galeria`);
     revalidatePath(`/admin/cursos/${courseId}`);
     revalidatePath("/courses/[slug]", "page");
+    revalidatePath("/courses");
+    revalidatePath("/");
+    revalidatePath("/minha-trilha");
     return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };

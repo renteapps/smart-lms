@@ -20,13 +20,19 @@ export type ProfileQuestion = {
 
 export type ProfileTestStatus = 'draft' | 'published';
 
+export type ProfileTestAccessType = 'public' | 'logged_in' | 'course_owners' | 'plan_owners';
+
 export type ProfileTest = {
   id: string;
+  slug: string;
   title: string;
   description: string;
   coverUrl?: string;
   status: ProfileTestStatus;
   resultType?: 'single' | 'percentage';
+  accessType?: ProfileTestAccessType;
+  requiredCourseIds?: string[];
+  requiredPlanIds?: string[];
   categories: ProfileCategory[];
   questions: ProfileQuestion[];
   createdAt: string;
