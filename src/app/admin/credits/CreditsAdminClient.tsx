@@ -2,11 +2,12 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Banknote, CircleDollarSign, Coins, Gauge, ShieldCheck, Sparkles } from "lucide-react";
+import { AlertTriangle, Banknote, CalendarRange, CircleDollarSign, Coins, Gauge, Landmark, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { Button, Card, ProgressBar, Tabs, toast } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
 import { formatAiCostBrl, formatAiCredits } from "@/lib/aiCredits";
 import { calculateAiPrice, calculateTokenCostUsd } from "@/lib/aiPricing";
+import type { AiCreditForecast } from "@/lib/aiCreditForecast";
 import { saveBillingSettings, saveFeaturePolicy, saveModelPricing, savePlanLimits, type BillingSettingsInput } from "./actions";
 
 type SettingsRow = {
@@ -45,6 +46,8 @@ type ModelRow = {
 type PlanRow = {
   id: string;
   name: string;
+  frequency: string | null;
+  price: number | string | null;
   is_active: boolean;
   ai_daily_credits: number | string;
   ai_weekly_credits: number | string;
@@ -78,6 +81,12 @@ type RateRow = { rate_date: string; usd_brl: number | string; source: string; fe
 const number = (value: unknown) => Number(value) || 0;
 const money = (value: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 const integer = (value: number) => new Intl.NumberFormat("pt-BR").format(Math.round(value));
+const frequencyLabel = (frequency: string) => ({
+  monthly: "Mensal",
+  yearly: "Anual",
+  lifetime: "Vitalício",
+  custom: "Personalizado",
+}[frequency] ?? frequency);
 const inputClass = "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15";
 
 function Field({ label, value, onChange, step = "1", min = "0", help }: {
@@ -101,7 +110,7 @@ function SwitchControl({ checked, onChange, label }: { checked: boolean; onChang
   );
 }
 
-export function CreditsAdminClient({ initialSettings, initialPolicies, initialModels, plans: initialPlans, events, profiles, latestRate }: {
+export function CreditsAdminClient({ initialSettings, initialPolicies, initialModels, plans: initialPlans, events, profiles, latestRate, forecast }: {
   initialSettings: SettingsRow | null;
   initialPolicies: PolicyRow[];
   initialModels: ModelRow[];
@@ -109,6 +118,7 @@ export function CreditsAdminClient({ initialSettings, initialPolicies, initialMo
   events: UsageRow[];
   profiles: ProfileRow[];
   latestRate: RateRow | null;
+  forecast: AiCreditForecast;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -248,7 +258,7 @@ export function CreditsAdminClient({ initialSettings, initialPolicies, initialMo
 
       <Tabs.Root defaultSelectedKey="overview">
         <Tabs.List aria-label="Áreas de gestão dos créditos" className="overflow-x-auto">
-          <Tabs.Tab id="overview">Visão geral</Tabs.Tab><Tabs.Tab id="pricing">Precificação</Tabs.Tab><Tabs.Tab id="simulator">Simulador</Tabs.Tab><Tabs.Tab id="limits">Limites</Tabs.Tab><Tabs.Tab id="usage">Consumo</Tabs.Tab>
+          <Tabs.Tab id="overview">Visão geral</Tabs.Tab><Tabs.Tab id="future">Compromisso futuro</Tabs.Tab><Tabs.Tab id="pricing">Precificação</Tabs.Tab><Tabs.Tab id="simulator">Simulador</Tabs.Tab><Tabs.Tab id="limits">Limites</Tabs.Tab><Tabs.Tab id="usage">Consumo</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel id="overview" className="space-y-5 pt-5">
@@ -263,6 +273,87 @@ export function CreditsAdminClient({ initialSettings, initialPolicies, initialMo
               <p className="text-3xl font-bold">{formatAiCostBrl(projectedMonthCost)}</p><p className="mt-2 text-sm text-muted">Projeção no ritmo atual; custo realizado {formatAiCostBrl(monthCost)}. O bloqueio é automático em {money(settings.monthlyBudgetBrl)} e reservas simultâneas também entram na proteção.</p>
               {budgetUsed >= settings.warningThresholdPercent && <p className="mt-4 flex gap-2 rounded-xl bg-warning-soft p-3 text-sm text-warning-soft-foreground"><AlertTriangle className="size-4 shrink-0" /> O consumo passou do primeiro alerta configurado.</p>}
             </Card.Content></Card>
+          </div>
+        </Tabs.Panel>
+
+        <Tabs.Panel id="future" className="space-y-5 pt-5">
+          <Card className="border-accent/30 bg-accent-soft">
+            <Card.Content className="gap-4">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="max-w-3xl">
+                  <p className="flex items-center gap-2 font-bold text-accent-soft-foreground">
+                    <Landmark className="size-5" aria-hidden="true" /> Caixa necessário para honrar os créditos vendidos
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-accent-soft-foreground/80">
+                    Cenário conservador de 100% de uso. Cada crédito reserva {money(forecast.recommendedCashPerCreditBrl)} de caixa: custo protegido pela menor margem ativa ({forecast.reserveMarginPercent.toFixed(1)}%) mais {forecast.operationalBufferPercent.toFixed(1)}% de folga operacional.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-surface/80 px-4 py-3 text-right shadow-sm">
+                  <p className="text-xs font-semibold text-muted">Caixa recomendado agora</p>
+                  <p className="mt-1 text-3xl font-bold text-foreground">{money(forecast.recommendedCashBrl)}</p>
+                </div>
+              </div>
+            </Card.Content>
+          </Card>
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              [Landmark, "Caixa recomendado", money(forecast.recommendedCashBrl), "Inclui a folga operacional"],
+              [ShieldCheck, "Custo protegido", money(forecast.protectedProviderCostBrl), "Antes da folga operacional"],
+              [Coins, "Créditos ainda prometidos", formatAiCredits(forecast.totalFutureCredits), `${money(forecast.nominalCommitmentBrl)} nominais`],
+              [Users, "Beneficiários", integer(forecast.beneficiaries), `${forecast.activeSubscriptions} contratos considerados`],
+            ].map(([Icon, title, value, detail]) => {
+              const MetricIcon = Icon as typeof Landmark;
+              return <Card key={String(title)}><Card.Content><MetricIcon className="size-5 text-accent" /><p className="mt-3 text-xs font-semibold text-muted">{String(title)}</p><p className="mt-1 text-2xl font-bold text-foreground">{String(value)}</p><p className="mt-1 text-xs text-muted">{String(detail)}</p></Card.Content></Card>;
+            })}
+          </div>
+
+          <Card>
+            <Card.Header>
+              <Card.Title>Se uma nova assinatura for vendida hoje</Card.Title>
+              <Card.Description>Reserva máxima por usuário usando 100% da franquia até o fim do período contratado.</Card.Description>
+            </Card.Header>
+            <Card.Content className="overflow-x-auto p-0">
+              <table className="min-w-[900px] w-full text-left text-xs">
+                <thead className="border-b border-border bg-background-secondary text-muted"><tr>{["Plano", "Janelas mensais", "Créditos prometidos", "Valor nominal", "Caixa recomendado", "% do preço"].map((heading) => <th key={heading} className="px-4 py-3 font-semibold">{heading}</th>)}</tr></thead>
+                <tbody>{forecast.planStress.map((plan) => <tr key={plan.planId} className="border-b border-border last:border-0">
+                  <td className="px-4 py-3"><p className="font-semibold">{plan.planName}</p><p className="text-muted">{frequencyLabel(plan.frequency)} · preço {money(plan.planPriceBrl)}</p>{plan.usesRollingYearAssumption && <p className="mt-1 text-warning">Estimativa móvel de 12 meses</p>}</td>
+                  <td className="px-4 py-3"><p className="font-bold">{integer(plan.entitlementWindows)}</p><p className="text-muted">renovações de franquia</p></td>
+                  <td className="px-4 py-3 font-semibold">{formatAiCredits(plan.futureCredits)}</td>
+                  <td className="px-4 py-3">{money(plan.nominalCommitmentBrl)}</td>
+                  <td className="px-4 py-3 font-bold text-foreground">{money(plan.recommendedCashBrl)}</td>
+                  <td className="px-4 py-3">{plan.reserveToPricePercent == null ? "—" : `${plan.reserveToPricePercent.toFixed(1)}%`}</td>
+                </tr>)}</tbody>
+              </table>
+              {forecast.planStress.length === 0 && <p className="p-8 text-center text-sm text-muted">Nenhum plano ativo para simular.</p>}
+            </Card.Content>
+          </Card>
+
+          <Card>
+            <Card.Header>
+              <Card.Title>Compromissos já contratados</Card.Title>
+              <Card.Description>Aplica a precedência real: plano individual antes do empresarial e maior franquia em caso de empate.</Card.Description>
+            </Card.Header>
+            <Card.Content className="overflow-x-auto p-0">
+              <table className="min-w-[1050px] w-full text-left text-xs">
+                <thead className="border-b border-border bg-background-secondary text-muted"><tr>{["Plano / contrato", "Escopo", "Beneficiários", "Franquias futuras", "Créditos restantes", "Fim do período", "Caixa recomendado"].map((heading) => <th key={heading} className="px-4 py-3 font-semibold">{heading}</th>)}</tr></thead>
+                <tbody>{forecast.rows.map((row) => <tr key={row.subscriptionId} className="border-b border-border last:border-0">
+                  <td className="px-4 py-3"><p className="font-semibold">{row.planName}</p><p className="text-muted">{frequencyLabel(row.frequency)} · contrato {row.subscriptionId.slice(0, 8)}</p></td>
+                  <td className="px-4 py-3">{row.scope === "individual" ? "Individual" : "Organização"}</td>
+                  <td className="px-4 py-3">{integer(row.beneficiaries)}</td>
+                  <td className="px-4 py-3">{integer(row.entitlementWindows)}</td>
+                  <td className="px-4 py-3 font-semibold">{formatAiCredits(row.futureCredits)}</td>
+                  <td className="px-4 py-3"><p>{row.periodEnd ? new Date(row.periodEnd).toLocaleDateString("pt-BR") : "Sem data registrada"}</p>{row.isEstimatedPeriod && <p className="text-warning">período estimado</p>}</td>
+                  <td className="px-4 py-3 font-bold">{money(row.recommendedCashBrl)}</td>
+                </tr>)}</tbody>
+              </table>
+              {forecast.rows.length === 0 && <div className="p-8 text-center"><CalendarRange className="mx-auto size-8 text-muted" /><p className="mt-3 font-semibold text-foreground">Ainda não há assinaturas ativas</p><p className="mt-1 text-sm text-muted">A tabela acima mostra quanto reservar quando a primeira venda entrar.</p></div>}
+            </Card.Content>
+          </Card>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            <Card><Card.Header><Card.Title>Créditos extras já concedidos</Card.Title></Card.Header><Card.Content><p className="text-3xl font-bold">{formatAiCredits(forecast.extraCredits)}</p><p className="mt-2 text-sm text-muted">Também entram no compromisso de caixa porque não expiram até serem usados.</p></Card.Content></Card>
+            <Card><Card.Header><Card.Title>Por que um anual pode ter 13 franquias?</Card.Title></Card.Header><Card.Content><p className="text-sm leading-6 text-muted">A franquia atual renova no primeiro dia de cada mês. Uma venda feita no meio do mês pode usar o saldo do mês da compra, os 11 meses seguintes e novamente o mês final antes do vencimento. A previsão considera todas essas janelas para não subestimar o caixa.</p></Card.Content></Card>
           </div>
         </Tabs.Panel>
 
