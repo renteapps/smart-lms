@@ -285,7 +285,7 @@ export function CreditsAdminClient({ initialSettings, initialPolicies, initialMo
                     <Landmark className="size-5" aria-hidden="true" /> Caixa necessário para honrar os créditos vendidos
                   </p>
                   <p className="mt-1 text-sm leading-6 text-accent-soft-foreground/80">
-                    Cenário conservador de 100% de uso. Cada crédito reserva {money(forecast.recommendedCashPerCreditBrl)} de caixa: custo protegido pela menor margem ativa ({forecast.reserveMarginPercent.toFixed(1)}%) mais {forecast.operationalBufferPercent.toFixed(1)}% de folga operacional.
+                    Cenário conservador de 100% de uso. Cada crédito reserva {formatAiCostBrl(forecast.recommendedCashPerCreditBrl)} de caixa: custo protegido pela menor margem ativa ({forecast.reserveMarginPercent.toFixed(1)}%) mais {forecast.operationalBufferPercent.toFixed(1)}% de folga operacional.
                   </p>
                 </div>
                 <div className="rounded-xl bg-surface/80 px-4 py-3 text-right shadow-sm">

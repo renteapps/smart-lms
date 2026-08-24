@@ -152,7 +152,8 @@ function roundCredits(value: number) {
 }
 
 function ceilMoney(value: number) {
-  return Math.ceil(Math.max(0, value) * 100 - 1e-9) / 100;
+  const rounded = Math.ceil(Math.max(0, value) * 100 - 1e-9) / 100;
+  return Object.is(rounded, -0) ? 0 : rounded;
 }
 
 export function buildAiCreditForecast(input: {

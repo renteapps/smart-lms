@@ -73,6 +73,12 @@ describe("AI credit future commitment", () => {
     expect(forecast.recommendedCashBrl).toBe(0.63);
   });
 
+  it("never exposes negative zero in an empty cash forecast", () => {
+    const forecast = buildAiCreditForecast(base);
+    expect(forecast.recommendedCashBrl).toBe(0);
+    expect(Object.is(forecast.recommendedCashBrl, -0)).toBe(false);
+  });
+
   it("estimates missing end dates from the plan frequency", () => {
     const forecast = buildAiCreditForecast({
       ...base,
