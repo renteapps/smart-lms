@@ -84,6 +84,7 @@ export async function getProfileTests(db: DB, onlyPublished = false): Promise<Pr
 
 export async function getProfileTestById(db: DB, id: string): Promise<ProfileTest | null> {
   const { data, error } = await db.from("profile_tests").select(TEST_SELECT).eq("id", id).maybeSingle();
+  if (error) console.error("DEBUG getProfileTestById ERROR:", error);
   logQueryError("getProfileTestById", error);
   return data ? mapProfileTest(data) : null;
 }

@@ -10,17 +10,20 @@ export const metadata: Metadata = {
   description: "Edite um teste de perfil existente",
 };
 
-export default async function EditProfileTestPage({ params }: { params: { id: string } }) {
-  if (params.id === "novo") {
+export default async function EditProfileTestPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+  if (resolvedParams.id === "novo") {
     return notFound();
   }
 
   const { adminClient } = await requireAdmin();
   const [test, courses, plans] = await Promise.all([
-    getProfileTestById(adminClient, params.id),
+    getProfileTestById(adminClient, resolvedParams.id),
     getAvailableCourses(adminClient),
     getAvailablePlans(adminClient)
   ]);
+
+  console.log("DEBUG: EditProfileTestPage params.id =", resolvedParams.id, "test found =", !!test);
 
   if (!test) {
     return notFound();

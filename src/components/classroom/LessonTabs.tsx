@@ -14,7 +14,7 @@ import {
   TextField,
   Typography,
 } from "@heroui/react";
-import { Check, Download, FileText, MessageSquare, Save, Send } from "lucide-react";
+import { Check, Download, FileText, MessageSquare, Save, Send, Trash } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   AlignBoxBottomLeftIcon,
@@ -27,7 +27,7 @@ import type { StudentNote } from "@/lib/data/notes";
 import type { Comment } from "@/lib/data/comments";
 import type { User } from "@supabase/supabase-js";
 import { saveLessonNote } from "@/app/actions/notes";
-import { addLessonComment } from "@/app/actions/comments";
+import { addLessonComment, deleteLessonComment } from "@/app/actions/comments";
 import BlockViewer from "./BlockViewer";
 
 interface LessonTabsProps {
@@ -111,6 +111,21 @@ export default function LessonTabs({
         alert(result.message || "Erro ao adicionar comentário");
       }
     });
+  };
+
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm("Deseja apagar este comentário?")) return;
+    setIsDeleting(commentId);
+    try {
+      const result = await deleteLessonComment(commentId);
+      if (!result.success) {
+        alert(result.message || "Erro ao apagar comentário");
+      }
+    } finally {
+      setIsDeleting(null);
+    }
   };
 
   return (
@@ -209,12 +224,15 @@ export default function LessonTabs({
         {enableComments && (
           <Tabs.Panel id="comments" className={PANEL_CLASS}>
             <h2 className="display-3 mb-5 text-foreground sm:mb-6">Comentários e dúvidas</h2>
-
           <div className="flex max-w-[68ch] gap-3 sm:gap-4">
-            <Avatar size="md" color="accent" className="mt-1 hidden shrink-0 sm:flex">
-              <Avatar.Fallback>
-                {currentUser?.email?.substring(0, 2).toUpperCase() || "VC"}
-              </Avatar.Fallback>
+            <Avatar size="md" color="accent" className="mt-1 flex shrink-0">
+              {currentUser?.user_metadata?.avatar_url ? (
+                <Avatar.Image src={currentUser.user_metadata.avatar_url} alt={currentUser?.user_metadata?.full_name || currentUser?.email || "Você"} />
+              ) : (
+                <Avatar.Fallback>
+                  {currentUser?.email?.substring(0, 2).toUpperCase() || "VC"}
+                </Avatar.Fallback>
+              )}
             </Avatar>
             <div className="relative flex-1">
               <TextField value={newComment} onChange={setNewComment}>
@@ -251,7 +269,7 @@ export default function LessonTabs({
             ) : (
               initialComments.map((comment) => (
                 <li key={comment.id} className="flex gap-3 sm:gap-4">
-                  <Avatar size="md" className="mt-1 hidden shrink-0 sm:flex">
+                  <Avatar size="md" className="mt-1 flex shrink-0">
                     {comment.user.avatarUrl ? (
                       <Avatar.Image src={comment.user.avatarUrl} alt={comment.user.name} />
                     ) : (
@@ -263,9 +281,16 @@ export default function LessonTabs({
                   <div className="min-w-0 flex-1">
                     <div className="rounded-xl border border-hairline bg-background-secondary p-3.5 sm:p-4">
                       <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                        <span className="text-sm font-bold text-foreground">
-                          {comment.user.name}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-foreground">
+                            {comment.user.name}
+                          </span>
+                          {comment.status === "pending" && (
+                            <span className="rounded-full border border-warning/20 bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning">
+                              Aguardando aprovação
+                            </span>
+                          )}
+                        </div>
                         <span className="text-xs text-muted">
                           {formatDistanceToNow(new Date(comment.createdAt), {
                             addSuffix: true,
@@ -275,14 +300,28 @@ export default function LessonTabs({
                       </div>
                       <p className="text-sm leading-6 text-muted">{comment.content}</p>
                     </div>
-                    <div className="mt-2 flex items-center gap-1">
-                      <Button variant="ghost" size="sm">
-                        Responder
-                      </Button>
-                      <Button variant="ghost" size="sm" className="gap-1.5 text-muted">
-                        <MessageSquare className="size-3.5" aria-hidden="true" />
-                        {comment.replies?.length || 0} respostas
-                      </Button>
+                    <div className="mt-2 flex items-center justify-between gap-1">
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm">
+                          Responder
+                        </Button>
+                        <Button variant="ghost" size="sm" className="gap-1.5 text-muted">
+                          <MessageSquare className="size-3.5" aria-hidden="true" />
+                          {comment.replies?.length || 0} respostas
+                        </Button>
+                      </div>
+                      {currentUser?.id === comment.userId && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1.5 text-danger"
+                          onClick={() => handleDeleteComment(comment.id)}
+                          isDisabled={isDeleting === comment.id}
+                        >
+                          {isDeleting === comment.id ? <Spinner className="size-3.5" /> : <Trash className="size-3.5" aria-hidden="true" />}
+                          Apagar
+                        </Button>
+                      )}
                     </div>
 
                     {/* Replies */}
@@ -290,7 +329,7 @@ export default function LessonTabs({
                       <ul className="mt-4 flex flex-col gap-4 border-l border-hairline pl-3 sm:pl-4">
                         {comment.replies.map((reply) => (
                           <li key={reply.id} className="flex gap-3 sm:gap-4">
-                            <Avatar size="sm" className="mt-1 hidden shrink-0 sm:flex">
+                            <Avatar size="sm" className="mt-1 flex shrink-0">
                               {reply.user.avatarUrl ? (
                                 <Avatar.Image src={reply.user.avatarUrl} alt={reply.user.name} />
                               ) : (
@@ -302,9 +341,16 @@ export default function LessonTabs({
                             <div className="min-w-0 flex-1">
                               <div className="rounded-xl border border-hairline bg-background-secondary p-3.5 sm:p-4">
                                 <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                                  <span className="text-sm font-bold text-foreground">
-                                    {reply.user.name}
-                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-bold text-foreground">
+                                      {reply.user.name}
+                                    </span>
+                                    {reply.status === "pending" && (
+                                      <span className="rounded-full border border-warning/20 bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning">
+                                        Aguardando aprovação
+                                      </span>
+                                    )}
+                                  </div>
                                   <span className="text-xs text-muted">
                                     {formatDistanceToNow(new Date(reply.createdAt), {
                                       addSuffix: true,
@@ -314,6 +360,20 @@ export default function LessonTabs({
                                 </div>
                                 <p className="text-sm leading-6 text-muted">{reply.content}</p>
                               </div>
+                              {currentUser?.id === reply.userId && (
+                                <div className="mt-2 flex justify-end">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="gap-1.5 text-danger"
+                                    onClick={() => handleDeleteComment(reply.id)}
+                                    isDisabled={isDeleting === reply.id}
+                                  >
+                                    {isDeleting === reply.id ? <Spinner className="size-3.5" /> : <Trash className="size-3.5" aria-hidden="true" />}
+                                    Apagar
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </li>
                         ))}

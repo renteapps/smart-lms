@@ -28,6 +28,7 @@ type CommentType = {
   content: string;
   timeAgo: string;
   status: "Aguardando" | "Respondido";
+  dbStatus: string;
 };
 
 const filters = [
@@ -60,6 +61,7 @@ export default function AdminComentarios() {
           content,
           created_at,
           lesson_id,
+          status,
           profiles:user_id(full_name, email),
           lessons:lesson_id(
             title,
@@ -98,6 +100,7 @@ export default function AdminComentarios() {
           content: row.content,
           timeAgo: new Date(row.created_at).toLocaleDateString("pt-BR", { day: '2-digit', month: 'short' }),
           status: repliedIds.has(row.id) ? "Respondido" : "Aguardando",
+          dbStatus: row.status || "pending",
         } as CommentType;
       });
 
@@ -122,11 +125,22 @@ export default function AdminComentarios() {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Não autenticado");
 
+      const newStatus = replyVisibility === "public" ? "published" : "pending";
+
+      // If public, we should also publish the parent comment
+      if (replyVisibility === "public") {
+        await supabase
+          .from("comments")
+          .update({ status: "published" })
+          .eq("id", selectedComment.id);
+      }
+
       const { error } = await supabase.from("comments").insert({
         content: replyText,
         parent_id: selectedComment.id,
         lesson_id: selectedComment.lessonId,
-        user_id: userData.user.id
+        user_id: userData.user.id,
+        status: newStatus
       });
 
       if (error) throw error;
@@ -303,9 +317,14 @@ export default function AdminComentarios() {
                       <p className="font-display text-xl font-bold text-foreground">{selectedComment.courseName}</p>
                       <p className="text-sm font-semibold text-accent">{selectedComment.lessonName}</p>
                     </div>
-                    <StatusBadge tone={selectedComment.status === "Aguardando" ? "warning" : "positive"}>
-                      {selectedComment.status}
-                    </StatusBadge>
+                    <div className="flex gap-2">
+                      <StatusBadge tone={selectedComment.dbStatus === "pending" ? "warning" : "positive"}>
+                        {selectedComment.dbStatus === "pending" ? "Oculto" : "Público"}
+                      </StatusBadge>
+                      <StatusBadge tone={selectedComment.status === "Aguardando" ? "warning" : "positive"}>
+                        {selectedComment.status}
+                      </StatusBadge>
+                    </div>
                   </Modal.Header>
 
                   <Modal.Body className="space-y-6">
@@ -385,6 +404,25 @@ export default function AdminComentarios() {
                       <Button variant="tertiary" onClick={() => setSelectedComment(null)}>
                         Cancelar
                       </Button>
+                      {selectedComment.dbStatus === "pending" && (
+                        <Button 
+                          variant="secondary" 
+                          className="gap-2" 
+                          onClick={async () => {
+                            const supabase = createClient();
+                            await supabase
+                              .from("comments")
+                              .update({ status: "published" })
+                              .eq("id", selectedComment.id);
+                            toast.success("Comentário aprovado!");
+                            setSelectedComment(null);
+                            loadComments();
+                          }}
+                        >
+                          <Globe className="size-4" aria-hidden="true" />
+                          Aprovar (Tornar Público)
+                        </Button>
+                      )}
                       <Button variant="primary" className="gap-2" onClick={handleSendReply}>
                         <Send className="size-4" aria-hidden="true" />
                         Enviar resposta
@@ -417,7 +455,13 @@ export default function AdminComentarios() {
                 </Button>
                 <Button
                   variant="danger"
-                  onClick={() => {
+                  onClick={async () => {
+                    if (selectedComment) {
+                      const supabase = createClient();
+                      await supabase.from("comments").delete().eq("id", selectedComment.id);
+                      toast.success("Comentário excluído.");
+                      loadComments();
+                    }
                     setConfirmDelete(false);
                     setSelectedComment(null);
                   }}

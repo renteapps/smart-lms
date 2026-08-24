@@ -4,9 +4,10 @@ import { getProfileTestBySlug } from "@/lib/data/profileTests";
 import { TakeTestClient } from "./TakeTestClient";
 import type { Metadata } from "next";
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const resolvedParams = await params;
   const { supabase } = await getSessionUser();
-  const test = await getProfileTestBySlug(supabase, params.slug);
+  const test = await getProfileTestBySlug(supabase, resolvedParams.slug);
 
   if (!test) {
     return { title: "Teste não encontrado" };
@@ -18,9 +19,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default async function DiagnosticoPage({ params }: { params: { slug: string } }) {
+export default async function DiagnosticoPage({ params }: { params: Promise<{ slug: string }> }) {
+  const resolvedParams = await params;
   const { supabase, user } = await getSessionUser();
-  const test = await getProfileTestBySlug(supabase, params.slug);
+  const test = await getProfileTestBySlug(supabase, resolvedParams.slug);
 
   if (!test || test.status !== "published") {
     return (

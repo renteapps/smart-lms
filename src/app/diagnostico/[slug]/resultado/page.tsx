@@ -14,14 +14,15 @@ interface ResultPayload {
   percentages: Array<{ category: ProfileCategory; score: number; percentage: number }>;
 }
 
-export default function DiagnosticResultPage({ params }: { params: { slug: string } }) {
+export default function DiagnosticResultPage({ params }: { params: Promise<{ slug: string }> }) {
+  const resolvedParams = React.use(params);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<ResultPayload | null>(null);
 
   useEffect(() => {
     async function processResult() {
-      const storageKey = `pending_diagnostic_${params.slug}`;
+      const storageKey = `pending_diagnostic_${resolvedParams.slug}`;
       const storedResult = localStorage.getItem(storageKey);
       
       const supabase = createClient();
@@ -31,7 +32,7 @@ export default function DiagnosticResultPage({ params }: { params: { slug: strin
         // Should not happen as middleware/router should protect this route if not public flow,
         // but if public flow completed, user must be registered/logged in to see result.
         toast.error('Você precisa estar logado para ver o resultado.');
-        router.push(`/login?next=/diagnostico/${params.slug}/resultado`);
+        router.push(`/login?next=/diagnostico/${resolvedParams.slug}/resultado`);
         return;
       }
 
@@ -44,7 +45,7 @@ export default function DiagnosticResultPage({ params }: { params: { slug: strin
           const { data: testData } = await supabase
               .from('profile_tests')
               .select('id, title')
-              .eq('slug', params.slug)
+              .eq('slug', resolvedParams.slug)
               .single();
 
           if (parsedResult.winner && testData) {
@@ -81,7 +82,7 @@ export default function DiagnosticResultPage({ params }: { params: { slug: strin
           const { data: testData } = await supabase
             .from('profile_tests')
             .select('id, title')
-            .eq('slug', params.slug)
+            .eq('slug', resolvedParams.slug)
             .single();
 
           if (testData) {
@@ -118,7 +119,7 @@ export default function DiagnosticResultPage({ params }: { params: { slug: strin
                }
             } else {
                // No result found, redirect to test
-               router.push(`/diagnostico/${params.slug}`);
+               router.push(`/diagnostico/${resolvedParams.slug}`);
                return;
             }
           }
@@ -131,7 +132,7 @@ export default function DiagnosticResultPage({ params }: { params: { slug: strin
     }
 
     processResult();
-  }, [params.slug, router]);
+  }, [resolvedParams.slug, router]);
 
   if (loading) {
     return (
@@ -147,7 +148,7 @@ export default function DiagnosticResultPage({ params }: { params: { slug: strin
         <div>
           <h1 className="text-xl font-bold mb-2">Resultado Indisponível</h1>
           <p className="text-muted">Não conseguimos carregar o seu resultado.</p>
-          <Button className="mt-4" onClick={() => router.push(`/diagnostico/${params.slug}`)}>
+          <Button className="mt-4" onClick={() => router.push(`/diagnostico/${resolvedParams.slug}`)}>
             Refazer Teste
           </Button>
         </div>
@@ -296,7 +297,7 @@ export default function DiagnosticResultPage({ params }: { params: { slug: strin
             variant="outline"
             size="lg"
             className="gap-2 rounded-full px-8 py-4 flex-1 sm:flex-none"
-            onClick={() => router.push(`/diagnostico/${params.slug}`)}
+            onClick={() => router.push(`/diagnostico/${resolvedParams.slug}`)}
           >
             <RotateCcw className="size-4" aria-hidden="true" />
             Refazer o Teste

@@ -6,6 +6,7 @@ export type Comment = {
   userId: string;
   content: string;
   parentId?: string;
+  status: string;
   createdAt: string;
   user: {
     name: string;
@@ -18,7 +19,7 @@ export async function getLessonComments(db: DB, lessonId: string): Promise<Comme
   const { data, error } = await db
     .from("comments")
     .select(`
-      id, lesson_id, user_id, content, parent_id, created_at
+      id, lesson_id, user_id, content, parent_id, status, created_at
     `)
     .eq("lesson_id", lessonId)
     .order("created_at", { ascending: true });
@@ -30,7 +31,7 @@ export async function getLessonComments(db: DB, lessonId: string): Promise<Comme
   
   const { data: profilesData } = await db
     .from("profiles")
-    .select("id, name, avatar_url")
+    .select("id, full_name, username, avatar_url")
     .in("id", userIds);
     
   const profilesMap = new Map(
@@ -45,9 +46,10 @@ export async function getLessonComments(db: DB, lessonId: string): Promise<Comme
       userId: row.user_id,
       content: row.content,
       parentId: row.parent_id,
+      status: row.status || "pending",
       createdAt: row.created_at,
       user: {
-        name: profile.name || "Usuário",
+        name: profile.username || profile.full_name || "Usuário",
         avatarUrl: profile.avatar_url,
       },
     };

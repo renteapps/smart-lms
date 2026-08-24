@@ -2,12 +2,13 @@
 
 import React from 'react';
 import { ProfileTest } from '@/types/profileTest';
-import { Edit3, Eye, Trash2, HelpCircle, Layers, Users, Copy } from 'lucide-react';
+import { Edit3, Eye, Trash2, HelpCircle, Layers, Users, Copy, Globe, Lock, GraduationCap, CreditCard, Link2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button, buttonVariants } from '@heroui/react';
 import { StatusBadge } from '@/components/ui/editorial';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface TestCardProps {
   test: ProfileTest;
@@ -99,6 +100,33 @@ export const TestCard: React.FC<TestCardProps> = ({ test, onPreview, onDelete, o
             </span>
             <span className="text-sm font-extrabold text-foreground">{test.completionsCount || 0}</span>
           </div>
+        </div>
+
+        {/* Access Type Row */}
+        <div className="flex items-center justify-between pt-3 border-t border-border/40">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold text-muted uppercase tracking-wider mb-0.5">Acesso</span>
+            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              {test.accessType === 'public' && <><Globe className="w-3.5 h-3.5 text-success" /> Captura de Leads</>}
+              {(!test.accessType || test.accessType === 'logged_in') && <><Lock className="w-3.5 h-3.5 text-accent" /> Apenas Logados</>}
+              {test.accessType === 'course_owners' && <><GraduationCap className="w-3.5 h-3.5 text-warning" /> Restrito (Cursos)</>}
+              {test.accessType === 'plan_owners' && <><CreditCard className="w-3.5 h-3.5 text-warning" /> Restrito (Planos)</>}
+            </span>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 rounded-full text-xs font-bold gap-1.5 bg-background-secondary border-border/50 hover:bg-accent/10 hover:text-accent hover:border-accent/30 transition-all"
+            onClick={() => {
+              const url = `${window.location.origin}/diagnostico/${test.slug}`;
+              navigator.clipboard.writeText(url);
+              toast.success('Link do teste copiado para a área de transferência!');
+            }}
+          >
+            <Link2 className="w-3.5 h-3.5" />
+            Copiar Link
+          </Button>
         </div>
 
         {/* Action Buttons */}

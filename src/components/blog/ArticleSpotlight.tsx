@@ -38,7 +38,7 @@ export default function ArticleSpotlight({ article, className }: ArticleSpotligh
        */}
       <Reveal className="h-full rounded-2xl">
         <Card className="lift h-full gap-0 overflow-hidden border-hairline p-0">
-          <div className="relative flex min-h-[26rem] flex-col justify-end p-7 sm:p-9 lg:min-h-[clamp(26rem,36vw,32rem)]">
+          <div className="relative flex h-full min-h-[26rem] flex-col justify-end p-7 sm:p-9 lg:min-h-[clamp(26rem,36vw,32rem)]">
             <Image
               src={coverSrc}
               alt=""

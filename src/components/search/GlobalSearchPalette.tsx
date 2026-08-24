@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { CornerDownLeft, Loader2, Search } from "lucide-react";
+import { CornerDownLeft, Loader2, Search, X } from "lucide-react";
 import { getSearchSuggestions } from "@/app/actions/search";
 import { HighlightedText } from "@/components/search/HighlightedText";
 import { SEARCH_TYPE_VISUALS } from "@/components/search/searchResultMeta";
@@ -204,13 +204,21 @@ export function GlobalSearchPalette() {
             autoComplete="off"
             spellCheck={false}
           />
-          {isLoading ? (
-            <Loader2 className="size-4 shrink-0 animate-spin text-muted" aria-hidden="true" />
-          ) : (
-            <kbd className="shrink-0 rounded-md border border-hairline bg-surface px-1.5 py-0.5 text-xs font-semibold text-muted">
-              esc
-            </kbd>
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            {isLoading && (
+              <Loader2 className="size-4 animate-spin text-muted" aria-hidden="true" />
+            )}
+            <button
+              type="button"
+              onClick={close}
+              className="flex items-center gap-1.5 rounded-md border border-hairline bg-surface px-1.5 py-0.5 text-xs font-semibold text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+              aria-label="Fechar busca"
+              title="Fechar (Esc)"
+            >
+              <X className="size-3.5" aria-hidden="true" />
+              <span className="hidden sm:inline">esc</span>
+            </button>
+          </div>
         </div>
 
         {visible.length > 0 ? (
