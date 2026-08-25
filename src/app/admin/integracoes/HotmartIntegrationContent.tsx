@@ -19,6 +19,15 @@ import { PageHeader } from "@/components/ui/editorial";
 const inputClass = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent";
 const buttonClass = "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50";
 
+/** Mesmo indicativo de "salvo" da tela da Eduzz — ver o comentário lá para o porquê. */
+function SavedBadge({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
+      <CheckCircle2 className="size-3.5" /> {label}
+    </span>
+  );
+}
+
 /**
  * Tela de integração Hotmart, no mesmo formato de `EduzzIntegrationContent`:
  * webhook + chaves, credenciais de API (client-credentials em vez de OAuth por
@@ -146,7 +155,10 @@ export function HotmartIntegrationContent() {
           </div>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          <input className={inputClass} type="password" value={hottok} onChange={(e) => setHottok(e.target.value)} placeholder="Hottok ou chave HMAC da conta" />
+          <div className="space-y-1">
+            <input className={inputClass} type="password" value={hottok} onChange={(e) => setHottok(e.target.value)} placeholder="Hottok ou chave HMAC da conta" />
+            {Boolean(data?.webhookKeyCount) && <SavedBadge label={`${data!.webhookKeyCount} chave(s) salva(s) no servidor`} />}
+          </div>
           <button className={`${buttonClass} bg-accent text-accent-foreground`} disabled={busy || !hottok} onClick={() => void saveCredentials()}>
             <CheckCircle2 className="size-4" /> Adicionar chave
           </button>
@@ -165,9 +177,18 @@ export function HotmartIntegrationContent() {
           </p>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          <input className={inputClass} value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder={data?.hasClientId ? "Client ID configurado — deixe vazio para manter" : "Client ID"} />
-          <input className={inputClass} type="password" value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} placeholder={data?.hasClientSecret ? "Client Secret configurado — deixe vazio para manter" : "Client Secret"} />
-          <input className={`${inputClass} md:col-span-2`} type="password" value={basicToken} onChange={(e) => setBasicToken(e.target.value)} placeholder={data?.hasBasicToken ? "Token Basic configurado — deixe vazio para manter" : "Token (Basic)"} />
+          <div className="space-y-1">
+            <input className={inputClass} value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder={data?.hasClientId ? "Client ID configurado — deixe vazio para manter" : "Client ID"} />
+            {data?.hasClientId && <SavedBadge label="Client ID salvo" />}
+          </div>
+          <div className="space-y-1">
+            <input className={inputClass} type="password" value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} placeholder={data?.hasClientSecret ? "Client Secret configurado — deixe vazio para manter" : "Client Secret"} />
+            {data?.hasClientSecret && <SavedBadge label="Client Secret salvo" />}
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <input className={inputClass} type="password" value={basicToken} onChange={(e) => setBasicToken(e.target.value)} placeholder={data?.hasBasicToken ? "Token Basic configurado — deixe vazio para manter" : "Token (Basic)"} />
+            {data?.hasBasicToken && <SavedBadge label="Token Basic salvo" />}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button className={`${buttonClass} bg-accent text-accent-foreground`} disabled={busy || (!clientId && !clientSecret && !basicToken)} onClick={() => void saveCredentials()}>

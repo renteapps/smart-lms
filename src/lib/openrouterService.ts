@@ -142,7 +142,7 @@ export const DEFAULT_OPENROUTER_CONFIG: OpenRouterConfig = {
   siteUrl: typeof window !== "undefined" ? window.location.origin : "https://smartlms.app",
   siteName: "Smart LMS",
   temperature: 0.7,
-  maxTokens: 1500,
+  maxTokens: 4000,
   status: "disconnected",
   updatedAt: new Date().toISOString(),
 };
@@ -432,7 +432,7 @@ export async function sendOpenRouterChatCompletion(
   const apiKey = config.apiKey?.trim();
   const model = payload.model || config.defaultModel || "google/gemini-2.0-flash-001";
   const temperature = typeof payload.temperature === "number" ? payload.temperature : config.temperature ?? 0.7;
-  const maxTokens = payload.maxTokens || config.maxTokens || 1500;
+  const maxTokens = payload.maxTokens || config.maxTokens || 4000;
 
   const userPromptPreview =
     payload.messages.filter((m) => m.role === "user").pop()?.content || "Mensagem de teste";

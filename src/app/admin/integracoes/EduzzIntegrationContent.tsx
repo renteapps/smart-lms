@@ -20,6 +20,22 @@ import { PageHeader } from "@/components/ui/editorial";
 const inputClass = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent";
 const buttonClass = "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50";
 
+/**
+ * Confirmação visual de que um segredo já está gravado no servidor.
+ *
+ * Os campos de Client ID/Secret e a chave de webhook são `type="password"` e
+ * voltam vazios depois de salvar (nunca redigitam o valor real) — sem um sinal
+ * explícito, isso parece "não salvou nada" mesmo quando salvou. O placeholder
+ * sozinho ("Client ID configurado…") não estava sendo notado.
+ */
+function SavedBadge({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
+      <CheckCircle2 className="size-3.5" /> {label}
+    </span>
+  );
+}
+
 export function EduzzIntegrationContent() {
   const [data, setData] = useState<EduzzAdminConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -157,7 +173,10 @@ export function EduzzIntegrationContent() {
           <div className="flex gap-2"><code className="min-w-0 flex-1 overflow-x-auto text-xs">{webhookUrl}</code><button className={buttonClass} onClick={() => { void navigator.clipboard.writeText(webhookUrl); toast.success("URL copiada."); }}><Copy className="size-4" /></button></div>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          <input className={inputClass} type="password" value={webhookSecret} onChange={(e) => setWebhookSecret(e.target.value)} placeholder="Nova chave HMAC (adiciona para rotação)" />
+          <div className="space-y-1">
+            <input className={inputClass} type="password" value={webhookSecret} onChange={(e) => setWebhookSecret(e.target.value)} placeholder="Nova chave HMAC (adiciona para rotação)" />
+            {Boolean(data?.webhookKeyCount) && <SavedBadge label={`${data!.webhookKeyCount} chave(s) salva(s) no servidor`} />}
+          </div>
           <div className="flex gap-2">
             <button className={`${buttonClass} bg-accent text-accent-foreground`} disabled={busy || (!webhookSecret && !clientId && !clientSecret)} onClick={() => void saveCredentials()}><CheckCircle2 className="size-4" /> Adicionar chave</button>
             {Boolean(data?.webhookKeyCount) && <button className={`${buttonClass} border border-border`} disabled={busy || !webhookSecret} onClick={() => void saveCredentials(true)}>Trocar e aposentar anteriores</button>}
@@ -172,8 +191,14 @@ export function EduzzIntegrationContent() {
           <p className="mt-1 text-sm text-muted">A API com escopo <code>myeduzz_subscriptions_read</code> é a fonte preferencial. O webhook assinado permanece como fallback.</p>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          <input className={inputClass} value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder={data?.hasClientId ? "Client ID configurado — deixe vazio para manter" : "Client ID"} />
-          <input className={inputClass} type="password" value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} placeholder={data?.hasClientSecret ? "Client Secret configurado — deixe vazio para manter" : "Client Secret"} />
+          <div className="space-y-1">
+            <input className={inputClass} value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder={data?.hasClientId ? "Client ID configurado — deixe vazio para manter" : "Client ID"} />
+            {data?.hasClientId && <SavedBadge label="Client ID salvo" />}
+          </div>
+          <div className="space-y-1">
+            <input className={inputClass} type="password" value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} placeholder={data?.hasClientSecret ? "Client Secret configurado — deixe vazio para manter" : "Client Secret"} />
+            {data?.hasClientSecret && <SavedBadge label="Client Secret salvo" />}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button className={`${buttonClass} border border-border`} disabled={busy || (!clientId && !clientSecret)} onClick={() => void saveCredentials()}>Salvar credenciais</button>

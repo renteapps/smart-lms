@@ -542,7 +542,7 @@ export async function sendPlatformAssistantMessage(
       feature: "platform_assistant",
       model: settings.model,
       messages: providerMessages,
-      maxOutputTokens: 1_500,
+      maxOutputTokens: 4_000,
     });
 
     const response = await sendOpenRouterChatCompletion(

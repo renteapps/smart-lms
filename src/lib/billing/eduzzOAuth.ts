@@ -2,6 +2,32 @@ import { timingSafeEqual } from "node:crypto";
 
 export const EDUZZ_REQUIRED_SCOPE = "myeduzz_subscriptions_read";
 
+/**
+ * Lê o corpo de uma resposta de erro da Eduzz e extrai algo legível.
+ *
+ * Sem isso, todo 400/401 virava só "HTTP 400" no `oauth_error` da URL — o
+ * suficiente para saber que falhou, mas não o porquê (redirect_uri errado,
+ * client_secret errado, código expirado são todos "HTTP 400" iguais). A Eduzz
+ * segue o formato OAuth2 padrão de erro (`error`/`error_description`), com
+ * `message` como alternativa em endpoints REST comuns da conta.
+ */
+async function readEduzzErrorDetail(response: Response): Promise<string | null> {
+  try {
+    const text = await response.text();
+    if (!text) return null;
+    try {
+      const parsed = JSON.parse(text) as Record<string, unknown>;
+      const detail = parsed.error_description ?? parsed.error ?? parsed.message ?? parsed.detail;
+      if (typeof detail === "string" && detail.trim()) return detail.trim().slice(0, 200);
+    } catch {
+      // Corpo não é JSON — usa o texto bruto mesmo.
+    }
+    return text.trim().slice(0, 200) || null;
+  } catch {
+    return null;
+  }
+}
+
 export type EduzzOAuthToken = {
   accessToken: string;
   refreshToken?: string;
@@ -43,7 +69,10 @@ export async function exchangeEduzzAuthorizationCode(input: {
     }),
     cache: "no-store",
   });
-  if (!response.ok) throw new Error(`A troca OAuth da Eduzz falhou (HTTP ${response.status}).`);
+  if (!response.ok) {
+    const detail = await readEduzzErrorDetail(response);
+    throw new Error(`A troca OAuth da Eduzz falhou (HTTP ${response.status})${detail ? `: ${detail}` : "."}`);
+  }
   const payload = await response.json() as Record<string, unknown>;
   const accessToken = typeof payload.access_token === "string" ? payload.access_token : "";
   const scope = typeof payload.scope === "string" ? payload.scope.split(/\s+/).filter(Boolean) : [];
@@ -69,7 +98,10 @@ export async function validateEduzzAccount(accessToken: string, fetchImpl: typeo
     headers: { Accept: "application/json", Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
   });
-  if (!response.ok) throw new Error(`Não foi possível validar a conta Eduzz (HTTP ${response.status}).`);
+  if (!response.ok) {
+    const detail = await readEduzzErrorDetail(response);
+    throw new Error(`Não foi possível validar a conta Eduzz (HTTP ${response.status})${detail ? `: ${detail}` : "."}`);
+  }
   const payload = await response.json() as Record<string, unknown>;
   if (typeof payload.id !== "string") throw new Error("Resposta inválida ao validar a conta Eduzz.");
   return payload;

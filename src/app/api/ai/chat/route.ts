@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
       feature: "agent_chat",
       model: selectedModel,
       messages: formattedMessages,
-      maxOutputTokens: config.maxTokens ?? 1500,
+      maxOutputTokens: config.maxTokens ?? 4000,
     });
 
     let userMessage: { id: string; author: "student"; text: string } | null = null;
