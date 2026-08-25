@@ -80,6 +80,62 @@ describe("normalizeEduzzEvent", () => {
     expect(evento.subscription!.gatewaySubscriptionId).toBe("CT-123456");
   });
 
+  it("normaliza o payload oficial novo de fatura paga", () => {
+    const evento = normalizeEduzzEvent({
+      id: "evt-invoice-paid",
+      event: "myeduzz.invoice_paid",
+      sentDate: "2026-08-25T10:00:00Z",
+      data: {
+        id: "INV-NEW-1",
+        status: "paid",
+        buyer: {
+          name: "Comprador Novo",
+          email: "NOVO@EXEMPLO.COM",
+          document: "12345678900",
+          cellphone: "85999998888",
+        },
+        producer: { id: "producer-1" },
+        paid: { value: 249.9, currency: "BRL" },
+        price: { value: 299.9, currency: "BRL" },
+        paidAt: "2026-08-25T09:59:00Z",
+        dueDate: "2026-08-25T00:00:00Z",
+        items: [{ productId: "PROD-NEW", price: { value: 299.9, currency: "BRL" } }],
+      },
+    })!;
+
+    expect(evento).not.toBeNull();
+    expect(evento.buyer).toEqual({
+      email: "novo@exemplo.com",
+      name: "Comprador Novo",
+      phone: "85999998888",
+      document: "12345678900",
+    });
+    expect(evento.product).toEqual({ productId: "PROD-NEW", offerId: undefined });
+    expect(evento.transaction).toEqual({
+      id: "INV-NEW-1",
+      amount: 249.9,
+      currency: "BRL",
+      occurredAt: "2026-08-25T09:59:00.000Z",
+      status: "approved",
+    });
+  });
+
+  it("aceita data.items como objeto no payload de fatura", () => {
+    const evento = normalizeEduzzEvent({
+      id: "evt-object-item",
+      event: "myeduzz.invoice_opened",
+      sentDate: "2026-08-25T10:00:00Z",
+      data: {
+        id: "INV-OBJECT",
+        status: "open",
+        buyer: { email: "objeto@exemplo.com" },
+        items: { productId: "PROD-OBJECT", price: { value: 10, currency: "BRL" } },
+      },
+    })!;
+    expect(evento.product?.productId).toBe("PROD-OBJECT");
+    expect(evento.action).toBe("ignore");
+  });
+
   it("não fabrica transação quando o contrato oficial não traz fatura", () => {
     const payload = contratoCriado() as any;
     delete payload.data.invoice;
@@ -95,8 +151,8 @@ describe("normalizeEduzzEvent", () => {
     expect(evento.transaction!.status).toBe("refunded");
   });
 
-  it("cancelamento de contrato preserva o período pago", () => {
-    expect(normalizeEduzzEvent(contratoCriado({ event: "myeduzz.contract_canceled" }))!.action)
+  it("cancelamento de fatura preserva o período pago", () => {
+    expect(normalizeEduzzEvent(contratoCriado({ event: "myeduzz.invoice_canceled" }))!.action)
       .toBe("revoke_at_period_end");
   });
 

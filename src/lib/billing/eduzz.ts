@@ -14,6 +14,7 @@ import type { NormalizedBillingEvent } from "./types";
 const EMAIL_PATHS = [
   "data.customer.email",
   "data.buyer.email",
+  "data.student.email",
   "data.client.email",
   "customer.email",
   "cus_email",
@@ -30,6 +31,11 @@ const PHONE_PATHS = [
   "data.customer.telephone",
   "data.customer.cel",
   "data.buyer.phone",
+  "data.buyer.phone2",
+  "data.buyer.cellphone",
+  "data.student.phone",
+  "data.student.phone2",
+  "data.student.cellphone",
   "customer.telephone",
   "cus_tel",
   "cus_cel",
@@ -38,12 +44,16 @@ const PHONE_PATHS = [
 const DOCUMENT_PATHS = [
   "data.customer.document",
   "data.customer.taxNumber",
+  "data.buyer.document",
+  "data.student.document",
   "customer.document",
   "cus_taxnumber",
 ] as const;
 
 const PRODUCT_PATHS = [
   "data.products.0.id",
+  "data.items.0.productId",
+  "data.items.productId",
   "data.product.id",
   "data.items.0.id",
   "product_cod",
@@ -65,6 +75,7 @@ const CONTRACT_PATHS = [
 
 const TRANSACTION_PATHS = [
   "data.invoice.id",
+  "data.id",
   "data.sale.id",
   "data.transaction.id",
   "trans_cod",
@@ -73,6 +84,8 @@ const TRANSACTION_PATHS = [
 const AMOUNT_PATHS = [
   "data.invoice.paidAmount",
   "data.invoice.amount",
+  "data.paid.value",
+  "data.price.value",
   "data.contract.paidAmount",
   "data.contract.recurrence.price.value",
   "data.products.0.price.value",
@@ -83,6 +96,9 @@ const AMOUNT_PATHS = [
 const OCCURRED_PATHS = [
   "data.invoice.paidAt",
   "data.invoice.createdAt",
+  "data.paidAt",
+  "data.attemptDate",
+  "data.createdAt",
   "data.contract.startDate",
   "data.contract.recurrence.startsAt",
   "data.contract.createdAt",
@@ -98,6 +114,7 @@ const PERIOD_END_PATHS = [
   "data.contract.recurrence.nextDue",
   "data.contract.recurrence.nextDueDate",
   "data.invoice.dueDate",
+  "data.dueDate",
   "data.subscription.nextDueDate",
 ] as const;
 
@@ -171,6 +188,10 @@ export function normalizeEduzzEvent(payload: unknown): NormalizedBillingEvent | 
       amount: pickNumber(payload, AMOUNT_PATHS) ?? 0,
       currency: pickString(payload, [
         "data.invoice.currency",
+        "data.paid.currency",
+        "data.price.currency",
+        "data.items.0.price.currency",
+        "data.items.price.currency",
         "data.contract.recurrence.price.currency",
         "data.products.0.price.currency",
         "data.currency",
@@ -188,8 +209,22 @@ export function normalizeEduzzEvent(payload: unknown): NormalizedBillingEvent | 
       removeOnLatePayment: pickBoolean(payload, ["data.contract.contentAccess.removeOnLatePayment"]),
       removeOnContractEnd: pickBoolean(payload, ["data.contract.contentAccess.removeOnContractEnd"]),
       reason: pickString(payload, ["data.reason", "reason"]),
-      amount: pickNumber(payload, ["data.contract.recurrence.price.value", "data.products.0.price.value"]),
-      currency: pickString(payload, ["data.contract.recurrence.price.currency", "data.products.0.price.currency"]) ?? "BRL",
+      amount: pickNumber(payload, [
+        "data.contract.recurrence.price.value",
+        "data.paid.value",
+        "data.price.value",
+        "data.products.0.price.value",
+        "data.items.0.price.value",
+        "data.items.price.value",
+      ]),
+      currency: pickString(payload, [
+        "data.contract.recurrence.price.currency",
+        "data.paid.currency",
+        "data.price.currency",
+        "data.products.0.price.currency",
+        "data.items.0.price.currency",
+        "data.items.price.currency",
+      ]) ?? "BRL",
       recurrence: {
         type: pickString(payload, ["data.contract.recurrence.frequency.type"]),
         value: pickNumber(payload, ["data.contract.recurrence.frequency.value"]),

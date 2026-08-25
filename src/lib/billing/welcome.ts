@@ -1,5 +1,5 @@
 import type { DB } from "@/lib/data/types";
-import { sendEmail } from "@/lib/resendService";
+import { sendConfiguredEmail } from "@/lib/resendServer";
 
 /**
  * E-mail de boas-vindas para quem acabou de comprar e ainda não tinha conta.
@@ -31,7 +31,7 @@ export async function sendPurchaseWelcomeEmail(
     const actionLink = data?.properties?.action_link;
     if (!actionLink) return false;
 
-    const result = await sendEmail({
+    const result = await sendConfiguredEmail(db, {
       to: input.email,
       subject: "",
       template: "welcome",

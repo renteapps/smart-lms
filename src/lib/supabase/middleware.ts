@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isProfileComplete } from "@/lib/profileCompleteness";
 import { getSupabaseUrl, getSupabaseAnonKey } from "./env";
 
 export async function updateSession(request: NextRequest) {
@@ -52,7 +53,16 @@ export async function updateSession(request: NextRequest) {
     "/certificados/",
     // Teste de perfil livre: a pessoa responde sem conta e só cria login no resultado.
     "/diagnostico",
-    "/api/"
+    "/api/",
+    /*
+     * Quem clica num link de recuperação de senha, confirmação de cadastro ou
+     * callback OAuth ainda não tem sessão — só tem o token na própria URL.
+     * Sem este prefixo aqui, o bloco "usuário anônimo em rota protegida" logo
+     * abaixo redirecionava para /acessar antes da rota processar o token,
+     * quebrando magic link, recuperação de senha e o e-mail de boas-vindas
+     * disparado na compra (que usa exatamente esse link).
+     */
+    "/auth/",
   ];
   const isPublicRoute = request.nextUrl.pathname === "/" || 
                         publicPrefixes.some(prefix => request.nextUrl.pathname.startsWith(prefix));
@@ -115,12 +125,69 @@ export async function updateSession(request: NextRequest) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
       url.searchParams.set(
-        "blocked_reason", 
+        "blocked_reason",
         dbError ? `db_error_${dbError.code || dbError.message}` : `not_admin`
       );
       return createRedirectResponse(url);
     }
   }
-  
+
+  /*
+   * Etapa obrigatória de perfil: Eduzz e Hotmart não coletam nome de usuário,
+   * data de nascimento, gênero ou cargo no checkout — uma conta criada pelo
+   * webhook de compra (ver lib/billing/provisioning.ts) nunca passa pelo
+   * formulário de /criar-conta, então esses campos ficam vazios para sempre a
+   * menos que alguém seja levado a preenchê-los. Este bloco fecha essa lacuna
+   * bloqueando a navegação até `/completar-cadastro`, para qualquer conta com
+   * perfil incompleto — não só as vindas de gateway, o critério é só "campo
+   * obrigatório vazio", então cobre qualquer forma futura de provisionamento.
+   *
+   * `/admin` fica de fora porque é rota de equipe interna, não de aluno.
+   */
+  const completionExemptPrefixes = [
+    "/completar-cadastro",
+    "/perfil",
+    "/acessar",
+    "/criar-conta",
+    "/resetar-senha",
+    "/confirmar",
+    "/auth/",
+    "/api/",
+    "/certificados/",
+  ];
+  const isCompletionExempt = isAdminRoute
+    || completionExemptPrefixes.some((prefix) => request.nextUrl.pathname.startsWith(prefix));
+
+  if (user && !isCompletionExempt) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, full_name, username, phone, birth_date, gender, career_role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    // Sem linha em profiles ainda (corrida rara com o trigger de criação) não
+    // bloqueia — é melhor deixar passar uma vez do que travar o login. Admin
+    // fica isento por papel, não só por rota: sem isso, um admin com perfil
+    // de teste incompleto seria barrado ao simplesmente navegar por uma tela
+    // de aluno fora de /admin (ex.: conferir /minha-trilha).
+    if (profile && profile.role !== "admin") {
+      const complete = isProfileComplete({
+        fullName: profile.full_name,
+        username: profile.username,
+        phone: profile.phone,
+        birthDate: profile.birth_date,
+        gender: profile.gender,
+        careerRole: profile.career_role,
+      });
+
+      if (!complete) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/completar-cadastro";
+        url.searchParams.set("next", request.nextUrl.pathname);
+        return createRedirectResponse(url);
+      }
+    }
+  }
+
   return supabaseResponse;
 }

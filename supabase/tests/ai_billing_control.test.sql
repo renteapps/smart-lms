@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(29);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
 values
@@ -73,6 +73,63 @@ select public.reserve_ai_usage('44000000-0000-0000-0000-000000000001', 'agent_ch
 select extensions.is((select daily_limit from public.ai_credit_accounts where user_id = '44000000-0000-0000-0000-000000000001'), 30::numeric, 'assinatura individual prevalece sobre a organização');
 select extensions.is((select daily_used from public.ai_credit_accounts where user_id = '44000000-0000-0000-0000-000000000001'), 1::numeric, 'período diário vencido renova antes da reserva');
 select public.cancel_ai_usage((select id from public.ai_usage_events where request_key = '44000000-0000-0000-0000-000000000015'), 'test_cleanup');
+
+update public.ai_credit_accounts
+set daily_used = 29,
+    weekly_used = 29,
+    monthly_used = 29,
+    extra_balance = 25,
+    daily_period_started_at = now(),
+    weekly_period_started_at = now(),
+    monthly_period_started_at = now()
+where user_id = '44000000-0000-0000-0000-000000000001';
+
+select public.reserve_ai_usage(
+  '44000000-0000-0000-0000-000000000001',
+  'agent_chat',
+  'google/gemini-2.0-flash-001',
+  '44000000-0000-0000-0000-000000000016',
+  0.01,
+  3,
+  5,
+  true
+);
+select extensions.is((select reserved_recurring_credits from public.ai_usage_events where request_key = '44000000-0000-0000-0000-000000000016'), 1::numeric, 'reserva usa primeiro o último crédito da franquia diária');
+select extensions.is((select reserved_extra_credits from public.ai_usage_events where request_key = '44000000-0000-0000-0000-000000000016'), 2::numeric, 'reserva usa extras somente para o valor excedente');
+select extensions.is((select daily_used from public.ai_credit_accounts where user_id = '44000000-0000-0000-0000-000000000001'), 30::numeric, 'uso diário para no limite e não contabiliza extras');
+select extensions.is((select extra_balance from public.ai_credit_accounts where user_id = '44000000-0000-0000-0000-000000000001'), 23::numeric, 'reserva desconta apenas o excedente do saldo extra');
+
+select public.settle_ai_usage(
+  (select id from public.ai_usage_events where request_key = '44000000-0000-0000-0000-000000000016'),
+  2, 0.01, 0.05, 0.06, 100, 20
+);
+select extensions.is((select daily_used from public.ai_credit_accounts where user_id = '44000000-0000-0000-0000-000000000001'), 30::numeric, 'liquidação mantém consumida a parcela recorrente usada');
+select extensions.is((select extra_balance from public.ai_credit_accounts where user_id = '44000000-0000-0000-0000-000000000001'), 24::numeric, 'liquidação devolve ao saldo extra somente o excedente não usado');
+select extensions.is(
+  (public.settle_ai_usage(
+    (select id from public.ai_usage_events where request_key = '44000000-0000-0000-0000-000000000016'),
+    2, 0.01, 0.05, 0.06, 100, 20
+  )->>'credits_remaining')::numeric,
+  24::numeric,
+  'saldo restante continua disponível nos extras após atingir o limite diário'
+);
+
+select public.reserve_ai_usage(
+  '44000000-0000-0000-0000-000000000001',
+  'agent_chat',
+  'google/gemini-2.0-flash-001',
+  '44000000-0000-0000-0000-000000000017',
+  0.01,
+  2,
+  5,
+  true
+);
+select public.cancel_ai_usage(
+  (select id from public.ai_usage_events where request_key = '44000000-0000-0000-0000-000000000017'),
+  'test_cleanup'
+);
+select extensions.is((select daily_used from public.ai_credit_accounts where user_id = '44000000-0000-0000-0000-000000000001'), 30::numeric, 'cancelamento de reserva extra não altera a franquia diária consumida');
+select extensions.is((select extra_balance from public.ai_credit_accounts where user_id = '44000000-0000-0000-0000-000000000001'), 24::numeric, 'cancelamento devolve integralmente os créditos extras reservados');
 
 select extensions.throws_ok(
   $$update public.ai_credit_ledger set note = 'alterado' where usage_event_id = (select id from public.ai_usage_events where request_key = '44000000-0000-0000-0000-000000000011')$$,

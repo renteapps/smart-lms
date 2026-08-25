@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, DM_Sans } from "next/font/google";
 import "./globals.css";
-import { cn } from "@/lib/utils";
+import { cn, getContrastForeground } from "@/lib/utils";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppearanceConfig } from "@/lib/data/appearance";
 import { AppearanceProvider } from "@/contexts/AppearanceContext";
@@ -44,6 +44,7 @@ export default async function RootLayout({
   const supabase = createAdminClient();
   const appearance = await getAppearanceConfig(supabase);
   const primaryColor = appearance.primaryColor || "#3157B7";
+  const accentForeground = getContrastForeground(primaryColor);
 
   return (
     <html lang="pt-BR" className={cn(dmSans.variable, manrope.variable)}>
@@ -61,7 +62,7 @@ export default async function RootLayout({
             --accent: ${primaryColor};
             --accent-hover: color-mix(in srgb, ${primaryColor} 85%, black);
             --accent-soft: color-mix(in srgb, ${primaryColor} 15%, transparent);
-            --accent-foreground: #ffffff;
+            --accent-foreground: ${accentForeground};
             --primary: var(--accent);
             --primary-active: var(--accent-hover);
             --primary-pale: var(--accent-soft);

@@ -36,7 +36,7 @@ import {
   EmailTemplateType,
   CustomEmailTemplate,
 } from "@/types/resend";
-import { DEFAULT_RESEND_CONFIG, getResendConfig, saveResendConfig } from "@/lib/resendService";
+import { DEFAULT_RESEND_CONFIG, getResendConfig } from "@/lib/resendService";
 import {
   generateEmailHtml,
   getCustomTemplates,
@@ -244,14 +244,12 @@ export function ResendIntegrationContent() {
       if (data.success) {
         setConfig(updatedConfig);
         if (typedKey) setHasStoredKey(true);
-        saveResendConfig(payloadConfig);
         toast.success("Configurações do Resend salvas com sucesso!");
       } else {
         toast.error(data.error || "Erro ao salvar configurações.");
       }
     } catch (_e) {
-      saveResendConfig({ ...config, apiKey: apiKeyInput.trim() });
-      toast.success("Configurações salvas localmente!");
+      toast.error("Não foi possível salvar no servidor. Tente novamente.");
     } finally {
       setIsSaving(false);
     }

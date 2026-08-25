@@ -212,10 +212,6 @@ export async function handleBillingWebhook(input: {
     return { status: 200, body: { ok: true, ignored: true } };
   }
 
-  if (config.producerId && normalized.producerId && config.producerId !== normalized.producerId) {
-    return { status: 403, body: { error: "Produtor divergente." } };
-  }
-
   let claim: Awaited<ReturnType<typeof claimEvent>>;
   try { claim = await claimEvent(db, normalized, payload); } catch (error) {
     console.error(`[webhook:${gateway}] ${(error as Error).message}`);
@@ -224,6 +220,21 @@ export async function handleBillingWebhook(input: {
   if (claim.state === "duplicate") return { status: 200, body: { ok: true, duplicate: true } };
   if (claim.state === "busy") return { status: 200, body: { ok: true, processing: true } };
   if (!claim.id) return { status: 503, body: { error: "Evento sem referência de processamento." } };
+
+  if (config.producerId && normalized.producerId && config.producerId !== normalized.producerId) {
+    const reason = "Produtor divergente da conta Eduzz conectada; evento autenticado ignorado.";
+    const { error } = await db.from("gateway_webhook_events").update({
+      status: "ignored",
+      error_message: reason,
+      processed_at: new Date().toISOString(),
+    }).eq("id", claim.id);
+    if (error) {
+      console.error(`[webhook:${gateway}] falha ao auditar produtor divergente: ${error.message}`);
+      return { status: 503, body: { error: "Falha ao registrar o evento." } };
+    }
+    console.warn(`[webhook:${gateway}] ${normalized.eventType} ignorado: produtor divergente (${normalized.eventId})`);
+    return { status: 200, body: { ok: true, ignored: true, reason: "producer_mismatch" } };
+  }
 
   try {
     const enriched = gateway === "eduzz"

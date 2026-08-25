@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser, requireAdmin } from "@/lib/supabase/auth";
 import type { LearningTrail, Questionnaire, StudyAvailability } from "@/types/trilha";
 import type { TrailAnalyticsEvent, TrailAnalyticsEventType } from "@/lib/trailAnalytics";
-import { generateLearningTrail, replanLearningTrail, syncTrailCompletion } from "@/lib/matching";
+import { generateLearningTrail, replanLearningTrail, restoreLegacyOverdueMarkers, syncTrailCompletion } from "@/lib/matching";
 import { getContentIndex } from "@/lib/data/content";
 import { getPublishedQuestionnaire, saveLearningTrail as persistTrail } from "@/lib/data/trail";
 import * as trailData from "@/lib/data/trail";
@@ -112,9 +112,9 @@ export type TrailRefreshNotice = {
  * Três coisas acontecem entre uma visita e outra, e nenhuma delas era percebida:
  * a pessoa concluiu conteúdo fora da agenda, o admin mapeou conteúdo novo numa
  * resposta que ela já deu, e dias planejados passaram em branco. Esta action
- * resolve as três na ordem certa — o que já foi visto sai, o que é novo entra na
- * posição curada (logo à frente, quando a etapa dele já passou), e só então o
- * que ficou para trás é redistribuído.
+ * resolve as três na ordem certa — o que já foi visto sai, o que venceu é
+ * marcado antes que sua data original se perca, e só então o catálogo é
+ * reconciliado sem apagar as pendências que a pessoa já recebeu.
  *
  * O trabalho pesado (remontar o índice de conteúdo) só roda quando o carimbo do
  * catálogo mudou de verdade.
@@ -153,6 +153,23 @@ export async function refreshTrail(): Promise<{
       changed = true;
     }
 
+    const restored = restoreLegacyOverdueMarkers(trail);
+    if (restored.changed) {
+      trail = restored.trail;
+      changed = true;
+    }
+
+    /*
+     * O atraso precisa ser identificado antes de qualquer reconciliação com o
+     * catálogo. Regenerar primeiro já parte de hoje e apaga justamente a data
+     * vencida que permite dizer "isto ficou atrasado".
+     */
+    const replanned = replanLearningTrail(trail);
+    if (replanned.changed) {
+      trail = replanned.trail;
+      changed = true;
+    }
+
     let added = 0;
     const currentStamp = stamp ? `${PLAN_FORMAT}:${stamp}` : null;
     if (currentStamp && currentStamp !== trail.catalogStamp) {
@@ -172,18 +189,13 @@ export async function refreshTrail(): Promise<{
           new Date(),
           index,
           completedIds,
+          { preservePending: true },
         );
         added = regenerated.items.filter((item) => !before.has(item.id)).length;
         trail = { ...regenerated, catalogStamp: currentStamp };
       } else {
         trail = { ...trail, catalogStamp: currentStamp };
       }
-      changed = true;
-    }
-
-    const replanned = replanLearningTrail(trail);
-    if (replanned.changed) {
-      trail = replanned.trail;
       changed = true;
     }
 
@@ -244,10 +256,11 @@ function buildRefreshSummary(
       ? "Um conteúdo que você já concluiu saiu da agenda."
       : `${synced} conteúdos que você já concluiu saíram da agenda.`);
   }
+  if (missedSessions > 0) {
+    parts.push("O que não foi concluído ficou marcado como atrasado, e os próximos dias foram reorganizados.");
+  }
   if (easedMinutes) {
     parts.push(`Como ${missedSessions === 1 ? "um dia passou" : `${missedSessions} dias passaram`} sem estudo, as próximas sessões passam a ter ${easedMinutes} minutos.`);
-  } else if (missedSessions > 0) {
-    parts.push("Reorganizamos na frente o que ficou para trás.");
   }
 
   return parts.join(" ");

@@ -57,8 +57,8 @@ select extensions.is(
 );
 select extensions.is(
   (public.get_ai_credit_balance('33000000-0000-0000-0000-000000000002')->>'available_credits')::numeric,
-  25::numeric,
-  'créditos extras não burlam o limite diário'
+  50::numeric,
+  'saldo disponível soma a franquia diária aos créditos extras'
 );
 
 select * from extensions.finish();

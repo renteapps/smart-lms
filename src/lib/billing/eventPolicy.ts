@@ -18,22 +18,26 @@ const IGNORE: BillingEventOutcome = { action: "ignore", transactionStatus: "pend
 
 const EDUZZ_EVENTS: Record<string, BillingEventOutcome> = {
   "myeduzz.invoice_paid": { action: "grant", transactionStatus: "approved" },
-  "myeduzz.contract_renewed": { action: "grant", transactionStatus: "approved" },
-
-  "myeduzz.contract_canceled": { action: "revoke_at_period_end", transactionStatus: "canceled" },
-  "myeduzz.contract_cancelled": { action: "revoke_at_period_end", transactionStatus: "canceled" },
   "myeduzz.invoice_canceled": { action: "revoke_at_period_end", transactionStatus: "canceled" },
 
   "myeduzz.invoice_refunded": { action: "revoke_now", transactionStatus: "refunded" },
   "myeduzz.invoice_chargeback": { action: "revoke_now", transactionStatus: "chargeback" },
 
-  // Cobrança falhou ou está atrasada: marca inadimplência sem cortar o acesso —
-  // a Eduzz ainda vai tentar de novo.
-  "myeduzz.invoice_overdue": { action: "past_due", transactionStatus: "pending" },
-  "myeduzz.contract_card_attempted": { action: "past_due", transactionStatus: "pending" },
-
-  "myeduzz.invoice_created": IGNORE,
+  // Eventos de tentativa e estados intermediários são informativos. A mudança
+  // de acesso só acontece quando chegar o estado final da fatura/contrato.
+  "myeduzz.contract_bankslip_attempted": IGNORE,
+  "myeduzz.contract_card_attempted": IGNORE,
+  "myeduzz.contract_eduzz_balance_attempted": IGNORE,
+  "myeduzz.contract_pix_attempted": IGNORE,
+  "myeduzz.commission_processed": IGNORE,
+  "myeduzz.invoice_expired": IGNORE,
+  "myeduzz.invoice_negotiated": IGNORE,
+  "myeduzz.invoice_opened": IGNORE,
+  "myeduzz.invoice_recovering": IGNORE,
+  "myeduzz.invoice_scheduled": IGNORE,
   "myeduzz.invoice_waiting_payment": IGNORE,
+  "myeduzz.invoice_waiting_refund": IGNORE,
+  "sun.cart_abandonment": IGNORE,
 };
 
 const EDUZZ_CONTRACT_STATUS: Record<string, BillingEventOutcome> = {

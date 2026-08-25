@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendEmail, validateResendApiKey, getResendDomains } from "@/lib/resendService";
+import { validateResendApiKey, getResendDomains } from "@/lib/resendService";
+import { getResendServerConfig, sendConfiguredEmail } from "@/lib/resendServer";
+import { requireAdmin } from "@/lib/supabase/auth";
 import { EmailTemplateType } from "@/types/resend";
 
 export async function POST(req: NextRequest) {
   try {
+    const { adminClient } = await requireAdmin();
     const body = await req.json();
     const { action, apiKey, to, template, data } = body;
 
@@ -24,14 +27,16 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "get_domains") {
-      if (!apiKey) {
+      const savedConfig = apiKey ? null : await getResendServerConfig(adminClient);
+      const domainsKey = apiKey || savedConfig?.apiKey;
+      if (!domainsKey) {
         return NextResponse.json(
           { success: false, message: "Informe a chave de API para buscar domínios." },
           { status: 400 }
         );
       }
 
-      const res = await getResendDomains(apiKey);
+      const res = await getResendDomains(domainsKey);
       return NextResponse.json({
         success: res.success,
         domains: res.domains,
@@ -43,7 +48,8 @@ export async function POST(req: NextRequest) {
     const recipient = to?.trim() || "teste@smartlms.com";
     const templateType: EmailTemplateType = template || "test";
 
-    const result = await sendEmail(
+    const result = await sendConfiguredEmail(
+      adminClient,
       {
         to: recipient,
         subject: body.subject || `E-mail de Teste Resend - Smart LMS`,
@@ -58,7 +64,7 @@ export async function POST(req: NextRequest) {
           ...data,
         },
       },
-      apiKey ? { apiKey } : undefined
+      apiKey ? { apiKey } : undefined,
     );
 
     if (result.success) {
@@ -83,7 +89,7 @@ export async function POST(req: NextRequest) {
     const errorMsg = error instanceof Error ? error.message : "Erro ao processar teste de e-mail.";
     return NextResponse.json(
       { success: false, error: errorMsg },
-      { status: 500 }
+      { status: errorMsg.includes("administradores") || errorMsg.includes("Sessão") ? 403 : 500 }
     );
   }
 }

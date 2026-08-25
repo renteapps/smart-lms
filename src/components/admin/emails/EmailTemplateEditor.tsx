@@ -46,7 +46,6 @@ import {
   interpolateVariables,
   EmailTemplateData,
 } from "@/lib/emailTemplates";
-import { sendEmail } from "@/lib/resendService";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -248,11 +247,16 @@ export function EmailTemplateEditor({
       const interpolatedSubject = interpolateVariables(subject, sampleData);
       const interpolatedHtml = interpolateVariables(htmlContent, sampleData);
 
-      const res = await sendEmail({
-        to: testEmailRecipient,
-        subject: `[TESTE] ${interpolatedSubject}`,
-        html: interpolatedHtml,
+      const response = await fetch("/api/email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: testEmailRecipient,
+          subject: `[TESTE] ${interpolatedSubject}`,
+          html: interpolatedHtml,
+        }),
       });
+      const res = await response.json();
 
       if (res.success) {
         toast.success(`E-mail de teste enviado para ${testEmailRecipient}!`, {

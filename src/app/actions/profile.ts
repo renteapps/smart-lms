@@ -29,7 +29,7 @@ export async function updateProfile(update: ProfileUpdate): Promise<ActionResult
     };
 
     set("full_name", update.fullName);
-    set("username", update.username);
+    set("username", update.username?.trim().toLowerCase());
     set("avatar_url", update.avatarUrl);
     set("headline", update.headline);
     set("bio", update.bio);
@@ -43,13 +43,42 @@ export async function updateProfile(update: ProfileUpdate): Promise<ActionResult
     if (Object.keys(payload).length === 0) return { success: true };
 
     const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
-    if (error) return { success: false, message: error.message };
+    if (error) {
+      // Mesma checagem de /criar-conta: sem isso a pessoa via o texto cru da
+      // violação de constraint do Postgres em vez de "nome já em uso".
+      if (error.message.includes("profiles_username_key")) {
+        return { success: false, message: "Este nome de usuário já está em uso." };
+      }
+      return { success: false, message: error.message };
+    }
 
     revalidatePath("/perfil");
+    revalidatePath("/completar-cadastro");
     return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };
   }
+}
+
+/**
+ * Versão restrita de `updateProfile` para a etapa obrigatória de cadastro.
+ *
+ * Os seis campos são exigidos aqui, mesmo com `updateProfile` aceitando
+ * atualização parcial — a etapa só existe porque esses campos faltam, então
+ * salvar sem todos de volta reabriria o próprio buraco que ela fecha.
+ */
+export async function completeRequiredProfile(update: Required<Pick<
+  ProfileUpdate, "fullName" | "username" | "phone" | "birthDate" | "gender" | "careerRole"
+>>): Promise<ActionResult> {
+  const missing = (Object.entries(update) as [string, string][])
+    .filter(([, value]) => !value?.trim())
+    .map(([key]) => key);
+
+  if (missing.length > 0) {
+    return { success: false, message: "Preencha todos os campos para continuar." };
+  }
+
+  return updateProfile(update);
 }
 
 /** Registra o último acesso — chamado uma vez por sessão. */
@@ -121,9 +150,9 @@ export async function sendProfileTestResultEmail(result: ProfileTestResult): Pro
       <p>Acesse a plataforma para ver mais detalhes e continuar sua jornada de aprendizado.</p>
     `;
 
-    const { sendEmail } = await import("@/lib/resendService");
+    const { sendPlatformEmail } = await import("@/lib/resendServer");
     
-    const emailResult = await sendEmail({
+    const emailResult = await sendPlatformEmail({
       to: user.email,
       subject: `Seu resultado do teste: ${result.testTitle}`,
       html: htmlContent,

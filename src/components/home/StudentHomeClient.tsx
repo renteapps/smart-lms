@@ -364,11 +364,15 @@ export default function StudentHomeClient({
   const greeting = `${firstName ? `Olá, ${firstName}` : "Olá"} · ${today}`;
 
   /*
-   * Derivado, não estado: itens pendentes marcados como remarcados. O aviso some
-   * sozinho conforme a pessoa os conclui, em vez de depender de uma flag de sessão.
+   * Derivado, não estado: apenas o conteúdo que venceu sem conclusão. Itens que
+   * o aluno adiou e os que só acompanharam o ajuste da agenda não viram atraso.
+   * O aviso some sozinho conforme a pessoa conclui os atrasados.
    */
-  const rescheduledCount = state.trail.items.filter(
-    (item) => item.status === "pending" && item.rescheduled,
+  const overdueCount = state.trail.items.filter(
+    (item) => item.status === "pending" && (
+      item.rescheduleReason === "overdue"
+      || (item.rescheduled && !item.rescheduleReason)
+    ),
   ).length;
 
   return (
@@ -377,16 +381,18 @@ export default function StudentHomeClient({
      * atrás do conteúdo da home sem cair atrás do gradiente ambiente do RouteShell.
      */
     <div className="relative isolate pt-[76px]">
-      {rescheduledCount > 0 && (
+      {overdueCount > 0 && (
         <div className="editorial-container pt-6">
           <Alert status="warning">
             <Alert.Indicator />
             <Alert.Content>
-              <Alert.Title>Alguns conteúdos foram remarcados</Alert.Title>
+              <Alert.Title>
+                {overdueCount === 1 ? "Conteúdo atrasado replanejado" : "Conteúdos atrasados replanejados"}
+              </Alert.Title>
               <Alert.Description>
-                <span data-numeric>{rescheduledCount}</span>{" "}
-                {rescheduledCount === 1 ? "conteúdo voltou" : "conteúdos voltaram"} para os próximos
-                dias da sua rotina. Nada foi perdido.
+                <span data-numeric>{overdueCount}</span>{" "}
+                {overdueCount === 1 ? "conteúdo ficou atrasado e voltou" : "conteúdos ficaram atrasados e voltaram"} para os próximos
+                dias da sua rotina. As etapas seguintes também foram ajustadas.
               </Alert.Description>
             </Alert.Content>
           </Alert>

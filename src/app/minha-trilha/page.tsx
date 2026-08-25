@@ -156,7 +156,12 @@ function weekdayDate(dateKey: string): string {
 
 function statusLabel(item: LearningTrailItem, today: string): string {
   if (item.status === 'completed') return 'Concluído';
-  if (item.rescheduled) return 'Atrasado replanejado';
+  if (item.rescheduleReason === 'overdue') {
+    return item.overdueSince ? `Atrasado desde ${shortDate(item.overdueSince)}` : 'Atrasado';
+  }
+  if (item.scheduledDate < today || (item.rescheduled && !item.rescheduleReason)) return 'Atrasado';
+  if (item.rescheduleReason === 'postponed') return 'Adiado';
+  if (item.rescheduleReason === 'adjusted' || item.rescheduled) return 'Replanejado';
   if (item.scheduledDate === today) return 'Hoje';
   return 'Planejado';
 }
@@ -164,7 +169,7 @@ function statusLabel(item: LearningTrailItem, today: string): string {
 /** Estado nunca é só cor: cada situação tem cor, ícone e texto. */
 function statusVisual(item: LearningTrailItem, today: string) {
   if (item.status === 'completed') return { color: 'success', icon: <Check className="size-3" aria-hidden="true" /> } as const;
-  if (item.rescheduled) return { color: 'warning', icon: <RefreshCw className="size-3" aria-hidden="true" /> } as const;
+  if (item.rescheduled || item.scheduledDate < today) return { color: 'warning', icon: <RefreshCw className="size-3" aria-hidden="true" /> } as const;
   if (item.scheduledDate === today) return { color: 'accent', icon: <Sparkles className="size-3" aria-hidden="true" /> } as const;
   return { color: 'default', icon: <CalendarDays className="size-3" aria-hidden="true" /> } as const;
 }
@@ -208,7 +213,7 @@ function TrailContentCard({ item, today, subdued = false, withActionBar = false,
   const completed = item.status === 'completed';
   const type = typeVisual(item.type);
   const status = statusVisual(item, today);
-  const showStatus = completed || item.rescheduled || item.scheduledDate === today;
+  const showStatus = completed || item.rescheduled || item.scheduledDate <= today;
   // Aula mostra a formação a que pertence; link mostra de onde vem; artigo, o módulo se houver.
   const origin = external ? hostOf(item.url) : item.courseName || item.moduleName || null;
 
@@ -694,8 +699,8 @@ export default function MinhaTrilhaPage() {
     setPostponeTarget(null);
     setAdaptationMessage(
       movedTogether > 0
-        ? `“${item.title}” foi para o próximo dia da sua rotina, junto com ${movedTogether} ${movedTogether === 1 ? 'conteúdo que vem' : 'conteúdos que vêm'} depois dele no curso. O resto da sessão continua valendo.`
-        : `“${item.title}” foi para o próximo dia da sua rotina. O resto da sessão continua valendo.`,
+        ? `“${item.title}” foi para o próximo dia da sua rotina, e ${movedTogether} ${movedTogether === 1 ? 'conteúdo seguinte teve' : 'conteúdos seguintes tiveram'} as datas ajustadas. O resto da sessão atual continua valendo.`
+        : `“${item.title}” foi para o próximo dia da sua rotina. O resto da sessão atual continua valendo.`,
     );
   };
 
@@ -975,6 +980,8 @@ export default function MinhaTrilhaPage() {
           const external = item.type === 'external_link';
           const type = typeVisual(item.type);
           const origin = item.courseName || item.moduleName;
+          const visiblyRescheduled = item.status === 'pending'
+            && (item.rescheduled || item.scheduledDate < today);
 
           const row = (
             <>
@@ -1017,12 +1024,17 @@ export default function MinhaTrilhaPage() {
 
               <span
                 className={cn(
-                  'hidden w-24 shrink-0 text-right text-xs font-semibold sm:block',
-                  done ? 'text-success' : 'text-muted',
+                  'hidden w-40 shrink-0 text-right text-xs font-semibold sm:block',
+                  done ? 'text-success' : visiblyRescheduled ? 'text-warning' : 'text-muted',
                 )}
                 data-numeric
+                title={item.overdueSince ? `Previsto originalmente para ${shortDate(item.overdueSince)}` : undefined}
               >
-                {done ? 'Concluído' : shortDate(item.scheduledDate)}
+                {done
+                  ? 'Concluído'
+                  : visiblyRescheduled
+                    ? `${statusLabel(item, today)} · ${shortDate(item.scheduledDate)}`
+                    : shortDate(item.scheduledDate)}
               </span>
             </>
           );
@@ -1147,9 +1159,10 @@ export default function MinhaTrilhaPage() {
               <RefreshCw className="size-5" aria-hidden="true" />
             </Alert.Indicator>
             <Alert.Content>
-              <Alert.Title>Sua agenda foi reorganizada.</Alert.Title>
+              <Alert.Title>Conteúdo atrasado, agenda ajustada.</Alert.Title>
               <Alert.Description>
-                Conteúdos que ficaram pendentes foram distribuídos nas próximas sessões disponíveis.
+                O que não foi concluído ficou marcado como atrasado e foi distribuído com o restante
+                nas próximas sessões disponíveis.
               </Alert.Description>
             </Alert.Content>
           </Alert>
@@ -1392,8 +1405,8 @@ export default function MinhaTrilhaPage() {
                 {postponeTarget?.kind === 'item' ? (
                   <p>
                     “{postponeTarget.item.title}” vai para o próximo dia da sua rotina e o resto da
-                    sessão de hoje continua valendo. Conteúdos do mesmo curso que vêm depois dele
-                    acompanham, para não quebrar a ordem das aulas.
+                    sessão atual continua valendo. Os próximos dias serão reorganizados para não
+                    acumular conteúdo, mantendo a ordem das aulas.
                   </p>
                 ) : (
                   <p>

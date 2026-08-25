@@ -51,7 +51,7 @@ describe("resolveHotmartOutcome", () => {
 });
 
 describe("resolveEduzzOutcome", () => {
-  it.each(["myeduzz.invoice_paid", "myeduzz.contract_renewed"])(
+  it.each(["myeduzz.invoice_paid"])(
     "%s libera acesso",
     (evento) => {
       expect(resolveEduzzOutcome(evento)).toEqual({ action: "grant", transactionStatus: "approved" });
@@ -73,10 +73,28 @@ describe("resolveEduzzOutcome", () => {
   });
 
   it("cancelamento de contrato preserva o período pago", () => {
-    expect(resolveEduzzOutcome("myeduzz.contract_canceled")).toEqual({
+    expect(resolveEduzzOutcome("myeduzz.invoice_canceled")).toEqual({
       action: "revoke_at_period_end",
       transactionStatus: "canceled",
     });
+  });
+
+  it.each([
+    "myeduzz.commission_processed",
+    "myeduzz.contract_bankslip_attempted",
+    "myeduzz.contract_card_attempted",
+    "myeduzz.contract_eduzz_balance_attempted",
+    "myeduzz.contract_pix_attempted",
+    "myeduzz.invoice_expired",
+    "myeduzz.invoice_negotiated",
+    "myeduzz.invoice_opened",
+    "myeduzz.invoice_recovering",
+    "myeduzz.invoice_scheduled",
+    "myeduzz.invoice_waiting_payment",
+    "myeduzz.invoice_waiting_refund",
+    "sun.cart_abandonment",
+  ])("%s é informativo e não altera acesso", (eventType) => {
+    expect(resolveEduzzOutcome(eventType)).toEqual({ action: "ignore", transactionStatus: "pending" });
   });
 
   it.each([

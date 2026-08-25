@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { applySessionFeedback, generateLearningTrail, postponeTrailItem, postponeTrailSession, replanLearningTrail, schedulePendingItems, syncTrailCompletion, updateTrailAvailability, validateQuestionnaire, weeklyMinutes } from './matching';
+import { applySessionFeedback, generateLearningTrail, postponeTrailItem, postponeTrailSession, replanLearningTrail, restoreLegacyOverdueMarkers, schedulePendingItems, syncTrailCompletion, updateTrailAvailability, validateQuestionnaire, weeklyMinutes } from './matching';
 import { mockQuestionnaire, TRAIL_CONTENT_INDEX } from './seed/questionnaire';
-import { ContentMapping, LearningTrailItem, Questionnaire } from '@/types/trilha';
+import { ContentMapping, LearningTrail, LearningTrailItem, Questionnaire } from '@/types/trilha';
 
 describe('adaptive learning trail', () => {
   it('deduplicates mappings, adds prerequisites and raises content matched by more answers', () => {
@@ -28,6 +28,16 @@ describe('adaptive learning trail', () => {
   ): LearningTrailItem => ({
     id, type: 'lesson', title: id, durationMin, order: 1, reason: 'test', score: 1,
     learningRole: 'essential', status: 'pending', scheduledDate: '', sessionId: '', ...extra,
+  });
+
+  const trailWith = (items: LearningTrailItem[]): LearningTrail => ({
+    formatVersion: 3,
+    userId: 'u1',
+    items,
+    generatedAt: new Date(2026, 7, 10).getTime(),
+    questionnaireVersion: 1,
+    answers: {},
+    availability: { weekdays: [1, 3], minutesPerSession: 30 },
   });
 
   it('fills each day inside the ±20% tolerance and isolates content no day can hold', () => {
@@ -245,6 +255,71 @@ describe('adaptive learning trail', () => {
     expect(result.trail.items.some((item) => item.rescheduled)).toBe(true);
   });
 
+  it('marks the missed content as overdue and shifts every following study day', () => {
+    const trail = trailWith([
+      pending('missed', 30, { order: 1, scheduledDate: '2026-08-10', sessionId: '2026-08-10-1' }),
+      pending('next', 30, { order: 2, scheduledDate: '2026-08-12', sessionId: '2026-08-12-2' }),
+      pending('later', 30, { order: 3, scheduledDate: '2026-08-17', sessionId: '2026-08-17-3' }),
+    ]);
+
+    const result = replanLearningTrail(trail, new Date(2026, 7, 12));
+
+    expect(result.trail.items.map((item) => [item.id, item.scheduledDate])).toEqual([
+      ['missed', '2026-08-12'],
+      ['next', '2026-08-17'],
+      ['later', '2026-08-19'],
+    ]);
+    expect(result.trail.items.find((item) => item.id === 'missed')?.rescheduleReason).toBe('overdue');
+    expect(result.trail.items.find((item) => item.id === 'missed')?.overdueSince).toBe('2026-08-10');
+    expect(result.trail.items.find((item) => item.id === 'next')?.rescheduleReason).toBe('adjusted');
+    expect(result.trail.items.find((item) => item.id === 'later')?.rescheduleReason).toBe('adjusted');
+  });
+
+  it('keeps an overdue pending item during a catalog-only reconciliation', () => {
+    const existing = trailWith([
+      pending('l1', 20, {
+        scheduledDate: '2026-08-12',
+        sessionId: '2026-08-12-1',
+        rescheduled: true,
+        rescheduleReason: 'overdue',
+        overdueSince: '2026-08-10',
+      }),
+    ]);
+
+    const reconciled = generateLearningTrail(
+      'u1',
+      {},
+      mockQuestionnaire,
+      existing.availability,
+      existing,
+      new Date(2026, 7, 12),
+      TRAIL_CONTENT_INDEX,
+      [],
+      { preservePending: true },
+    );
+    const retained = reconciled.items.find((item) => item.id === 'l1');
+
+    expect(retained?.status).toBe('pending');
+    expect(retained?.rescheduleReason).toBe('overdue');
+    expect(retained?.overdueSince).toBe('2026-08-10');
+  });
+
+  it('restores the overdue marker lost by legacy replanning', () => {
+    const legacy = trailWith([
+      pending('first-session', 30, { order: 1, scheduledDate: '2026-08-12', sessionId: '2026-08-12-1' }),
+      pending('later-session', 30, { order: 2, scheduledDate: '2026-08-17', sessionId: '2026-08-17-2' }),
+    ]);
+    legacy.missedSessions = 1;
+    legacy.replannedAt = new Date(2026, 7, 11).getTime();
+
+    const restored = restoreLegacyOverdueMarkers(legacy);
+
+    expect(restored.changed).toBe(true);
+    expect(restored.trail.items.find((item) => item.id === 'first-session')?.rescheduleReason).toBe('overdue');
+    expect(restored.trail.items.find((item) => item.id === 'later-session')?.rescheduleReason).toBeUndefined();
+    expect(restoreLegacyOverdueMarkers(restored.trail).changed).toBe(false);
+  });
+
   it('validates the unique final availability question and custom durations', () => {
     expect(validateQuestionnaire(mockQuestionnaire, TRAIL_CONTENT_INDEX)).toEqual([]);
     const invalid: Questionnaire = {
@@ -328,10 +403,33 @@ describe('adaptive learning trail', () => {
 
     expect(moved.scheduledDate).not.toBe(firstDate);
     expect(moved.rescheduled).toBe(true);
+    expect(moved.rescheduleReason).toBe('postponed');
     // O resto do dia fica onde estava.
     sameDay.slice(0, -1).forEach((item) => {
       expect(postponed.items.find((next) => next.id === item.id)!.scheduledDate).toBe(firstDate);
     });
+  });
+
+  it('puts postponed content on the next study day and replans the full tail', () => {
+    const trail = trailWith([
+      pending('postponed', 30, { order: 1, scheduledDate: '2026-08-10', sessionId: '2026-08-10-1' }),
+      pending('stays-today', 10, { order: 2, type: 'article', scheduledDate: '2026-08-10', sessionId: '2026-08-10-1' }),
+      pending('next', 30, { order: 3, scheduledDate: '2026-08-12', sessionId: '2026-08-12-2' }),
+      pending('later', 30, { order: 4, scheduledDate: '2026-08-17', sessionId: '2026-08-17-3' }),
+    ]);
+
+    const result = postponeTrailItem(trail, 'postponed');
+
+    expect(result.items.map((item) => [item.id, item.scheduledDate])).toEqual([
+      ['postponed', '2026-08-12'],
+      ['stays-today', '2026-08-10'],
+      ['next', '2026-08-17'],
+      ['later', '2026-08-19'],
+    ]);
+    expect(result.items.find((item) => item.id === 'postponed')?.rescheduleReason).toBe('postponed');
+    expect(result.items.find((item) => item.id === 'stays-today')?.rescheduleReason).toBeUndefined();
+    expect(result.items.find((item) => item.id === 'next')?.rescheduleReason).toBe('adjusted');
+    expect(result.items.find((item) => item.id === 'later')?.rescheduleReason).toBe('adjusted');
   });
 
   it('drags same-course successors so postponing never breaks the lesson order', () => {

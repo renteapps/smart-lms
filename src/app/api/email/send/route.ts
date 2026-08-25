@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendEmail, getResendConfig } from "@/lib/resendService";
+import { getResendServerConfig, sendConfiguredEmail } from "@/lib/resendServer";
 import { requireAdmin } from "@/lib/supabase/auth";
 import { EmailSendPayload } from "@/types/resend";
 
@@ -14,8 +14,9 @@ import { EmailSendPayload } from "@/types/resend";
  * notificações do admin, que já exige sessão de administrador.
  */
 export async function POST(req: NextRequest) {
+  let adminClient;
   try {
-    await requireAdmin();
+    ({ adminClient } = await requireAdmin());
   } catch {
     return NextResponse.json(
       { success: false, error: "Acesso restrito a administradores." },
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const config = getResendConfig();
+    const config = await getResendServerConfig(adminClient);
     if (!config.enabled) {
       return NextResponse.json(
         {
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const result = await sendEmail(payload);
+    const result = await sendConfiguredEmail(adminClient, payload);
 
     if (result.success) {
       return NextResponse.json({

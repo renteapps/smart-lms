@@ -12,6 +12,13 @@ import {
 import { EMPTY_CONTENT_INDEX, type ContentIndex, type ContentResolver } from '@/lib/contentCatalog';
 
 type UserAnswers = Record<string, string[]>;
+type GenerateTrailOptions = {
+  /**
+   * Reconciliação silenciosa do catálogo: mantém na fila o que já estava
+   * pendente e ainda existe, mesmo que o admin tenha mudado os mapeamentos.
+   */
+  preservePending?: boolean;
+};
 type Candidate = ResolvedContent & {
   score: number;
   learningRole: LearningRole;
@@ -593,6 +600,7 @@ export function generateLearningTrail(
   startDate = new Date(),
   indexOrResolver?: ContentIndex | ContentResolver,
   completedContentIds: Iterable<string> = [],
+  options: GenerateTrailOptions = {},
 ): LearningTrail {
   const index = normalizeIndex(indexOrResolver);
   const existingCompleted = new Map(
@@ -601,7 +609,7 @@ export function generateLearningTrail(
   const alreadySeen = new Set([...completedContentIds, ...existingCompleted.keys()]);
 
   const candidates = collectCandidates(answers, questionnaire, index);
-  const draftItems: LearningTrailItem[] = candidates.filter(
+  const candidateDrafts: LearningTrailItem[] = candidates.filter(
     (candidate) => !alreadySeen.has(candidate.id),
   ).map((candidate, index) => {
     return {
@@ -631,6 +639,29 @@ export function generateLearningTrail(
       warnings: candidate.warnings.length > 0 ? candidate.warnings : undefined,
     };
   });
+
+  let draftItems = candidateDrafts;
+  if (options.preservePending && existingTrail) {
+    const draftsById = new Map(candidateDrafts.map((item) => [item.id, item]));
+    const retained = existingTrail.items.flatMap((previous) => {
+      if (previous.status !== 'pending' || alreadySeen.has(previous.id)) return [];
+      const fresh = draftsById.get(previous.id);
+      const stillExists = Boolean(fresh) || index.has(previous.id) || previous.type === 'external_link';
+      if (!stillExists) return [];
+
+      return [{
+        ...(fresh || previous),
+        status: 'pending' as const,
+        scheduledDate: previous.scheduledDate,
+        sessionId: previous.sessionId,
+        rescheduled: previous.rescheduled,
+        rescheduleReason: previous.rescheduleReason,
+        overdueSince: previous.overdueSince,
+      }];
+    });
+    const retainedIds = new Set(retained.map((item) => item.id));
+    draftItems = [...retained, ...candidateDrafts.filter((item) => !retainedIds.has(item.id))];
+  }
 
   /*
    * Conteúdo concluído que deixou de ser recomendado continua na trilha.
@@ -766,26 +797,85 @@ export function applySessionFeedback(
   };
 }
 
-export function postponeTrailSession(trail: LearningTrail, sessionId: string): LearningTrail {
-  const session = trail.items.filter((item) => item.sessionId === sessionId && item.status === 'pending');
-  if (session.length === 0) return trail;
-  const targetDate = session[0].scheduledDate;
-  const shiftedDates = new Map<string, string>();
-  const futureDates = [...new Set(trail.items
-    .filter((item) => item.status === 'pending' && item.scheduledDate >= targetDate)
-    .map((item) => item.scheduledDate))].sort();
-  futureDates.forEach((date) => {
-    shiftedDates.set(date, toLocalDateKey(nextPreferredDate(fromLocalDateKey(date), trail.availability.weekdays, false)));
-  });
+/**
+ * Recompõe uma cauda da agenda sem tocar no que ficou antes dela.
+ *
+ * O adiamento não pode ser uma simples troca de data: o próximo dia já pode
+ * estar cheio. Esta função devolve toda a cauda ao agendador, começando no
+ * próximo dia de estudo, e então aplica apenas as novas datas à trilha original
+ * para preservar histórico, ordem global e conteúdos já concluídos.
+ */
+function rescheduleTrailTail(
+  trail: LearningTrail,
+  tailIds: Set<string>,
+  explicitlyPostponedIds: Set<string>,
+  startDate: Date,
+): LearningTrail {
+  const tail = trail.items
+    .filter((item) => tailIds.has(item.id) && item.status === 'pending')
+    .sort((a, b) => (
+      Number(explicitlyPostponedIds.has(b.id)) - Number(explicitlyPostponedIds.has(a.id))
+      || a.scheduledDate.localeCompare(b.scheduledDate)
+      || a.order - b.order
+    ));
+
+  const replanned = new Map(
+    schedulePendingItems(tail, effectiveAvailability(trail), startDate)
+      .map((item) => [item.id, item]),
+  );
 
   return {
     ...trail,
     items: trail.items.map((item) => {
-      const shifted = item.status === 'pending' ? shiftedDates.get(item.scheduledDate) : undefined;
-      return shifted ? { ...item, scheduledDate: shifted, sessionId: `${shifted}-postponed`, rescheduled: true } : item;
+      const next = replanned.get(item.id);
+      if (!next) return item;
+
+      const explicitlyPostponed = explicitlyPostponedIds.has(item.id);
+      const dateChanged = item.scheduledDate !== next.scheduledDate;
+      const previousReason = item.rescheduleReason;
+      const rescheduleReason = previousReason === 'overdue'
+        ? previousReason
+        : explicitlyPostponed
+          ? 'postponed' as const
+          : dateChanged
+            ? previousReason || 'adjusted' as const
+            : previousReason;
+
+      return {
+        ...item,
+        scheduledDate: next.scheduledDate,
+        sessionId: next.sessionId,
+        overBudget: next.overBudget,
+        movedForFit: next.movedForFit,
+        rescheduled: item.rescheduled || explicitlyPostponed || dateChanged || undefined,
+        rescheduleReason,
+      };
     }),
     replannedAt: Date.now(),
   };
+}
+
+export function postponeTrailSession(trail: LearningTrail, sessionId: string): LearningTrail {
+  const session = trail.items.filter((item) => item.sessionId === sessionId && item.status === 'pending');
+  if (session.length === 0) return trail;
+  const targetDate = session[0].scheduledDate;
+  if (!targetDate) return trail;
+
+  const explicitlyPostponedIds = new Set(session.map((item) => item.id));
+  const tailIds = new Set(
+    trail.items
+      .filter((item) => item.status === 'pending' && (
+        explicitlyPostponedIds.has(item.id) || item.scheduledDate > targetDate
+      ))
+      .map((item) => item.id),
+  );
+  const nextStudyDate = nextPreferredDate(
+    fromLocalDateKey(targetDate),
+    normalizeAvailability(trail.availability).weekdays,
+    false,
+  );
+
+  return rescheduleTrailTail(trail, tailIds, explicitlyPostponedIds, nextStudyDate);
 }
 
 /**
@@ -797,18 +887,20 @@ export function postponeTrailSession(trail: LearningTrail, sessionId: string): L
  * continua valendo para hoje.
  *
  * A sequência do curso continua intocável: se o item adiado tem colegas do mesmo
- * curso na mesma sessão que viriam *depois* dele, eles vão junto — deixá-los para
- * trás colocaria a aula 5 antes da aula 4. Conteúdo de outros cursos no mesmo dia
- * não é afetado, e as sessões seguintes ficam onde estão.
+ * curso na mesma sessão que viriam *depois* dele, eles entram na cauda junto —
+ * deixá-los para trás colocaria a aula 5 antes da aula 4. Conteúdo de outros
+ * cursos no mesmo dia não é afetado. A partir do próximo dia de estudo, toda a
+ * cauda é montada de novo para não duplicar a carga das sessões seguintes.
  */
 export function postponeTrailItem(trail: LearningTrail, itemId: string): LearningTrail {
   const target = trail.items.find((item) => item.id === itemId && item.status === 'pending');
   if (!target || !target.scheduledDate) return trail;
 
-  const nextDate = toLocalDateKey(
-    nextPreferredDate(fromLocalDateKey(target.scheduledDate), trail.availability.weekdays, false),
+  const nextStudyDate = nextPreferredDate(
+    fromLocalDateKey(target.scheduledDate),
+    normalizeAvailability(trail.availability).weekdays,
+    false,
   );
-  if (nextDate === target.scheduledDate) return trail;
 
   const key = sequenceKeyOf(target);
   const targetEntry: QueueEntry = { item: target, position: trail.items.indexOf(target) };
@@ -823,15 +915,15 @@ export function postponeTrailItem(trail: LearningTrail, itemId: string): Learnin
     });
   }
 
-  return {
-    ...trail,
-    items: trail.items.map((item) => (
-      moving.has(item.id)
-        ? { ...item, scheduledDate: nextDate, sessionId: `${nextDate}-postponed`, rescheduled: true }
-        : item
-    )),
-    replannedAt: Date.now(),
-  };
+  const tailIds = new Set(
+    trail.items
+      .filter((item) => item.status === 'pending' && (
+        moving.has(item.id) || item.scheduledDate > target.scheduledDate
+      ))
+      .map((item) => item.id),
+  );
+
+  return rescheduleTrailTail(trail, tailIds, new Set([target.id]), nextStudyDate);
 }
 
 export type TrailReplanResult = {
@@ -842,6 +934,53 @@ export type TrailReplanResult = {
   /** Nova meta diária quando o motor aliviou a carga; `null` quando não mexeu nela. */
   easedMinutes: number | null;
 };
+
+/**
+ * Recupera trilhas gravadas pelo replanejador antigo.
+ *
+ * Ele incrementava `missedSessions`, mas algumas versões reconstruíam a agenda
+ * logo depois e perdiam o marcador do item. Quando há evidência de atraso e
+ * nenhum item histórico já o representa, marcamos as primeiras sessões
+ * pendentes. É uma correção única: depois de persistida, a razão explícita
+ * impede novas inferências.
+ */
+export function restoreLegacyOverdueMarkers(
+  trail: LearningTrail,
+): { trail: LearningTrail; changed: boolean } {
+  if ((trail.missedSessions ?? 0) < 1) return { trail, changed: false };
+  if (trail.items.some((item) => item.rescheduleReason === 'overdue')) {
+    return { trail, changed: false };
+  }
+
+  const pending = trail.items.filter((item) => item.status === 'pending' && item.scheduledDate);
+  if (pending.length === 0) return { trail, changed: false };
+
+  const explicitlyRescheduled = pending.filter((item) => item.rescheduled);
+  const inferredIds = new Set(
+    (explicitlyRescheduled.length > 0
+      ? explicitlyRescheduled
+      : (() => {
+        const dates = [...new Set(pending.map((item) => item.scheduledDate))]
+          .sort()
+          .slice(0, trail.missedSessions);
+        const inferredDates = new Set(dates);
+        return pending.filter((item) => inferredDates.has(item.scheduledDate));
+      })()
+    ).map((item) => item.id),
+  );
+
+  return {
+    changed: inferredIds.size > 0,
+    trail: {
+      ...trail,
+      items: trail.items.map((item) => (
+        inferredIds.has(item.id)
+          ? { ...item, rescheduled: true, rescheduleReason: 'overdue' as const }
+          : item
+      )),
+    },
+  };
+}
 
 /**
  * Ajusta a trilha de quem não fez o conteúdo do dia.
@@ -881,8 +1020,26 @@ export function replanLearningTrail(trail: LearningTrail, startDate = new Date()
   const easedMinutes = shouldEase ? clampSessionMinutes(currentTarget * (1 - BUDGET_TOLERANCE)) : null;
   const nextTarget = easedMinutes ?? trail.adaptiveMinutesPerSession;
 
+  const previousSchedule = new Map(
+    trail.items.map((item) => [item.id, { date: item.scheduledDate, sessionId: item.sessionId }]),
+  );
   const items = schedulePendingItems(trail.items, adaptedRoutine(declared, nextTarget), startDate)
-    .map((item) => ({ ...item, rescheduled: overdueIds.has(item.id) || item.rescheduled }));
+    .map((item) => {
+      const previous = previousSchedule.get(item.id);
+      const dateChanged = previous?.date !== item.scheduledDate;
+      const becameOverdue = overdueIds.has(item.id);
+
+      return {
+        ...item,
+        rescheduled: item.rescheduled || becameOverdue || dateChanged || undefined,
+        overdueSince: becameOverdue
+          ? item.overdueSince || previous?.date
+          : item.overdueSince,
+        rescheduleReason: item.rescheduleReason === 'overdue' || becameOverdue
+          ? 'overdue' as const
+          : item.rescheduleReason || (dateChanged ? 'adjusted' as const : undefined),
+      };
+    });
 
   return {
     changed: true,

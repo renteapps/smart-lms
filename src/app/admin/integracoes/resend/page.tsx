@@ -24,12 +24,13 @@ import {
 } from "lucide-react";
 import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { CustomEmailTemplate, ResendConfig, EmailTemplateType } from "@/types/resend";
-import { DEFAULT_RESEND_CONFIG, getResendConfig, saveResendConfig } from "@/lib/resendService";
+import { DEFAULT_RESEND_CONFIG, getResendConfig } from "@/lib/resendService";
 import { getCustomTemplates } from "@/lib/emailTemplates";
 
 export default function ResendOverviewPage() {
   const [config, setConfig] = useState<ResendConfig>(DEFAULT_RESEND_CONFIG);
   const [apiKeyInput, setApiKeyInput] = useState("");
+  const [hasStoredKey, setHasStoredKey] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isValidatingKey, setIsValidatingKey] = useState(false);
@@ -55,7 +56,8 @@ export default function ResendOverviewPage() {
         const data = await res.json();
         if (isMounted && data.success && data.config) {
           setConfig(data.config);
-          setApiKeyInput(data.config.apiKey || "");
+          setApiKeyInput("");
+          setHasStoredKey(Boolean(data.config.hasApiKey));
           if (data.logs) {
             setTotalLogsCount(data.logs.length);
           }
@@ -92,24 +94,25 @@ export default function ResendOverviewPage() {
         apiKey: apiKeyInput.trim(),
         updatedAt: new Date().toISOString(),
       };
+      const payloadConfig: Partial<ResendConfig> = { ...updatedConfig };
+      if (!payloadConfig.apiKey) delete payloadConfig.apiKey;
 
       const res = await fetch("/api/admin/integracoes/resend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ config: updatedConfig }),
+        body: JSON.stringify({ config: payloadConfig }),
       });
 
       const data = await res.json();
       if (data.success) {
         setConfig(updatedConfig);
-        saveResendConfig(updatedConfig);
+        if (apiKeyInput.trim()) setHasStoredKey(true);
         toast.success("Configurações do Resend salvas com sucesso!");
       } else {
         toast.error(data.error || "Erro ao salvar configurações.");
       }
     } catch {
-      saveResendConfig({ ...config, apiKey: apiKeyInput.trim() });
-      toast.success("Configurações salvas localmente!");
+      toast.error("Não foi possível salvar no servidor. Tente novamente.");
     } finally {
       setIsSaving(false);
     }
@@ -187,7 +190,9 @@ export default function ResendOverviewPage() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const isConnected = !!apiKeyInput.trim() && apiKeyInput.startsWith("re_");
+  const isConnected = apiKeyInput.trim()
+    ? apiKeyInput.trim().startsWith("re_")
+    : hasStoredKey;
 
   return (
     <div className="space-y-8">
@@ -335,7 +340,7 @@ export default function ResendOverviewPage() {
                     type={showApiKey ? "text" : "password"}
                     value={apiKeyInput}
                     onChange={(e) => setApiKeyInput(e.target.value)}
-                    placeholder="re_123456789_abcdefghijklmnopqrstuvwxyz"
+                    placeholder={hasStoredKey ? "Chave configurada — deixe em branco para manter" : "re_123456789_abcdefghijklmnopqrstuvwxyz"}
                     className="w-full min-h-11 rounded-xl border border-border bg-background-secondary pl-4 pr-24 font-mono text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                   />
                   <div className="absolute right-2 flex items-center gap-1">

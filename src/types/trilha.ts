@@ -34,6 +34,7 @@ export type ContentType = 'lesson' | 'module' | 'course' | 'article' | 'external
 export type SchedulableContentType = 'lesson' | 'article' | 'external_link';
 export type LearningRole = 'essential' | 'deepening' | 'extra';
 export type SessionLoadRating = 'light' | 'right' | 'heavy';
+export type TrailRescheduleReason = 'overdue' | 'postponed' | 'adjusted';
 
 export type ContentMapping = {
   id: string;
@@ -119,7 +120,18 @@ export type LearningTrailItem = ResolvedContent & {
   scheduledDate: string;
   sessionId: string;
   overBudget?: boolean;
+  /** O item mudou de data ao recompor a agenda. Mantido para trilhas antigas e métricas. */
   rescheduled?: boolean;
+  /**
+   * Motivo visível da última mudança relevante de data.
+   *
+   * `overdue` identifica o conteúdo que venceu sem conclusão; `postponed`, o
+   * conteúdo ou sessão que o aluno adiou; `adjusted`, os itens seguintes que o
+   * motor deslocou para manter a carga e a sequência da agenda.
+   */
+  rescheduleReason?: TrailRescheduleReason;
+  /** Data em que o conteúdo venceu pela primeira vez, antes de voltar à agenda. */
+  overdueSince?: string;
   /** Antecipado para preencher um dia que sobrava tempo, sem furar a sequência do curso. */
   movedForFit?: boolean;
   completedAt?: string;

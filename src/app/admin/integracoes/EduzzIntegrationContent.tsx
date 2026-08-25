@@ -162,7 +162,7 @@ export function EduzzIntegrationContent() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-bold"><Webhook className="size-5 text-accent" /> Webhook e chaves</h2>
-            <p className="mt-1 text-sm text-muted">Cadastre somente <code>myeduzz.contract_created</code> e <code>myeduzz.contract_updated</code>. O ping é tratado automaticamente.</p>
+            <p className="mt-1 text-sm text-muted">Você pode cadastrar os 19 eventos exibidos pela Eduzz. Todos são auditados, mas somente contratos e estados financeiros finais alteram o acesso; eventos informativos são ignorados com segurança. O ping é tratado automaticamente.</p>
           </div>
           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${data?.enabled ? "bg-success-soft text-success" : "bg-surface-secondary text-muted"}`}>
             {data?.enabled ? "Ativa" : "Desativada"} · {data?.webhookKeyCount ?? 0} chave(s)
