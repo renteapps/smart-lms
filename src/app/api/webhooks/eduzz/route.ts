@@ -1,53 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { normalizeEduzzEvent } from "@/lib/billing/eduzz";
+import { handleBillingWebhook } from "@/lib/billing/handleWebhook";
+import { verifyEduzzSignature } from "@/lib/billing/signature";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const MAX_WEBHOOK_BYTES = 1_048_576;
+
 export async function POST(req: NextRequest) {
-  try {
-    const payload = await req.json();
-
-    // Valida se o payload tem a estrutura básica esperada da Eduzz
-    if (!payload || !payload.event) {
-      return NextResponse.json({ error: "Payload inválido" }, { status: 400 });
-    }
-
-    // Lida especificamente com o evento de contrato criado
-    if (payload.event === "myeduzz.contract_created") {
-      const { data } = payload;
-      
-      const customer = data?.customer;
-      const contract = data?.contract;
-      const products = data?.products;
-
-      console.log("=== Webhook Eduzz Recebido ===");
-      console.log(`Evento: ${payload.event}`);
-      console.log(`Cliente: ${customer?.name} (${customer?.email})`);
-      console.log(`Contrato ID: ${contract?.id} - Status: ${contract?.status}`);
-      console.log(`Produto(s): ${products?.map((p: any) => p.name).join(", ")}`);
-      console.log("===============================");
-
-      // TODO: Implementar lógica de salvar/atualizar no banco de dados
-      // Ex: Buscar qual plano local corresponde ao Produto e/ou Produtor
-      // const plano = await db.planos.findUnique({ 
-      //   where: { gateway: 'Eduzz', productId: String(products[0]?.id), producerId: String(producer?.id) } 
-      // })
-      
-      // Se não encontrar o plano, talvez criar ou apenas logar
-      // Ex: Criar ou atualizar o usuário na tabela de users (usando customer.email)
-      
-      // Ex: Criar registro na tabela de subscriptions e vincular o plano e usuário
-      // Logica de Expiração (nextDue):
-      // - Se plano.frequency == "vitalicio", definir nextDue como null
-      // - Se plano.frequency == "personalizado", calcular nextDue = data_hoje + plano.accessTimeDays
-      // - Senão, assumir renovação natural da Eduzz
-
-      return NextResponse.json({ success: true, message: "Webhook recebido e processado com sucesso" }, { status: 200 });
-    }
-
-    // Se recebermos outros eventos que não acompanhamos, retornamos 200 para a Eduzz não tentar reenviar
-    console.log(`Webhook Eduzz ignorado. Evento: ${payload.event}`);
-    return NextResponse.json({ success: true, message: "Evento ignorado" }, { status: 200 });
-    
-  } catch (error) {
-    console.error("Erro ao processar webhook da Eduzz:", error);
-    return NextResponse.json({ error: "Erro interno ao processar webhook" }, { status: 500 });
+  const declaredLength = Number(req.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_WEBHOOK_BYTES) {
+    return NextResponse.json({ error: "Corpo excede o limite permitido." }, { status: 413 });
   }
+
+  // A assinatura é sobre os bytes exatos recebidos, não sobre JSON
+  // reserializado. O limite também é conferido após a leitura porque
+  // Content-Length pode estar ausente (chunked) ou incorreto.
+  const rawBytes = Buffer.from(await req.arrayBuffer());
+  if (rawBytes.byteLength > MAX_WEBHOOK_BYTES) {
+    return NextResponse.json({ error: "Corpo excede o limite permitido." }, { status: 413 });
+  }
+  const rawBody = rawBytes.toString("utf8");
+
+  // Next.js não expõe o IP diretamente; o header padrão do Vercel/proxy é
+  // x-forwarded-for. Fallback para "unknown" — o rate-limiter em memória
+  // ainda funciona, só agrupa todos os IPs desconhecidos em um bucket.
+  const clientIp =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown";
+
+  const signatureHeader = req.headers.get("x-signature");
+
+  const { status, body } = await handleBillingWebhook({
+    gateway: "eduzz",
+    rawBody,
+    clientIp,
+    verifySignature: (secrets) =>
+      verifyEduzzSignature(rawBytes, signatureHeader, secrets),
+    normalize: normalizeEduzzEvent,
+  });
+
+  return NextResponse.json(body, { status });
 }

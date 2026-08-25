@@ -24,6 +24,11 @@ describe('validade do acesso', () => {
 
   it('nega assinatura encerrada ou fora do período', () => {
     expect(isSubscriptionActive({ status: 'canceled', currentPeriodEnd: null }, now)).toBe(false);
+    expect(isSubscriptionActive({ status: 'canceled', currentPeriodEnd: '2026-08-21T12:00:00.000Z' }, now)).toBe(true);
+    expect(isSubscriptionActive({ status: 'past_due', currentPeriodEnd: '2026-08-21T12:00:00.000Z' }, now)).toBe(true);
+    expect(isSubscriptionActive({ status: 'suspended', currentPeriodEnd: '2026-08-19T12:00:00.000Z' }, now)).toBe(false);
+    expect(isSubscriptionActive({ status: 'pending', currentPeriodEnd: '2026-08-21T12:00:00.000Z' }, now)).toBe(false);
+    expect(isSubscriptionActive({ status: 'trialing', currentPeriodEnd: null }, now)).toBe(true);
     expect(isSubscriptionActive({ status: 'active', currentPeriodEnd: '2026-08-19T12:00:00.000Z' }, now)).toBe(false);
     expect(isSubscriptionActive({ status: 'active', currentPeriodEnd: '2026-08-21T12:00:00.000Z' }, now)).toBe(true);
   });

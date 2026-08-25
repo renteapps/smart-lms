@@ -1,8 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getResendConfig, saveResendConfig, getEmailLogs, clearEmailLogs } from "@/lib/resendService";
 import { getCustomTemplates, saveCustomTemplate, resetCustomTemplate } from "@/lib/emailTemplates";
+import { requireAdmin } from "@/lib/supabase/auth";
+
+/*
+ * `/api/` é prefixo público no middleware, então cada rota se defende sozinha.
+ * Esta lê e grava a configuração do Resend e o histórico de e-mails enviados —
+ * nada disso pode ficar aberto.
+ */
+async function guardAdmin(): Promise<NextResponse | null> {
+  try {
+    await requireAdmin();
+    return null;
+  } catch {
+    return NextResponse.json(
+      { success: false, error: "Acesso restrito a administradores." },
+      { status: 403 }
+    );
+  }
+}
 
 export async function GET() {
+  const denied = await guardAdmin();
+  if (denied) return denied;
+
   try {
     const config = getResendConfig();
     const logs = getEmailLogs();
@@ -15,10 +36,17 @@ export async function GET() {
         : "••••••••"
       : "";
 
+    // `apiKey` sai do objeto: espalhar `config` devolvia a chave em claro ao
+    // lado da versão mascarada, o que anulava o mascaramento. A tela só precisa
+    // saber se existe uma chave configurada.
+    const safeConfig: Record<string, unknown> = { ...config };
+    delete safeConfig.apiKey;
+
     return NextResponse.json({
       success: true,
       config: {
-        ...config,
+        ...safeConfig,
+        hasApiKey: Boolean(config.apiKey),
         maskedApiKey: maskedKey,
       },
       logs,
@@ -34,6 +62,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = await guardAdmin();
+  if (denied) return denied;
+
   try {
     const body = await req.json();
 

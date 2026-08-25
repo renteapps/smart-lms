@@ -98,6 +98,12 @@ export function ResendIntegrationContent() {
 
   // Logs State
   const [logs, setLogs] = useState<EmailLog[]>([]);
+  /*
+   * A API não devolve mais a chave em claro (só `hasApiKey` e a versão
+   * mascarada), então o estado de "conectado" não pode mais ser inferido do
+   * campo de digitação — campo vazio agora significa "manter a chave atual".
+   */
+  const [hasStoredKey, setHasStoredKey] = useState(false);
 
   // Load config, templates and logs
   useEffect(() => {
@@ -111,7 +117,7 @@ export function ResendIntegrationContent() {
       const data = await res.json();
       if (data.success && data.config) {
         setConfig(data.config);
-        setApiKeyInput(data.config.apiKey || "");
+        setHasStoredKey(Boolean(data.config.hasApiKey));
         if (data.logs) {
           setLogs(data.logs);
         }
@@ -128,6 +134,7 @@ export function ResendIntegrationContent() {
         const localTemplates = getCustomTemplates();
         setConfig(local);
         setApiKeyInput(local.apiKey || "");
+        setHasStoredKey(Boolean(local.apiKey));
         setTemplates(localTemplates);
         loadTemplateIntoEditor(selectedTemplateType, localTemplates);
       }
@@ -136,6 +143,7 @@ export function ResendIntegrationContent() {
       const localTemplates = getCustomTemplates();
       setConfig(local);
       setApiKeyInput(local.apiKey || "");
+      setHasStoredKey(Boolean(local.apiKey));
       setTemplates(localTemplates);
       loadTemplateIntoEditor(selectedTemplateType, localTemplates);
     } finally {
@@ -211,22 +219,32 @@ export function ResendIntegrationContent() {
   const handleSaveConfig = async () => {
     setIsSaving(true);
     try {
+      const typedKey = apiKeyInput.trim();
       const updatedConfig: ResendConfig = {
         ...config,
-        apiKey: apiKeyInput.trim(),
+        apiKey: typedKey,
         updatedAt: new Date().toISOString(),
       };
+
+      /*
+       * Sem chave digitada, `apiKey` sai do payload em vez de ir vazia: salvar o
+       * formulário só para mudar um toggle não pode apagar a credencial. É a
+       * mesma regra de `saveIntegration` no servidor.
+       */
+      const payloadConfig: Partial<ResendConfig> = { ...updatedConfig };
+      if (!typedKey) delete payloadConfig.apiKey;
 
       const res = await fetch("/api/admin/integracoes/resend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ config: updatedConfig }),
+        body: JSON.stringify({ config: payloadConfig }),
       });
 
       const data = await res.json();
       if (data.success) {
         setConfig(updatedConfig);
-        saveResendConfig(updatedConfig);
+        if (typedKey) setHasStoredKey(true);
+        saveResendConfig(payloadConfig);
         toast.success("Configurações do Resend salvas com sucesso!");
       } else {
         toast.error(data.error || "Erro ao salvar configurações.");
@@ -556,7 +574,9 @@ export function ResendIntegrationContent() {
     return tpl.category === templateFilter;
   });
 
-  const isConnected = !!apiKeyInput.trim() && apiKeyInput.startsWith("re_");
+  const isConnected = apiKeyInput.trim()
+    ? apiKeyInput.trim().startsWith("re_")
+    : hasStoredKey;
 
   return (
     <div className="space-y-6">
@@ -758,7 +778,7 @@ export function ResendIntegrationContent() {
                       type={showApiKey ? "text" : "password"}
                       value={apiKeyInput}
                       onChange={(e) => setApiKeyInput(e.target.value)}
-                      placeholder="re_123456789_abcdefghijklmnopqrstuvwxyz"
+                      placeholder={hasStoredKey ? "Chave configurada — deixe em branco para manter" : "re_123456789_abcdefghijklmnopqrstuvwxyz"}
                       className="w-full min-h-11 rounded-xl border border-border bg-background-secondary pl-4 pr-24 font-mono text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                     />
                     <div className="absolute right-2 flex items-center gap-1">

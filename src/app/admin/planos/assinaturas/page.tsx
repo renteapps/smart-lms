@@ -40,16 +40,19 @@ export default function AssinaturasPage() {
   );
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "ativo":
-        return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-success-soft text-success-soft-foreground">Ativa</span>;
-      case "atrasado":
-        return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-warning-soft text-warning-soft-foreground">Atrasada</span>;
-      case "cancelado":
-        return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-danger-soft text-danger-soft-foreground">Cancelada</span>;
-      default:
-        return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-default-100 text-default-600">Desconhecido</span>;
-    }
+    const labels: Record<string, { label: string; classes: string }> = {
+      active: { label: "Ativa", classes: "bg-success-soft text-success-soft-foreground" },
+      trialing: { label: "Em teste", classes: "bg-success-soft text-success-soft-foreground" },
+      pending: { label: "Pendente", classes: "bg-default-100 text-default-600" },
+      past_due: { label: "Em atraso", classes: "bg-warning-soft text-warning-soft-foreground" },
+      suspended: { label: "Suspensa", classes: "bg-warning-soft text-warning-soft-foreground" },
+      canceled: { label: "Cancelada", classes: "bg-danger-soft text-danger-soft-foreground" },
+      refunded: { label: "Reembolsada", classes: "bg-danger-soft text-danger-soft-foreground" },
+      chargeback: { label: "Chargeback", classes: "bg-danger-soft text-danger-soft-foreground" },
+      expired: { label: "Expirada", classes: "bg-default-100 text-default-600" },
+    };
+    const badge = labels[status] ?? { label: status || "Desconhecido", classes: "bg-default-100 text-default-600" };
+    return <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${badge.classes}`}>{badge.label}</span>;
   };
 
   return (

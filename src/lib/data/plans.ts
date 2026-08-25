@@ -1,4 +1,5 @@
 import { logQueryError, type DB, type Row } from "./types";
+import { isSubscriptionActive } from "@/lib/courseAccess";
 
 export type PlanFrequency = "monthly" | "yearly" | "lifetime" | "custom";
 
@@ -172,9 +173,13 @@ export async function getMySubscription(db: DB, userId: string): Promise<Subscri
     .from("subscriptions")
     .select(SUBSCRIPTION_SELECT)
     .eq("user_id", userId)
-    .eq("status", "active")
-    .maybeSingle();
+    .in("status", ["active", "trialing", "past_due", "suspended", "canceled"])
+    .order("created_at", { ascending: false });
 
   logQueryError("getMySubscription", error);
-  return data ? mapSubscription(data) : null;
+  const row = (data ?? []).find((subscription) => isSubscriptionActive({
+    status: subscription.status,
+    currentPeriodEnd: subscription.current_period_end,
+  }));
+  return row ? mapSubscription(row) : null;
 }

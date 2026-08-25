@@ -23,8 +23,12 @@ export function isSubscriptionActive(
   subscription: { status?: string | null; currentPeriodEnd?: string | null },
   now = new Date(),
 ): boolean {
-  if (subscription.status !== 'active') return false;
-  if (!subscription.currentPeriodEnd) return true;
+  const openEnded = subscription.status === 'active' || subscription.status === 'trialing';
+  const gracePeriod = subscription.status === 'past_due'
+    || subscription.status === 'suspended'
+    || subscription.status === 'canceled';
+  if (!openEnded && !gracePeriod) return false;
+  if (!subscription.currentPeriodEnd) return openEnded;
   const periodEnd = new Date(subscription.currentPeriodEnd);
   return !Number.isNaN(periodEnd.getTime()) && periodEnd > now;
 }

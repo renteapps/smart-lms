@@ -966,11 +966,11 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                       </div>
                       <div>
                         <span className="text-muted block text-[11px]">Taxa Média</span>
-                        <strong className="text-foreground font-semibold">{gw.avgFee}</strong>
+                        <strong className="text-foreground font-semibold">{gw.avgFee ?? "—"}</strong>
                       </div>
                       <div>
                         <span className="text-muted block text-[11px]">Webhook Latency</span>
-                        <strong className="text-success font-semibold">{gw.webhookLatency}</strong>
+                        <strong className="text-success font-semibold">{gw.webhookLatency ?? "—"}</strong>
                       </div>
                     </div>
                   </div>

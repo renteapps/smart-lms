@@ -1,3 +1,5 @@
+import { isSubscriptionActive } from "./courseAccess";
+
 export type AiForecastPlanInput = {
   id: string;
   name: string;
@@ -183,7 +185,10 @@ export function buildAiCreditForecast(input: {
 
   const candidatesByUser = new Map<string, Candidate[]>();
   for (const subscription of input.subscriptions) {
-    if (!["active", "trialing"].includes(subscription.status)) continue;
+    if (!isSubscriptionActive({
+      status: subscription.status,
+      currentPeriodEnd: subscription.currentPeriodEnd,
+    }, now)) continue;
     const plan = subscription.planId ? planMap.get(subscription.planId) : null;
     if (!plan?.isActive) continue;
     const period = subscriptionPeriod(subscription, plan, now);
