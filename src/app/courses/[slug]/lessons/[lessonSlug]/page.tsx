@@ -42,6 +42,7 @@ export default async function AulaPage({
     lesson.type === "profile_test" ? await getProfileTests(supabase, true) : [];
     
   let quiz = null;
+  let previousQuizResult = null;
   if (lesson.type === "quiz" && lesson.quizId) {
     const { data } = await supabase
       .from("quizzes")
@@ -56,6 +57,28 @@ export default async function AulaPage({
         questions: data.questions,
         passingScore: data.passing_score
       };
+    }
+
+    if (quiz && user) {
+      const { data: resultRow } = await supabase
+        .from("quiz_results")
+        .select("*")
+        .eq("quiz_id", quiz.id)
+        .eq("lesson_id", lesson.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (resultRow) {
+        previousQuizResult = {
+          id: resultRow.id,
+          quizId: resultRow.quiz_id,
+          userId: resultRow.user_id,
+          lessonId: resultRow.lesson_id,
+          score: resultRow.score,
+          answers: resultRow.answers,
+          passed: resultRow.passed,
+          createdAt: resultRow.created_at
+        };
+      }
     }
   }
 
@@ -72,6 +95,7 @@ export default async function AulaPage({
       profileTests={profileTests}
       initialNote={note}
       quiz={quiz}
+      previousQuizResult={previousQuizResult}
       initialComments={comments}
       currentUser={user}
     />

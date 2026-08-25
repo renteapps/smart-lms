@@ -1,7 +1,13 @@
 import { StudentsAnalyticsView } from "@/components/admin/analytics/StudentsAnalyticsView";
 import { getStudentsAnalytics } from "../actions";
+import { parseAnalyticsPeriod } from "@/lib/analytics";
 
-export default async function AdminAnaliseAlunosPage() {
-  const data = await getStudentsAnalytics();
-  return <StudentsAnalyticsView basePath="/admin/analises" data={data} />;
+export default async function AdminAnaliseAlunosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string | string[] }>;
+}) {
+  const period = parseAnalyticsPeriod((await searchParams).period);
+  const data = await getStudentsAnalytics(period);
+  return <StudentsAnalyticsView basePath="/admin/analises" period={period} data={data} />;
 }

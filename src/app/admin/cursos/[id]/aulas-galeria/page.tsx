@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import GalleryLessonList from "@/components/admin/GalleryLessonList";
 import { requireAdmin } from "@/lib/supabase/auth";
 import { getCourse } from "@/lib/data/courses";
+import { getLessonRatingSummaries } from "@/lib/data/courseRatings";
 
 /**
  * Gestão de aulas do curso galeria — a versão sem módulos de `/modulos`.
@@ -16,7 +17,10 @@ import { getCourse } from "@/lib/data/courses";
 export default async function AulasGaleriaAdminPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const { supabase } = await requireAdmin();
-  const course = await getCourse(supabase, resolvedParams.id);
+  const [course, lessonRatings] = await Promise.all([
+    getCourse(supabase, resolvedParams.id),
+    getLessonRatingSummaries(supabase, resolvedParams.id),
+  ]);
 
   if (!course) notFound();
   // Curso por módulos não tem essa tela — a rota certa dele é `/modulos`.
@@ -47,6 +51,7 @@ export default async function AulasGaleriaAdminPage({ params }: { params: Promis
           courseId={resolvedParams.id}
           moduleId={galleryModule.id}
           initialLessons={galleryModule.lessons}
+          lessonRatings={lessonRatings}
         />
       ) : (
         <div className="rounded-2xl border border-dashed border-border bg-background-secondary p-10 text-center text-sm text-muted">

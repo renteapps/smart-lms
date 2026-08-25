@@ -31,14 +31,15 @@ import {
 import { PageHeader } from "@/components/ui/editorial";
 import {
   MetricCard,
-  PeriodSelector,
   SimpleAreaChart,
   Sparkline,
-  type TimePeriod,
+  UrlPeriodSelector,
 } from "@/components/admin/analytics/AnalyticsComponents";
 // Mock imports removed
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { downloadCsv } from "@/lib/downloadCsv";
+import { formatAnalyticsHours, type AnalyticsPeriod } from "@/lib/analytics";
 
 const iconMap = {
   BookOpen,
@@ -48,27 +49,42 @@ const iconMap = {
   Users,
 };
 
-const crossGrowthData = [
-  { label: "Jan", value: 54, formattedValue: "R$ 54k • 820h" },
-  { label: "Fev", value: 61, formattedValue: "R$ 61k • 950h" },
-  { label: "Mar", value: 68, formattedValue: "R$ 68k • 1.100h" },
-  { label: "Abr", value: 72, formattedValue: "R$ 72k • 1.050h" },
-  { label: "Mai", value: 79, formattedValue: "R$ 79k • 1.320h" },
-  { label: "Jun", value: 83, formattedValue: "R$ 83k • 1.480h" },
-  { label: "Jul", value: 89, formattedValue: "R$ 89k • 1.650h" },
-  { label: "Ago", value: 95, formattedValue: "R$ 95k • 1.890h" },
-];
+const insightIconMap = {
+  flame: Flame,
+  zap: Zap,
+  check: CheckCircle2,
+};
 
 import { AnalyticsOverview, AnalyticsCardItem } from "@/lib/mocks/analyticsMocks";
+import type { AreaChartDataPoint } from "@/components/admin/analytics/AnalyticsComponents";
 
 export interface AnalyticsHubViewProps {
   basePath?: string;
+  period: AnalyticsPeriod;
+  periodLabel: string;
   overviewData: AnalyticsOverview;
   cardsData: AnalyticsCardItem[];
+  revenueTrend?: number[];
+  watchHoursTrend?: number[];
+  agentTrend?: number[];
+  growthTrend: AreaChartDataPoint[];
+  growthLabel: string | null;
+  insights: { icon: "flame" | "zap" | "check"; title: string; description: string }[];
 }
 
-export function AnalyticsHubView({ basePath = "/admin/analises", overviewData, cardsData }: AnalyticsHubViewProps) {
-  const [period, setPeriod] = useState<TimePeriod>("30d");
+export function AnalyticsHubView({
+  basePath = "/admin/analises",
+  period,
+  periodLabel,
+  overviewData,
+  cardsData,
+  revenueTrend,
+  watchHoursTrend,
+  agentTrend,
+  growthTrend,
+  growthLabel,
+  insights,
+}: AnalyticsHubViewProps) {
   const [selectedCategoryTab, setSelectedCategoryTab] = useState<string>("todos");
   const [searchFilter, setSearchFilter] = useState("");
 
@@ -89,10 +105,29 @@ export function AnalyticsHubView({ basePath = "/admin/analises", overviewData, c
   });
 
   const handleExportConsolidated = () => {
-    toast.success("Gerando relatório consolidado...", {
-      description: "O download do PDF analítico será iniciado em instantes.",
-    });
+    downloadCsv(
+      `analises-consolidadas-${period}.csv`,
+      ["Indicador", "Valor", "Período"],
+      [
+        ["Faturamento bruto", overviewData.totalRevenue, periodLabel],
+        ["Alunos ativos", overviewData.activeStudents, periodLabel],
+        ["Horas de aulas concluídas", overviewData.totalWatchHours, periodLabel],
+        ["Mensagens com agentes de IA", overviewData.totalAgentInteractions, periodLabel],
+        ["Assinaturas ativas", overviewData.activeSubscriptions, "posição atual"],
+        ["MRR", overviewData.mrr, "posição atual"],
+      ],
+    );
+    toast.success("Relatório consolidado exportado em CSV.");
   };
+
+  const trend = (value: number | null) =>
+    value == null
+      ? undefined
+      : {
+          value: `${value > 0 ? "+" : ""}${value}%`,
+          isPositive: value >= 0,
+          isNeutral: value === 0,
+        };
 
   return (
     <div className="space-y-8">
@@ -103,7 +138,7 @@ export function AnalyticsHubView({ basePath = "/admin/analises", overviewData, c
         description="Métricas consolidadas de aprendizagem, faturamento, inteligência artificial e retenção de assinaturas."
         actions={
           <div className="flex flex-wrap items-center gap-3">
-            <PeriodSelector period={period} onChange={setPeriod} />
+            <UrlPeriodSelector period={period} />
             <Button
               variant="outline"
               size="md"
@@ -111,7 +146,7 @@ export function AnalyticsHubView({ basePath = "/admin/analises", overviewData, c
               className="gap-2 font-semibold"
             >
               <Download className="size-4" aria-hidden="true" />
-              <span>Exportar PDF</span>
+              <span>Exportar CSV</span>
             </Button>
           </div>
         }
@@ -120,44 +155,43 @@ export function AnalyticsHubView({ basePath = "/admin/analises", overviewData, c
       {/* Top High-level KPIs */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Métricas Principais">
         <MetricCard
-          label="Faturamento Total"
+          label="Faturamento no Período"
           value={`R$ ${overviewData.totalRevenue.toLocaleString("pt-BR")}`}
-          helper="vs mês anterior"
+          helper={overviewData.revenueChange == null ? periodLabel : "vs período anterior"}
           icon={TrendingUp}
           tone="primary"
           tooltipText="Faturamento bruto acumulado somando assinaturas e compras avulsas."
-          trend={{ value: `+${overviewData.revenueChange}%`, isPositive: true }}
-          sparklineData={[28, 35, 42, 55, 62, 70, 82, 94]}
+          trend={trend(overviewData.revenueChange)}
+          sparklineData={revenueTrend}
         />
         <MetricCard
-          label="Alunos Ativos"
+          label="Alunos Ativos no Período"
           value={overviewData.activeStudents.toLocaleString("pt-BR")}
-          helper="alunos com estudo ativo"
+          helper={periodLabel}
           icon={Users}
           tone="sage"
-          tooltipText="Estudantes que assistiram aulas ou interagiram com IA nos últimos 30 dias."
-          trend={{ value: `+${overviewData.studentsChange}%`, isPositive: true }}
-          sparklineData={[40, 48, 52, 60, 68, 74, 80, 88]}
+          tooltipText="Alunos matriculados cujo último acesso ocorreu no período selecionado."
+          trend={trend(overviewData.studentsChange)}
         />
         <MetricCard
           label="Horas Assistidas"
-          value={`${(overviewData.totalWatchHours / 1000).toFixed(1)}k h`}
-          helper="+0k h no período"
+          value={formatAnalyticsHours(overviewData.totalWatchHours)}
+          helper={periodLabel}
           icon={Clock3}
           tone="terracotta"
-          tooltipText="Total de tempo em vídeo consumido pelos estudantes na plataforma."
-          trend={{ value: `+${overviewData.watchHoursChange}%`, isPositive: true }}
-          sparklineData={[30, 38, 45, 52, 60, 72, 85, 95]}
+          tooltipText="Soma da duração cadastrada das aulas concluídas no período selecionado."
+          trend={trend(overviewData.watchHoursChange)}
+          sparklineData={watchHoursTrend}
         />
         <MetricCard
           label="Interações com IA"
           value={overviewData.totalAgentInteractions.toLocaleString("pt-BR")}
-          helper="Interações de agentes registradas"
+          helper={periodLabel}
           icon={Bot}
           tone="purple"
           tooltipText="Volume de sessões e mensagens trocadas com os agentes de tutoria."
-          trend={{ value: `+${overviewData.agentInteractionsChange}%`, isPositive: true }}
-          sparklineData={[15, 25, 38, 50, 65, 78, 88, 100]}
+          trend={trend(overviewData.agentInteractionsChange)}
+          sparklineData={agentTrend}
         />
       </section>
 
@@ -292,12 +326,20 @@ export function AnalyticsHubView({ basePath = "/admin/analises", overviewData, c
                 Correlação contínua entre consumo de horas de estudo e volume de receita
               </Card.Description>
             </div>
-            <Chip size="sm" variant="soft" color="success">
-              +48% no ano
-            </Chip>
+            {growthLabel && (
+              <Chip size="sm" variant="soft" color="success">
+                {growthLabel}
+              </Chip>
+            )}
           </Card.Header>
           <Card.Content className="pt-4">
-            <SimpleAreaChart data={crossGrowthData} height={220} />
+            {growthTrend.length >= 2 ? (
+              <SimpleAreaChart data={growthTrend} height={220} />
+            ) : (
+              <p className="py-10 text-center text-sm text-muted">
+                Ainda não há histórico suficiente para exibir a tendência de crescimento.
+              </p>
+            )}
           </Card.Content>
         </Card>
 
@@ -310,38 +352,21 @@ export function AnalyticsHubView({ basePath = "/admin/analises", overviewData, c
                   Insights Automáticos
                 </Card.Title>
               </div>
-              <Card.Description>Oportunidades e marcos detectados</Card.Description>
+              <Card.Description>Marcos detectados nos dados reais da plataforma</Card.Description>
             </Card.Header>
             <Card.Content className="space-y-3.5 pt-0">
-              <div className="rounded-xl border border-border/80 bg-background-secondary p-3 text-xs space-y-1">
-                <div className="flex items-center gap-1.5 font-semibold text-foreground">
-                  <Flame className="size-3.5 text-warning" />
-                  <span>Alta Retenção em IA</span>
-                </div>
-                <p className="text-muted leading-relaxed">
-                  Alunos que interagem com o <strong>Tutor Socrático</strong> concluem módulos 2.4x mais rápido.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-border/80 bg-background-secondary p-3 text-xs space-y-1">
-                <div className="flex items-center gap-1.5 font-semibold text-foreground">
-                  <Zap className="size-3.5 text-accent" />
-                  <span>Conversão via PIX</span>
-                </div>
-                <p className="text-muted leading-relaxed">
-                  O PIX reduziu o abandono de carrinho em 18% em relação a boletos tradicionais.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-border/80 bg-background-secondary p-3 text-xs space-y-1">
-                <div className="flex items-center gap-1.5 font-semibold text-foreground">
-                  <CheckCircle2 className="size-3.5 text-success" />
-                  <span>Baixo Churn Recorrente</span>
-                </div>
-                <p className="text-muted leading-relaxed">
-                  Taxa de churn caiu para 1.9%, mantendo o LTV estimado acima de R$ 1.400.
-                </p>
-              </div>
+              {insights.map((insight, idx) => {
+                const Icon = insightIconMap[insight.icon];
+                return (
+                  <div key={idx} className="rounded-xl border border-border/80 bg-background-secondary p-3 text-xs space-y-1">
+                    <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                      <Icon className="size-3.5 text-accent" />
+                      <span>{insight.title}</span>
+                    </div>
+                    <p className="text-muted leading-relaxed">{insight.description}</p>
+                  </div>
+                );
+              })}
             </Card.Content>
           </div>
 

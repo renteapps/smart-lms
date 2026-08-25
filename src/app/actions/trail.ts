@@ -5,7 +5,7 @@ import { requireUser, requireAdmin } from "@/lib/supabase/auth";
 import type { LearningTrail, Questionnaire, StudyAvailability } from "@/types/trilha";
 import type { TrailAnalyticsEvent, TrailAnalyticsEventType } from "@/lib/trailAnalytics";
 import { generateLearningTrail, replanLearningTrail, restoreLegacyOverdueMarkers, syncTrailCompletion } from "@/lib/matching";
-import { getContentIndex } from "@/lib/data/content";
+import { getCachedContentIndex, getContentIndex } from "@/lib/data/content";
 import { getPublishedQuestionnaire, saveLearningTrail as persistTrail } from "@/lib/data/trail";
 import * as trailData from "@/lib/data/trail";
 import type { ActionResult } from "./progress";
@@ -34,12 +34,19 @@ export async function generateTrail(
   try {
     const { supabase, user } = await requireUser();
 
-    const [questionnaire, index, existing, completedIds, stamp] = await Promise.all([
+    /*
+     * O carimbo vem sozinho e antes do resto: é ele que chaveia o catálogo em
+     * cache. Ler uma linha a mais em série custa menos do que remontar o índice
+     * inteiro de novo para cada pessoa que termina o onboarding.
+     */
+    const stamp = await trailData.getCatalogStamp(supabase);
+    const catalogStamp = stamp ? `${PLAN_FORMAT}:${stamp}` : null;
+
+    const [questionnaire, index, existing, completedIds] = await Promise.all([
       getPublishedQuestionnaire(supabase),
-      getContentIndex(supabase),
+      catalogStamp ? getCachedContentIndex(supabase, catalogStamp) : getContentIndex(supabase),
       trailData.getLearningTrail(supabase, user.id),
       trailData.getCompletedContentIds(supabase, user.id),
-      trailData.getCatalogStamp(supabase),
     ]);
 
     if (!questionnaire) {
@@ -58,7 +65,7 @@ export async function generateTrail(
     );
     const trail: LearningTrail = {
       ...generated,
-      catalogStamp: stamp ? `${PLAN_FORMAT}:${stamp}` : undefined,
+      catalogStamp: catalogStamp ?? undefined,
     };
 
     await persistTrail(supabase, user.id, trail);
@@ -173,17 +180,17 @@ export async function refreshTrail(): Promise<{
     let added = 0;
     const currentStamp = stamp ? `${PLAN_FORMAT}:${stamp}` : null;
     if (currentStamp && currentStamp !== trail.catalogStamp) {
-      const [questionnaire, index] = await Promise.all([
-        Promise.resolve(published),
-        getContentIndex(supabase),
-      ]);
-
-      if (questionnaire) {
+      if (published) {
+        /*
+         * Sem questionário publicado não há o que regenerar — e não vale puxar
+         * o catálogo para descartá-lo logo em seguida, que era o que acontecia.
+         */
+        const index = await getCachedContentIndex(supabase, currentStamp);
         const before = new Set(trail.items.map((item) => item.id));
         const regenerated = generateLearningTrail(
           user.id,
           trail.answers,
-          questionnaire,
+          published,
           trail.availability,
           trail,
           new Date(),

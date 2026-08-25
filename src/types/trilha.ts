@@ -20,7 +20,6 @@ export type EligibleLesson = {
   courseSlug: string;
   moduleId: string;
   title: string;
-  description: string;
   duration: number;
   topics: string[];
   problemasQueResolve: string[];

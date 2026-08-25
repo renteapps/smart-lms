@@ -4,11 +4,15 @@ import { notFound } from "next/navigation";
 import ModuleList from "@/components/admin/ModuleList";
 import { requireAdmin } from "@/lib/supabase/auth";
 import { getCourse } from "@/lib/data/courses";
+import { getLessonRatingSummaries } from "@/lib/data/courseRatings";
 
 export default async function ModulosAdminPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const { supabase } = await requireAdmin();
-  const course = await getCourse(supabase, resolvedParams.id);
+  const [course, lessonRatings] = await Promise.all([
+    getCourse(supabase, resolvedParams.id),
+    getLessonRatingSummaries(supabase, resolvedParams.id),
+  ]);
 
   if (!course) notFound();
   
@@ -28,7 +32,11 @@ export default async function ModulosAdminPage({ params }: { params: Promise<{ i
         </p>
       </div>
 
-      <ModuleList courseId={resolvedParams.id} initialCourse={course} />
+      <ModuleList
+        courseId={resolvedParams.id}
+        initialCourse={course}
+        lessonRatings={lessonRatings}
+      />
     </div>
   );
 }

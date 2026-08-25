@@ -67,6 +67,7 @@ export default async function RootLayout({
             --primary-active: var(--accent-hover);
             --primary-pale: var(--accent-soft);
             --on-primary: var(--accent-foreground);
+            --primary-foreground: var(--accent-foreground);
           }
         `,
           }}

@@ -367,7 +367,7 @@ export const ContentPickerModal: React.FC<ContentPickerModalProps> = ({ isOpen, 
                 <button
                   onClick={handleAdd}
                   disabled={selectedIds.size === 0 && (!customLinkTitle || !customLinkUrl)}
-                  className="px-6 py-2.5 rounded-lg font-bold bg-accent text-white hover:bg-accent-hover disabled:opacity-50 transition-colors shadow-sm"
+                  className="px-6 py-2.5 rounded-lg font-bold bg-accent text-on-primary hover:bg-accent-hover disabled:opacity-50 transition-colors shadow-sm"
                 >
                   Adicionar à Opção
                 </button>

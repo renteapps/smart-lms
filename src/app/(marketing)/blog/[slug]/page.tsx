@@ -217,7 +217,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               <div>
                 <Link 
                   href={`/courses/${relatedCourse.slug}`}
-                  className={cn(buttonVariants({ variant: "default", size: "lg" }), "h-14 rounded-full px-8 font-bold text-base text-white shadow-lg")}
+                  className={cn(buttonVariants({ variant: "default", size: "lg" }), "h-14 rounded-full px-8 font-bold text-base text-on-primary shadow-lg")}
                 >
                   Conhecer o Curso
                 </Link>

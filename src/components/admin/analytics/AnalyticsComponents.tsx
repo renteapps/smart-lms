@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import {
   Card,
@@ -10,9 +11,10 @@ import {
 } from "@heroui/react";
 import { ArrowDownRight, ArrowUpRight, Info, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { AnalyticsPeriod } from "@/lib/analytics";
 
 // --- Period Selector with HeroUI Design ---
-export type TimePeriod = "7d" | "30d" | "90d" | "12m" | "tudo";
+export type TimePeriod = AnalyticsPeriod;
 
 interface PeriodSelectorProps {
   period: TimePeriod;
@@ -58,6 +60,36 @@ export function PeriodSelector({ period, onChange, className }: PeriodSelectorPr
           </button>
         );
       })}
+    </div>
+  );
+}
+
+export function UrlPeriodSelector({
+  period,
+  className,
+}: {
+  period: TimePeriod;
+  className?: string;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
+
+  const handleChange = (nextPeriod: TimePeriod) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextPeriod === "30d") params.delete("period");
+    else params.set("period", nextPeriod);
+
+    const query = params.toString();
+    startTransition(() => {
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    });
+  };
+
+  return (
+    <div className={cn(isPending && "opacity-60", className)} aria-busy={isPending}>
+      <PeriodSelector period={period} onChange={handleChange} />
     </div>
   );
 }

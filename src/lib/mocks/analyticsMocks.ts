@@ -1,16 +1,16 @@
 export interface AnalyticsOverview {
   totalRevenue: number;
-  revenueChange: number;
+  revenueChange: number | null;
   activeStudents: number;
-  studentsChange: number;
+  studentsChange: number | null;
   totalWatchHours: number;
-  watchHoursChange: number;
+  watchHoursChange: number | null;
   totalAgentInteractions: number;
-  agentInteractionsChange: number;
+  agentInteractionsChange: number | null;
   activeSubscriptions: number;
-  subscriptionsChange: number;
+  subscriptionsChange: number | null;
   mrr: number;
-  mrrChange: number;
+  mrrChange: number | null;
 }
 
 export interface AnalyticsCardItem {
@@ -660,4 +660,3 @@ export const MOCK_STUDENTS_ANALYTICS = {
     { title: "Realizaram Teste de Perfil", count: 1089, share: "87%" },
   ],
 };
-

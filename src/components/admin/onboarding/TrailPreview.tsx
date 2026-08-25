@@ -70,7 +70,7 @@ export const TrailPreview: React.FC<TrailPreviewProps> = ({ questionnaire, index
         ))}
         <div className="rounded-xl border border-border bg-surface p-4">
           <p className="text-sm font-bold text-foreground">Rotina simulada</p>
-          <div className="mt-3 flex flex-wrap gap-2">{DAYS.map((day) => <button key={day.value} type="button" aria-pressed={availability.weekdays.includes(day.value)} onClick={() => toggleDay(day.value)} className={cn('grid h-10 min-w-10 place-items-center rounded-lg border text-xs font-bold', availability.weekdays.includes(day.value) ? 'border-accent bg-accent text-white' : 'border-border text-muted')}>{day.label}</button>)}</div>
+          <div className="mt-3 flex flex-wrap gap-2">{DAYS.map((day) => <button key={day.value} type="button" aria-pressed={availability.weekdays.includes(day.value)} onClick={() => toggleDay(day.value)} className={cn('grid h-10 min-w-10 place-items-center rounded-lg border text-xs font-bold', availability.weekdays.includes(day.value) ? 'border-accent bg-accent text-on-primary' : 'border-border text-muted')}>{day.label}</button>)}</div>
           <label className="mt-4 flex items-center gap-3 text-sm font-semibold text-muted"><Clock3 size={16} /><input type="number" min="10" max="240" value={availability.minutesPerSession} onChange={(event) => setAvailability((current) => ({ ...current, minutesPerSession: Math.max(10, Math.min(240, Number(event.target.value) || 10)) }))} className="w-20 rounded-lg border border-border bg-background px-2 py-1.5 text-foreground outline-none focus:border-accent" /> minutos por sessão</label>
         </div>
       </aside>

@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { getContentIndex } from "./content";
+import { beforeEach, describe, expect, it } from "vitest";
+import { clearContentIndexCache, getCachedContentIndex, getContentIndex } from "./content";
 import type { DB, Row } from "./types";
 
 /**
@@ -170,5 +170,74 @@ describe("getContentIndex — curso galeria não herda a corrente linear", () =>
     ])));
 
     expect(index.byId("l2")?.prerequisites).toEqual(["l1"]);
+  });
+});
+
+/**
+ * Conta quantas vezes o índice foi de fato remontado a partir do banco — é o
+ * número que o memo existe para manter em 1.
+ */
+function countingDb(courses: Row[]): { db: DB; calls: () => number } {
+  let calls = 0;
+  const inner = fakeDb(courses);
+  return {
+    calls: () => calls,
+    db: {
+      from: (table: string) => {
+        if (table === "courses") calls += 1;
+        return (inner as unknown as { from: (t: string) => unknown }).from(table);
+      },
+    } as unknown as DB,
+  };
+}
+
+describe("getCachedContentIndex", () => {
+  beforeEach(() => clearContentIndexCache());
+
+  it("não volta ao banco enquanto o carimbo for o mesmo", async () => {
+    const { db, calls } = countingDb(courseWith([{ ...baseLesson, id: "l1", title: "Aula 1", order_index: 0 }]));
+
+    await getCachedContentIndex(db, "v7:1");
+    await getCachedContentIndex(db, "v7:1");
+
+    expect(calls()).toBe(1);
+  });
+
+  it("remonta quando o carimbo muda", async () => {
+    const { db, calls } = countingDb(courseWith([{ ...baseLesson, id: "l1", title: "Aula 1", order_index: 0 }]));
+
+    await getCachedContentIndex(db, "v7:1");
+    await getCachedContentIndex(db, "v7:2");
+
+    expect(calls()).toBe(2);
+  });
+
+  it("colapsa a manada: pedidos simultâneos esperam a mesma busca", async () => {
+    const { db, calls } = countingDb(courseWith([{ ...baseLesson, id: "l1", title: "Aula 1", order_index: 0 }]));
+
+    const [a, b, c] = await Promise.all([
+      getCachedContentIndex(db, "v7:1"),
+      getCachedContentIndex(db, "v7:1"),
+      getCachedContentIndex(db, "v7:1"),
+    ]);
+
+    expect(calls()).toBe(1);
+    expect(a).toBe(b);
+    expect(b).toBe(c);
+  });
+
+  it("não guarda índice vazio — query que falhou não pode esvaziar trilha", async () => {
+    /*
+     * Erro de query não vira exceção em `getContentIndex`: `logQueryError` só
+     * registra no console e o índice sai vazio. Se isso ficasse no memo, todo
+     * mundo que entrasse no minuto seguinte recalcularia a trilha contra um
+     * catálogo inexistente — e o resultado seria gravado.
+     */
+    const { db, calls } = countingDb([]);
+
+    await getCachedContentIndex(db, "v7:1");
+    await getCachedContentIndex(db, "v7:1");
+
+    expect(calls()).toBe(2);
   });
 });

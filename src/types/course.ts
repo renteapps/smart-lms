@@ -249,6 +249,9 @@ export type HomeCarouselRow = {
   courseId: string;
   courseSlug?: string;
   courseTitle: string;
+  category?: string;
+  isFeatured?: boolean;
+  createdAt?: string;
   courseHref: string;
   /** Curso inteiro está travado para o aluno da sessão — todas as aulas da faixa seguem o mesmo estado. */
   locked: boolean;

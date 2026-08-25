@@ -809,16 +809,27 @@ export async function getGalleryCourse(
  * Aparece para todo mundo, matriculado ou não — quem não tem acesso vê a mesma faixa travada, com CTA de matrícula.
  */
 export async function getHomeCarouselRows(db: DB, userId?: string | null): Promise<HomeCarouselRow[]> {
-  const { data: courseRows, error } = await db
-    .from("courses")
-    .select("id, slug, title, cover_url, order_index, sales_url, sales_config")
-    .eq("layout", "gallery")
-    .eq("home_carousel", true)
-    .eq("is_published", true)
-    .neq("status", "Arquivado")
-    .order("order_index", { ascending: true });
+  return getPageGalleryRows(db, userId, { homeCarouselOnly: true });
+}
 
-  logQueryError("getHomeCarouselRows", error);
+export async function getPageGalleryRows(
+  db: DB,
+  userId?: string | null,
+  options: { homeCarouselOnly?: boolean; courseIds?: string[] } = {},
+): Promise<HomeCarouselRow[]> {
+  let query = db
+    .from("courses")
+    .select("id, slug, title, category, cover_url, order_index, is_featured, created_at, sales_url, sales_config")
+    .eq("layout", "gallery")
+    .eq("is_published", true)
+    .neq("status", "Arquivado");
+
+  if (options.homeCarouselOnly) query = query.eq("home_carousel", true);
+  if (options.courseIds?.length) query = query.in("id", options.courseIds);
+
+  const { data: courseRows, error } = await query.order("order_index", { ascending: true });
+
+  logQueryError("getPageGalleryRows", error);
   if (!courseRows || courseRows.length === 0) return [];
 
   const courseIds = courseRows.map((row: Row) => row.id);
@@ -855,6 +866,9 @@ export async function getHomeCarouselRows(db: DB, userId?: string | null): Promi
       courseId: row.id,
       courseSlug: row.slug ?? undefined,
       courseTitle: row.title,
+      category: row.category ?? undefined,
+      isFeatured: row.is_featured ?? false,
+      createdAt: row.created_at ?? undefined,
       courseHref: `/courses/${courseUrlId}`,
       locked,
       salesUrl: getCourseSalesTemplate({ salesUrl: row.sales_url, salesConfig: row.sales_config }),

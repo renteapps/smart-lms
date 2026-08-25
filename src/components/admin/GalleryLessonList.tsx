@@ -7,6 +7,8 @@ import { Edit2, GripVertical, HelpCircle, Image as ImageIcon, LoaderCircle, Plus
 import { Button, Toast } from "@heroui/react";
 import type { Lesson } from "@/types/course";
 import { deleteLesson, reorderLessons } from "@/app/actions/admin/catalog";
+import { RatingSummary } from "@/components/admin/RatingSummary";
+import type { RatingSummary as RatingSummaryData } from "@/lib/data/courseRatings";
 
 type LessonDropTarget = {
   lessonId: string;
@@ -52,10 +54,12 @@ export default function GalleryLessonList({
   courseId,
   moduleId,
   initialLessons,
+  lessonRatings,
 }: {
   courseId: string;
   moduleId: string;
   initialLessons: Lesson[];
+  lessonRatings: Record<string, RatingSummaryData>;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -232,9 +236,14 @@ export default function GalleryLessonList({
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 text-xs text-muted">
-                      {lesson.type === "quiz" ? "Quiz" : lesson.type === "text" ? "Texto" : "Vídeo"} · {lesson.durationInMinutes} min
-                    </p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+                      <span>{lesson.type === "quiz" ? "Quiz" : lesson.type === "text" ? "Texto" : "Vídeo"} · {lesson.durationInMinutes} min</span>
+                      <span aria-hidden="true">·</span>
+                      <RatingSummary
+                        averageRating={lessonRatings[lesson.id]?.averageRating}
+                        ratingsCount={lessonRatings[lesson.id]?.ratingsCount}
+                      />
+                    </div>
                   </div>
                 </div>
 

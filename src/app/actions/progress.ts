@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/auth";
+import { computeQuizScore } from "@/lib/quiz/grading";
+import type { QuizQuestion } from "@/types/quiz";
 
 export type ActionResult = { success: boolean; message?: string };
 
@@ -124,46 +126,23 @@ export async function submitQuizResult(
       return { success: false, message: "Quiz não encontrado." };
     }
 
-    let correctCount = 0;
-    const totalQuestions = quiz.questions.length;
-
-    quiz.questions.forEach((q: any) => {
-      const studentAnswer = answers[q.id];
-      if (q.type === 'open_ended') {
-        if (studentAnswer && (studentAnswer as string).trim().length > 0) {
-          correctCount++;
-        }
-        return;
-      }
-
-      if (q.type === 'multiple_select') {
-        const correctOptions = q.options.filter((opt: any) => opt.isCorrect).map((opt: any) => opt.id);
-        const studentAnswersArr = Array.isArray(studentAnswer) ? studentAnswer : [];
-        const isExactMatch = 
-          correctOptions.length === studentAnswersArr.length &&
-          correctOptions.every((val: string) => studentAnswersArr.includes(val));
-        
-        if (isExactMatch) correctCount++;
-        return;
-      }
-
-      const correctOption = q.options.find((opt: any) => opt.isCorrect);
-      if (correctOption && studentAnswer === correctOption.id) {
-        correctCount++;
-      }
-    });
-
-    const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 100;
-    const passed = score >= quiz.passing_score;
-
-    const { error } = await supabase.from("quiz_results").insert({
-      quiz_id: quizId,
-      user_id: user.id,
-      lesson_id: lessonId,
-      score,
+    const { score, passed } = computeQuizScore(
+      quiz.questions as QuizQuestion[],
       answers,
-      passed
-    });
+      quiz.passing_score
+    );
+
+    const { error } = await supabase.from("quiz_results").upsert(
+      {
+        quiz_id: quizId,
+        user_id: user.id,
+        lesson_id: lessonId,
+        score,
+        answers,
+        passed
+      },
+      { onConflict: "quiz_id,lesson_id,user_id" }
+    );
 
     if (error) {
       return { success: false, message: error.message };

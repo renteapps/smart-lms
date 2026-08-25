@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import StudentHomeClient from "@/components/home/StudentHomeClient";
 import { StudentShell } from "@/components/shells/StudentShell";
 import { MarketingShell } from "@/components/shells/MarketingShell";
-import { LandingPage } from "@/components/marketing/LandingPage";
+import { PageRenderer } from "@/components/page-builder/PageRenderer";
 import { getSessionUser } from "@/lib/supabase/auth";
 import { getCatalogCourses, getContinueLessons, getHomeCarouselRows } from "@/lib/data/courses";
 import { getAllArticles } from "@/lib/data/blog";
+import { getPageBuilderData, getPublishedPage, hasActiveProductAccess } from "@/lib/data/pages";
 
 export const metadata: Metadata = {
   title: "Início | Smart LMS",
@@ -26,10 +27,25 @@ export default async function Home() {
   const { supabase, user } = await getSessionUser();
 
   if (!user) {
+    const document = await getPublishedPage(supabase, "public-home");
+    const data = await getPageBuilderData(supabase, document);
     return (
       <MarketingShell>
-        <LandingPage />
+        <PageRenderer document={document} data={data} />
       </MarketingShell>
+    );
+  }
+
+  const hasProducts = await hasActiveProductAccess(supabase, user.id);
+  if (!hasProducts) {
+    const document = await getPublishedPage(supabase, "no-products");
+    const data = await getPageBuilderData(supabase, document, user.id);
+    return (
+      <StudentShell>
+        <div className="pt-[76px]">
+          <PageRenderer document={document} data={data} />
+        </div>
+      </StudentShell>
     );
   }
 

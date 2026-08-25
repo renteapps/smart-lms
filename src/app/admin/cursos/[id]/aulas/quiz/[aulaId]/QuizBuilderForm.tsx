@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ArrowLeft, Save, Plus, Trash2, GripVertical, CheckCircle2, Circle } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, GripVertical } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@heroui/react";
-import type { Quiz, QuizQuestion, QuizOption, QuestionType } from "@/types/quiz";
+import type { Quiz, QuizQuestion, QuestionType } from "@/types/quiz";
+import QuizQuestionTypeEditor from "./QuizQuestionTypeEditor";
 import { saveQuiz, saveLesson } from "@/app/actions/admin/catalog";
 
 interface QuizBuilderFormProps {
@@ -67,64 +68,55 @@ export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialDat
   const handleTypeChange = (id: string, type: QuestionType) => {
     setQuestions(prev => prev.map(q => {
       if (q.id !== id) return q;
-      let newOptions = q.options;
+      const base: QuizQuestion = {
+        id: q.id,
+        type,
+        text: q.text,
+        explanation: q.explanation,
+      };
+
       if (type === "true_false") {
-        newOptions = [
-          { id: `opt-${Date.now()}-t`, text: "Verdadeiro", isCorrect: true },
-          { id: `opt-${Date.now()}-f`, text: "Falso", isCorrect: false }
-        ];
-      } else if (type === "open_ended") {
-        newOptions = undefined;
-      } else if (!newOptions || newOptions.length === 0) {
-        newOptions = [
-          { id: `opt-${Date.now()}-1`, text: "", isCorrect: true },
-          { id: `opt-${Date.now()}-2`, text: "", isCorrect: false }
-        ];
+        return {
+          ...base,
+          options: [
+            { id: `opt-${Date.now()}-t`, text: "Verdadeiro", isCorrect: true },
+            { id: `opt-${Date.now()}-f`, text: "Falso", isCorrect: false }
+          ]
+        };
       }
-      return { ...q, type, options: newOptions };
-    }));
-  };
-
-  const handleAddOption = (questionId: string) => {
-    setQuestions(prev => prev.map(q => {
-      if (q.id !== questionId || !q.options) return q;
-      return {
-        ...q,
-        options: [...q.options, { id: `opt-${Date.now()}`, text: "", isCorrect: false }]
-      };
-    }));
-  };
-
-  const handleRemoveOption = (questionId: string, optionId: string) => {
-    setQuestions(prev => prev.map(q => {
-      if (q.id !== questionId || !q.options) return q;
-      return {
-        ...q,
-        options: q.options.filter(o => o.id !== optionId)
-      };
-    }));
-  };
-
-  const handleUpdateOption = (questionId: string, optionId: string, text: string) => {
-    setQuestions(prev => prev.map(q => {
-      if (q.id !== questionId || !q.options) return q;
-      return {
-        ...q,
-        options: q.options.map(o => o.id === optionId ? { ...o, text } : o)
-      };
-    }));
-  };
-
-  const handleSetCorrectOption = (questionId: string, optionId: string, isMultiple: boolean) => {
-    setQuestions(prev => prev.map(q => {
-      if (q.id !== questionId || !q.options) return q;
-      return {
-        ...q,
-        options: q.options.map(o => {
-          if (o.id === optionId) return { ...o, isCorrect: isMultiple ? !o.isCorrect : true };
-          return isMultiple ? o : { ...o, isCorrect: false };
-        })
-      };
+      if (type === "multiple_choice" || type === "multiple_select") {
+        return {
+          ...base,
+          options: q.options && q.options.length > 0 ? q.options : [
+            { id: `opt-${Date.now()}-1`, text: "", isCorrect: true },
+            { id: `opt-${Date.now()}-2`, text: "", isCorrect: false }
+          ]
+        };
+      }
+      if (type === "matching") {
+        return {
+          ...base,
+          pairs: q.pairs && q.pairs.length > 0 ? q.pairs : [
+            { id: `pair-${Date.now()}-1`, left: "", right: "" },
+            { id: `pair-${Date.now()}-2`, left: "", right: "" }
+          ]
+        };
+      }
+      if (type === "fill_table") {
+        return {
+          ...base,
+          columns: q.columns && q.columns.length > 0 ? q.columns : [
+            { id: `col-${Date.now()}-1`, header: "" },
+            { id: `col-${Date.now()}-2`, header: "" }
+          ],
+          minRows: q.minRows ?? 1
+        };
+      }
+      if (type === "fill_blank") {
+        return { ...base, blanks: q.blanks ?? [] };
+      }
+      // open_ended
+      return base;
     }));
   };
 
@@ -278,6 +270,9 @@ export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialDat
                         <option value="multiple_select">Seleção Múltipla</option>
                         <option value="true_false">Verdadeiro ou Falso</option>
                         <option value="open_ended">Resposta Aberta (Dissertativa)</option>
+                        <option value="matching">Relação (Associação)</option>
+                        <option value="fill_table">Preencher Tabela</option>
+                        <option value="fill_blank">Preencher Lacunas</option>
                       </select>
                     </div>
                     <button
@@ -290,59 +285,21 @@ export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialDat
                   </div>
 
                   <div className="space-y-3">
-                    <input
-                      type="text"
-                      placeholder="Digite a pergunta aqui..."
-                      required
-                      value={q.text}
-                      onChange={e => handleUpdateQuestion(q.id, { text: e.target.value })}
-                      className="w-full bg-background border border-border rounded-lg px-4 py-3 text-base font-semibold focus:outline-none focus:border-accent transition-colors"
-                    />
-
-                    {/* Options rendering based on type */}
-                    {q.type !== 'open_ended' && q.options && (
-                      <div className="space-y-2 mt-2">
-                        {q.options.map(opt => (
-                          <div key={opt.id} className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => handleSetCorrectOption(q.id, opt.id, q.type === 'multiple_select')}
-                              className={`shrink-0 transition-colors ${opt.isCorrect ? 'text-success' : 'text-muted hover:text-foreground'}`}
-                            >
-                              {opt.isCorrect ? <CheckCircle2 className="size-5" /> : <Circle className="size-5" />}
-                            </button>
-                            <input
-                              type="text"
-                              required
-                              value={opt.text}
-                              onChange={e => handleUpdateOption(q.id, opt.id, e.target.value)}
-                              placeholder="Texto da alternativa"
-                              disabled={q.type === 'true_false'}
-                              className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent disabled:opacity-70 disabled:bg-surface"
-                            />
-                            {q.type !== 'true_false' && (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveOption(q.id, opt.id)}
-                                className="text-muted hover:text-danger p-1 shrink-0"
-                              >
-                                <Trash2 className="size-4" />
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                        
-                        {q.type !== 'true_false' && (
-                          <button
-                            type="button"
-                            onClick={() => handleAddOption(q.id)}
-                            className="text-sm font-medium text-accent hover:text-accent/80 mt-2 inline-flex items-center gap-1"
-                          >
-                            <Plus className="size-3.5" /> Adicionar Alternativa
-                          </button>
-                        )}
-                      </div>
+                    {q.type !== 'fill_blank' && (
+                      <input
+                        type="text"
+                        placeholder="Digite a pergunta aqui..."
+                        required
+                        value={q.text}
+                        onChange={e => handleUpdateQuestion(q.id, { text: e.target.value })}
+                        className="w-full bg-background border border-border rounded-lg px-4 py-3 text-base font-semibold focus:outline-none focus:border-accent transition-colors"
+                      />
                     )}
+
+                    <QuizQuestionTypeEditor
+                      question={q}
+                      onChange={(updates) => handleUpdateQuestion(q.id, updates)}
+                    />
                   </div>
                 </div>
               ))}
@@ -364,7 +321,7 @@ export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialDat
           <button
             type="submit"
             disabled={isSaving}
-            className="px-5 py-2.5 rounded-lg bg-accent text-white font-medium text-sm hover:bg-primary-hover transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60"
+            className="px-5 py-2.5 rounded-lg bg-accent text-on-primary font-medium text-sm hover:bg-primary-hover transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60"
           >
             <Save className="w-4 h-4" />
             {isSaving ? "Salvando..." : "Salvar Quiz"}

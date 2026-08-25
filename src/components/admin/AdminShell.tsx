@@ -23,6 +23,7 @@ import {
   Users,
   CreditCard,
   FileText,
+  PanelsTopLeft,
 } from "lucide-react";
 import {
   Badge,
@@ -67,6 +68,7 @@ const navGroups = [
   {
     label: "Plataforma",
     links: [
+      { href: "/admin/pages", icon: PanelsTopLeft, label: "Páginas" },
       { href: "/admin/ajustes", icon: Settings, label: "Ajustes" },
     ],
   },
@@ -100,6 +102,7 @@ const segmentLabels: Record<string, string> = {
   comentarios: "Comentários",
   notificacoes: "Notificações",
   home: "Home Page",
+  pages: "Páginas",
   aparencia: "Aparência",
   "testes-perfil": "Testes de Perfil",
   ajustes: "Ajustes",

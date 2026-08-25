@@ -482,7 +482,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                   className="group flex flex-col items-center justify-between rounded-2xl border border-border/80 bg-surface p-6 transition-all duration-200 hover:-translate-y-1 hover:border-accent/40 hover:bg-accent-soft/10 hover:shadow-md cursor-pointer"
                 >
                   <div className="flex flex-col items-center text-center">
-                    <div className="grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground transition-all duration-200 group-hover:scale-110 group-hover:bg-accent group-hover:text-white shadow-xs">
+                    <div className="grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground transition-all duration-200 group-hover:scale-110 group-hover:bg-accent group-hover:text-on-primary shadow-xs">
                       <Plus className="size-5" />
                     </div>
                     <h3 className="mt-4 font-bold text-base text-foreground">Anotação Rápida</h3>
@@ -491,7 +491,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                     </p>
                   </div>
                   <div className="mt-6 flex w-full justify-center">
-                    <span className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-accent/20 bg-accent-soft/40 py-2.5 px-3 text-xs font-bold text-accent transition-all group-hover:bg-accent group-hover:text-white">
+                    <span className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-accent/20 bg-accent-soft/40 py-2.5 px-3 text-xs font-bold text-accent transition-all group-hover:bg-accent group-hover:text-on-primary">
                       Criar agora <ArrowUpRight className="size-3.5" />
                     </span>
                   </div>
@@ -503,7 +503,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                   className="group flex flex-col items-center justify-between rounded-2xl border border-border/80 bg-surface p-6 transition-all duration-200 hover:-translate-y-1 hover:border-accent/40 hover:bg-accent-soft/10 hover:shadow-md"
                 >
                   <div className="flex flex-col items-center text-center">
-                    <div className="grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground transition-all duration-200 group-hover:scale-110 group-hover:bg-accent group-hover:text-white shadow-xs">
+                    <div className="grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground transition-all duration-200 group-hover:scale-110 group-hover:bg-accent group-hover:text-on-primary shadow-xs">
                       <BookOpen className="size-5" />
                     </div>
                     <h3 className="mt-4 font-bold text-base text-foreground">Anotar em Aula</h3>
@@ -512,7 +512,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                     </p>
                   </div>
                   <div className="mt-6 flex w-full justify-center">
-                    <span className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-accent/20 bg-accent-soft/40 py-2.5 px-3 text-xs font-bold text-accent transition-all group-hover:bg-accent group-hover:text-white">
+                    <span className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-accent/20 bg-accent-soft/40 py-2.5 px-3 text-xs font-bold text-accent transition-all group-hover:bg-accent group-hover:text-on-primary">
                       Explorar Cursos <ArrowUpRight className="size-3.5" />
                     </span>
                   </div>
@@ -524,7 +524,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                   className="group flex flex-col items-center justify-between rounded-2xl border border-border/80 bg-surface p-6 transition-all duration-200 hover:-translate-y-1 hover:border-accent/40 hover:bg-accent-soft/10 hover:shadow-md"
                 >
                   <div className="flex flex-col items-center text-center">
-                    <div className="grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground transition-all duration-200 group-hover:scale-110 group-hover:bg-accent group-hover:text-white shadow-xs">
+                    <div className="grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground transition-all duration-200 group-hover:scale-110 group-hover:bg-accent group-hover:text-on-primary shadow-xs">
                       <Bot className="size-5" />
                     </div>
                     <h3 className="mt-4 font-bold text-base text-foreground">Resumos com IA</h3>
@@ -533,7 +533,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                     </p>
                   </div>
                   <div className="mt-6 flex w-full justify-center">
-                    <span className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-accent/20 bg-accent-soft/40 py-2.5 px-3 text-xs font-bold text-accent transition-all group-hover:bg-accent group-hover:text-white">
+                    <span className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-accent/20 bg-accent-soft/40 py-2.5 px-3 text-xs font-bold text-accent transition-all group-hover:bg-accent group-hover:text-on-primary">
                       Ver Agentes <ArrowUpRight className="size-3.5" />
                     </span>
                   </div>
@@ -570,7 +570,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                   onClick={() => setSelectedCategory("aulas")}
                   className={`flex h-10 items-center gap-2 rounded-xl px-3.5 text-xs font-bold transition-colors cursor-pointer ${
                     selectedCategory === "aulas"
-                      ? "bg-accent text-white shadow-xs"
+                      ? "bg-accent text-on-primary shadow-xs"
                       : "border border-border bg-surface text-muted hover:bg-surface-hover hover:text-foreground"
                   }`}
                 >
@@ -586,7 +586,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                   onClick={() => setSelectedCategory("agentes")}
                   className={`flex h-10 items-center gap-2 rounded-xl px-3.5 text-xs font-bold transition-colors cursor-pointer ${
                     selectedCategory === "agentes"
-                      ? "bg-accent text-white shadow-xs"
+                      ? "bg-accent text-on-primary shadow-xs"
                       : "border border-border bg-surface text-muted hover:bg-surface-hover hover:text-foreground"
                   }`}
                 >
@@ -602,7 +602,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                   onClick={() => setSelectedCategory("pessoal")}
                   className={`flex h-10 items-center gap-2 rounded-xl px-3.5 text-xs font-bold transition-colors cursor-pointer ${
                     selectedCategory === "pessoal"
-                      ? "bg-accent text-white shadow-xs"
+                      ? "bg-accent text-on-primary shadow-xs"
                       : "border border-border bg-surface text-muted hover:bg-surface-hover hover:text-foreground"
                   }`}
                 >

@@ -53,6 +53,7 @@ type SalesTabId = "visao_geral" | "funil_checkout" | "transacoes" | "produtos" |
 
 export interface SalesAnalyticsViewProps {
   basePath?: string;
+  period?: any;
   data: any;
 }
 

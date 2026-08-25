@@ -6,27 +6,33 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { AdminCursosClient, type AdminCourseListItem } from "./AdminCursosClient";
 import type { CourseStatus } from "@/types/course";
+import { getCourseRatingSummaries } from "@/lib/data/courseRatings";
 
 export default async function AdminCursosList() {
   const supabase = await createClient();
 
-  // Fetch courses with lesson counts and status
-  const { data: coursesData } = await supabase
-    .from("v_course_metrics")
-    .select(`
-      id,
-      title,
-      category,
-      cover_url,
-      status,
-      is_published,
-      updated_at,
-      lesson_count,
-      order_index,
-      is_featured
-    `)
-    .order('order_index', { ascending: true })
-    .order('updated_at', { ascending: false });
+  // Fetch courses with lesson counts/status and the pre-aggregated rating summaries.
+  const [coursesResult, ratingSummaries] = await Promise.all([
+    supabase
+      .from("v_course_metrics")
+      .select(`
+        id,
+        title,
+        category,
+        cover_url,
+        status,
+        is_published,
+        updated_at,
+        lesson_count,
+        order_index,
+        is_featured
+      `)
+      .order('order_index', { ascending: true })
+      .order('updated_at', { ascending: false }),
+    getCourseRatingSummaries(supabase),
+  ]);
+
+  const coursesData = coursesResult.data;
 
   const courses: AdminCourseListItem[] = (coursesData || []).map((course) => {
     // Format date (e.g. 28 jul, 14:08)
@@ -38,6 +44,8 @@ export default async function AdminCursosList() {
       minute: 'numeric' 
     }).format(date);
 
+    const ratingSummary = ratingSummaries[course.id];
+
     return {
       id: course.id,
       title: course.title,
@@ -48,6 +56,8 @@ export default async function AdminCursosList() {
       updated: formattedDate,
       orderIndex: course.order_index || 0,
       isFeatured: course.is_featured || false,
+      averageRating: ratingSummary?.averageRating ?? null,
+      ratingsCount: ratingSummary?.ratingsCount ?? 0,
     };
   });
 

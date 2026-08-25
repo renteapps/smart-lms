@@ -9,10 +9,13 @@ import AddProfileTestModal from "./AddProfileTestModal";
 import AddEditModuleModal from "./AddEditModuleModal";
 import { saveModule, deleteModule, saveLesson, deleteLesson, reorderLessons, reorderModules } from "@/app/actions/admin/catalog";
 import { useRouter } from "next/navigation";
+import { RatingSummary } from "@/components/admin/RatingSummary";
+import type { RatingSummary as RatingSummaryData } from "@/lib/data/courseRatings";
 
 interface ModuleListProps {
   courseId: string;
   initialCourse: Course;
+  lessonRatings: Record<string, RatingSummaryData>;
 }
 
 type LessonDropTarget = {
@@ -75,7 +78,7 @@ function moduleOrderChanged(previous: Module[], next: Module[]) {
   return previous.some((module, index) => module.id !== next[index]?.id);
 }
 
-export default function ModuleList({ courseId, initialCourse }: ModuleListProps) {
+export default function ModuleList({ courseId, initialCourse, lessonRatings }: ModuleListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [course, setCourse] = useState(initialCourse);
@@ -640,8 +643,14 @@ export default function ModuleList({ courseId, initialCourse }: ModuleListProps)
                                 )}
                               </div>
 
-                              <div className="mt-0.5 flex items-center gap-2 text-xs text-muted">
+                              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
                                 <span>{isProfileTest ? 'Diagnóstico' : lesson.type === 'video' ? 'Vídeo' : 'Texto'} • {lesson.durationInMinutes} min</span>
+
+                                <span aria-hidden="true">•</span>
+                                <RatingSummary
+                                  averageRating={lessonRatings[lesson.id]?.averageRating}
+                                  ratingsCount={lessonRatings[lesson.id]?.ratingsCount}
+                                />
 
                                 {isProfileTest && lesson.profileTestConfig && (
                                   <>

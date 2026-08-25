@@ -613,7 +613,7 @@ export default function AulaAdminForm({
           <button
             type="submit"
             disabled={isSaving}
-            className="px-5 py-2.5 rounded-lg bg-accent text-white font-medium text-sm hover:bg-primary-hover transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60"
+            className="px-5 py-2.5 rounded-lg bg-accent text-on-primary font-medium text-sm hover:bg-primary-hover transition-colors shadow-sm flex items-center gap-2 disabled:opacity-60"
           >
             <Save className="w-4 h-4" />
             {isSaving ? "Salvando..." : "Salvar Aula"}

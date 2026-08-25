@@ -28,22 +28,23 @@ import {
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 import {
   MetricCard,
-  PeriodSelector,
   RetentionFunnelChart,
   SimpleBarChart,
-  type TimePeriod,
+  UrlPeriodSelector,
 } from "@/components/admin/analytics/AnalyticsComponents";
 // Mock import removed
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { downloadCsv } from "@/lib/downloadCsv";
+import { formatAnalyticsHours, type AnalyticsPeriod } from "@/lib/analytics";
 
 export interface CoursesAnalyticsViewProps {
   basePath?: string;
+  period: AnalyticsPeriod;
   data: any; // Type corresponds to the return type of getCoursesAnalytics()
 }
 
-export function CoursesAnalyticsView({ basePath = "/admin/analises", data }: CoursesAnalyticsViewProps) {
-  const [period, setPeriod] = useState<TimePeriod>("30d");
+export function CoursesAnalyticsView({ basePath = "/admin/analises", period, data }: CoursesAnalyticsViewProps) {
   const [search, setSearch] = useState("");
   const [selectedTab, setSelectedTab] = useState("visao_geral");
 
@@ -62,9 +63,21 @@ export function CoursesAnalyticsView({ basePath = "/admin/analises", data }: Cou
   );
 
   const handleExport = () => {
-    toast.success("Exportando métricas pedagógicas...", {
-      description: "Arquivo CSV de engajamento de cursos gerado.",
-    });
+    downloadCsv(
+      `analise-cursos-${period}.csv`,
+      ["Curso", "Instrutor", "Alunos", "Conclusão (%)", "Horas por aluno", "Avaliação", "Receita", "Status"],
+      topCourses.map((course: any) => [
+        course.title,
+        course.instructor,
+        course.students,
+        course.completionRate,
+        course.avgHours,
+        course.rating || "",
+        course.revenueGenerated,
+        course.status,
+      ]),
+    );
+    toast.success("Métricas pedagógicas exportadas em CSV.");
   };
 
   return (
@@ -81,10 +94,10 @@ export function CoursesAnalyticsView({ basePath = "/admin/analises", data }: Cou
         <PageHeader
           eyebrow="Visão • Aprendizagem"
           title="Análise de Cursos & Engajamento"
-          description="Acompanhe o consumo de aulas, taxas de conclusão, retenção por módulo e feedbacks pedagógicos."
+          description="Acompanhe consumo de aulas concluídas, progresso por curso, matrículas e feedbacks pedagógicos."
           actions={
             <div className="flex flex-wrap items-center gap-3">
-              <PeriodSelector period={period} onChange={setPeriod} />
+              <UrlPeriodSelector period={period} />
               <Button variant="outline" size="md" onClick={handleExport} className="gap-2 font-semibold">
                 <Download className="size-4" aria-hidden="true" />
                 <span>Exportar CSV</span>
@@ -99,32 +112,33 @@ export function CoursesAnalyticsView({ basePath = "/admin/analises", data }: Cou
         <MetricCard
           label="Taxa de Conclusão"
           value={`${kpis.completionRate}%`}
-          helper={kpis.completionRateDelta}
+          helper="posição atual das matrículas ativas"
           icon={GraduationCap}
           tone="sage"
           tooltipText="Percentual de alunos que finalizam 100% dos módulos do curso."
-          trend={{ value: "+4.2%", isPositive: true }}
-          sparklineData={[48, 52, 55, 60, 63, 65, 68]}
+          sparklineData={monthlyEngagement.map((item: any) => item.completions)}
         />
         <MetricCard
           label="Horas Assistidas"
-          value={`${(kpis.totalWatchHours / 1000).toFixed(1)}k h`}
+          value={formatAnalyticsHours(kpis.totalWatchHours)}
           helper={kpis.watchHoursDelta}
           icon={Clock3}
           tone="primary"
-          tooltipText="Soma de minutos e horas assistidas no player de vídeo."
-          trend={{ value: "+12.1%", isPositive: true }}
-          sparklineData={[30, 42, 55, 68, 79, 88, 95]}
+          tooltipText="Soma da duração cadastrada das aulas concluídas no período."
+          trend={kpis.watchHoursChange == null ? undefined : {
+            value: `${kpis.watchHoursChange > 0 ? "+" : ""}${kpis.watchHoursChange}%`,
+            isPositive: kpis.watchHoursChange >= 0,
+            isNeutral: kpis.watchHoursChange === 0,
+          }}
+          sparklineData={monthlyEngagement.map((item: any) => item.watchHours)}
         />
         <MetricCard
           label="Matrículas Ativas"
           value={kpis.activeEnrollments.toLocaleString("pt-BR")}
-          helper="em 24 cursos cadastrados"
+          helper={`em ${kpis.totalCourses} cursos cadastrados`}
           icon={Users}
           tone="terracotta"
           tooltipText="Total de inscrições de estudantes ativas nos cursos."
-          trend={{ value: "+8.5%", isPositive: true }}
-          sparklineData={[60, 65, 70, 72, 78, 82, 85]}
         />
         <MetricCard
           label="Avaliação Média"
@@ -133,8 +147,6 @@ export function CoursesAnalyticsView({ basePath = "/admin/analises", data }: Cou
           icon={Star}
           tone="purple"
           tooltipText="Nota média de 1 a 5 estrelas concedida pelos alunos após as aulas."
-          trend={{ value: "+0.1", isPositive: true }}
-          sparklineData={[90, 92, 91, 94, 95, 96, 98]}
         />
       </section>
 

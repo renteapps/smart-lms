@@ -19,7 +19,7 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
     db
       .from("courses")
       .select(
-        "id, slug, title, cover_url, layout, status, modules(id, title, order_index, cover_url, lessons(id, title, cover_url, short_description, duration_in_minutes, order_index, is_published, is_eligible_for_trail, topics, solves, level, objective, audience, prerequisites, content, slug))",
+        "id, slug, title, cover_url, layout, status, modules(id, title, order_index, cover_url, lessons(id, title, cover_url, short_description, duration_in_minutes, order_index, is_published, is_eligible_for_trail, topics, solves, level, objective, audience, prerequisites, slug))",
       )
       .eq("is_published", true)
       .neq("status", "Arquivado")
@@ -136,7 +136,6 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
           courseSlug: course.slug,
           moduleId: mod.id,
           title: clean(lesson.title),
-          description: lesson.objective || lesson.content?.slice(0, 160) || "",
           duration: (lesson.duration_in_minutes ?? 10) * 60,
           topics: lesson.topics ?? [],
           problemasQueResolve: lesson.solves ?? [],
@@ -189,4 +188,65 @@ export async function getContentIndex(db: DB): Promise<ContentIndex> {
   });
 
   return createContentIndex(items, eligibleLessons);
+}
+
+/**
+ * O catálogo é o mesmo para todo mundo — remontá-lo por aluno é desperdício.
+ *
+ * Toda visita à home e à `/minha-trilha` chama `refreshTrail`, e no instante em
+ * que o carimbo do catálogo muda **todos** os alunos que entrarem em seguida
+ * remontariam o índice inteiro ao mesmo tempo, cada um com a sua própria query.
+ * Aqui o índice fica guardado no processo, chaveado pelo próprio carimbo: se o
+ * carimbo não mudou, o índice também não, e não há o que perguntar ao banco.
+ *
+ * O que fica guardado é a *promessa*, não o valor já resolvido. Os pedidos que
+ * chegam enquanto a primeira busca ainda está no ar esperam por ela em vez de
+ * abrir a sua própria — é isso que transforma a manada que entra logo depois de
+ * o admin publicar alguma coisa em uma consulta só.
+ *
+ * O teto de tempo existe por causa do artigo agendado: o índice só inclui
+ * artigos com `published_at` no passado, e a hora de publicação chegar não mexe
+ * no carimbo de ninguém. Sem ele, um post agendado ficaria fora do índice até
+ * alguém tocar no catálogo.
+ */
+const CONTENT_INDEX_TTL_MS = 60_000;
+
+type CachedContentIndex = {
+  stamp: string;
+  expiresAt: number;
+  index: Promise<ContentIndex>;
+};
+
+let cachedContentIndex: CachedContentIndex | null = null;
+
+export function getCachedContentIndex(db: DB, stamp: string): Promise<ContentIndex> {
+  const now = Date.now();
+  if (cachedContentIndex?.stamp === stamp && now < cachedContentIndex.expiresAt) {
+    return cachedContentIndex.index;
+  }
+
+  const pending = getContentIndex(db);
+  const entry: CachedContentIndex = { stamp, expiresAt: now + CONTENT_INDEX_TTL_MS, index: pending };
+  cachedContentIndex = entry;
+
+  pending
+    .then((index) => {
+      /*
+       * Query que falha no Supabase não vira exceção aqui — vira índice vazio,
+       * porque `logQueryError` só registra no console. Guardar isso por um
+       * minuto esvaziaria a trilha de quem entrasse no intervalo, e o motor
+       * gravaria o resultado de volta. Índice vazio não fica no cache.
+       */
+      if (index.items.length === 0 && cachedContentIndex === entry) cachedContentIndex = null;
+    })
+    .catch(() => {
+      if (cachedContentIndex === entry) cachedContentIndex = null;
+    });
+
+  return pending;
+}
+
+/** Esvazia o memo — os testes precisam de um ponto de partida limpo. */
+export function clearContentIndexCache(): void {
+  cachedContentIndex = null;
 }

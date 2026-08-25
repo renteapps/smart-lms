@@ -284,7 +284,7 @@ export default function OnboardingPage() {
                             aria-label={day.label}
                             whileTap={reduceMotion ? undefined : { scale: 0.97 }}
                             onClick={() => toggleWeekday(day.value)}
-                            className={cn('flex min-h-16 flex-col items-center justify-center rounded-[10px] border text-sm font-extrabold outline-none focus-visible:ring-3 focus-visible:ring-primary/25', selected ? 'border-primary bg-primary text-white shadow-sm' : 'border-border bg-surface text-text-soft hover:border-primary/35')}
+                            className={cn('flex min-h-16 flex-col items-center justify-center rounded-[10px] border text-sm font-extrabold outline-none focus-visible:ring-3 focus-visible:ring-primary/25', selected ? 'border-primary bg-primary text-on-primary shadow-sm' : 'border-border bg-surface text-text-soft hover:border-primary/35')}
                           >
                             {selected && <Check className="mb-1 h-3.5 w-3.5" />}
                             {day.short}
@@ -391,7 +391,7 @@ export default function OnboardingPage() {
                         <span className={cn('absolute inset-y-3 left-0 w-1 rounded-r-full transition-colors', selected ? 'bg-primary' : 'bg-transparent group-hover:bg-primary/25')} />
                         <span className="flex w-full items-start justify-between gap-4">
                           <span className="text-xs font-extrabold tracking-[0.12em] text-text-mute">{String(index + 1).padStart(2, '0')}</span>
-                          <span className={cn('grid h-8 w-8 place-items-center rounded-[8px] border transition-colors', selected ? 'border-primary bg-primary text-white' : 'border-border bg-canvas-soft text-transparent')}><Check className="h-4 w-4 stroke-[3]" /></span>
+                          <span className={cn('grid h-8 w-8 place-items-center rounded-[8px] border transition-colors', selected ? 'border-primary bg-primary text-on-primary' : 'border-border bg-canvas-soft text-transparent')}><Check className="h-4 w-4 stroke-[3]" /></span>
                         </span>
                         <span className={cn('max-w-[22ch] font-display text-xl font-extrabold leading-tight tracking-[-0.025em] sm:text-2xl', selected ? 'text-primary-active' : 'text-ink')}>{option.label}</span>
                       </motion.button>
@@ -417,7 +417,7 @@ export default function OnboardingPage() {
                           selected ? 'border-primary/45 bg-primary-pale/65 shadow-sm' : 'border-border bg-surface hover:border-primary/30 hover:bg-primary-pale/20',
                         )}
                       >
-                        <span className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-[8px] border text-xs font-extrabold', selected ? 'border-primary bg-primary text-white' : 'border-border bg-canvas-soft text-text-mute')}>{selected ? <Check className="h-4 w-4 stroke-[3]" /> : String(index + 1).padStart(2, '0')}</span>
+                        <span className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-[8px] border text-xs font-extrabold', selected ? 'border-primary bg-primary text-on-primary' : 'border-border bg-canvas-soft text-text-mute')}>{selected ? <Check className="h-4 w-4 stroke-[3]" /> : String(index + 1).padStart(2, '0')}</span>
                         <span className={cn('flex-1 text-base font-bold sm:text-lg', selected ? 'text-primary-active' : 'text-ink')}>{option.label}</span>
                         <ArrowRight02Icon size={16} className={cn('transition-[opacity,transform]', selected ? 'translate-x-0 text-primary opacity-100' : '-translate-x-1 text-text-mute opacity-0 group-hover:translate-x-0 group-hover:opacity-100')} />
                       </motion.button>

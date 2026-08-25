@@ -1,7 +1,13 @@
 import { CoursesAnalyticsView } from "@/components/admin/analytics/CoursesAnalyticsView";
 import { getCoursesAnalytics } from "../actions";
+import { parseAnalyticsPeriod } from "@/lib/analytics";
 
-export default async function AdminAnaliseCursosPage() {
-  const data = await getCoursesAnalytics();
-  return <CoursesAnalyticsView basePath="/admin/analises" data={data} />;
+export default async function AdminAnaliseCursosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string | string[] }>;
+}) {
+  const period = parseAnalyticsPeriod((await searchParams).period);
+  const data = await getCoursesAnalytics(period);
+  return <CoursesAnalyticsView basePath="/admin/analises" period={period} data={data} />;
 }

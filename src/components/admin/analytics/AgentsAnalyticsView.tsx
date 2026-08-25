@@ -34,6 +34,7 @@ import { toast } from "sonner";
 
 export interface AgentsAnalyticsViewProps {
   basePath?: string;
+  period?: any;
   data: any;
 }
 

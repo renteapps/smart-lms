@@ -31,6 +31,7 @@ import { toast } from "sonner";
 
 export interface SubscriptionsAnalyticsViewProps {
   basePath?: string;
+  period?: any;
   data: any;
 }
 

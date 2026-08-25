@@ -176,6 +176,8 @@
   --color-primary-hover: var(--primary-active);
   --color-primary-pale: var(--primary-pale);
   --color-on-primary: var(--on-primary);
+  /* Foreground calculado dinamicamente em layout.tsx via getContrastForeground() */
+  --color-primary-foreground: var(--primary-foreground);
 
   --color-text: var(--text);
   --color-text-soft: var(--text-soft);

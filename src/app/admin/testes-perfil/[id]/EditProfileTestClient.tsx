@@ -326,7 +326,7 @@ export function EditProfileTestClient({ initialTest, courses, plans }: { initial
                         : 'border-border/60 bg-background-secondary hover:border-accent/40'
                     }`}
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${resultType === 'single' ? 'bg-accent text-white' : 'bg-surface border border-border text-muted'}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${resultType === 'single' ? 'bg-accent text-on-primary' : 'bg-surface border border-border text-muted'}`}>
                       🏆
                     </div>
                     <div>
@@ -343,7 +343,7 @@ export function EditProfileTestClient({ initialTest, courses, plans }: { initial
                         : 'border-border/60 bg-background-secondary hover:border-accent/40'
                     }`}
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${resultType === 'percentage' ? 'bg-accent text-white' : 'bg-surface border border-border text-muted'}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${resultType === 'percentage' ? 'bg-accent text-on-primary' : 'bg-surface border border-border text-muted'}`}>
                       📊
                     </div>
                     <div>

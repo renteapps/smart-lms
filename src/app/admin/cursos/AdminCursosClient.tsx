@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import type { CourseStatus } from "@/types/course";
 import { updateCoursesOrderBulk, toggleCourseFeatured } from "./actions";
 import { toast } from "sonner";
+import { RatingSummary } from "@/components/admin/RatingSummary";
 import {
   DndContext,
   closestCenter,
@@ -37,6 +38,8 @@ export type AdminCourseListItem = {
   updated: string;
   orderIndex: number;
   isFeatured: boolean;
+  averageRating: number | null;
+  ratingsCount: number;
 };
 
 function SortableCourseRow({
@@ -110,6 +113,11 @@ function SortableCourseRow({
             <span>{course.category}</span>
             <span>·</span>
             <span>{course.lessons} aulas</span>
+            <span>·</span>
+            <RatingSummary
+              averageRating={course.averageRating}
+              ratingsCount={course.ratingsCount}
+            />
           </div>
         </div>
       </div>

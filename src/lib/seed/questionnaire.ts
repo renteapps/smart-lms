@@ -2,11 +2,11 @@ import { EligibleLesson, Questionnaire } from '@/types/trilha';
 import { createContentIndex, type ContentItem } from '@/lib/contentCatalog';
 
 export const mockEligibleLessons: EligibleLesson[] = [
-  { lessonId: 'l1', courseSlug: 'c1', moduleId: 'm1', title: 'Bem-vindo ao Curso!', description: 'Comece com clareza.', duration: 300, topics: ['fundamentos'], problemasQueResolve: ['inseguranca'], nivel: 'iniciante' },
-  { lessonId: 'l2', courseSlug: 'c1', moduleId: 'm1', title: 'O que é React?', description: 'Conceitos fundamentais.', duration: 720, topics: ['fundamentos'], problemasQueResolve: ['falta de base'], nivel: 'iniciante', prerequisitos: ['l1'] },
-  { lessonId: 'l-profile-1', courseSlug: 'c1', moduleId: 'm1', title: 'Perfil de Estudo', description: 'Diagnóstico inicial.', duration: 600, topics: ['fundamentos'], problemasQueResolve: ['inseguranca'], nivel: 'iniciante', prerequisitos: ['l1'] },
-  { lessonId: 'l3', courseSlug: 'c1', moduleId: 'm2', title: 'Criando seu primeiro componente', description: 'Aplicação prática.', duration: 900, topics: ['pratica'], problemasQueResolve: ['procrastinacao'], nivel: 'intermediario', prerequisitos: ['l2', 'l-profile-1'] },
-  { lessonId: 'l4', courseSlug: 'c1', moduleId: 'm2', title: 'Entendendo useState', description: 'Aprofundamento técnico.', duration: 1200, topics: ['aprofundamento'], problemasQueResolve: ['estagnacao'], nivel: 'avancado', prerequisitos: ['l3'] },
+  { lessonId: 'l1', courseSlug: 'c1', moduleId: 'm1', title: 'Bem-vindo ao Curso!', duration: 300, topics: ['fundamentos'], problemasQueResolve: ['inseguranca'], nivel: 'iniciante' },
+  { lessonId: 'l2', courseSlug: 'c1', moduleId: 'm1', title: 'O que é React?', duration: 720, topics: ['fundamentos'], problemasQueResolve: ['falta de base'], nivel: 'iniciante', prerequisitos: ['l1'] },
+  { lessonId: 'l-profile-1', courseSlug: 'c1', moduleId: 'm1', title: 'Perfil de Estudo', duration: 600, topics: ['fundamentos'], problemasQueResolve: ['inseguranca'], nivel: 'iniciante', prerequisitos: ['l1'] },
+  { lessonId: 'l3', courseSlug: 'c1', moduleId: 'm2', title: 'Criando seu primeiro componente', duration: 900, topics: ['pratica'], problemasQueResolve: ['procrastinacao'], nivel: 'intermediario', prerequisitos: ['l2', 'l-profile-1'] },
+  { lessonId: 'l4', courseSlug: 'c1', moduleId: 'm2', title: 'Entendendo useState', duration: 1200, topics: ['aprofundamento'], problemasQueResolve: ['estagnacao'], nivel: 'avancado', prerequisitos: ['l3'] },
 ];
 
 /** Itens de conteúdo correspondentes ao mockQuestionnaire para uso nos testes de matching. */

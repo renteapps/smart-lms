@@ -71,7 +71,7 @@ export default function CourseGalleryClient({
   return (
     <div className="min-h-screen pt-20 sm:pt-[76px]">
       <section className="editorial-container py-5 sm:py-8 lg:py-10">
-        <div className="relative isolate overflow-hidden rounded-xl sm:rounded-2xl bg-foreground shadow-elev-4">
+        <div className="relative isolate overflow-hidden rounded-xl sm:rounded-2xl bg-neutral-950 text-white shadow-elev-4 border border-white/10">
           <Image
             src={heroCover}
             alt={`Capa do curso ${course.title}`}
@@ -79,31 +79,31 @@ export default function CourseGalleryClient({
             unoptimized
             priority
             sizes="(max-width: 768px) 100vw, (max-width: 1280px) 95vw, 1280px"
-            className="object-cover opacity-50 sm:opacity-55"
+            className="object-cover opacity-45 sm:opacity-50"
           />
           <div
             aria-hidden="true"
-            className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/90 to-foreground/75 sm:bg-gradient-to-r sm:from-foreground sm:via-foreground/90 sm:to-foreground/30"
+            className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/85 to-neutral-950/40 sm:bg-gradient-to-r sm:from-neutral-950 sm:via-neutral-950/90 sm:to-neutral-950/30"
           />
 
           <div className="relative z-10 max-w-3xl px-5 py-8 sm:px-8 sm:py-12 md:px-10 md:py-16 lg:px-14 lg:py-20">
-            <p className="eyebrow text-background/70 text-[11px] sm:text-xs tracking-wider">
+            <p className="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-white/70">
               {course.category || "Geral"} · Coleção de aulas
             </p>
-            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:display-1 mt-3 sm:mt-4 font-extrabold text-background tracking-tight leading-[1.1] break-words">
+            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:display-1 mt-3 sm:mt-4 font-extrabold text-white tracking-tight leading-[1.1] break-words">
               {course.title}
             </h1>
-            <p className="lede mt-3 sm:mt-5 text-sm sm:text-base md:text-lg text-background/80 max-w-2xl leading-relaxed">
+            <p className="mt-3.5 sm:mt-5 text-sm sm:text-base md:text-lg text-white/90 max-w-2xl leading-relaxed font-normal antialiased">
               {course.description}
             </p>
 
             <div className="mt-6 sm:mt-8 flex flex-wrap gap-2 sm:gap-2.5">
-              <span className="material-thin flex items-center gap-1.5 sm:gap-2 rounded-full px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-xs sm:text-sm font-semibold text-background">
-                <BookOpen className="size-3.5 sm:size-4" aria-hidden="true" />
+              <span className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-xs sm:text-sm font-semibold text-white backdrop-blur-md">
+                <BookOpen className="size-3.5 sm:size-4 text-white/80" aria-hidden="true" />
                 <span data-numeric>{totalLessons} aulas</span>
               </span>
               {!locked && progressPercentage > 0 && (
-                <span className="material-thin flex items-center gap-1.5 sm:gap-2 rounded-full px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-xs sm:text-sm font-semibold text-background">
+                <span className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-xs sm:text-sm font-semibold text-white backdrop-blur-md">
                   <span data-numeric>{progressPercentage}% assistido</span>
                 </span>
               )}

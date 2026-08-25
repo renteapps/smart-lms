@@ -30,6 +30,7 @@ import { toast } from "sonner";
 
 export interface StudentsAnalyticsViewProps {
   basePath?: string;
+  period?: any;
   data: any;
 }
 
