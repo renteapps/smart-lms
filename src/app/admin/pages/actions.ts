@@ -48,6 +48,7 @@ export async function savePageDraft(
       }
       if (error || !data) return { success: false, message: error?.message || "Não foi possível salvar o rascunho." };
       revalidatePath("/admin/pages");
+      revalidatePath(`/admin/pages/${pageKeyInput}`);
       return { success: true, message: "Rascunho salvo.", revision: data.revision, updatedAt: data.updated_at ?? now };
     }
 
@@ -61,6 +62,7 @@ export async function savePageDraft(
     if (error) return { success: false, message: error.message };
     if (!data) return { success: false, conflict: true, message: "Este rascunho mudou em outra sessão. Recarregue antes de continuar." };
     revalidatePath("/admin/pages");
+    revalidatePath(`/admin/pages/${pageKeyInput}`);
     return { success: true, message: "Rascunho salvo.", revision: data.revision, updatedAt: data.updated_at ?? now };
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : "Não foi possível salvar o rascunho." };
@@ -93,6 +95,7 @@ export async function publishPage(pageKeyInput: string, expectedRevision: number
 
     revalidatePath("/");
     revalidatePath("/admin/pages");
+    revalidatePath(`/admin/pages/${pageKeyInput}`);
     return { success: true, message: "Página publicada com sucesso.", revision: draft.revision, updatedAt: publishedAt };
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : "Não foi possível publicar a página." };

@@ -1,5 +1,20 @@
 import { normalizeTag } from "@/lib/matching";
-import type { QuizQuestion } from "@/types/quiz";
+import type { FillBlankDef, QuizQuestion } from "@/types/quiz";
+
+/**
+ * Uma lacuna em modo múltipla escolha (blank.options presente) é certa se o
+ * valor guardado for o id do option marcado isCorrect; em modo livre, se o
+ * texto digitado bater com algum de acceptedAnswers (ignorando acento/caixa).
+ */
+export function isBlankCorrect(blank: FillBlankDef, value: unknown): boolean {
+  if (typeof value !== "string" || value.trim().length === 0) return false;
+  if (blank.options && blank.options.length > 0) {
+    const correctOption = blank.options.find((opt) => opt.isCorrect);
+    return Boolean(correctOption && value === correctOption.id);
+  }
+  const normalized = normalizeTag(value);
+  return blank.acceptedAnswers.some((accepted) => normalizeTag(accepted) === normalized);
+}
 
 /**
  * Nota fracionária (0..1) de uma pergunta. multiple_choice/true_false/
@@ -42,12 +57,7 @@ export function gradeQuestion(question: QuizQuestion, answer: unknown): number {
       const blanks = question.blanks ?? [];
       if (blanks.length === 0) return 0;
       const given = answer && typeof answer === "object" ? (answer as Record<string, string>) : {};
-      const correctCount = blanks.filter((blank) => {
-        const value = given[blank.id];
-        if (typeof value !== "string" || value.trim().length === 0) return false;
-        const normalized = normalizeTag(value);
-        return blank.acceptedAnswers.some((accepted) => normalizeTag(accepted) === normalized);
-      }).length;
+      const correctCount = blanks.filter((blank) => isBlankCorrect(blank, given[blank.id])).length;
       return correctCount / blanks.length;
     }
 

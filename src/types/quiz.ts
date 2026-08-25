@@ -30,10 +30,19 @@ export interface TableColumn {
 
 // Uma lacuna de "preencher lacunas". Corresponde ao marcador {{n}} dentro de
 // QuizQuestion.text (o texto funciona como o template da lacuna).
+//
+// Duas modalidades:
+//  - livre (options ausente/vazio): o aluno digita, comparado com acceptedAnswers.
+//  - múltipla escolha (options presente): o aluno escolhe entre as opções (um
+//    dropdown), a resposta certa é o option com isCorrect true. acceptedAnswers
+//    fica sem uso nesse modo.
 export interface FillBlankDef {
   id: string;
   acceptedAnswers: string[];
+  options?: QuizOption[];
 }
+
+export type FillTableLayout = 'table' | 'stacked';
 
 export interface QuizQuestion {
   id: string;
@@ -43,6 +52,7 @@ export interface QuizQuestion {
   pairs?: MatchingPair[]; // matching
   columns?: TableColumn[]; // fill_table
   minRows?: number; // fill_table — quantidade mínima de linhas preenchidas (default 1)
+  tableLayout?: FillTableLayout; // fill_table — 'table' (padrão) ou 'stacked' (um cartão por linha, melhor com muitas colunas)
   blanks?: FillBlankDef[]; // fill_blank
   explanation?: string; // Shown after answering
 }

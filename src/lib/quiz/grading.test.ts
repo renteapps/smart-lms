@@ -124,6 +124,27 @@ describe("gradeQuestion", () => {
     expect(gradeQuestion(q, { b1: "brasilia", b2: "argentina" })).toBeCloseTo(0.5);
     expect(gradeQuestion(q, {})).toBe(0);
   });
+
+  it("grades multiple-choice blanks (blank.options) by the selected option id", () => {
+    const q: QuizQuestion = {
+      id: "q1",
+      type: "fill_blank",
+      text: "O {{1}} é a capital do Brasil.",
+      blanks: [
+        {
+          id: "b1",
+          acceptedAnswers: [],
+          options: [
+            { id: "opt-a", text: "Brasília", isCorrect: true },
+            { id: "opt-b", text: "Rio de Janeiro", isCorrect: false },
+          ],
+        },
+      ],
+    };
+    expect(gradeQuestion(q, { b1: "opt-a" })).toBe(1);
+    expect(gradeQuestion(q, { b1: "opt-b" })).toBe(0);
+    expect(gradeQuestion(q, {})).toBe(0);
+  });
 });
 
 describe("isQuestionAnswered", () => {

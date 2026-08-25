@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { MOCK_ANALYTICS_CARDS } from "@/lib/mocks/analyticsMocks";
 import {
   ANALYTICS_PERIOD_LABELS,
@@ -69,46 +70,7 @@ function isLiveSubscription(sub: { status?: string | null; current_period_end?: 
 
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
-/**
- * Minutos assistidos de um registro de progresso: aula concluída conta a
- * duração cadastrada da aula (melhor proxy que temos de "assistiu inteira");
- * aula em andamento conta o segundo real onde o aluno parou.
- */
-function watchMinutesOf(row: { is_completed?: boolean | null; last_watched_second?: number | null }, durationMinutes: number): number {
-  if (row.is_completed) return durationMinutes;
-  return (row.last_watched_second ?? 0) / 60;
-}
-
 const MONTH_LABELS_PT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-
-function lastNMonths(n: number) {
-  const now = new Date();
-  const months: { key: string; label: string; start: Date; end: Date }[] = [];
-  for (let i = n - 1; i >= 0; i--) {
-    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
-    const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1));
-    months.push({ key: `${start.getUTCFullYear()}-${start.getUTCMonth()}`, label: MONTH_LABELS_PT[start.getUTCMonth()], start, end });
-  }
-  return months;
-}
-
-function monthKeyOf(date: Date) {
-  return `${date.getUTCFullYear()}-${date.getUTCMonth()}`;
-}
-
-function lastNDays(n: number) {
-  const now = new Date();
-  const days: { key: string; label: string }[] = [];
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i));
-    days.push({ key: d.toISOString().slice(0, 10), label: `${String(d.getUTCDate()).padStart(2, "0")}/${MONTH_LABELS_PT[d.getUTCMonth()]}` });
-  }
-  return days;
-}
-
-function dayKeyOf(dateStr: string) {
-  return new Date(dateStr).toISOString().slice(0, 10);
-}
 
 function relativeTime(dateStr: string): string {
   const diffMin = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
@@ -183,86 +145,13 @@ function splitCurrentAndPrevious<T>(
   };
 }
 
-export async function getAnalyticsOverview() {
-  const supabase = await createClient();
-  const nowIso = new Date().toISOString();
-
-  const [
-    { data: subscriptions, error: subError },
-    { data: approvedTx },
-    { data: activeEnrollments },
-    { data: progressData },
-    { count: totalAgentInteractions },
-  ] = await Promise.all([
-    supabase
-      .from("subscriptions")
-      .select("status, current_period_end, plans(price, frequency)"),
-    // Receita de verdade vem das transações do gateway; somar `plans.price` por
-    // assinatura contava o mesmo plano de novo a cada renovação.
-    supabase
-      .from("gateway_transactions")
-      .select("amount, status"),
-    // "Aluno ativo" = tem matrícula ativa e não vencida, não qualquer perfil
-    // cadastrado (que inclui contas admin usadas para testar a plataforma).
-    supabase
-      .from("enrollments")
-      .select("user_id")
-      .eq("status", "active")
-      .or(`expires_at.is.null,expires_at.gt.${nowIso}`),
-    // Coluna correta é `is_completed`, não `completed` — o select antigo
-    // pedia uma coluna inexistente, o PostgREST rejeitava a query inteira e
-    // Horas Assistidas ficava sempre zero.
-    supabase
-      .from("lesson_progress")
-      .select("is_completed, last_watched_second, lessons(duration_in_minutes)"),
-    supabase
-      .from("agent_messages")
-      .select("id", { count: "exact", head: true }),
-  ]);
-
-  let totalRevenue = 0;
-  for (const tx of approvedTx ?? []) {
-    const amount = Number(tx.amount) || 0;
-    if (tx.status === "approved") totalRevenue += amount;
-    else if (tx.status === "refunded" || tx.status === "chargeback") totalRevenue -= amount;
-  }
-
-  let mrr = 0;
-  let activeSubscriptions = 0;
-  if (!subError && subscriptions) {
-    subscriptions.forEach((sub) => {
-      if (!isLiveSubscription(sub)) return;
-      activeSubscriptions++;
-      mrr += monthlyRecurring(planOf(sub.plans));
-    });
-  }
-
-  const activeStudents = new Set((activeEnrollments ?? []).map((e) => e.user_id)).size;
-
-  let totalWatchMinutes = 0;
-  for (const p of progressData ?? []) {
-    const duration = embedOne<{ duration_in_minutes: number | null }>(p.lessons)?.duration_in_minutes ?? 0;
-    totalWatchMinutes += watchMinutesOf(p, duration);
-  }
-
-  return {
-    totalRevenue,
-    revenueChange: 0, // Tendências exigiriam snapshots históricos que ainda não guardamos
-    activeStudents,
-    studentsChange: 0,
-    totalWatchHours: totalWatchMinutes / 60,
-    watchHoursChange: 0,
-    totalAgentInteractions: totalAgentInteractions || 0,
-    agentInteractionsChange: 0,
-    activeSubscriptions,
-    subscriptionsChange: 0,
-    mrr,
-    mrrChange: 0,
-  };
-}
-
 export async function getCoursesAnalytics(period: AnalyticsPeriod = "30d") {
   const supabase = await createClient();
+  // `gateway_transactions` só concede SELECT para `service_role` — nenhuma
+  // policy/grant libera `authenticated`. Sem o client admin aqui, o PostgREST
+  // devolve "permission denied for table gateway_transactions" (42501) e a
+  // função lança, derrubando a página inteira de análises.
+  const adminSupabase = createAdminClient();
   const nowIso = new Date().toISOString();
   const { previousStart } = getAnalyticsPeriodBounds(period);
 
@@ -295,7 +184,7 @@ export async function getCoursesAnalytics(period: AnalyticsPeriod = "30d") {
       .or(`expires_at.is.null,expires_at.gt.${nowIso}`),
     supabase.from("v_user_course_progress").select("course_id, user_id, completed_lessons, started_lessons"),
     periodProgressQuery,
-    supabase.from("gateway_transactions").select("course_id, amount, status, occurred_at").eq("status", "approved"),
+    adminSupabase.from("gateway_transactions").select("course_id, amount, status, occurred_at").eq("status", "approved"),
   ]);
 
   const queryResults = [
@@ -305,11 +194,16 @@ export async function getCoursesAnalytics(period: AnalyticsPeriod = "30d") {
     ["matrículas", enrollmentsResult.error],
     ["progresso agregado", progressSummaryResult.error],
     ["progresso do período", periodProgressResult.error],
-    ["transações", transactionsResult.error],
   ] as const;
   const failed = queryResults.find(([, error]) => error);
   if (failed?.[1]) {
     throw new Error(`Não foi possível carregar as análises de cursos (${failed[0]}): ${failed[1].message}`);
+  }
+  // `gateway_transactions` depende da service role key (ver nota acima). Sem
+  // ela configurada (ex.: dev local), tratamos como "sem dados de receita"
+  // em vez de derrubar a página inteira de cursos por causa da receita.
+  if (transactionsResult.error) {
+    console.warn("[admin/analises] gateway_transactions indisponível:", transactionsResult.error.message);
   }
 
   const courses = coursesResult.data ?? [];
@@ -487,9 +381,13 @@ export async function getCoursesAnalytics(period: AnalyticsPeriod = "30d") {
 
 export async function getSalesAnalytics(period: AnalyticsPeriod = "30d") {
   const supabase = await createClient();
+  // `gateway_transactions` só concede SELECT para `service_role` — ver nota em
+  // getCoursesAnalytics. Sem isto, o PostgREST recusa a query com "permission
+  // denied" e a página inteira de análises quebra.
+  const adminSupabase = createAdminClient();
   const { previousStart } = getAnalyticsPeriodBounds(period);
 
-  let transactionsQuery = supabase
+  let transactionsQuery = adminSupabase
     .from("gateway_transactions")
     .select("id, transaction_id, gateway, status, amount, occurred_at, user_id, course_id, plan_id, courses(title), plans(name)")
     .order("occurred_at", { ascending: false });
@@ -499,8 +397,11 @@ export async function getSalesAnalytics(period: AnalyticsPeriod = "30d") {
   }
 
   const { data: transactionRows, error: transactionsError } = await transactionsQuery;
+  // `gateway_transactions` depende da service role key (ver nota acima). Sem
+  // ela configurada (ex.: dev local), tratamos como "sem transações" em vez
+  // de derrubar a página inteira — o resto da tela ainda renderiza com zeros.
   if (transactionsError) {
-    throw new Error(`Não foi possível carregar as análises de vendas: ${transactionsError.message}`);
+    console.warn("[admin/analises] gateway_transactions indisponível:", transactionsError.message);
   }
 
   const { current: transactions, previous: previousTransactions } = splitCurrentAndPrevious(

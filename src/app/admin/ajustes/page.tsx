@@ -1,10 +1,17 @@
 import Link from "next/link";
-import { Bot, Home, Palette, Navigation, Plug, WalletCards } from "lucide-react";
+import { Bot, Home, Palette, Navigation, PanelsTopLeft, Plug, WalletCards } from "lucide-react";
 import { Card } from "@heroui/react/card";
 import { PageHeader } from "@/components/ui/editorial";
 import { requireAdmin } from "@/lib/supabase/auth";
 
 const settingsCards = [
+  {
+    href: "/admin/pages",
+    icon: PanelsTopLeft,
+    title: "Páginas",
+    description: "Monte a home pública e a vitrine para quem ainda não tem produtos.",
+    tone: "bg-info-soft text-info-soft-foreground",
+  },
   {
     href: "/admin/home",
     icon: Home,

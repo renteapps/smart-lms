@@ -1,9 +1,12 @@
-import { AgentsAnalyticsView } from "@/components/admin/analytics/AgentsAnalyticsView";
-import { getAgentsAnalytics } from "@/app/admin/analises/actions";
-import { parseAnalyticsPeriod } from "@/lib/analytics";
+import { redirect } from "next/navigation";
 
-export default async function AnalisesAgentesDirectPage({ searchParams }: { searchParams: Promise<{ period?: string | string[] }> }) {
-  const period = parseAnalyticsPeriod((await searchParams).period);
-  const data = await getAgentsAnalytics(period);
-  return <AgentsAnalyticsView basePath="/analises" period={period} data={data} />;
+// Ver nota de segurança em src/app/analises/page.tsx.
+export default async function AnalisesAgentesRedirect({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string | string[] }>;
+}) {
+  const { period } = await searchParams;
+  const suffix = typeof period === "string" ? `?period=${encodeURIComponent(period)}` : "";
+  redirect(`/admin/analises/agentes${suffix}`);
 }

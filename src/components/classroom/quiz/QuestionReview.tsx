@@ -2,8 +2,7 @@
 
 import { CheckCircle2, XCircle } from "lucide-react";
 import type { QuizQuestion } from "@/types/quiz";
-import { normalizeTag } from "@/lib/matching";
-import { gradeQuestion } from "@/lib/quiz/grading";
+import { gradeQuestion, isBlankCorrect } from "@/lib/quiz/grading";
 import { cn } from "@/lib/utils";
 import { questionTypeLabel } from "./QuestionInput";
 
@@ -113,6 +112,23 @@ export default function QuestionReview({ question, index, answer }: QuestionRevi
         if (filledRows.length === 0) {
           return <p className="text-sm text-muted">Não respondida</p>;
         }
+        if (question.tableLayout === "stacked") {
+          return (
+            <div className="space-y-2">
+              {filledRows.map((row, i) => (
+                <div key={i} className="rounded-xl border border-hairline bg-background-secondary p-3 space-y-1.5">
+                  <span className="text-xs font-semibold text-muted">Registro {i + 1}</span>
+                  {columns.map((col) => (
+                    <p key={col.id} className="text-sm text-foreground">
+                      <span className="text-muted">{col.header}: </span>
+                      {row[col.id] || "—"}
+                    </p>
+                  ))}
+                </div>
+              ))}
+            </div>
+          );
+        }
         return (
           <div className="overflow-x-auto rounded-xl border border-hairline">
             <table className="w-full min-w-[420px] border-collapse text-sm">
@@ -147,18 +163,21 @@ export default function QuestionReview({ question, index, answer }: QuestionRevi
         return (
           <div className="space-y-2">
             {blanks.map((blank, i) => {
-              const value = given[blank.id] || "";
-              const isCorrect =
-                value.trim().length > 0 &&
-                blank.acceptedAnswers.some((accepted) => normalizeTag(accepted) === normalizeTag(value));
+              const rawValue = given[blank.id] || "";
+              const isCorrect = isBlankCorrect(blank, rawValue);
+              const isOptionsMode = Boolean(blank.options && blank.options.length > 0);
+              const displayValue = isOptionsMode
+                ? blank.options!.find((opt) => opt.id === rawValue)?.text || ""
+                : rawValue;
+              const correctLabel = isOptionsMode
+                ? blank.options!.find((opt) => opt.isCorrect)?.text || ""
+                : blank.acceptedAnswers.join(", ");
               return (
                 <div key={blank.id} className="flex items-start gap-2">
                   <Badge correct={isCorrect} />
                   <p className="text-sm text-foreground">
-                    Lacuna {i + 1}: <span className="font-medium">{value || "Não respondida"}</span>
-                    {!isCorrect && (
-                      <span className="text-muted"> (aceito: {blank.acceptedAnswers.join(", ")})</span>
-                    )}
+                    Lacuna {i + 1}: <span className="font-medium">{displayValue || "Não respondida"}</span>
+                    {!isCorrect && <span className="text-muted"> (aceito: {correctLabel})</span>}
                   </p>
                 </div>
               );

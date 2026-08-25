@@ -70,36 +70,141 @@ export const GLOBAL_EMAIL_VARIABLES: EmailTemplateVariable[] = [
   },
 ];
 
+const emailButton = (
+  url: string,
+  label: string,
+  bgColor: string = "#0f172a",
+  textColor: string = "#ffffff"
+) => `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+  <tr>
+    <td align="center">
+      <!--[if mso]>
+      <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:48px;v-text-anchor:middle;width:290px;" arcsize="18%" strokecolor="${bgColor}" fillcolor="${bgColor}">
+        <w:anchorlock/>
+        <center style="color:${textColor};font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;">${label}</center>
+      </v:roundrect>
+      <![endif]-->
+      <!--[if !mso]><!-->
+      <a href="${url}" class="button" style="display: inline-block; background-color: ${bgColor}; color: ${textColor}; padding: 14px 28px; border-radius: 10px; font-weight: 700; text-decoration: none; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); box-sizing: border-box;">
+        ${label}
+      </a>
+      <!--<![endif]-->
+    </td>
+  </tr>
+</table>`;
+
 const baseHtmlShell = (content: string, previewText: string = "{{nome_plataforma}}") => `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>{{nome_plataforma}}</title>
   <!--[if mso]>
   <style type="text/css">
-    body, table, td {font-family: Arial, Helvetica, sans-serif !important;}
+    body, table, td, a, span, p, h1, h2 {font-family: Arial, Helvetica, sans-serif !important;}
   </style>
   <![endif]-->
   <style>
-    @media only screen and (max-width: 600px) {
-      .container { width: 100% !important; padding: 12px !important; }
-      .content-box { padding: 24px 18px !important; }
-      .button { display: block !important; width: 100% !important; text-align: center !important; }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+    }
+
+    * {
+      -ms-text-size-adjust: 100%;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    table, td {
+      mso-table-lspace: 0pt !important;
+      mso-table-rspace: 0pt !important;
+      border-collapse: collapse;
+    }
+
+    img {
+      -ms-interpolation-mode: bicubic;
+      border: 0;
+      outline: none;
+      text-decoration: none;
+    }
+
+    a {
+      text-decoration: none;
+    }
+
+    @media only screen and (max-width: 620px) {
+      .email-shell { padding: 22px 8px !important; }
+      .container { width: 100% !important; max-width: 100% !important; }
+      .content-box { padding: 28px 20px !important; border-radius: 18px !important; }
+      .button { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; }
+      .heading { font-size: 21px !important; line-height: 27px !important; }
+      .alt-box { padding: 16px !important; }
+      .footer-cell { padding-top: 20px !important; }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body, .email-shell {
+        background-color: #0b0d12 !important;
+      }
+      .content-box {
+        background-color: #12151c !important;
+        border-color: #252a35 !important;
+      }
+      .heading, .section-title {
+        color: #f5f7fa !important;
+      }
+      .body-text, .alt-box-text {
+        color: #a6adba !important;
+      }
+      .alt-box {
+        background-color: #171b23 !important;
+        border-color: #262b36 !important;
+      }
+      .divider {
+        border-color: #262b36 !important;
+      }
+      .footer-text {
+        color: #747d8d !important;
+      }
+    }
+
+    [data-ogsc] body, [data-ogsc] .email-shell {
+      background-color: #0b0d12 !important;
+    }
+    [data-ogsc] .content-box {
+      background-color: #12151c !important;
+      border-color: #252a35 !important;
+    }
+    [data-ogsc] .heading, [data-ogsc] .section-title {
+      color: #f5f7fa !important;
+    }
+    [data-ogsc] .body-text, [data-ogsc] .alt-box-text {
+      color: #a6adba !important;
+    }
+    [data-ogsc] .alt-box {
+      background-color: #171b23 !important;
+      border-color: #262b36 !important;
+    }
+    [data-ogsc] .footer-text {
+      color: #747d8d !important;
     }
   </style>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
   <!-- Preview text hack -->
-  <div style="display: none; font-size: 1px; color: #f8fafc; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;">
+  <div style="display: none; font-size: 1px; line-height: 1px; max-height: 0; max-width: 0; opacity: 0; overflow: hidden; mso-hide: all;">
     ${previewText}
+    &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
   </div>
 
-  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; padding: 36px 10px;">
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="email-shell" style="width: 100%; background-color: #f8fafc; padding: 36px 10px;">
     <tr>
       <td align="center">
-        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="container" style="max-width: 580px; margin: 0 auto;">
-          
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="container" style="width: 100%; max-width: 580px; margin: 0 auto;">
+
           <!-- Brand Header -->
           <tr>
             <td align="center" style="padding-bottom: 24px;">
@@ -122,9 +227,9 @@ const baseHtmlShell = (content: string, previewText: string = "{{nome_plataforma
 
           <!-- Footer -->
           <tr>
-            <td align="center" style="padding-top: 24px; color: #94a3b8; font-size: 12px; line-height: 1.5; text-align: center;">
-              <p style="margin: 0 0 6px;">Este e-mail foi enviado automaticamente por <strong>{{nome_plataforma}}</strong> para {{email}}.</p>
-              <p style="margin: 0;">© {{ano_atual}} {{nome_plataforma}}. Todos os direitos reservados.</p>
+            <td align="center" class="footer-cell" style="padding-top: 24px; text-align: center;">
+              <p class="footer-text" style="margin: 0 0 6px; color: #94a3b8; font-size: 12px; line-height: 1.5;">Este e-mail foi enviado automaticamente por <strong>{{nome_plataforma}}</strong> para {{email}}.</p>
+              <p class="footer-text" style="margin: 0; color: #94a3b8; font-size: 12px; line-height: 1.5;">© {{ano_atual}} {{nome_plataforma}}. Todos os direitos reservados.</p>
             </td>
           </tr>
 
@@ -159,27 +264,25 @@ export function getDefaultTemplateDefinitions(): CustomEmailTemplate[] {
   <div style="display: inline-block; background-color: #e0f2fe; color: #0284c7; padding: 8px 16px; border-radius: 9999px; font-size: 13px; font-weight: 600; margin-bottom: 12px;">
     🎉 Cadastro Confirmado
   </div>
-  <h1 style="color: #0f172a; font-size: 24px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">
+  <h1 class="heading" style="color: #0f172a; font-size: 24px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">
     Olá, {{nome}}!
   </h1>
-  <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
+  <p class="body-text" style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
     Sua conta na plataforma <strong>{{nome_plataforma}}</strong> está pronta para ser usada. Prepare-se para uma experiência de aprendizado moderna, interativa e personalizada com inteligência artificial.
   </p>
 </div>
 
-<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0;">
-  <h3 style="color: #0f172a; font-size: 14px; font-weight: 700; margin: 0 0 8px;">O que você pode fazer agora:</h3>
-  <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 14px; line-height: 1.6;">
+<div class="alt-box" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0;">
+  <h3 class="heading" style="color: #0f172a; font-size: 14px; font-weight: 700; margin: 0 0 8px;">O que você pode fazer agora:</h3>
+  <ul class="alt-box-text" style="margin: 0; padding-left: 20px; color: #475569; font-size: 14px; line-height: 1.6;">
     <li>Explorar o catálogo de cursos e trilhas guiadas</li>
     <li>Praticar com os Agentes de IA tutores</li>
     <li>Conquistar certificados verificados</li>
   </ul>
 </div>
 
-<div style="text-align: center; margin-top: 32px;">
-  <a href="{{link_login}}" class="button" style="background-color: #0f172a; color: #ffffff; padding: 14px 28px; border-radius: 10px; font-weight: 700; text-decoration: none; display: inline-block; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-    Acessar Minha Conta →
-  </a>
+<div style="margin-top: 32px;">
+  ${emailButton("{{link_login}}", "Acessar Minha Conta →", "#0f172a")}
 </div>
 `),
     },
@@ -205,22 +308,20 @@ export function getDefaultTemplateDefinitions(): CustomEmailTemplate[] {
   <div style="display: inline-block; background-color: #fef3c7; color: #d97706; padding: 8px 16px; border-radius: 9999px; font-size: 13px; font-weight: 600; margin-bottom: 12px;">
     🔒 Segurança da Conta
   </div>
-  <h1 style="color: #0f172a; font-size: 24px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">
+  <h1 class="heading" style="color: #0f172a; font-size: 24px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">
     Olá, {{nome}}
   </h1>
-  <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
+  <p class="body-text" style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
     Recebemos uma solicitação de redefinição de senha para a sua conta no <strong>{{nome_plataforma}}</strong>.
   </p>
 </div>
 
-<div style="text-align: center; margin: 32px 0;">
-  <a href="{{link_recuperacao}}" class="button" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; border-radius: 10px; font-weight: 700; text-decoration: none; display: inline-block; font-size: 14px; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
-    Criar Nova Senha
-  </a>
+<div style="margin: 32px 0;">
+  ${emailButton("{{link_recuperacao}}", "Criar Nova Senha", "#2563eb")}
 </div>
 
-<div style="background-color: #f8fafc; border-left: 4px solid #94a3b8; padding: 14px 18px; border-radius: 0 8px 8px 0; margin-top: 24px;">
-  <p style="color: #64748b; font-size: 13px; margin: 0; line-height: 1.5;">
+<div class="alt-box" style="background-color: #f8fafc; border-left: 4px solid #94a3b8; padding: 14px 18px; border-radius: 0 8px 8px 0; margin-top: 24px;">
+  <p class="alt-box-text" style="color: #64748b; font-size: 13px; margin: 0; line-height: 1.5;">
     Este link é válido por <strong>60 minutos</strong>. Se você não solicitou a alteração, ignore este e-mail.
   </p>
 </div>
@@ -254,23 +355,21 @@ export function getDefaultTemplateDefinitions(): CustomEmailTemplate[] {
   <div style="display: inline-block; background-color: #dcfce7; color: #16a34a; padding: 8px 16px; border-radius: 9999px; font-size: 13px; font-weight: 600; margin-bottom: 12px;">
     🎓 Acesso Liberado
   </div>
-  <h1 style="color: #0f172a; font-size: 24px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">
+  <h1 class="heading" style="color: #0f172a; font-size: 24px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">
     Parabéns, {{nome}}!
   </h1>
-  <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
+  <p class="body-text" style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
     Sua matrícula foi aprovada e as aulas já estão liberadas na plataforma <strong>{{nome_plataforma}}</strong>:
   </p>
 </div>
 
-<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
-  <p style="color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px;">Curso Liberado</p>
-  <h2 style="color: #0f172a; font-size: 20px; font-weight: 800; margin: 0;">{{nome_curso}}</h2>
+<div class="alt-box" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
+  <p class="alt-box-text" style="color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 6px;">Curso Liberado</p>
+  <h2 class="heading" style="color: #0f172a; font-size: 20px; font-weight: 800; margin: 0;">{{nome_curso}}</h2>
 </div>
 
-<div style="text-align: center; margin-top: 32px;">
-  <a href="{{link_curso}}" class="button" style="background-color: #0f172a; color: #ffffff; padding: 14px 28px; border-radius: 10px; font-weight: 700; text-decoration: none; display: inline-block; font-size: 14px;">
-    Começar a Assistir Agora →
-  </a>
+<div style="margin-top: 32px;">
+  ${emailButton("{{link_curso}}", "Começar a Assistir Agora →", "#0f172a")}
 </div>
 `),
     },
@@ -308,23 +407,21 @@ export function getDefaultTemplateDefinitions(): CustomEmailTemplate[] {
   <div style="display: inline-block; background-color: #fef9c3; color: #a16207; padding: 8px 16px; border-radius: 9999px; font-size: 13px; font-weight: 600; margin-bottom: 12px;">
     🏆 Conquista Desbloqueada
   </div>
-  <h1 style="color: #0f172a; font-size: 24px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">
+  <h1 class="heading" style="color: #0f172a; font-size: 24px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">
     Sensacional, {{nome}}!
   </h1>
-  <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
+  <p class="body-text" style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
     Você concluiu com sucesso todas as aulas e atividades do curso <strong>{{nome_curso}}</strong>.
   </p>
 </div>
 
-<div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
-  <p style="color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; margin: 0 0 4px;">Código de Autenticidade</p>
-  <span style="font-family: monospace; font-size: 18px; font-weight: 800; color: #0f172a; letter-spacing: 2px;">{{codigo_certificado}}</span>
+<div class="alt-box" style="background-color: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
+  <p class="alt-box-text" style="color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; margin: 0 0 4px;">Código de Autenticidade</p>
+  <span class="heading" style="font-family: monospace; font-size: 18px; font-weight: 800; color: #0f172a; letter-spacing: 2px;">{{codigo_certificado}}</span>
 </div>
 
-<div style="text-align: center; margin-top: 32px;">
-  <a href="{{link_certificado}}" class="button" style="background-color: #16a34a; color: #ffffff; padding: 14px 28px; border-radius: 10px; font-weight: 700; text-decoration: none; display: inline-block; font-size: 14px; box-shadow: 0 2px 4px rgba(22,163,74,0.2);">
-    Visualizar e Baixar Certificado 📄
-  </a>
+<div style="margin-top: 32px;">
+  ${emailButton("{{link_certificado}}", "Visualizar e Baixar Certificado 📄", "#16a34a")}
 </div>
 `),
     },
@@ -362,29 +459,39 @@ export function getDefaultTemplateDefinitions(): CustomEmailTemplate[] {
   <div style="display: inline-block; background-color: #f3e8ff; color: #7e22ce; padding: 8px 16px; border-radius: 9999px; font-size: 13px; font-weight: 600; margin-bottom: 12px;">
     ⭐ Membro VIP
   </div>
-  <h1 style="color: #0f172a; font-size: 24px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">
+  <h1 class="heading" style="color: #0f172a; font-size: 24px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">
     Tudo pronto, {{nome}}!
   </h1>
-  <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
+  <p class="body-text" style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
     Sua assinatura do <strong>{{nome_plano}}</strong> foi confirmada e todos os recursos exclusivos já estão liberados para você.
   </p>
 </div>
 
-<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0;">
-  <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 12px;">
-    <span style="color: #64748b; font-size: 13px;">Plano contratado:</span>
-    <strong style="color: #0f172a; font-size: 13px;">{{nome_plano}}</strong>
-  </div>
-  <div style="display: flex; justify-content: space-between;">
-    <span style="color: #64748b; font-size: 13px;">Valor da recorrência:</span>
-    <strong style="color: #16a34a; font-size: 13px;">{{valor_plano}}</strong>
-  </div>
-</div>
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="alt-box" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin: 24px 0;">
+  <tr>
+    <td style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+          <td align="left" class="alt-box-text" style="color: #64748b; font-size: 13px;">Plano contratado:</td>
+          <td align="right" class="heading" style="color: #0f172a; font-size: 13px; font-weight: 700;">{{nome_plano}}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding: 20px;">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+          <td align="left" class="alt-box-text" style="color: #64748b; font-size: 13px;">Valor da recorrência:</td>
+          <td align="right" style="color: #16a34a; font-size: 13px; font-weight: 700;">{{valor_plano}}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
 
-<div style="text-align: center; margin-top: 32px;">
-  <a href="{{link_login}}" class="button" style="background-color: #0f172a; color: #ffffff; padding: 14px 28px; border-radius: 10px; font-weight: 700; text-decoration: none; display: inline-block; font-size: 14px;">
-    Acessar a Plataforma Agora →
-  </a>
+<div style="margin-top: 32px;">
+  ${emailButton("{{link_login}}", "Acessar a Plataforma Agora →", "#0f172a")}
 </div>
 `),
     },
@@ -416,24 +523,22 @@ export function getDefaultTemplateDefinitions(): CustomEmailTemplate[] {
   <div style="display: inline-block; background-color: #ede9fe; color: #6d28d9; padding: 8px 16px; border-radius: 9999px; font-size: 13px; font-weight: 600; margin-bottom: 12px;">
     ⏱️ Pausa nos Estudos
   </div>
-  <h1 style="color: #0f172a; font-size: 24px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">
+  <h1 class="heading" style="color: #0f172a; font-size: 24px; font-weight: 800; margin: 0 0 12px; letter-spacing: -0.5px;">
     Olá, {{nome}}!
   </h1>
-  <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
+  <p class="body-text" style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0;">
     Notamos que faz cerca de <strong>{{dias_inativo}} dias</strong> que você não acessa seus cursos no <strong>{{nome_plataforma}}</strong>.
   </p>
 </div>
 
-<div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0; text-align: left;">
-  <p style="color: #334155; font-size: 14px; line-height: 1.6; margin: 0;">
+<div class="alt-box" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0; text-align: left;">
+  <p class="alt-box-text" style="color: #334155; font-size: 14px; line-height: 1.6; margin: 0;">
     Manter uma rotina de apenas <strong>15 minutos diários</strong> faz toda a diferença para fixar o aprendizado e alcançar seus objetivos de carreira. Seus módulos te aguardam!
   </p>
 </div>
 
-<div style="text-align: center; margin-top: 32px;">
-  <a href="{{link_acao}}" class="button" style="background-color: #0f172a; color: #ffffff; padding: 14px 28px; border-radius: 10px; font-weight: 700; text-decoration: none; display: inline-block; font-size: 14px;">
-    Retomar Meus Estudos →
-  </a>
+<div style="margin-top: 32px;">
+  ${emailButton("{{link_acao}}", "Retomar Meus Estudos →", "#0f172a")}
 </div>
 `),
     },
@@ -477,19 +582,21 @@ export function getDefaultTemplateDefinitions(): CustomEmailTemplate[] {
   <div style="display: inline-block; background-color: #f1f5f9; color: #475569; padding: 6px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; margin-bottom: 12px;">
     📢 Notificação da Plataforma
   </div>
-  <h1 style="color: #0f172a; font-size: 22px; font-weight: 800; margin: 0 0 16px; letter-spacing: -0.5px;">
+  <h1 class="heading" style="color: #0f172a; font-size: 22px; font-weight: 800; margin: 0 0 16px; letter-spacing: -0.5px;">
     {{titulo_notificacao}}
   </h1>
-  <div style="color: #334155; font-size: 15px; line-height: 1.6; white-space: pre-line;">
+  <div class="body-text" style="color: #334155; font-size: 15px; line-height: 1.6; white-space: pre-line;">
     {{mensagem_notificacao}}
   </div>
 </div>
 
-<div style="text-align: center; margin-top: 32px; border-top: 1px solid #f1f5f9; padding-top: 24px;">
-  <a href="{{link_acao}}" class="button" style="background-color: #0f172a; color: #ffffff; padding: 12px 24px; border-radius: 10px; font-weight: 700; text-decoration: none; display: inline-block; font-size: 14px;">
-    {{texto_acao}} →
-  </a>
-</div>
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 32px;">
+  <tr>
+    <td class="divider" style="border-top: 1px solid #f1f5f9; padding-top: 24px;">
+      ${emailButton("{{link_acao}}", "{{texto_acao}} →", "#0f172a")}
+    </td>
+  </tr>
+</table>
 `),
     },
   ];

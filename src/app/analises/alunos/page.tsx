@@ -1,9 +1,12 @@
-import { StudentsAnalyticsView } from "@/components/admin/analytics/StudentsAnalyticsView";
-import { getStudentsAnalytics } from "@/app/admin/analises/actions";
-import { parseAnalyticsPeriod } from "@/lib/analytics";
+import { redirect } from "next/navigation";
 
-export default async function AnalisesAlunosDirectPage({ searchParams }: { searchParams: Promise<{ period?: string | string[] }> }) {
-  const period = parseAnalyticsPeriod((await searchParams).period);
-  const data = await getStudentsAnalytics(period);
-  return <StudentsAnalyticsView basePath="/analises" period={period} data={data} />;
+// Ver nota de segurança em src/app/analises/page.tsx.
+export default async function AnalisesAlunosRedirect({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string | string[] }>;
+}) {
+  const { period } = await searchParams;
+  const suffix = typeof period === "string" ? `?period=${encodeURIComponent(period)}` : "";
+  redirect(`/admin/analises/alunos${suffix}`);
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import {
   DndContext,
   PointerSensor,
@@ -21,9 +22,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@heroui/react";
 import {
   ArrowDown,
+  ArrowLeft,
   ArrowUp,
   BookOpen,
-  Check,
   Copy,
   Eye,
   EyeOff,
@@ -45,7 +46,7 @@ import { PageHeader } from "@/components/ui/editorial";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { PandaVideoSelector } from "@/components/admin/integracoes/PandaVideoSelector";
 import { PageRenderer } from "@/components/page-builder/PageRenderer";
-import { createSection, PAGE_KEYS, PAGE_LABELS } from "@/lib/pageBuilder";
+import { createSection, PAGE_LABELS } from "@/lib/pageBuilder";
 import { cn } from "@/lib/utils";
 import type { ContentSource, PageBuilderData, PageCta, PageDraft, PageKey, PageSection } from "@/types/pageBuilder";
 import { publishPage, savePageDraft } from "./actions";
@@ -63,12 +64,9 @@ const SECTION_LIBRARY: Array<{ type: PageSection["type"]; label: string; icon: t
 
 const sectionLabel = (type: PageSection["type"]) => SECTION_LIBRARY.find((item) => item.type === type)?.label ?? type;
 
-type DraftMap = Record<PageKey, PageDraft>;
-
-export function PageBuilderEditor({ initialDrafts, catalog }: { initialDrafts: DraftMap; catalog: PageBuilderData }) {
-  const [drafts, setDrafts] = useState<DraftMap>(initialDrafts);
-  const [selectedKey, setSelectedKey] = useState<PageKey>("public-home");
-  const [dirty, setDirty] = useState<Set<PageKey>>(new Set());
+export function PageBuilderEditor({ pageKey, initialDraft, catalog }: { pageKey: PageKey; initialDraft: PageDraft; catalog: PageBuilderData }) {
+  const [draft, setDraft] = useState<PageDraft>(initialDraft);
+  const [dirty, setDirty] = useState(false);
   const [preview, setPreview] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [status, setStatus] = useState<{ tone: "success" | "danger" | "neutral"; message: string } | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -76,14 +74,11 @@ export function PageBuilderEditor({ initialDrafts, catalog }: { initialDrafts: D
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-  const draft = drafts[selectedKey];
+  const pageLabel = PAGE_LABELS[pageKey];
 
   const setSections = (sections: PageSection[]) => {
-    setDrafts((current) => ({
-      ...current,
-      [selectedKey]: { ...current[selectedKey], document: { ...current[selectedKey].document, sections } },
-    }));
-    setDirty((current) => new Set(current).add(selectedKey));
+    setDraft((current) => ({ ...current, document: { ...current.document, sections } }));
+    setDirty(true);
     setStatus(null);
   };
 
@@ -99,18 +94,18 @@ export function PageBuilderEditor({ initialDrafts, catalog }: { initialDrafts: D
   };
 
   const handleSave = () => startTransition(async () => {
-    const result = await savePageDraft(selectedKey, draft.document, draft.revision);
+    const result = await savePageDraft(pageKey, draft.document, draft.revision);
     setStatus({ tone: result.success ? "success" : "danger", message: result.message });
     if (result.success && result.revision !== undefined) {
-      setDrafts((current) => ({ ...current, [selectedKey]: { ...current[selectedKey], revision: result.revision!, updatedAt: result.updatedAt ?? new Date().toISOString() } }));
-      setDirty((current) => { const next = new Set(current); next.delete(selectedKey); return next; });
+      setDraft((current) => ({ ...current, revision: result.revision!, updatedAt: result.updatedAt ?? new Date().toISOString() }));
+      setDirty(false);
     }
   });
 
   const handlePublish = () => {
-    if (!window.confirm(`Publicar “${PAGE_LABELS[selectedKey].title}” agora?`)) return;
+    if (!window.confirm(`Publicar “${pageLabel.title}” agora?`)) return;
     startTransition(async () => {
-      const result = await publishPage(selectedKey, draft.revision);
+      const result = await publishPage(pageKey, draft.revision);
       setStatus({ tone: result.success ? "success" : "danger", message: result.message });
     });
   };
@@ -119,42 +114,35 @@ export function PageBuilderEditor({ initialDrafts, catalog }: { initialDrafts: D
 
   return (
     <div className="space-y-7 pb-20">
-      <PageHeader eyebrow="Plataforma" title="Páginas" description="Monte a experiência de visitantes e de usuários que ainda não possuem produtos." />
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {PAGE_KEYS.map((key) => (
-          <button key={key} type="button" onClick={() => { setSelectedKey(key); setStatus(null); }} className={cn(
-            "rounded-2xl border p-5 text-left transition",
-            selectedKey === key ? "border-accent bg-accent-soft shadow-elev-2" : "border-border bg-surface hover:border-accent/40",
-          )}>
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-lg font-extrabold text-foreground">{PAGE_LABELS[key].title}</h2>
-              {dirty.has(key) ? <span className="rounded-full bg-warning-soft px-2.5 py-1 text-xs font-bold text-warning-soft-foreground">Não salvo</span> : <Check className="size-4 text-success" />}
-            </div>
-            <p className="mt-2 text-sm leading-6 text-muted">{PAGE_LABELS[key].description}</p>
-          </button>
-        ))}
+      <div>
+        <Link href="/admin/pages" className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-accent">
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Voltar para Páginas
+        </Link>
+        <PageHeader eyebrow="Plataforma" title={pageLabel.title} description={pageLabel.description} />
       </div>
 
       <div className="sticky top-[76px] z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-background/95 p-3 shadow-elev-2 backdrop-blur-xl">
         <div>
-          <p className="font-display font-extrabold text-foreground">{PAGE_LABELS[selectedKey].title}</p>
+          <p className="font-display font-extrabold text-foreground">{pageLabel.title}</p>
           <p className="text-xs text-muted">Revisão {draft.revision || "nova"}{draft.updatedAt ? ` · salva em ${new Date(draft.updatedAt).toLocaleString("pt-BR")}` : ""}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onPress={handleSave} isDisabled={isPending || !dirty.has(selectedKey)}><Save className="size-4" /> Salvar rascunho</Button>
-          <Button variant="primary" onPress={handlePublish} isDisabled={isPending || dirty.has(selectedKey) || draft.revision === 0}>Publicar</Button>
+          {dirty && <span className="inline-flex items-center gap-1.5 self-center rounded-full bg-warning-soft px-2.5 py-1 text-xs font-bold text-warning-soft-foreground">Não salvo</span>}
+          <Button variant="outline" onPress={handleSave} isDisabled={isPending || !dirty}><Save className="size-4" /> Salvar rascunho</Button>
+          <Button variant="primary" onPress={handlePublish} isDisabled={isPending || dirty || draft.revision === 0}>Publicar</Button>
         </div>
       </div>
 
       {status && <div role="status" className={cn("rounded-xl border px-4 py-3 text-sm font-semibold", status.tone === "success" ? "border-success/30 bg-success-soft text-success-soft-foreground" : status.tone === "danger" ? "border-danger/30 bg-danger-soft text-danger-soft-foreground" : "border-border bg-default text-foreground")}>{status.message}</div>}
 
-      <div className="grid gap-7 xl:grid-cols-[minmax(360px,0.8fr)_minmax(0,1.2fr)]">
+      <div className="grid gap-7 lg:grid-cols-[minmax(300px,0.85fr)_minmax(0,1.15fr)]">
         <div className="space-y-5">
           <div className="rounded-2xl border border-border bg-surface p-5">
             <h3 className="font-display font-extrabold text-foreground">Adicionar seção</h3>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {SECTION_LIBRARY.map(({ type, label, icon: Icon }) => <Button key={type} variant="outline" className="justify-start" onPress={() => setSections([...draft.document.sections, createSection(type)])}><Icon className="size-4" />{label}</Button>)}
+            <p className="mt-1 text-sm text-muted">Escolha um bloco para montar a página. Você pode reordenar e configurar depois.</p>
+            <div className="mt-4 grid grid-cols-2 gap-2 min-[480px]:grid-cols-3 lg:grid-cols-2 min-[1400px]:grid-cols-3">
+              {SECTION_LIBRARY.map(({ type, label, icon: Icon }) => <Button key={type} variant="outline" className="h-auto justify-start whitespace-normal py-2.5 text-left" onPress={() => setSections([...draft.document.sections, createSection(type)])}><Icon className="size-4 shrink-0" />{label}</Button>)}
             </div>
           </div>
 

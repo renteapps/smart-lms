@@ -122,9 +122,32 @@ export default function QuizQuestionTypeEditor({ question: q, onChange }: QuizQu
 
   if (q.type === "fill_table") {
     const columns = q.columns ?? [];
+    const layout = q.tableLayout ?? "table";
     return (
       <div className="space-y-3 mt-2">
         <p className="text-xs text-muted">O aluno preenche uma tabela livre com essas colunas, adicionando quantas linhas quiser.</p>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-foreground">Layout de resposta</span>
+          <div className="inline-flex rounded-lg border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => onChange({ tableLayout: "table" })}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${layout === "table" ? "bg-accent text-on-primary" : "bg-background text-muted hover:text-foreground"}`}
+            >
+              Tabela
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange({ tableLayout: "stacked" })}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${layout === "stacked" ? "bg-accent text-on-primary" : "bg-background text-muted hover:text-foreground"}`}
+            >
+              Lista (um registro por vez)
+            </button>
+          </div>
+        </div>
+        {columns.length > 3 && layout === "table" && (
+          <p className="text-xs text-warning">Com {columns.length} colunas, o layout &quot;Lista&quot; costuma ser mais fácil de preencher.</p>
+        )}
         <div className="space-y-2">
           {columns.map((col) => (
             <div key={col.id} className="flex items-center gap-2">
@@ -235,34 +258,117 @@ export default function QuizQuestionTypeEditor({ question: q, onChange }: QuizQu
         </div>
 
         {blanks.length > 0 && (
-          <div className="space-y-2">
-            {blanks.map((blank, i) => (
-              <div key={blank.id} className="flex items-center gap-2">
-                <span className="shrink-0 text-xs font-medium text-muted w-16">Lacuna {i + 1}</span>
-                <input
-                  type="text"
-                  defaultValue={blank.acceptedAnswers.join(", ")}
-                  onBlur={(e) =>
-                    onChange({
-                      blanks: blanks.map((b, bi) =>
-                        bi === i
-                          ? { ...b, acceptedAnswers: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) }
-                          : b
-                      ),
-                    })
-                  }
-                  placeholder="Respostas aceitas, separadas por vírgula"
-                  className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeBlank(i)}
-                  className="text-muted hover:text-danger p-1 shrink-0"
-                >
-                  <Trash2 className="size-4" />
-                </button>
-              </div>
-            ))}
+          <div className="space-y-3">
+            {blanks.map((blank, i) => {
+              const isOptionsMode = Boolean(blank.options && blank.options.length > 0);
+              const options = blank.options ?? [];
+
+              const setMode = (mode: "text" | "options") => {
+                onChange({
+                  blanks: blanks.map((b, bi) => {
+                    if (bi !== i) return b;
+                    if (mode === "options") {
+                      return {
+                        ...b,
+                        options: b.options && b.options.length > 0 ? b.options : [
+                          { id: `blankopt-${Date.now()}-1`, text: "", isCorrect: true },
+                          { id: `blankopt-${Date.now()}-2`, text: "", isCorrect: false },
+                        ],
+                      };
+                    }
+                    return { ...b, options: undefined };
+                  }),
+                });
+              };
+
+              const updateOptions = (nextOptions: typeof options) => {
+                onChange({ blanks: blanks.map((b, bi) => (bi === i ? { ...b, options: nextOptions } : b)) });
+              };
+
+              return (
+                <div key={blank.id} className="rounded-lg border border-border p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-muted">Lacuna {i + 1}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="inline-flex rounded-lg border border-border overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setMode("text")}
+                          className={`px-2.5 py-1 text-xs font-medium transition-colors ${!isOptionsMode ? "bg-accent text-on-primary" : "bg-background text-muted hover:text-foreground"}`}
+                        >
+                          Resposta livre
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMode("options")}
+                          className={`px-2.5 py-1 text-xs font-medium transition-colors ${isOptionsMode ? "bg-accent text-on-primary" : "bg-background text-muted hover:text-foreground"}`}
+                        >
+                          Múltipla escolha
+                        </button>
+                      </div>
+                      <button type="button" onClick={() => removeBlank(i)} className="text-muted hover:text-danger p-1 shrink-0">
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {isOptionsMode ? (
+                    <div className="space-y-2">
+                      {options.map((opt) => (
+                        <div key={opt.id} className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => updateOptions(options.map((o) => ({ ...o, isCorrect: o.id === opt.id })))}
+                            className={`shrink-0 transition-colors ${opt.isCorrect ? "text-success" : "text-muted hover:text-foreground"}`}
+                          >
+                            {opt.isCorrect ? <CheckCircle2 className="size-5" /> : <Circle className="size-5" />}
+                          </button>
+                          <input
+                            type="text"
+                            required
+                            value={opt.text}
+                            onChange={(e) => updateOptions(options.map((o) => (o.id === opt.id ? { ...o, text: e.target.value } : o)))}
+                            placeholder="Texto da opção"
+                            className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => options.length > 2 && updateOptions(options.filter((o) => o.id !== opt.id))}
+                            disabled={options.length <= 2}
+                            className="text-muted hover:text-danger p-1 shrink-0 disabled:opacity-30 disabled:hover:text-muted"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => updateOptions([...options, { id: `blankopt-${Date.now()}`, text: "", isCorrect: false }])}
+                        className="text-sm font-medium text-accent hover:text-accent/80 inline-flex items-center gap-1"
+                      >
+                        <Plus className="size-3.5" /> Adicionar Opção
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      defaultValue={blank.acceptedAnswers.join(", ")}
+                      onBlur={(e) =>
+                        onChange({
+                          blanks: blanks.map((b, bi) =>
+                            bi === i
+                              ? { ...b, acceptedAnswers: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) }
+                              : b
+                          ),
+                        })
+                      }
+                      placeholder="Respostas aceitas, separadas por vírgula"
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

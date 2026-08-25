@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { CheckCircle2, Circle, CheckSquare, Plus, Square, Trash2 } from "lucide-react";
-import type { QuizQuestion } from "@/types/quiz";
+import type { QuizOption, QuizQuestion } from "@/types/quiz";
 import { cn } from "@/lib/utils";
 
 interface QuestionInputProps {
@@ -46,6 +46,17 @@ export default function QuestionInput({ question, value, onChange }: QuestionInp
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [question.id]
   );
+
+  const shuffledBlankOptions = useMemo(() => {
+    const map = new Map<string, QuizOption[]>();
+    (question.blanks ?? []).forEach((blank) => {
+      if (blank.options && blank.options.length > 0) {
+        map.set(blank.id, shuffled(blank.options));
+      }
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [question.id]);
 
   if (question.type === "open_ended") {
     return (
@@ -111,55 +122,89 @@ export default function QuestionInput({ question, value, onChange }: QuestionInp
       onChange(rows.filter((_, i) => i !== rowIndex));
     };
 
+    const addLabel = question.tableLayout === "stacked" ? "Adicionar Registro" : "Adicionar Linha";
+
     return (
       <div className="mt-4 space-y-3">
-        <div className="overflow-x-auto rounded-2xl border border-hairline shadow-xs">
-          <table className="w-full min-w-[480px] border-collapse text-sm">
-            <thead>
-              <tr className="bg-background-secondary">
+        {question.tableLayout === "stacked" ? (
+          <div className="space-y-3">
+            {rows.map((row, rowIndex) => (
+              <div key={rowIndex} className="rounded-2xl border border-hairline bg-surface p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted">Registro {rowIndex + 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeRow(rowIndex)}
+                    disabled={rows.length <= 1}
+                    className="text-muted hover:text-danger disabled:opacity-30 disabled:hover:text-muted"
+                    aria-label="Remover registro"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
                 {columns.map((col) => (
-                  <th key={col.id} className="border-b border-hairline px-3 py-2 text-left font-semibold text-foreground">
-                    {col.header}
-                  </th>
+                  <div key={col.id} className="space-y-1">
+                    <label className="block text-xs font-medium text-muted">{col.header}</label>
+                    <input
+                      type="text"
+                      value={row[col.id] || ""}
+                      onChange={(e) => updateCell(rowIndex, col.id, e.target.value)}
+                      className="w-full rounded-lg border border-hairline bg-background px-3 py-2 text-sm focus:border-accent focus:outline-none"
+                    />
+                  </div>
                 ))}
-                <th className="w-10 border-b border-hairline" />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, rowIndex) => (
-                <tr key={rowIndex} className="border-b border-hairline last:border-0">
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-hairline shadow-xs">
+            <table className="w-full min-w-[480px] border-collapse text-sm">
+              <thead>
+                <tr className="bg-background-secondary">
                   {columns.map((col) => (
-                    <td key={col.id} className="p-2">
-                      <input
-                        type="text"
-                        value={row[col.id] || ""}
-                        onChange={(e) => updateCell(rowIndex, col.id, e.target.value)}
-                        className="w-full rounded-lg border border-hairline bg-surface px-3 py-2 text-sm focus:border-accent focus:outline-none"
-                      />
-                    </td>
+                    <th key={col.id} className="border-b border-hairline px-3 py-2 text-left font-semibold text-foreground">
+                      {col.header}
+                    </th>
                   ))}
-                  <td className="p-2 text-center">
-                    <button
-                      type="button"
-                      onClick={() => removeRow(rowIndex)}
-                      disabled={rows.length <= 1}
-                      className="text-muted hover:text-danger disabled:opacity-30 disabled:hover:text-muted"
-                      aria-label="Remover linha"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </td>
+                  <th className="w-10 border-b border-hairline" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {rows.map((row, rowIndex) => (
+                  <tr key={rowIndex} className="border-b border-hairline last:border-0">
+                    {columns.map((col) => (
+                      <td key={col.id} className="p-2">
+                        <input
+                          type="text"
+                          value={row[col.id] || ""}
+                          onChange={(e) => updateCell(rowIndex, col.id, e.target.value)}
+                          className="w-full rounded-lg border border-hairline bg-surface px-3 py-2 text-sm focus:border-accent focus:outline-none"
+                        />
+                      </td>
+                    ))}
+                    <td className="p-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => removeRow(rowIndex)}
+                        disabled={rows.length <= 1}
+                        className="text-muted hover:text-danger disabled:opacity-30 disabled:hover:text-muted"
+                        aria-label="Remover linha"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         <button
           type="button"
           onClick={addRow}
           className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-accent/80"
         >
-          <Plus className="size-3.5" /> Adicionar Linha
+          <Plus className="size-3.5" /> {addLabel}
         </button>
         {minRows > 1 && <p className="text-xs text-muted">Preencha pelo menos {minRows} linhas.</p>}
       </div>
@@ -175,6 +220,28 @@ export default function QuestionInput({ question, value, onChange }: QuestionInp
           if (part.kind === "text") return <span key={i}>{part.value}</span>;
           const blank = question.blanks?.[part.index];
           if (!blank) return null;
+          const blankOptions = shuffledBlankOptions.get(blank.id);
+
+          if (blankOptions) {
+            return (
+              <select
+                key={i}
+                value={current[blank.id] || ""}
+                onChange={(e) => onChange({ ...current, [blank.id]: e.target.value })}
+                className="mx-1 inline-block w-48 rounded-lg border border-hairline bg-surface px-2 py-1 text-sm focus:border-accent focus:outline-none"
+              >
+                <option value="" disabled>
+                  Selecione...
+                </option>
+                {blankOptions.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.text}
+                  </option>
+                ))}
+              </select>
+            );
+          }
+
           return (
             <input
               key={i}
