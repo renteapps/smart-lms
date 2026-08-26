@@ -41,7 +41,7 @@ export default async function QuizAdminPage({
   }
 
   let initialQuizData: Quiz | undefined = undefined;
-  let initialLessonTitle = lesson?.title || undefined;
+  const initialLessonTitle = lesson?.title || undefined;
 
   if (lesson?.quizId) {
     const { data: quiz } = await supabase
@@ -57,6 +57,8 @@ export default async function QuizAdminPage({
         description: quiz.description,
         questions: Array.isArray(quiz.questions) ? quiz.questions : [],
         passingScore: quiz.passing_score ?? 70,
+        feedbackMode: quiz.feedback_mode === "immediate" ? "immediate" : "end",
+        shuffleQuestions: quiz.shuffle_questions ?? true,
       };
     }
   }

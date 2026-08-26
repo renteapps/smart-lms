@@ -7,6 +7,7 @@ import { getLessonWithCourse } from "@/lib/data/courses";
 import { getLessonNote } from "@/lib/data/notes";
 import { getProfileTests } from "@/lib/data/profileTests";
 import { getLessonComments } from "@/lib/data/comments";
+import type { QuizDraft, QuizFeedbackMode } from "@/types/quiz";
 
 export default async function AulaPage({
   params,
@@ -43,6 +44,7 @@ export default async function AulaPage({
     
   let quiz = null;
   let previousQuizResult = null;
+  let quizDraft: QuizDraft | null = null;
   if (lesson.type === "quiz" && lesson.quizId) {
     const { data } = await supabase
       .from("quizzes")
@@ -55,18 +57,29 @@ export default async function AulaPage({
         title: data.title,
         description: data.description,
         questions: data.questions,
-        passingScore: data.passing_score
+        passingScore: data.passing_score,
+        feedbackMode: (data.feedback_mode === "immediate" ? "immediate" : "end") as QuizFeedbackMode,
+        shuffleQuestions: data.shuffle_questions ?? true
       };
     }
 
     if (quiz && user) {
-      const { data: resultRow } = await supabase
-        .from("quiz_results")
-        .select("*")
-        .eq("quiz_id", quiz.id)
-        .eq("lesson_id", lesson.id)
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const [{ data: resultRow }, { data: draftRow }] = await Promise.all([
+        supabase
+          .from("quiz_results")
+          .select("*")
+          .eq("quiz_id", quiz.id)
+          .eq("lesson_id", lesson.id)
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("quiz_drafts")
+          .select("*")
+          .eq("quiz_id", quiz.id)
+          .eq("lesson_id", lesson.id)
+          .eq("user_id", user.id)
+          .maybeSingle()
+      ]);
       if (resultRow) {
         previousQuizResult = {
           id: resultRow.id,
@@ -77,6 +90,13 @@ export default async function AulaPage({
           answers: resultRow.answers,
           passed: resultRow.passed,
           createdAt: resultRow.created_at
+        };
+      }
+      if (draftRow) {
+        quizDraft = {
+          answers: draftRow.answers ?? {},
+          currentQuestionIndex: draftRow.current_question_index ?? 0,
+          shuffleSeed: draftRow.shuffle_seed ?? 0
         };
       }
     }
@@ -96,6 +116,7 @@ export default async function AulaPage({
       initialNote={note}
       quiz={quiz}
       previousQuizResult={previousQuizResult}
+      quizDraft={quizDraft}
       initialComments={comments}
       currentUser={user}
     />

@@ -3,21 +3,15 @@
 import { useMemo } from "react";
 import { CheckCircle2, Circle, CheckSquare, Plus, Square, Trash2 } from "lucide-react";
 import type { QuizOption, QuizQuestion } from "@/types/quiz";
+import { hashString, shuffledWithSeed } from "@/lib/quiz/shuffle";
 import { cn } from "@/lib/utils";
 
 interface QuestionInputProps {
   question: QuizQuestion;
   value: unknown;
   onChange: (value: unknown) => void;
-}
-
-function shuffled<T>(items: T[]): T[] {
-  const copy = [...items];
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
+  /** Seed da tentativa atual — mesma pergunta embaralha diferente a cada tentativa, mas igual entre reloads da mesma tentativa (ver src/lib/quiz/shuffle.ts). */
+  shuffleSeed?: number;
 }
 
 /** Divide o template de "preencher lacunas" em texto/marcador, preservando a ordem. */
@@ -40,23 +34,31 @@ function splitBlankTemplate(text: string): Array<{ kind: "text"; value: string }
 }
 
 /** Captura de resposta do aluno, uma pergunta por vez, com um renderer por tipo. */
-export default function QuestionInput({ question, value, onChange }: QuestionInputProps) {
+export default function QuestionInput({ question, value, onChange, shuffleSeed = 0 }: QuestionInputProps) {
+  const questionSeed = shuffleSeed + hashString(question.id);
+
   const matchingOptions = useMemo(
-    () => shuffled(question.pairs ?? []),
+    () => shuffledWithSeed(question.pairs ?? [], questionSeed),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [question.id]
+    [question.id, questionSeed]
+  );
+
+  const shuffledOptions = useMemo(
+    () => shuffledWithSeed(question.options ?? [], questionSeed),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [question.id, questionSeed]
   );
 
   const shuffledBlankOptions = useMemo(() => {
     const map = new Map<string, QuizOption[]>();
     (question.blanks ?? []).forEach((blank) => {
       if (blank.options && blank.options.length > 0) {
-        map.set(blank.id, shuffled(blank.options));
+        map.set(blank.id, shuffledWithSeed(blank.options, questionSeed + hashString(blank.id)));
       }
     });
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [question.id]);
+  }, [question.id, questionSeed]);
 
   if (question.type === "open_ended") {
     return (
@@ -260,7 +262,7 @@ export default function QuestionInput({ question, value, onChange }: QuestionInp
   const isMultiple = question.type === "multiple_select";
   return (
     <div className="space-y-3 pt-2">
-      {(question.options ?? []).map((opt, optIndex) => {
+      {shuffledOptions.map((opt, optIndex) => {
         const isSelected = isMultiple
           ? Array.isArray(value) && (value as string[]).includes(opt.id)
           : value === opt.id;

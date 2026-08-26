@@ -365,7 +365,15 @@ export async function reorderLessons(
 }
 
 export async function saveQuiz(
-  input: { id?: string; title: string; description?: string; questions: unknown[]; passingScore: number }
+  input: {
+    id?: string;
+    title: string;
+    description?: string;
+    questions: unknown[];
+    passingScore: number;
+    feedbackMode?: "immediate" | "end";
+    shuffleQuestions?: boolean;
+  }
 ): Promise<Saved<{ id: string }>> {
   try {
     const { adminClient } = await requireAdmin();
@@ -375,6 +383,8 @@ export async function saveQuiz(
       description: input.description,
       questions: input.questions,
       passing_score: input.passingScore,
+      feedback_mode: input.feedbackMode ?? "end",
+      shuffle_questions: input.shuffleQuestions ?? true,
       updated_at: new Date().toISOString()
     };
 

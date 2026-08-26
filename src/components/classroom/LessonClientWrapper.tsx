@@ -11,7 +11,7 @@ import ProfileTestRunner from "./ProfileTestRunner";
 import QuizRunner from "./QuizRunner";
 import type { CourseOutline, Lesson } from "@/types/course";
 import type { ProfileTest } from "@/types/profileTest";
-import type { Quiz, QuizResult } from "@/types/quiz";
+import type { Quiz, QuizDraft, QuizResult } from "@/types/quiz";
 import type { StudentNote } from "@/lib/data/notes";
 import type { Comment } from "@/lib/data/comments";
 import type { User } from "@supabase/supabase-js";
@@ -40,6 +40,7 @@ interface LessonClientWrapperProps {
   initialNote: StudentNote | null;
   quiz?: Quiz | null;
   previousQuizResult?: QuizResult | null;
+  quizDraft?: QuizDraft | null;
   initialComments?: Comment[];
   currentUser?: User | null;
 }
@@ -60,6 +61,7 @@ export default function LessonClientWrapper({
   initialNote,
   quiz,
   previousQuizResult = null,
+  quizDraft = null,
   initialComments = [],
   currentUser = null,
 }: LessonClientWrapperProps) {
@@ -377,6 +379,7 @@ export default function LessonClientWrapper({
           quiz={quiz}
           lessonId={lesson.id}
           previousResult={previousQuizResult}
+          draft={quizDraft}
           onComplete={handleMarkComplete}
         />
       ) : (

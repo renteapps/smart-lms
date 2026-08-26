@@ -54,8 +54,12 @@ export interface QuizQuestion {
   minRows?: number; // fill_table — quantidade mínima de linhas preenchidas (default 1)
   tableLayout?: FillTableLayout; // fill_table — 'table' (padrão) ou 'stacked' (um cartão por linha, melhor com muitas colunas)
   blanks?: FillBlankDef[]; // fill_blank
-  explanation?: string; // Shown after answering
+  explanation?: string; // Feedback opcional, mostrado ao aluno depois que a pergunta é revelada (ver Quiz.feedbackMode)
 }
+
+// 'immediate': revela acerto/erro + explicação logo depois de cada pergunta respondida
+// (a resposta fica travada a partir daí). 'end': só revela tudo junto, depois da nota final.
+export type QuizFeedbackMode = 'immediate' | 'end';
 
 export interface Quiz {
   id: string;
@@ -63,8 +67,18 @@ export interface Quiz {
   description?: string;
   questions: QuizQuestion[];
   passingScore: number;
+  feedbackMode?: QuizFeedbackMode; // default 'end'
+  shuffleQuestions?: boolean; // default true — embaralha a ordem das perguntas a cada tentativa (não afeta a correção, que casa por id)
   createdAt?: string;
   updatedAt?: string;
+}
+
+// Rascunho salvo automaticamente enquanto o aluno responde — permite retomar
+// de onde parou se sair no meio do quiz. Some assim que o quiz é enviado.
+export interface QuizDraft {
+  answers: Record<string, unknown>;
+  currentQuestionIndex: number;
+  shuffleSeed: number;
 }
 
 // answers[questionId] shapes por tipo:

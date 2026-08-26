@@ -5,7 +5,7 @@ import { ArrowLeft, Save, Plus, Trash2, GripVertical } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@heroui/react";
-import type { Quiz, QuizQuestion, QuestionType } from "@/types/quiz";
+import type { Quiz, QuizQuestion, QuestionType, QuizFeedbackMode } from "@/types/quiz";
 import QuizQuestionTypeEditor from "./QuizQuestionTypeEditor";
 import { saveQuiz, saveLesson } from "@/app/actions/admin/catalog";
 
@@ -36,6 +36,8 @@ export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialDat
   const [title, setTitle] = useState(initialLessonTitle || initialData?.title || "");
   const [description, setDescription] = useState(initialData?.description || "");
   const [passingScore, setPassingScore] = useState(initialData?.passingScore ?? 70);
+  const [feedbackMode, setFeedbackMode] = useState<QuizFeedbackMode>(initialData?.feedbackMode ?? "end");
+  const [shuffleQuestions, setShuffleQuestions] = useState(initialData?.shuffleQuestions ?? true);
   const [questions, setQuestions] = useState<QuizQuestion[]>(
     initialData?.questions && initialData.questions.length > 0
       ? initialData.questions
@@ -143,7 +145,9 @@ export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialDat
         title,
         description,
         questions,
-        passingScore
+        passingScore,
+        feedbackMode,
+        shuffleQuestions
       });
 
       if (!quizRes.success || !quizRes.data) {
@@ -237,6 +241,52 @@ export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialDat
               className="w-full sm:w-48 bg-background border border-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-accent transition-colors"
             />
           </div>
+
+          <div className="space-y-2">
+            <span className="block text-sm font-medium text-foreground">Quando mostrar o resultado das respostas?</span>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => setFeedbackMode("end")}
+                className={`flex-1 rounded-lg border px-4 py-2.5 text-left text-sm transition-colors ${
+                  feedbackMode === "end"
+                    ? "border-accent bg-accent/10 text-foreground font-medium"
+                    : "border-border bg-background text-muted hover:text-foreground"
+                }`}
+              >
+                No final, junto com a nota
+                <span className="block text-xs text-muted font-normal mt-0.5">O aluno vê tudo de uma vez ao terminar o quiz.</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeedbackMode("immediate")}
+                className={`flex-1 rounded-lg border px-4 py-2.5 text-left text-sm transition-colors ${
+                  feedbackMode === "immediate"
+                    ? "border-accent bg-accent/10 text-foreground font-medium"
+                    : "border-border bg-background text-muted hover:text-foreground"
+                }`}
+              >
+                A cada pergunta respondida
+                <span className="block text-xs text-muted font-normal mt-0.5">O aluno confere cada resposta antes de seguir para a próxima (a resposta fica travada depois de conferida).</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <div>
+              <span className="block text-sm font-medium text-foreground">Embaralhar ordem das perguntas</span>
+              <span className="block text-xs text-muted mt-0.5">A cada tentativa a ordem muda (as alternativas de múltipla escolha e V/F também embaralham sempre). Desligue se a sequência das perguntas importar pedagogicamente.</span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={shuffleQuestions}
+              onClick={() => setShuffleQuestions((prev) => !prev)}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${shuffleQuestions ? "bg-accent" : "bg-border"}`}
+            >
+              <span className={`inline-block size-4 transform rounded-full bg-white transition-transform ${shuffleQuestions ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
+          </div>
         </div>
 
         {/* Questions Builder */}
@@ -300,6 +350,20 @@ export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialDat
                       question={q}
                       onChange={(updates) => handleUpdateQuestion(q.id, updates)}
                     />
+
+                    <div className="space-y-1 pt-2 border-t border-border">
+                      <label htmlFor={`explanation-${q.id}`} className="block text-xs font-medium text-muted">
+                        Feedback / explicação (opcional) — mostrado ao aluno depois de responder
+                      </label>
+                      <textarea
+                        id={`explanation-${q.id}`}
+                        rows={2}
+                        value={q.explanation || ""}
+                        onChange={(e) => handleUpdateQuestion(q.id, { explanation: e.target.value })}
+                        placeholder="Ex: Lembre-se que o escopo de um projeto deve ser definido antes do orçamento..."
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent transition-colors resize-y"
+                      />
+                    </div>
                   </div>
                 </div>
               ))}

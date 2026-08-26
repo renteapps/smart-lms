@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, Lightbulb, XCircle } from "lucide-react";
 import type { QuizQuestion } from "@/types/quiz";
 import { gradeQuestion, isBlankCorrect } from "@/lib/quiz/grading";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,14 @@ interface QuestionReviewProps {
   question: QuizQuestion;
   index: number;
   answer: unknown;
+  /**
+   * 'card' (padrão): cartão completo com número/tipo/enunciado — usado nas
+   * listas de revisão (quiz já respondido, resumo no final).
+   * 'inline': só o corpo (resposta dada + explicação), sem repetir o
+   * enunciado — usado no reveal por pergunta (feedbackMode 'immediate'),
+   * onde o QuizRunner já mostra o enunciado acima.
+   */
+  variant?: "card" | "inline";
 }
 
 function Badge({ correct }: { correct: boolean }) {
@@ -21,7 +29,7 @@ function Badge({ correct }: { correct: boolean }) {
 }
 
 /** Rendição somente-leitura de uma pergunta + a resposta que o aluno já deu, para a tela de "já respondido". */
-export default function QuestionReview({ question, index, answer }: QuestionReviewProps) {
+export default function QuestionReview({ question, index, answer, variant = "card" }: QuestionReviewProps) {
   const body = (() => {
     switch (question.type) {
       case "multiple_choice":
@@ -191,6 +199,22 @@ export default function QuestionReview({ question, index, answer }: QuestionRevi
     }
   })();
 
+  const explanationBlock = question.explanation && question.explanation.trim().length > 0 && (
+    <div className="mt-3 flex items-start gap-2 rounded-xl bg-accent-soft/60 p-3">
+      <Lightbulb className="size-4 shrink-0 mt-0.5 text-accent" aria-hidden="true" />
+      <p className="text-sm text-foreground whitespace-pre-wrap">{question.explanation}</p>
+    </div>
+  );
+
+  if (variant === "inline") {
+    return (
+      <div>
+        {body}
+        {explanationBlock}
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-2xl border border-hairline bg-surface p-4 shadow-xs">
       <div className="mb-2 flex items-center gap-2">
@@ -203,6 +227,7 @@ export default function QuestionReview({ question, index, answer }: QuestionRevi
         {question.type === "fill_blank" ? question.text.replace(/\{\{\d+\}\}/g, "___") : question.text}
       </p>
       {body}
+      {explanationBlock}
     </div>
   );
 }

@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button, Card, Chip, ProgressBar } from "@heroui/react";
-import { AlertCircle, ArrowLeft, ClipboardList, RotateCcw, Trophy } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, ClipboardList, Clock, RotateCcw, Trophy } from "lucide-react";
 import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
-import type { Quiz, QuizResult } from "@/types/quiz";
-import { submitQuizResult } from "@/app/actions/progress";
+import type { Quiz, QuizDraft, QuizResult } from "@/types/quiz";
+import { clearQuizDraft, saveQuizDraft, submitQuizResult } from "@/app/actions/progress";
 import { isQuestionAnswered } from "@/lib/quiz/grading";
+import { randomSeed, shuffledWithSeed } from "@/lib/quiz/shuffle";
 import { cn } from "@/lib/utils";
 import QuestionInput, { questionTypeLabel } from "./quiz/QuestionInput";
 import QuestionReview from "./quiz/QuestionReview";
@@ -16,38 +17,93 @@ interface QuizRunnerProps {
   quiz: Quiz;
   lessonId: string;
   previousResult?: QuizResult | null;
+  draft?: QuizDraft | null;
   onComplete: () => void;
 }
 
 type Step = "intro" | "review" | "question" | "result";
 
-export default function QuizRunner({ quiz, lessonId, previousResult, onComplete }: QuizRunnerProps) {
-  const [step, setStep] = useState<Step>(previousResult ? "review" : "intro");
-  const [answers, setAnswers] = useState<Record<string, unknown>>({});
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+const DRAFT_SAVE_DEBOUNCE_MS = 1000;
+
+export default function QuizRunner({ quiz, lessonId, previousResult, draft, onComplete }: QuizRunnerProps) {
+  const totalQuestions = quiz.questions.length;
+  const clampedDraftIndex = draft
+    ? Math.min(Math.max(draft.currentQuestionIndex, 0), Math.max(totalQuestions - 1, 0))
+    : 0;
+
+  // Sem rascunho ainda restomável: se já tem resultado, mostra a revisão;
+  // se tem um rascunho em andamento, pula a intro e retoma direto na pergunta salva.
+  const [step, setStep] = useState<Step>(previousResult ? "review" : draft ? "question" : "intro");
+  const [answers, setAnswers] = useState<Record<string, unknown>>(draft?.answers ?? {});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(clampedDraftIndex);
   const [isSubmitting, startSubmitting] = useTransition();
   const [result, setResult] = useState<{ score: number; passed: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmingRetake, setConfirmingRetake] = useState(false);
+  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
+  // Mesmo seed entre reloads da mesma tentativa (persistido no rascunho); novo seed só ao refazer.
+  const [shuffleSeed, setShuffleSeed] = useState<number>(() => draft?.shuffleSeed ?? randomSeed());
 
-  const totalQuestions = quiz.questions.length;
-  const question = quiz.questions[currentQuestionIndex];
+  const feedbackMode = quiz.feedbackMode ?? "end";
+  const isImmediateMode = feedbackMode === "immediate";
+  const estimatedMinutes = Math.max(1, totalQuestions * 2);
+
+  const orderedQuestions = quiz.shuffleQuestions === false ? quiz.questions : shuffledWithSeed(quiz.questions, shuffleSeed);
+  const question = orderedQuestions[currentQuestionIndex];
   const isFirstQuestion = currentQuestionIndex === 0;
   const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
 
   const currentAnswer = question ? answers[question.id] : null;
   const hasAnsweredCurrent = question ? isQuestionAnswered(question, currentAnswer) : false;
+  const isCurrentRevealed = Boolean(isImmediateMode && question && revealed[question.id]);
+
+  // Progresso salvo automaticamente enquanto o aluno responde (debounced) —
+  // se ele sair no meio, ao voltar retoma da última pergunta salva em vez de perder tudo.
+  const draftSaveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (step !== "question") return;
+    if (draftSaveTimeout.current) clearTimeout(draftSaveTimeout.current);
+    draftSaveTimeout.current = setTimeout(() => {
+      saveQuizDraft(quiz.id, lessonId, answers, currentQuestionIndex, shuffleSeed).catch(() => {});
+    }, DRAFT_SAVE_DEBOUNCE_MS);
+    return () => {
+      if (draftSaveTimeout.current) clearTimeout(draftSaveTimeout.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers, step]);
+
+  // Aviso ao tentar fechar/recarregar a aba no meio do quiz (o autosave acima já cobre a maior parte, isso é reforço).
+  useEffect(() => {
+    if (step !== "question") return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [step]);
 
   const handleAnswerChange = (questionId: string, value: unknown) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
+  const handleReveal = () => {
+    if (!question) return;
+    setRevealed((prev) => ({ ...prev, [question.id]: true }));
+  };
+
   const handleNext = () => {
-    if (!isLastQuestion) setCurrentQuestionIndex((prev) => prev + 1);
+    if (isLastQuestion) return;
+    const nextIndex = currentQuestionIndex + 1;
+    setCurrentQuestionIndex(nextIndex);
+    saveQuizDraft(quiz.id, lessonId, answers, nextIndex, shuffleSeed).catch(() => {});
   };
 
   const handlePrev = () => {
-    if (!isFirstQuestion) setCurrentQuestionIndex((prev) => prev - 1);
+    if (isFirstQuestion) return;
+    const prevIndex = currentQuestionIndex - 1;
+    setCurrentQuestionIndex(prevIndex);
+    saveQuizDraft(quiz.id, lessonId, answers, prevIndex, shuffleSeed).catch(() => {});
   };
 
   const handleSubmit = (e?: React.FormEvent) => {
@@ -73,6 +129,9 @@ export default function QuizRunner({ quiz, lessonId, previousResult, onComplete 
     setResult(null);
     setError(null);
     setConfirmingRetake(false);
+    setRevealed({});
+    setShuffleSeed(randomSeed());
+    clearQuizDraft(quiz.id, lessonId).catch(() => {});
     setStep("question");
   };
 
@@ -105,9 +164,18 @@ export default function QuizRunner({ quiz, lessonId, previousResult, onComplete 
           <h2 className="display-3 mt-2 text-foreground">{quiz.title}</h2>
           {quiz.description && <p className="lede mx-auto mt-3 max-w-md">{quiz.description}</p>}
 
-          <div className="mt-8 flex w-full max-w-xs items-center justify-between rounded-2xl border border-hairline bg-surface px-6 py-4 shadow-elev-1">
-            <span className="text-sm font-medium text-muted">Perguntas</span>
-            <span className="text-2xl font-bold font-display text-foreground">{totalQuestions}</span>
+          <div className="mt-8 flex w-full max-w-xs gap-3">
+            <div className="flex flex-1 flex-col items-center rounded-2xl border border-hairline bg-surface px-4 py-4 shadow-elev-1">
+              <span className="text-2xl font-bold font-display text-foreground">{totalQuestions}</span>
+              <span className="text-xs font-medium text-muted">{totalQuestions === 1 ? "pergunta" : "perguntas"}</span>
+            </div>
+            <div className="flex flex-1 flex-col items-center rounded-2xl border border-hairline bg-surface px-4 py-4 shadow-elev-1">
+              <span className="flex items-center gap-1.5 text-2xl font-bold font-display text-foreground">
+                <Clock className="size-4 text-muted" aria-hidden="true" />
+                ~{estimatedMinutes}
+              </span>
+              <span className="text-xs font-medium text-muted">minutos</span>
+            </div>
           </div>
           <Chip color="accent" variant="soft" size="sm" className="mt-4">
             Nota mínima: {quiz.passingScore}%
@@ -231,6 +299,14 @@ export default function QuizRunner({ quiz, lessonId, previousResult, onComplete 
             </span>
           </div>
 
+          {feedbackMode === "end" && (
+            <div className="mt-8 w-full space-y-3 text-left">
+              {quiz.questions.map((q, i) => (
+                <QuestionReview key={q.id} question={q} index={i} answer={answers[q.id]} />
+              ))}
+            </div>
+          )}
+
           <div className="mt-8 flex w-full flex-col items-center justify-center gap-3 sm:flex-row">
             {!result.passed ? (
               confirmingRetake ? (
@@ -310,16 +386,23 @@ export default function QuizRunner({ quiz, lessonId, previousResult, onComplete 
                   </span>
                   <span className="text-xs font-medium text-muted">{questionTypeLabel(question)}</span>
                 </div>
-                {question.type !== "fill_blank" && (
-                  <h3 className="display-4 text-foreground font-semibold leading-snug">{question.text}</h3>
+                {(question.type !== "fill_blank" || isCurrentRevealed) && (
+                  <h3 className="display-4 text-foreground font-semibold leading-snug">
+                    {question.type === "fill_blank" ? question.text.replace(/\{\{\d+\}\}/g, "___") : question.text}
+                  </h3>
                 )}
               </div>
 
-              <QuestionInput
-                question={question}
-                value={currentAnswer}
-                onChange={(value) => handleAnswerChange(question.id, value)}
-              />
+              {isCurrentRevealed ? (
+                <QuestionReview question={question} index={currentQuestionIndex} answer={currentAnswer} variant="inline" />
+              ) : (
+                <QuestionInput
+                  question={question}
+                  value={currentAnswer}
+                  onChange={(value) => handleAnswerChange(question.id, value)}
+                  shuffleSeed={shuffleSeed}
+                />
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -345,7 +428,18 @@ export default function QuizRunner({ quiz, lessonId, previousResult, onComplete 
           Anterior
         </Button>
 
-        {isLastQuestion ? (
+        {isImmediateMode && !isCurrentRevealed ? (
+          <Button
+            type="button"
+            onClick={handleReveal}
+            isDisabled={!hasAnsweredCurrent}
+            variant="primary"
+            className="gap-2 px-6"
+          >
+            Corrigir Resposta
+            <CheckCircle2 className="size-4" aria-hidden="true" />
+          </Button>
+        ) : isLastQuestion ? (
           <Button
             type="button"
             onClick={() => handleSubmit()}
