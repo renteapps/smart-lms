@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Reorder } from 'framer-motion';
 import {
   Save, PlayCircle, BarChart3, ListChecks, Plus, TriangleAlert, Activity,
-  CheckCircle2, Clock3, RefreshCw, History, UploadCloud, Undo2, X, Loader2,
+  CheckCircle2, Clock3, RefreshCw, History, UploadCloud, Undo2, X, Loader2, HelpCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Questionnaire, Question, ContentMapping, QuestionnaireVersion, EligibleLesson } from '@/types/trilha';
@@ -340,9 +341,20 @@ export function OnboardingClient({
         description="Gerencie o questionário inicial do aluno e defina a regra de liberação de conteúdos baseada em cada resposta para gerar trilhas exclusivas."
         actions={
           <div className="flex flex-wrap items-center gap-3">
-            <div className="hidden md:flex items-center gap-2">
-              <StatusBadge tone={statusTone}>{statusLabel}</StatusBadge>
-              {isDirty && <StatusBadge tone="warning">Alterações não salvas</StatusBadge>}
+            <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2">
+                <StatusBadge tone={statusTone}>{statusLabel}</StatusBadge>
+                {isDirty && <StatusBadge tone="warning">Alterações não salvas</StatusBadge>}
+              </div>
+              {/* Documentação das regras do motor — discreta, ao lado do status. */}
+              <Link
+                href="/admin/onboarding/function"
+                title="Como as trilhas são criadas"
+                aria-label="Ver as regras de criação das trilhas"
+                className="grid size-8 place-items-center rounded-full text-muted transition-colors hover:bg-surface-hover hover:text-accent"
+              >
+                <HelpCircle size={17} />
+              </Link>
             </div>
             {hasDraft && (
               <button

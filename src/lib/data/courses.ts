@@ -960,6 +960,7 @@ export async function getContinueLessons(db: DB, userId: string, limit = 4): Pro
     .eq("user_id", userId)
     .eq("is_completed", false)
     .gt("last_watched_second", 0)
+    .order("updated_at", { ascending: false })
     .limit(limit);
 
   logQueryError("getContinueLessons", error);
