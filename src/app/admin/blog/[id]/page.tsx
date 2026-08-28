@@ -36,6 +36,7 @@ import {
   toast,
 } from "@heroui/react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
+import { AudioUpload } from "@/components/ui/AudioUpload";
 import { AuthorModal } from "@/components/admin/blog/AuthorModal";
 import { createClient } from "@/lib/supabase/client";
 import { saveArticle, deleteArticle } from "@/app/actions/admin/content";
@@ -71,6 +72,7 @@ type ArticleFormState = {
   audioUrl: string;
   audioDuration: number;
   audioTranscript: string;
+  audioPeaks: number[] | null;
   relatedCourseId: string | null;
   featured: boolean;
   premium: boolean;
@@ -92,6 +94,7 @@ const EMPTY_ARTICLE: ArticleFormState = {
   audioUrl: "",
   audioDuration: 0,
   audioTranscript: "",
+  audioPeaks: null,
   relatedCourseId: null,
   featured: false,
   premium: false,
@@ -190,6 +193,7 @@ export default function AdminArticlePage() {
             audioUrl: data.audio_url ?? "",
             audioDuration: data.audio_duration ?? 0,
             audioTranscript: data.audio_transcript ?? "",
+            audioPeaks: Array.isArray(data.audio_peaks) ? data.audio_peaks : null,
             relatedCourseId: data.related_course_id ?? null,
             featured: data.featured ?? false,
             premium: data.premium ?? false,
@@ -283,6 +287,7 @@ export default function AdminArticlePage() {
         audioUrl: formData.audioUrl || undefined,
         audioDuration: Number(formData.audioDuration) || undefined,
         audioTranscript: formData.audioTranscript || undefined,
+        audioPeaks: formData.audioPeaks,
         relatedCourseId: formData.relatedCourseId,
         featured: formData.featured,
         premium: formData.premium,
@@ -443,14 +448,23 @@ export default function AdminArticlePage() {
                 </Card.Title>
               </Card.Header>
               <Card.Content className="space-y-4">
-                <TextField
-                  value={formData.audioUrl}
-                  onChange={(value) => setFormData((prev) => ({ ...prev, audioUrl: value }))}
-                  type="url"
-                >
-                  <Label>URL do áudio</Label>
-                  <Input placeholder="https://..." />
-                </TextField>
+                <AudioUpload
+                  label="Arquivo de áudio"
+                  folder="blog"
+                  value={{
+                    url: formData.audioUrl,
+                    duration: formData.audioDuration,
+                    peaks: formData.audioPeaks,
+                  }}
+                  onChange={({ url, duration, peaks }) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      audioUrl: url,
+                      audioDuration: duration,
+                      audioPeaks: peaks,
+                    }))
+                  }
+                />
                 <TextField
                   value={String(formData.audioDuration)}
                   onChange={(value) => setFormData((prev) => ({ ...prev, audioDuration: Number(value) || 0 }))}
@@ -458,6 +472,7 @@ export default function AdminArticlePage() {
                 >
                   <Label>Duração (segundos)</Label>
                   <Input placeholder="0" />
+                  <Description>Preenchida sozinha no envio. Só ajuste para áudio por URL externa.</Description>
                 </TextField>
                 <TextField
                   value={formData.audioTranscript}
@@ -465,6 +480,7 @@ export default function AdminArticlePage() {
                 >
                   <Label>Transcrição (acessibilidade)</Label>
                   <TextArea rows={4} placeholder="Transcrição do áudio" />
+                  <Description>Aparece recolhida sob o player, para quem prefere ler.</Description>
                 </TextField>
               </Card.Content>
             </Card>

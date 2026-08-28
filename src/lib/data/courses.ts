@@ -19,6 +19,7 @@ import {
   isSubscriptionActive,
 } from "@/lib/courseAccess";
 import { logQueryError, type DB, type Row } from "./types";
+import type { AiLessonSource } from "@/lib/quiz/aiQuestions";
 
 const FALLBACK_COVER =
   "https://images.unsplash.com/photo-1499750310107-5fef28a66643?q=85&w=1200&auto=format&fit=crop";
@@ -311,6 +312,99 @@ export async function getProgressByCourse(db: DB, userId: string): Promise<Map<s
   return result;
 }
 
+export type OverallProgress = {
+  /** Matrículas ativas consideradas no cálculo. */
+  enrolledCourses: number;
+  /** Cursos com todas as aulas concluídas. */
+  completedCourses: number;
+  /** Aulas concluídas somando todas as matrículas ativas. */
+  completedLessons: number;
+  /** Total de aulas dos cursos matriculados. */
+  totalLessons: number;
+  /** Média das porcentagens por curso (0–100), arredondada. */
+  averagePercent: number;
+};
+
+/**
+ * Progresso consolidado de um aluno, só sobre as matrículas ativas.
+ *
+ * `getProgressByCourse` cobre todos os cursos publicados — serve para catálogo,
+ * mas aqui diluiria o número com cursos que a pessoa nem faz. Este helper cruza
+ * `v_user_course_progress` com as matrículas ativas e devolve a média por curso
+ * (mesma conta que a lista "Meus cursos"), mais os totais de aulas para a barra.
+ */
+export async function getOverallProgress(db: DB, userId: string): Promise<OverallProgress> {
+  const empty: OverallProgress = {
+    enrolledCourses: 0,
+    completedCourses: 0,
+    completedLessons: 0,
+    totalLessons: 0,
+    averagePercent: 0,
+  };
+
+  const nowIso = new Date().toISOString();
+  const { data: enrollments, error: enrollmentsError } = await db
+    .from("enrollments")
+    .select("course_id")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .or(`expires_at.is.null,expires_at.gt.${nowIso}`);
+
+  logQueryError("getOverallProgress:enrollments", enrollmentsError);
+
+  const courseIds = [
+    ...new Set((enrollments ?? []).map((row: Row) => row.course_id).filter(Boolean)),
+  ];
+  if (courseIds.length === 0) return empty;
+
+  const [{ data: metrics, error: metricsError }, { data: progress, error: progressError }] =
+    await Promise.all([
+      db.from("v_course_metrics").select("id, lesson_count").in("id", courseIds),
+      db
+        .from("v_user_course_progress")
+        .select("course_id, completed_lessons")
+        .eq("user_id", userId)
+        .in("course_id", courseIds),
+    ]);
+
+  logQueryError("getOverallProgress:metrics", metricsError);
+  logQueryError("getOverallProgress:progress", progressError);
+
+  const lessonCountByCourse = new Map<string, number>();
+  (metrics ?? []).forEach((row: Row) => {
+    lessonCountByCourse.set(row.id, row.lesson_count ?? 0);
+  });
+
+  const completedByCourse = new Map<string, number>();
+  (progress ?? []).forEach((row: Row) => {
+    completedByCourse.set(row.course_id, row.completed_lessons ?? 0);
+  });
+
+  let percentSum = 0;
+  let completedCourses = 0;
+  let completedLessons = 0;
+  let totalLessons = 0;
+
+  courseIds.forEach((courseId) => {
+    const total = lessonCountByCourse.get(courseId) ?? 0;
+    const done = total > 0 ? Math.min(completedByCourse.get(courseId) ?? 0, total) : 0;
+    const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    percentSum += percent;
+    if (total > 0 && percent >= 100) completedCourses += 1;
+    completedLessons += done;
+    totalLessons += total;
+  });
+
+  return {
+    enrolledCourses: courseIds.length,
+    completedCourses,
+    completedLessons,
+    totalLessons,
+    averagePercent: Math.round(percentSum / courseIds.length),
+  };
+}
+
 /**
  * Como `getProgressByCourse`, mas para vários usuários de uma vez.
  *
@@ -526,6 +620,50 @@ export async function getCourseOutline(
     ? await getLessonProgressMap(db, userId, lessonIds)
     : new Map<string, Row>();
   return assembleCourseOutline(data, progressByLesson);
+}
+
+/**
+ * Material bruto das aulas para a geração de perguntas por IA.
+ *
+ * Sempre escopado ao curso: como não existe `lessons.course_id` (a aula só
+ * alcança o curso pelo módulo), o filtro por `module_id` é o que impede um id
+ * de aula vindo do cliente de puxar conteúdo de outro curso. Aulas de fora do
+ * curso simplesmente não voltam.
+ */
+export async function getLessonsAiSource(
+  db: DB,
+  courseId: string,
+  lessonIds: string[],
+): Promise<AiLessonSource[]> {
+  const ids = [...new Set(lessonIds.filter((id) => isUuid(id)))];
+  if (ids.length === 0) return [];
+
+  const { data: moduleRows, error: moduleError } = await db
+    .from("modules")
+    .select("id")
+    .eq("course_id", courseId);
+
+  logQueryError("getLessonsAiSource:modules", moduleError);
+  const moduleIds = (moduleRows ?? []).map((row: Row) => row.id);
+  if (moduleIds.length === 0) return [];
+
+  const { data, error } = await db
+    .from("lessons")
+    .select("id, title, module_id, transcription, short_description, content, blocks, order_index")
+    .in("id", ids)
+    .in("module_id", moduleIds)
+    .order("order_index", { ascending: true });
+
+  logQueryError("getLessonsAiSource:lessons", error);
+
+  return (data ?? []).map((row: Row) => ({
+    id: row.id,
+    title: row.title,
+    transcription: row.transcription ?? undefined,
+    shortDescription: row.short_description ?? undefined,
+    content: row.content ?? undefined,
+    blocks: Array.isArray(row.blocks) ? (row.blocks as LessonContentBlock[]) : undefined,
+  }));
 }
 
 export async function getLessonProgressMap(

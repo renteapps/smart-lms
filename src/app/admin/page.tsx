@@ -15,20 +15,13 @@ const quickActions = [
 export default async function AdminDashboard() {
   const supabase = await createClient();
 
-  const [activeUsers, published, drafts, recentActivity] = await Promise.all([
+  const [activeUsers, published, drafts, auditRows] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }).eq("status", "active"),
     supabase.from("courses").select("id", { count: "exact", head: true }).eq("is_published", true),
     supabase.from("courses").select("id", { count: "exact", head: true }).eq("is_published", false),
     supabase
       .from("audit_logs")
-      .select(`
-        id,
-        action,
-        resource_type,
-        resource_id,
-        created_at,
-        profiles ( full_name )
-      `)
+      .select("id, actor_id, action, target_type, target_id, created_at")
       .order("created_at", { ascending: false })
       .limit(5),
   ]);
@@ -36,47 +29,62 @@ export default async function AdminDashboard() {
   const activeUsersCount = activeUsers.count ?? 0;
   const publishedCourses = published.count ?? 0;
   const draftCourses = drafts.count ?? 0;
-  const recentActivityData = recentActivity.data;
 
-  const activity = (recentActivityData || []).map((log) => {
-    // Calculando o tempo relativo
-    const diffInMs = new Date().getTime() - new Date(log.created_at).getTime();
-    const diffInMins = Math.floor(diffInMs / 60000);
+  // O nome do autor vem numa segunda query: `audit_logs.actor_id` referencia
+  // `profiles.id`, mas o embed `profiles(...)` do PostgREST não resolve aqui.
+  const auditLogs = auditRows.data ?? [];
+  const actorIds = [...new Set(auditLogs.map((log) => log.actor_id).filter(Boolean))];
+  const nameByActor = new Map<string, string>();
+  if (actorIds.length > 0) {
+    const { data: actors } = await supabase.from("profiles").select("id, full_name").in("id", actorIds);
+    (actors ?? []).forEach((actor) => nameByActor.set(actor.id, actor.full_name ?? "Sistema"));
+  }
+
+  const humanizeAction = (value: string) => value.replace(/[_-]+/g, " ").trim();
+
+  const activity = auditLogs.map((log) => {
+    // Tempo relativo
+    const diffInMins = Math.max(0, Math.floor((new Date().getTime() - new Date(log.created_at).getTime()) / 60000));
     const diffInHours = Math.floor(diffInMins / 60);
-    const timeStr = diffInHours > 0 ? `há ${diffInHours} h` : `há ${diffInMins} min`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    const timeStr =
+      diffInDays > 0 ? `há ${diffInDays} d` : diffInHours > 0 ? `há ${diffInHours} h` : `há ${diffInMins} min`;
 
-    let actionLabel = "";
+    let actionLabel: string;
     let tone: "positive" | "primary" | "warning" | "neutral" = "neutral";
-    const profileObj: any = Array.isArray(log.profiles) ? log.profiles[0] : log.profiles;
-    const person = profileObj?.full_name || "Sistema";
 
-    switch(log.action) {
-      case 'login':
+    switch (log.action) {
+      case "login":
         actionLabel = "fez login na plataforma";
         tone = "primary";
         break;
-      case 'course_started':
-        actionLabel = "iniciou um curso";
-        tone = "primary";
+      case "update_profile":
+      case "profile_updated":
+        actionLabel = "atualizou um perfil";
+        tone = "neutral";
         break;
-      case 'course_completed':
+      case "publish_questionnaire":
+        actionLabel = log.target_id
+          ? `publicou o questionário da trilha (v${log.target_id})`
+          : "publicou o questionário da trilha";
+        tone = "positive";
+        break;
+      case "course_completed":
         actionLabel = "concluiu um curso";
         tone = "positive";
         break;
-      case 'profile_updated':
-        actionLabel = "atualizou o perfil";
-        tone = "neutral";
-        break;
-      default:
-        actionLabel = `realizou uma ação de ${log.action.replace('_', ' ')}`;
+      default: {
+        const target = log.target_type ? ` (${humanizeAction(log.target_type)})` : "";
+        actionLabel = `${humanizeAction(String(log.action ?? "ação"))}${target}`;
+      }
     }
 
     return {
       id: log.id,
-      person,
+      person: nameByActor.get(log.actor_id) || "Sistema",
       action: actionLabel,
       time: timeStr,
-      tone
+      tone,
     };
   });
 

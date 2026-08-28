@@ -14,7 +14,7 @@ interface AudioState {
 
 interface AudioPlayerContextType {
   state: AudioState;
-  playArticle: (article: Article) => void;
+  playArticle: (article: Article, startAt?: number) => void;
   togglePlayPause: () => void;
   seekTo: (time: number) => void;
   setPlaybackRate: (rate: number) => void;
@@ -26,6 +26,27 @@ interface AudioPlayerContextType {
 const AudioPlayerContext = createContext<AudioPlayerContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'smart_lms_audio_progress';
+
+/**
+ * Posição salva de um artigo, em segundos.
+ *
+ * Exportado porque o player da página do artigo precisa dela antes de o áudio
+ * virar o áudio ativo — é o que permite o botão dizer "continuar em 4:12" em vez
+ * de "ouvir agora" para quem já começou. Ler o `localStorage` direto no
+ * componente duplicaria a chave em dois arquivos.
+ */
+export function getSavedAudioProgress(slug: string): number {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed[slug] || 0;
+    }
+  } catch (e) {
+    console.error('Failed to get audio progress', e);
+  }
+  return 0;
+}
 
 function saveProgress(slug: string, time: number) {
   try {
@@ -108,29 +129,21 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     };
   }, []);
 
-  const getSavedProgress = (slug: string): number => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return parsed[slug] || 0;
-      }
-    } catch (e) {
-      console.error('Failed to get audio progress', e);
-    }
-    return 0;
-  };
-
-  const playArticle = (article: Article) => {
+  /**
+   * `startAt` existe para quem já escolheu a posição antes de dar play — o
+   * player da página do artigo deixa arrastar a onda com o áudio parado, e sem
+   * isso o play pularia de volta para a posição salva, desfazendo o gesto.
+   */
+  const playArticle = (article: Article, startAt?: number) => {
     if (!article.audio) return;
-    
+
     if (state.article?.slug === article.slug) {
       // Toggle if it's the same article
       togglePlayPause();
       return;
     }
 
-    const savedTime = getSavedProgress(article.slug);
+    const savedTime = startAt ?? getSavedAudioProgress(article.slug);
     lastRenderedSecondRef.current = Math.floor(savedTime);
     lastSavedBucketRef.current = Math.floor(savedTime / 5);
     

@@ -127,3 +127,43 @@ export async function isAdmin(db: DB, userId: string): Promise<boolean> {
   const { data } = await db.from("profiles").select("role").eq("id", userId).maybeSingle();
   return data?.role === "admin";
 }
+
+/**
+ * Momento da atividade mais recente do aluno na plataforma.
+ *
+ * Usa o `updated_at` do progresso de aula, que é tocado sempre que a pessoa
+ * assiste ou marca uma aula. Serve de sinal de "último acesso" mesmo quando
+ * `profiles.last_access_at` está vazio (a coluna só é preenchida em ambientes
+ * com a rotina de presença ativa) e quando não há service role para ler o
+ * `last_sign_in_at` do Auth.
+ */
+export async function getLastLessonActivityAt(db: DB, userId: string): Promise<string | null> {
+  const { data, error } = await db
+    .from("lesson_progress")
+    .select("updated_at")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  logQueryError("getLastLessonActivityAt", error);
+  return data?.updated_at ?? null;
+}
+
+/** Escolhe o carimbo de data/hora mais recente entre vários sinais possíveis. */
+export function pickLatestTimestamp(...values: Array<string | null | undefined>): string | null {
+  let latestMs: number | null = null;
+  let latestIso: string | null = null;
+
+  for (const value of values) {
+    if (!value) continue;
+    const ms = new Date(value).getTime();
+    if (Number.isNaN(ms)) continue;
+    if (latestMs === null || ms > latestMs) {
+      latestMs = ms;
+      latestIso = value;
+    }
+  }
+
+  return latestIso;
+}

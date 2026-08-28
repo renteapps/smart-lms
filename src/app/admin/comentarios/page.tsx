@@ -53,7 +53,10 @@ export default function AdminComentarios() {
     setIsLoading(true);
     const supabase = createClient();
     try {
-      // Buscar comentários raízes (parent_id is null)
+      // A consulta é intencionalmente plana. O embed aninhado do PostgREST
+      // depende de todas as FKs estarem presentes no schema cache; se uma
+      // migração estiver pendente, ele impede até a lista de comentários de
+      // carregar. As relações são montadas abaixo a partir das chaves reais.
       const { data, error } = await supabase
         .from("comments")
         .select(`
@@ -61,34 +64,64 @@ export default function AdminComentarios() {
           content,
           created_at,
           lesson_id,
-          status,
-          profiles:user_id(full_name, email),
-          lessons:lesson_id(
-            title,
-            modules(
-              courses(title)
-            )
-          )
+          user_id,
+          status
         `)
         .is("parent_id", null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
+      if (!data?.length) {
+        setComments([]);
+        return;
+      }
+
+      const userIds = [...new Set(data.map((comment) => comment.user_id).filter(Boolean))];
+      const lessonIds = [...new Set(data.map((comment) => comment.lesson_id).filter(Boolean))];
+      const [profilesResult, lessonsResult] = await Promise.all([
+        supabase.from("profiles").select("id, full_name, email").in("id", userIds),
+        supabase.from("lessons").select("id, title, module_id").in("id", lessonIds),
+      ]);
+
+      if (profilesResult.error) throw profilesResult.error;
+      if (lessonsResult.error) throw lessonsResult.error;
+
+      const moduleIds = [...new Set((lessonsResult.data ?? []).map((lesson) => lesson.module_id).filter(Boolean))];
+      const { data: modules, error: modulesError } = moduleIds.length
+        ? await supabase.from("modules").select("id, course_id").in("id", moduleIds)
+        : { data: [], error: null };
+
+      if (modulesError) throw modulesError;
+
+      const courseIds = [...new Set((modules ?? []).map((module) => module.course_id).filter(Boolean))];
+      const { data: courses, error: coursesError } = courseIds.length
+        ? await supabase.from("courses").select("id, title").in("id", courseIds)
+        : { data: [], error: null };
+
+      if (coursesError) throw coursesError;
+
+      const profilesById = new Map((profilesResult.data ?? []).map((profile) => [profile.id, profile]));
+      const lessonsById = new Map((lessonsResult.data ?? []).map((lesson) => [lesson.id, lesson]));
+      const modulesById = new Map((modules ?? []).map((module) => [module.id, module]));
+      const coursesById = new Map((courses ?? []).map((course) => [course.id, course]));
+
       // Buscar se há respostas (para definir status)
-      const { data: replies } = await supabase
+      const { data: replies, error: repliesError } = await supabase
         .from("comments")
         .select("parent_id")
         .not("parent_id", "is", null);
+
+      if (repliesError) throw repliesError;
 
       const repliedIds = new Set(replies?.map(r => r.parent_id));
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const formatted = (data ?? []).map((row: any) => {
-        const student = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-        const lesson = Array.isArray(row.lessons) ? row.lessons[0] : row.lessons;
-        const mod = lesson?.modules && Array.isArray(lesson.modules) ? lesson.modules[0] : lesson?.modules;
-        const course = mod?.courses && Array.isArray(mod.courses) ? mod.courses[0] : mod?.courses;
+        const student = profilesById.get(row.user_id);
+        const lesson = lessonsById.get(row.lesson_id);
+        const lessonModule = lesson ? modulesById.get(lesson.module_id) : undefined;
+        const course = lessonModule ? coursesById.get(lessonModule.course_id) : undefined;
 
         return {
           id: row.id,
@@ -114,7 +147,11 @@ export default function AdminComentarios() {
   };
 
   useEffect(() => {
-    void loadComments();
+    const timer = window.setTimeout(() => {
+      void loadComments();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   const handleSendReply = async () => {

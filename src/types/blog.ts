@@ -28,9 +28,11 @@ export type Article = {
   body?: any; // MDXContent representation (could be raw string or compiled source depending on the MDX solution)
   blocks?: LessonContentBlock[]; // Editor de blocos (BlockNote) — fonte de verdade do conteúdo
   audio?: {
-    url: string; // Bunny CDN URL
+    url: string; // Arquivo no bucket `article-audio` (ou URL externa legada)
     duration: number; // In seconds
     transcript?: string; // Markdown or raw text for accessibility
+    /** Envoltória gerada na conversão: inteiros 0–100, um por barra da onda. */
+    peaks?: number[];
   };
   relatedCourseSlug?: string; // CTA for funnels
   featured?: boolean; // If it should appear in the featured spot

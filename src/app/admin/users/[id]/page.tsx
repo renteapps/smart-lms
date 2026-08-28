@@ -21,8 +21,10 @@ import {
 import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@heroui/react";
 import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
-import { getProfile } from "@/lib/data/profiles";
+import { getProfile, getLastLessonActivityAt, pickLatestTimestamp } from "@/lib/data/profiles";
+import { getOverallProgress } from "@/lib/data/courses";
 import { getAiCreditBalance } from "@/lib/aiCredits";
+import { getAuthUserInfo } from "@/lib/supabase/authAdmin";
 import { createClient } from "@/lib/supabase/server";
 import { AiCreditAdminCard } from "./AiCreditAdminCard";
 import { SupportActions } from "./SupportActions";
@@ -36,18 +38,27 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
     notFound();
   }
 
-  const aiCreditBalance = await getAiCreditBalance(supabase, id);
-
   // Busca matrículas ativas do usuário
   const nowIso = new Date().toISOString();
-  const { count: enrollments } = await supabase
-    .from("enrollments")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", id)
-    .eq("status", "active")
-    .or(`expires_at.is.null,expires_at.gt.${nowIso}`);
+  const [aiCreditBalance, { count: enrollments }, overallProgress, lastLessonActivityAt, authInfo] =
+    await Promise.all([
+      getAiCreditBalance(supabase, id),
+      supabase
+        .from("enrollments")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", id)
+        .eq("status", "active")
+        .or(`expires_at.is.null,expires_at.gt.${nowIso}`),
+      getOverallProgress(supabase, id),
+      getLastLessonActivityAt(supabase, id),
+      getAuthUserInfo(id),
+    ]);
 
-  const progressDisplay = profile.role === "student" ? "Calculando..." : "—";
+  const hasProgress = overallProgress.enrolledCourses > 0;
+  const progressDisplay = hasProgress ? `${overallProgress.averagePercent}%` : "—";
+  const progressHelper = hasProgress
+    ? `${overallProgress.completedLessons}/${overallProgress.totalLessons} aulas concluídas`
+    : "Sem matrículas ativas";
   const statusToDisplay = profile.status === "active" ? "Ativo" : "Inativo";
 
   const cards = [
@@ -81,8 +92,13 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
     }
   ];
 
-  const lastSeenDisplay = profile.lastAccessAt 
-    ? new Date(profile.lastAccessAt).toLocaleDateString("pt-BR", { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) 
+  const lastAccessAt = pickLatestTimestamp(
+    profile.lastAccessAt,
+    authInfo?.lastSignInAt,
+    lastLessonActivityAt,
+  );
+  const lastSeenDisplay = lastAccessAt
+    ? new Date(lastAccessAt).toLocaleDateString("pt-BR", { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
     : "Nunca";
 
   const displayRole = profile.role === "admin" ? "Administrador" : profile.role === "instructor" ? "Instrutor" : "Aluno";
@@ -112,7 +128,7 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
           icon={profile.role === "instructor" || profile.role === "admin" ? ShieldCheck : GraduationCap}
           tone="primary"
         />
-        <StatCard label="Progresso Geral" value={progressDisplay} icon={BookOpen} tone="sage" />
+        <StatCard label="Progresso Geral" value={progressDisplay} helper={progressHelper} icon={BookOpen} tone="sage" />
         <StatCard
           label="Último Acesso"
           value={lastSeenDisplay.split(",")[0] || lastSeenDisplay}

@@ -5,12 +5,26 @@ import { type Session, type User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "@heroui/react";
+import { touchLastAccess } from "@/app/actions/profile";
 import {
   defaultProfile,
   PROFILE_SAVED_EVENT,
   PROFILE_STORAGE_KEY,
   type ProfilePreferences,
 } from "@/lib/profilePreferences";
+
+/** Marca presença no máximo uma vez por sessão do browser (o evento SIGNED_IN
+ *  também dispara a cada carga de página com sessão viva, não só no login). */
+function markPresenceOncePerSession() {
+  try {
+    if (sessionStorage.getItem("last-access-touched")) return;
+    sessionStorage.setItem("last-access-touched", "1");
+  } catch {
+    // Sem sessionStorage (modo privado / SSR): registra a cada SIGNED_IN mesmo.
+  }
+  // Fire-and-forget: presença não pode quebrar a navegação nem gerar rejeição.
+  touchLastAccess().catch(() => {});
+}
 
 interface AuthContextType {
   user: User | null;
@@ -77,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (event === "SIGNED_IN" && newSession?.user) {
           syncUserProfile(newSession.user);
+          markPresenceOncePerSession();
           startTransition(() => {
             router.refresh();
           });

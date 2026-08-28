@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import BlockViewer from '@/components/classroom/BlockViewer';
 import { Clock, Headphones, BookOpen, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { PlayArticleButton } from '@/components/audio/PlayArticleButton';
+import { ArticleAudioPlayer } from '@/components/audio/ArticleAudioPlayer';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -137,18 +137,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
       {/* Content */}
       <div className="editorial-container max-w-3xl">
-        {/* Placeholder para Player de Áudio - Fase 2 */}
         {(article.format === 'audio' || article.format === 'both') && article.audio && (
-          <div className="p-8 rounded-[var(--radius-xl)] bg-card border border-border/30 shadow-sm mb-12 flex flex-col items-center justify-center text-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-32 bg-primary/5 blur-[100px] rounded-full pointer-events-none" />
-            
-            <Headphones className="w-10 h-10 text-primary mb-4" />
-            <h3 className="text-2xl font-bold text-foreground mb-2">Episódio em Áudio</h3>
-            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-              Ouça este conteúdo enquanto navega pelo site. O player continuará tocando mesmo se você mudar de página.
-            </p>
-            <PlayArticleButton article={article} />
-          </div>
+          <ArticleAudioPlayer article={article} />
         )}
 
         <div className="max-w-none">

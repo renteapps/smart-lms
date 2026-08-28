@@ -2,9 +2,10 @@
 
 import { usePathname } from "next/navigation";
 import { Pause, Play, RotateCcw, RotateCw, X } from "lucide-react";
-import { useRef } from "react";
-import { Button, ProgressBar, Tooltip } from "@heroui/react";
+import { Button, Tooltip } from "@heroui/react";
+import { AudioScrubber } from "@/components/audio/AudioScrubber";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
+import { formatAudioDuration } from "@/lib/audioOptimization";
 
 /**
  * Player persistente do áudio dos artigos.
@@ -19,7 +20,7 @@ import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 export function GlobalMiniPlayer() {
   const pathname = usePathname();
   const {
-    state: { article, isPlaying, progress, currentTime, duration, playbackRate },
+    state: { article, isPlaying, currentTime, duration, playbackRate },
     togglePlayPause,
     closePlayer,
     seekTo,
@@ -27,17 +28,8 @@ export function GlobalMiniPlayer() {
     skipBackward,
     skipForward,
   } = useAudioPlayer();
-  const progressBarRef = useRef<HTMLDivElement>(null);
 
   if (!article || pathname.startsWith("/admin") || /^\/courses\/[^/]+\/lessons/.test(pathname)) return null;
-
-  const formatTime = (time: number) => `${Math.floor(time / 60)}:${Math.floor(time % 60).toString().padStart(2, "0")}`;
-
-  const handleProgressBarClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!progressBarRef.current) return;
-    const rect = progressBarRef.current.getBoundingClientRect();
-    seekTo(Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)) * duration);
-  };
 
   const cyclePlaybackRate = () => {
     const rates = [1, 1.25, 1.5, 2];
@@ -92,7 +84,7 @@ export function GlobalMiniPlayer() {
           </div>
 
           <p className="hidden min-w-24 text-center text-xs font-semibold text-muted md:block" data-numeric>
-            {formatTime(currentTime)} / {formatTime(duration)}
+            {formatAudioDuration(currentTime)} / {formatAudioDuration(duration)}
           </p>
 
           <Tooltip.Root>
@@ -123,20 +115,19 @@ export function GlobalMiniPlayer() {
         </div>
 
         {/*
-          A faixa de progresso é também a área de busca. O nó com `ref` tem
-          exatamente a largura da trilha — qualquer padding horizontal aqui
-          deslocaria o cálculo do clique. O respiro vertical vem do `py`.
+          A faixa de progresso é também a área de busca — mesmo controle da
+          página do artigo, então a onda, o teclado e o arrasto se comportam
+          igual nos dois lugares.
         */}
-        <div
-          ref={progressBarRef}
-          onClick={handleProgressBarClick}
-          className="relative z-10 mx-3 cursor-pointer py-3 sm:mx-5"
-        >
-          <ProgressBar value={progress * 100} color="accent" size="sm" aria-label="Progresso do áudio">
-            <ProgressBar.Track>
-              <ProgressBar.Fill />
-            </ProgressBar.Track>
-          </ProgressBar>
+        <div className="relative z-10 mx-3 py-2 sm:mx-5">
+          <AudioScrubber
+            currentTime={currentTime}
+            duration={duration}
+            onSeek={seekTo}
+            peaks={article.audio?.peaks}
+            size="sm"
+            label={`Posição do áudio de ${article.title}`}
+          />
         </div>
       </div>
     </div>

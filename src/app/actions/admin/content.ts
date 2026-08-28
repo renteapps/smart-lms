@@ -565,6 +565,7 @@ export type ArticleInput = {
   audioUrl?: string;
   audioDuration?: number;
   audioTranscript?: string;
+  audioPeaks?: number[] | null;
   relatedCourseId?: string | null;
   featured?: boolean;
   premium?: boolean;
@@ -598,6 +599,7 @@ export async function saveArticle(input: ArticleInput): Promise<Saved<{ id: stri
       audio_url: input.audioUrl ?? null,
       audio_duration: input.audioDuration ?? null,
       audio_transcript: input.audioTranscript ?? null,
+      audio_peaks: input.audioPeaks ?? null,
       related_course_id: input.relatedCourseId ?? null,
       featured: input.featured ?? false,
       premium: input.premium ?? false,

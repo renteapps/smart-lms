@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ArrowLeft, Save, Plus, Trash2, GripVertical } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@heroui/react";
 import type { Quiz, QuizQuestion, QuestionType, QuizFeedbackMode } from "@/types/quiz";
 import QuizQuestionTypeEditor from "./QuizQuestionTypeEditor";
+import CreateQuestionModal, { type AiLessonOption } from "@/components/admin/quiz/CreateQuestionModal";
+import { QUESTION_TYPES, QUESTION_TYPE_LABELS } from "@/lib/quiz/aiQuestions";
 import { saveQuiz, saveLesson } from "@/app/actions/admin/catalog";
 
 interface QuizBuilderFormProps {
@@ -15,19 +17,91 @@ interface QuizBuilderFormProps {
   aulaId: string;
   initialData?: Quiz;
   initialLessonTitle?: string;
+  courseTitle?: string;
+  /** Aulas do curso com material aproveitável pela geração por IA. */
+  aiLessons?: AiLessonOption[];
+  aiDefaultModel?: string;
+  aiEnabled?: boolean;
 }
 
-const emptyQuestion: QuizQuestion = {
-  id: `q-${Date.now()}`,
+const newId = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
+
+/** Campos específicos do tipo, preservando o que já dá para reaproveitar. */
+function shapeForType(type: QuestionType, previous?: QuizQuestion): Partial<QuizQuestion> {
+  switch (type) {
+    case "true_false":
+      return {
+        options: [
+          { id: newId("opt"), text: "Verdadeiro", isCorrect: true },
+          { id: newId("opt"), text: "Falso", isCorrect: false },
+        ],
+      };
+    case "multiple_choice":
+    case "multiple_select":
+      return {
+        options: previous?.options?.length
+          ? previous.options
+          : [
+              { id: newId("opt"), text: "", isCorrect: true },
+              { id: newId("opt"), text: "", isCorrect: false },
+            ],
+      };
+    case "matching":
+      return {
+        pairs: previous?.pairs?.length
+          ? previous.pairs
+          : [
+              { id: newId("pair"), left: "", right: "" },
+              { id: newId("pair"), left: "", right: "" },
+            ],
+      };
+    case "fill_table":
+      return {
+        columns: previous?.columns?.length
+          ? previous.columns
+          : [
+              { id: newId("col"), header: "" },
+              { id: newId("col"), header: "" },
+            ],
+        minRows: previous?.minRows ?? 1,
+      };
+    case "fill_blank":
+      return { blanks: previous?.blanks ?? [] };
+    default:
+      return {};
+  }
+}
+
+function createBlankQuestion(type: QuestionType = "multiple_choice"): QuizQuestion {
+  return { id: newId("q"), type, text: "", ...shapeForType(type) };
+}
+
+/**
+ * A primeira pergunta do formulário em branco precisa de ids estáveis: eles
+ * viram `key` e `htmlFor`, e um id sorteado sairia diferente no servidor e no
+ * cliente, quebrando a hidratação.
+ */
+const INITIAL_BLANK_QUESTION: QuizQuestion = {
+  id: "q-inicial",
   type: "multiple_choice",
   text: "",
   options: [
-    { id: `opt-${Date.now()}-1`, text: "", isCorrect: true },
-    { id: `opt-${Date.now()}-2`, text: "", isCorrect: false }
-  ]
+    { id: "opt-inicial-1", text: "", isCorrect: true },
+    { id: "opt-inicial-2", text: "", isCorrect: false },
+  ],
 };
 
-export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialData, initialLessonTitle }: QuizBuilderFormProps) {
+export default function QuizBuilderForm({
+  courseId,
+  moduleId,
+  aulaId,
+  initialData,
+  initialLessonTitle,
+  courseTitle,
+  aiLessons = [],
+  aiDefaultModel = "",
+  aiEnabled = false,
+}: QuizBuilderFormProps) {
   const router = useRouter();
   const isNew = aulaId === "nova";
   const [isSaving, startSaving] = useTransition();
@@ -41,22 +115,16 @@ export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialDat
   const [questions, setQuestions] = useState<QuizQuestion[]>(
     initialData?.questions && initialData.questions.length > 0
       ? initialData.questions
-      : [emptyQuestion]
+      : [INITIAL_BLANK_QUESTION]
   );
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const handleAddQuestion = () => {
-    setQuestions(prev => [
-      ...prev,
-      {
-        id: `q-${Date.now()}`,
-        type: "multiple_choice",
-        text: "",
-        options: [
-          { id: `opt-${Date.now()}-1`, text: "", isCorrect: true },
-          { id: `opt-${Date.now()}-2`, text: "", isCorrect: false }
-        ]
-      }
-    ]);
+  const handleAddBlankQuestion = () => {
+    setQuestions(prev => [...prev, createBlankQuestion()]);
+  };
+
+  const handleInsertGenerated = (generated: QuizQuestion[]) => {
+    setQuestions(prev => [...prev, ...generated]);
   };
 
   const handleRemoveQuestion = (id: string) => {
@@ -76,49 +144,7 @@ export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialDat
         text: q.text,
         explanation: q.explanation,
       };
-
-      if (type === "true_false") {
-        return {
-          ...base,
-          options: [
-            { id: `opt-${Date.now()}-t`, text: "Verdadeiro", isCorrect: true },
-            { id: `opt-${Date.now()}-f`, text: "Falso", isCorrect: false }
-          ]
-        };
-      }
-      if (type === "multiple_choice" || type === "multiple_select") {
-        return {
-          ...base,
-          options: q.options && q.options.length > 0 ? q.options : [
-            { id: `opt-${Date.now()}-1`, text: "", isCorrect: true },
-            { id: `opt-${Date.now()}-2`, text: "", isCorrect: false }
-          ]
-        };
-      }
-      if (type === "matching") {
-        return {
-          ...base,
-          pairs: q.pairs && q.pairs.length > 0 ? q.pairs : [
-            { id: `pair-${Date.now()}-1`, left: "", right: "" },
-            { id: `pair-${Date.now()}-2`, left: "", right: "" }
-          ]
-        };
-      }
-      if (type === "fill_table") {
-        return {
-          ...base,
-          columns: q.columns && q.columns.length > 0 ? q.columns : [
-            { id: `col-${Date.now()}-1`, header: "" },
-            { id: `col-${Date.now()}-2`, header: "" }
-          ],
-          minRows: q.minRows ?? 1
-        };
-      }
-      if (type === "fill_blank") {
-        return { ...base, blanks: q.blanks ?? [] };
-      }
-      // open_ended
-      return base;
+      return { ...base, ...shapeForType(type, q) };
     }));
   };
 
@@ -177,6 +203,20 @@ export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialDat
 
   return (
     <div className="max-w-4xl mx-auto pb-12">
+      {isCreateModalOpen && (
+        <CreateQuestionModal
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreateBlank={handleAddBlankQuestion}
+          onInsert={handleInsertGenerated}
+          courseId={courseId}
+          courseTitle={courseTitle}
+          quizTitle={title}
+          lessons={aiLessons}
+          defaultModel={aiDefaultModel}
+          aiEnabled={aiEnabled}
+        />
+      )}
+
       <div className="mb-8">
         <Link
           href={`/admin/cursos/${courseId}/modulos`}
@@ -293,7 +333,7 @@ export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialDat
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-foreground">Perguntas</h2>
-            <Button variant="primary" size="sm" type="button" onClick={handleAddQuestion}>
+            <Button variant="primary" size="sm" type="button" onClick={() => setIsCreateModalOpen(true)}>
               <Plus className="size-4 mr-1.5" /> Adicionar Pergunta
             </Button>
           </div>
@@ -316,13 +356,11 @@ export default function QuizBuilderForm({ courseId, moduleId, aulaId, initialDat
                         onChange={(e) => handleTypeChange(q.id, e.target.value as QuestionType)}
                         className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-accent"
                       >
-                        <option value="multiple_choice">Múltipla Escolha</option>
-                        <option value="multiple_select">Seleção Múltipla</option>
-                        <option value="true_false">Verdadeiro ou Falso</option>
-                        <option value="open_ended">Resposta Aberta (Dissertativa)</option>
-                        <option value="matching">Relação (Associação)</option>
-                        <option value="fill_table">Preencher Tabela</option>
-                        <option value="fill_blank">Preencher Lacunas</option>
+                        {QUESTION_TYPES.map((type) => (
+                          <option key={type} value={type}>
+                            {QUESTION_TYPE_LABELS[type]}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <button

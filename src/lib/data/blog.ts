@@ -3,7 +3,7 @@ import { logQueryError, type DB, type Row } from "./types";
 
 const ARTICLE_SELECT = `
   id, slug, title, excerpt, cover, category, author, author_id, published_at, reading_time,
-  format, body, blocks, audio_url, audio_duration, audio_transcript, related_course_id,
+  format, body, blocks, audio_url, audio_duration, audio_transcript, audio_peaks, related_course_id,
   featured, premium, courses:related_course_id ( slug ),
   author_rel:author_id ( id, name, slug, title, avatar_url, bio )
 `;
@@ -41,6 +41,7 @@ export function mapArticle(row: Row): Article {
           url: row.audio_url,
           duration: row.audio_duration ?? 0,
           transcript: row.audio_transcript ?? undefined,
+          peaks: Array.isArray(row.audio_peaks) ? row.audio_peaks : undefined,
         }
       : undefined,
     relatedCourseSlug: row.courses?.slug ?? undefined,
