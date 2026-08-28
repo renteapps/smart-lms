@@ -203,15 +203,19 @@ export default function ChatSticker() {
   const foreground = getContrastText(config.primaryColor);
   /*
    * O tocador de áudio ocupa a base da tela quando há um artigo tocando; o
-   * gatilho sobe para não cobri-lo, e o painel se ancora nesse mesmo ponto.
+   * gatilho sobe para não cobri-lo com margem confortável, e o painel se ancora
+   * nesse mesmo ponto.
    */
   const anchorBottom = article
-    ? "calc(5.75rem + env(safe-area-inset-bottom))"
+    ? "calc(7.5rem + env(safe-area-inset-bottom))"
     : "max(1rem, env(safe-area-inset-bottom))";
 
   return (
     <>
-      <div className="fixed right-4 z-40 flex flex-col items-end sm:right-6" style={{ bottom: anchorBottom }}>
+      <div
+        className="fixed right-4 z-40 flex flex-col items-end transition-[bottom] duration-[var(--duration-md)] ease-[var(--spring)] sm:right-6"
+        style={{ bottom: anchorBottom }}
+      >
         <button
           ref={triggerRef}
           type="button"

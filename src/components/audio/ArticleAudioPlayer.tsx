@@ -4,7 +4,6 @@ import { useState, useSyncExternalStore } from "react";
 import { Button, Chip, Disclosure, Tooltip } from "@heroui/react";
 import { Headphones, Pause, Play, RotateCcw, RotateCw } from "lucide-react";
 import { AudioScrubber } from "@/components/audio/AudioScrubber";
-import { Reveal } from "@/components/ui/Reveal";
 import { getSavedAudioProgress, useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { formatAudioDuration } from "@/lib/audioOptimization";
 import type { Article } from "@/types/blog";
@@ -80,7 +79,7 @@ export function ArticleAudioPlayer({ article }: { article: Article }) {
 
   return (
     <section aria-label="Ouvir este artigo" className="mb-12">
-      <Reveal className="surface-card overflow-hidden">
+      <div className="surface-card overflow-hidden">
         <div className="relative z-10 p-6 sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -191,7 +190,7 @@ export function ArticleAudioPlayer({ article }: { article: Article }) {
             </Disclosure.Content>
           </Disclosure>
         )}
-      </Reveal>
+      </div>
     </section>
   );
 }
