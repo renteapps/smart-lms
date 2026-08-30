@@ -51,6 +51,8 @@ export async function updateSession(request: NextRequest) {
     "/cursos",
     "/blog",
     "/certificados/",
+    // Páginas personalizadas do criador de páginas: sempre públicas, sem gate de login.
+    "/pagina",
     // Teste de perfil livre: a pessoa responde sem conta e só cria login no resultado.
     "/diagnostico",
     "/api/",

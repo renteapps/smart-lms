@@ -148,6 +148,7 @@ export async function getCatalogCourses(db: DB, userId?: string | null): Promise
         level: row.level ?? "Essencial",
         isFeatured: row.is_featured ?? false,
         orderIndex: row.order_index ?? 0,
+        createdAt: row.created_at ?? undefined,
         certificateEnabled: row.enable_certificates ?? true,
         studentState: deriveStudentCourseState({
           hasAccess: false,

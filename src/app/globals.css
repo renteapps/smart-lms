@@ -337,6 +337,17 @@
     width: min(100% - 2rem, 80rem);
   }
 
+  /* Variantes usadas pelas seções do criador de páginas (largura "estreita"/"ampla"). */
+  .editorial-container-narrow {
+    margin-inline: auto;
+    width: min(100% - 2rem, 48rem);
+  }
+
+  .editorial-container-wide {
+    margin-inline: auto;
+    width: min(100% - 2rem, 96rem);
+  }
+
   .admin-container {
     margin-inline: auto;
     width: min(100%, 90rem);
@@ -859,11 +870,27 @@
   .editorial-container {
     width: min(100% - 3rem, 80rem);
   }
+
+  .editorial-container-narrow {
+    width: min(100% - 3rem, 48rem);
+  }
+
+  .editorial-container-wide {
+    width: min(100% - 3rem, 96rem);
+  }
 }
 
 @media (min-width: 1280px) {
   .editorial-container {
     width: min(100% - 5rem, 80rem);
+  }
+
+  .editorial-container-narrow {
+    width: min(100% - 5rem, 48rem);
+  }
+
+  .editorial-container-wide {
+    width: min(100% - 5rem, 96rem);
   }
 }
 

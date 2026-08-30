@@ -2,7 +2,19 @@ import type { Article } from "@/types/blog";
 import type { CatalogCourse, HomeCarouselRow } from "@/types/course";
 import type { ProfileTest } from "@/types/profileTest";
 
-export type PageKey = "public-home" | "no-products";
+/** Qualquer slug cadastrado em `pages` — validado em runtime, não por union. */
+export type PageKey = string;
+/** As 2 páginas fixas, com lógica própria de roteamento em `src/app/page.tsx`. */
+export type SystemPageKey = "public-home" | "no-products";
+
+export type PageRegistryEntry = {
+  slug: string;
+  title: string;
+  description: string | null;
+  kind: "system" | "custom";
+  createdAt: string;
+  updatedAt: string;
+};
 export type SectionBackground = "default" | "muted" | "accent" | "dark";
 export type SectionWidth = "narrow" | "normal" | "wide";
 export type SectionSpacing = "compact" | "normal" | "spacious";

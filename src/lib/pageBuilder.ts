@@ -4,11 +4,12 @@ import type {
   PageKey,
   PageSection,
   SectionStyle,
+  SystemPageKey,
 } from "@/types/pageBuilder";
 
-export const PAGE_KEYS: PageKey[] = ["public-home", "no-products"];
+export const SYSTEM_PAGE_KEYS: SystemPageKey[] = ["public-home", "no-products"];
 
-export const PAGE_LABELS: Record<PageKey, { title: string; description: string }> = {
+export const SYSTEM_PAGE_LABELS: Record<SystemPageKey, { title: string; description: string }> = {
   "public-home": {
     title: "Home Pública",
     description: "Página inicial exibida para visitantes que ainda não entraram na plataforma.",
@@ -18,6 +19,51 @@ export const PAGE_LABELS: Record<PageKey, { title: string; description: string }
     description: "Vitrine exibida para usuários logados sem curso ou plano ativo.",
   },
 };
+
+export function isSystemPageKey(value: string): value is SystemPageKey {
+  return SYSTEM_PAGE_KEYS.includes(value as SystemPageKey);
+}
+
+/**
+ * Segmentos de topo já ocupados em `src/app` (mais os 2 slugs de sistema) —
+ * uma página nova não pode usar um destes como slug. `/pagina/[slug]` é um
+ * segmento diferente do slug em si, então uma colisão de URL de verdade não
+ * é possível hoje; a lista existe para manter o admin livre de nomes
+ * confusos e como proteção caso páginas custom um dia passem a viver na
+ * raiz.
+ */
+export const RESERVED_PAGE_SLUGS = new Set([
+  "acessar", "actions", "admin", "agentes", "analises", "api", "auth", "blog",
+  "busca", "certificados", "completar-cadastro", "confirmar", "courses",
+  "criar-conta", "cursos", "diagnostico", "empresa", "markdown-preview",
+  "minha-trilha", "notas", "onboarding", "pagina", "perfil", "resetar-senha",
+  ...SYSTEM_PAGE_KEYS,
+]);
+
+export function isReservedPageSlug(slug: string): boolean {
+  return RESERVED_PAGE_SLUGS.has(slug);
+}
+
+const SLUG_FORMAT = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+export function isValidPageSlugFormat(value: string): boolean {
+  return value.length >= 1 && value.length <= 80 && SLUG_FORMAT.test(value);
+}
+
+/** Mesma receita usada em `slugifyAgentName` e nas telas de admin (blog, planos, categorias). */
+export function slugify(value: string): string {
+  return value
+    .toString()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9 -]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 80);
+}
 
 export const DEFAULT_SECTION_STYLE: SectionStyle = {
   background: "default",
@@ -37,7 +83,7 @@ function id(prefix: string) {
   return `default-${prefix}`;
 }
 
-export const DEFAULT_PAGE_DOCUMENTS: Record<PageKey, PageDocument> = {
+export const DEFAULT_PAGE_DOCUMENTS: Record<SystemPageKey, PageDocument> = {
   "public-home": {
     version: 1,
     pageKey: "public-home",
@@ -262,7 +308,12 @@ export type PageValidationResult =
   | { success: false; error: string };
 
 export function validatePageDocument(value: unknown, expectedKey?: PageKey): PageValidationResult {
-  if (!isRecord(value) || value.version !== 1 || !PAGE_KEYS.includes(value.pageKey as PageKey)) {
+  // `pageKey` só precisa ter formato de slug válido aqui — não dá mais para
+  // checar contra uma lista fechada agora que páginas custom existem. A
+  // existência real da página (ela está mesmo cadastrada em `pages`?) é
+  // garantida pela FK de `page_builder_drafts.page_key`, não por este
+  // validador de formato de documento.
+  if (!isRecord(value) || value.version !== 1 || !validText(value.pageKey, 80, true)) {
     return { success: false, error: "Documento de página inválido." };
   }
   if (expectedKey && value.pageKey !== expectedKey) {
@@ -276,8 +327,13 @@ export function validatePageDocument(value: unknown, expectedKey?: PageKey): Pag
   return { success: true, document: value as PageDocument };
 }
 
+/** Documento inicial de uma página custom recém-criada: só um hero, para dar um ponto de partida sem ser uma tela em branco. */
+export function createEmptyPageDocument(pageKey: string): PageDocument {
+  return { version: 1, pageKey, sections: [createSection("hero")] };
+}
+
 export function cloneDefaultPage(key: PageKey): PageDocument {
-  return structuredClone(DEFAULT_PAGE_DOCUMENTS[key]);
+  return isSystemPageKey(key) ? structuredClone(DEFAULT_PAGE_DOCUMENTS[key]) : createEmptyPageDocument(key);
 }
 
 export function createSection(type: PageSection["type"]): PageSection {
@@ -293,7 +349,13 @@ export function createSection(type: PageSection["type"]): PageSection {
 export function selectPageItems<T>(
   items: T[],
   source: ContentSource,
-  helpers: { id: (item: T) => string; featured?: (item: T) => boolean; category?: (item: T) => string | undefined },
+  helpers: {
+    id: (item: T) => string;
+    featured?: (item: T) => boolean;
+    category?: (item: T) => string | undefined;
+    /** Data de referência para a regra "Mais recentes". Sem ela, a regra não reordena (mesmo comportamento de antes). */
+    date?: (item: T) => string | number | undefined | null;
+  },
 ): T[] {
   if (source.mode === "manual") {
     const byId = new Map(items.map((item) => [helpers.id(item), item]));
@@ -302,10 +364,21 @@ export function selectPageItems<T>(
       return item ? [item] : [];
     }).slice(0, source.limit);
   }
-  const filtered = source.rule === "featured" && helpers.featured
+  let filtered = source.rule === "featured" && helpers.featured
     ? items.filter(helpers.featured)
     : source.rule === "category" && source.category && helpers.category
       ? items.filter((item) => helpers.category?.(item) === source.category)
       : items;
+
+  if (source.rule === "recent" && helpers.date) {
+    const time = (item: T) => {
+      const value = helpers.date!(item);
+      if (value === undefined || value === null || value === "") return -Infinity;
+      const numeric = typeof value === "number" ? value : new Date(value).getTime();
+      return Number.isNaN(numeric) ? -Infinity : numeric;
+    };
+    filtered = [...filtered].sort((a, b) => time(b) - time(a));
+  }
+
   return filtered.slice(0, source.limit);
 }

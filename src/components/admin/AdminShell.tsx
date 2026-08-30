@@ -11,6 +11,7 @@ import {
   Building2,
   ClipboardCheck,
   LayoutDashboard,
+  LayoutTemplate,
   Lightbulb,
   Menu,
   MessageSquare,
@@ -67,6 +68,7 @@ const navGroups = [
   {
     label: "Plataforma",
     links: [
+      { href: "/admin/pages", icon: LayoutTemplate, label: "Páginas" },
       { href: "/admin/ajustes", icon: Settings, label: "Ajustes" },
     ],
   },

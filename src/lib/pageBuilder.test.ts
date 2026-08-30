@@ -41,4 +41,29 @@ describe("page builder document", () => {
       mode: "automatic", itemIds: [], rule: "featured", limit: 1,
     }, { id: (item) => item.id, featured: (item) => item.featured })).toEqual([items[1]]);
   });
+
+  it("ordena por mais recentes quando um helper de data é informado", () => {
+    const items = [
+      { id: "antigo", date: "2026-01-01T00:00:00.000Z" },
+      { id: "recente", date: "2026-08-01T00:00:00.000Z" },
+      { id: "sem-data", date: undefined },
+      { id: "medio", date: "2026-04-01T00:00:00.000Z" },
+    ];
+    expect(selectPageItems(items, {
+      mode: "automatic", itemIds: [], rule: "recent", limit: 10,
+    }, { id: (item) => item.id, date: (item) => item.date })).toEqual([
+      items[1], items[3], items[0], items[2],
+    ]);
+
+    // Sem o helper `date`, a regra "recent" não reordena — mesmo comportamento de antes.
+    expect(selectPageItems(items, {
+      mode: "automatic", itemIds: [], rule: "recent", limit: 10,
+    }, { id: (item) => item.id })).toEqual(items);
+
+    // Timestamp numérico (caso de Article.publishedAt) também funciona.
+    const numeric = [{ id: "a", ts: 100 }, { id: "b", ts: 300 }, { id: "c", ts: 200 }];
+    expect(selectPageItems(numeric, {
+      mode: "automatic", itemIds: [], rule: "recent", limit: 10,
+    }, { id: (item) => item.id, date: (item) => item.ts })).toEqual([numeric[1], numeric[2], numeric[0]]);
+  });
 });

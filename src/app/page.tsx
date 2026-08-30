@@ -31,7 +31,7 @@ export default async function Home() {
     const data = await getPageBuilderData(supabase, document);
     return (
       <MarketingShell>
-        <PageRenderer document={document} data={data} />
+        <PageRenderer document={document} data={data} offsetForFixedHeader />
       </MarketingShell>
     );
   }
@@ -42,9 +42,7 @@ export default async function Home() {
     const data = await getPageBuilderData(supabase, document, user.id);
     return (
       <StudentShell>
-        <div className="pt-[76px]">
-          <PageRenderer document={document} data={data} />
-        </div>
+        <PageRenderer document={document} data={data} offsetForFixedHeader />
       </StudentShell>
     );
   }

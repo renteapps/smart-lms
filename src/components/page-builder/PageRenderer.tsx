@@ -1,10 +1,18 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { buttonVariants } from "@heroui/react";
-import { ArrowRight, Clock3, LockKeyhole, Sparkles } from "lucide-react";
+// `buttonVariants` vem direto de @heroui/styles (não do barrel @heroui/react):
+// o barrel principal reexporta módulos que importam `client-only`, o que
+// quebra a renderização em servidor mesmo para um valor que não é componente.
+import { buttonVariants } from "@heroui/styles";
+import { EmptyState } from "@heroui/react/empty-state";
+import { ArrowRight, Sparkles } from "lucide-react";
 import PandaVideoPlayer from "@/components/classroom/PandaVideoPlayer";
+import CarouselRow from "@/components/CarouselRow";
+import { ArticleCard } from "@/components/blog/ArticleCard";
+import { BuilderCourseCard } from "@/components/page-builder/cards/BuilderCourseCard";
+import { BuilderGalleryItem } from "@/components/page-builder/cards/BuilderGalleryItem";
+import { BuilderTestCard } from "@/components/page-builder/cards/BuilderTestCard";
+import { Rise } from "@/components/ui/Rise";
 import { extractYouTubeId, youtubeEmbedUrl } from "@/lib/editor/youtube";
 import { resolvePageSectionItems } from "@/lib/data/pages";
 import { isSafePageUrl } from "@/lib/pageBuilder";
@@ -25,16 +33,25 @@ const spacingClasses: Record<SectionStyle["spacing"], string> = {
   normal: "py-16 md:py-24",
   spacious: "py-24 md:py-32",
 };
+// Mesmos tokens de contêiner que o resto do site usa (NavBar, Footer, todas
+// as páginas do produto) — antes, esta seção tinha sua própria largura e
+// respiro (px-5 sm:px-8 + max-w-*), desalinhada com tudo em volta.
 const widthClasses: Record<SectionStyle["width"], string> = {
-  narrow: "max-w-3xl",
-  normal: "max-w-6xl",
-  wide: "max-w-[90rem]",
+  narrow: "editorial-container-narrow",
+  normal: "editorial-container",
+  wide: "editorial-container-wide",
 };
 
+/**
+ * `@container` faz as grades internas reagirem à largura da própria seção
+ * (via `@min-[...]:`), não ao viewport inteiro — uma seção "estreita" passa a
+ * mostrar menos colunas de verdade, e o preview mobile/tablet do editor (que
+ * só limita o max-width de um ancestral) passa a refletir breakpoints reais.
+ */
 function SectionShell({ section, children }: { section: PageSection; children: React.ReactNode }) {
   return (
     <section id={section.id} className={cn(backgroundClasses[section.style.background], spacingClasses[section.style.spacing])}>
-      <div className={cn("mx-auto w-full px-5 sm:px-8", widthClasses[section.style.width])}>{children}</div>
+      <div className={cn("@container", widthClasses[section.style.width])}>{children}</div>
     </section>
   );
 }
@@ -82,59 +99,38 @@ function VideoEmbed({ provider, url, title }: { provider: "youtube" | "panda" | 
   );
 }
 
+const GRID_PROGRESSION = "grid grid-cols-1 gap-5 @min-[640px]:grid-cols-2 @min-[1024px]:grid-cols-3 @min-[1280px]:grid-cols-4";
+
 function CourseCards({ courses }: { courses: CatalogCourse[] }) {
   if (!courses.length) return <EmptyContent />;
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {courses.map((course, index) => {
-        const state = course.studentState;
-        const locked = state?.kind === "locked";
-        const salesUrl = state?.kind === "locked" ? state.salesUrl : null;
-        const href = locked && salesUrl ? salesUrl : `/courses/${course.slug || course.id}`;
-        return (
-          <Link key={course.id} href={href} className="group overflow-hidden rounded-2xl border border-border/60 bg-surface shadow-elev-1 transition hover:-translate-y-1 hover:shadow-elev-3">
-            <div className="relative aspect-video overflow-hidden bg-default">
-              <Image src={course.cover} alt={course.title} fill unoptimized sizes="(max-width: 768px) 100vw, 25vw" className="object-cover transition-transform group-hover:scale-105" priority={index < 2} />
-              {locked && <span className="absolute right-3 top-3 grid size-9 place-items-center rounded-full bg-foreground/75 text-background"><LockKeyhole className="size-4" /></span>}
-            </div>
-            <div className="p-5">
-              <p className="eyebrow text-accent">{course.category}</p>
-              <h3 className="mt-2 font-display text-lg font-extrabold text-foreground">{course.title}</h3>
-              <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted">{course.description}</p>
-              <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-accent">{locked ? "Conhecer curso" : "Acessar curso"}<ArrowRight className="size-4" /></span>
-            </div>
-          </Link>
-        );
-      })}
+    <div className={GRID_PROGRESSION}>
+      {courses.map((course, index) => (
+        <Rise key={course.id} className="min-w-0" delay={Math.min(index, 5) * 60}>
+          <BuilderCourseCard course={course} eager={index < 2} featured={index === 0} className="h-full" />
+        </Rise>
+      ))}
     </div>
   );
 }
 
 function GalleryRows({ rows }: { rows: HomeCarouselRow[] }) {
-  if (!rows.length) return <EmptyContent />;
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       {rows.map((row) => (
-        <div key={row.courseId}>
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <h3 className="font-display text-xl font-extrabold text-foreground">{row.courseTitle}</h3>
-            <Link href={row.courseHref} className="inline-flex items-center gap-2 text-sm font-bold text-accent">Ver curso <ArrowRight className="size-4" /></Link>
-          </div>
-          <div className="flex snap-x gap-4 overflow-x-auto pb-4">
-            {row.lessons.map((lesson) => (
-              <Link key={lesson.id} href={row.courseHref} className="group w-[min(76vw,260px)] shrink-0 snap-start overflow-hidden rounded-2xl border border-border/60 bg-surface shadow-elev-1">
-                <div className="relative aspect-[4/5] overflow-hidden bg-default">
-                  <Image src={lesson.cover} alt={lesson.title} fill unoptimized sizes="260px" className="object-cover transition-transform group-hover:scale-105" />
-                  {row.locked && <span className="absolute right-3 top-3 grid size-9 place-items-center rounded-full bg-foreground/75 text-background"><LockKeyhole className="size-4" /></span>}
-                </div>
-                <div className="p-4">
-                  <h4 className="line-clamp-2 font-display font-bold text-foreground">{lesson.title}</h4>
-                  <span className="mt-2 flex items-center gap-1.5 text-xs text-muted"><Clock3 className="size-3.5" />{lesson.durationInMinutes} min</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+        <CarouselRow
+          key={row.courseId}
+          title={row.courseTitle}
+          action={
+            <Link href={row.courseHref} className="inline-flex items-center gap-2 text-sm font-bold text-accent">
+              Ver curso <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          }
+        >
+          {row.lessons.map((lesson) => (
+            <BuilderGalleryItem key={lesson.id} lesson={lesson} href={row.courseHref} locked={row.locked} />
+          ))}
+        </CarouselRow>
       ))}
     </div>
   );
@@ -143,16 +139,11 @@ function GalleryRows({ rows }: { rows: HomeCarouselRow[] }) {
 function ArticleCards({ articles }: { articles: Article[] }) {
   if (!articles.length) return <EmptyContent />;
   return (
-    <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-      {articles.map((article) => (
-        <Link key={article.slug} href={`/blog/${article.slug}`} className="group overflow-hidden rounded-2xl border border-border/60 bg-surface shadow-elev-1 transition hover:-translate-y-1">
-          {article.cover && <div className="relative aspect-video"><Image src={article.cover} alt="" fill unoptimized sizes="25vw" className="object-cover" /></div>}
-          <div className="p-5">
-            <p className="eyebrow text-accent">{article.category}</p>
-            <h3 className="mt-2 font-display text-lg font-extrabold text-foreground">{article.title}</h3>
-            <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted">{article.excerpt}</p>
-          </div>
-        </Link>
+    <div className={GRID_PROGRESSION}>
+      {articles.map((article, index) => (
+        <Rise key={article.slug} className="min-w-0" delay={Math.min(index, 5) * 60}>
+          <ArticleCard article={article} className="h-full" />
+        </Rise>
       ))}
     </div>
   );
@@ -161,21 +152,25 @@ function ArticleCards({ articles }: { articles: Article[] }) {
 function TestCards({ tests }: { tests: ProfileTest[] }) {
   if (!tests.length) return <EmptyContent />;
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-      {tests.map((test) => (
-        <Link key={test.id} href={`/diagnostico/${test.slug}`} className="group overflow-hidden rounded-2xl border border-border/60 bg-surface p-5 shadow-elev-1 transition hover:-translate-y-1">
-          <span className="grid size-11 place-items-center rounded-xl bg-accent-soft text-accent"><Sparkles className="size-5" /></span>
-          <h3 className="mt-5 font-display text-lg font-extrabold text-foreground">{test.title}</h3>
-          <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted">{test.description}</p>
-          <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-accent">Fazer teste <ArrowRight className="size-4" /></span>
-        </Link>
+    <div className={GRID_PROGRESSION}>
+      {tests.map((test, index) => (
+        <Rise key={test.id} className="min-w-0" delay={Math.min(index, 5) * 60}>
+          <BuilderTestCard test={test} className="h-full" />
+        </Rise>
       ))}
     </div>
   );
 }
 
 function EmptyContent() {
-  return <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">Nenhum conteúdo publicado corresponde a esta seção.</p>;
+  return (
+    <EmptyState className="gap-4 py-16">
+      <span className="grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground">
+        <Sparkles className="size-6" aria-hidden="true" />
+      </span>
+      <p className="max-w-sm text-center text-sm leading-6 text-muted">Nenhum conteúdo publicado corresponde a esta seção.</p>
+    </EmptyState>
+  );
 }
 
 function RenderSection({ section, data }: { section: PageSection; data: PageBuilderData }) {
@@ -183,7 +178,7 @@ function RenderSection({ section, data }: { section: PageSection; data: PageBuil
   if (section.type === "hero") {
     return (
       <SectionShell section={section}>
-        <div className={cn("grid items-center gap-12", section.media && "lg:grid-cols-2", section.style.alignment === "center" && !section.media && "text-center")}>
+        <div className={cn("grid items-center gap-12", section.media && "@min-[1024px]:grid-cols-2", section.style.alignment === "center" && !section.media && "text-center")}>
           <div className={cn(section.style.alignment === "center" && !section.media && "mx-auto max-w-4xl")}>
             {section.eyebrow && <p className="eyebrow text-accent">{section.eyebrow}</p>}
             <h1 className="display-1 mt-4 text-current">{section.title}</h1>
@@ -206,17 +201,46 @@ function RenderSection({ section, data }: { section: PageSection; data: PageBuil
   if (section.type === "video") return <SectionShell section={section}><Heading section={section} /><VideoEmbed provider={section.provider} url={section.url} title={section.title} /></SectionShell>;
   if (section.type === "image-gallery") {
     const validImages = section.images.filter((image) => isSafePageUrl(image.url));
-    return <SectionShell section={section}><Heading section={section} />{validImages.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{validImages.map((image) => <div key={image.id} className="relative aspect-[4/3] overflow-hidden rounded-2xl"><Image src={image.url} alt={image.alt} fill unoptimized sizes="33vw" className="object-cover" /></div>)}</div> : <EmptyContent />}</SectionShell>;
+    return <SectionShell section={section}><Heading section={section} />{validImages.length ? <div className="grid grid-cols-1 gap-4 @min-[640px]:grid-cols-2 @min-[1024px]:grid-cols-3">{validImages.map((image) => <div key={image.id} className="relative aspect-[4/3] overflow-hidden rounded-2xl"><Image src={image.url} alt={image.alt} fill unoptimized sizes="33vw" className="object-cover" /></div>)}</div> : <EmptyContent />}</SectionShell>;
+  }
+  if (section.type === "gallery-course-carousel") {
+    // CarouselRow já traz seu próprio .editorial-container (é o carrossel real
+    // usado em todo o resto do site) — aninhar outro contêiner por fora dele
+    // dobraria a margem lateral. Por isso esta seção não passa pelo
+    // SectionShell genérico: só a introdução (Heading) respeita a largura
+    // configurada, o carrossel em si é sempre full-bleed até a borda da seção.
+    const rows = resolvePageSectionItems(section, data) as HomeCarouselRow[];
+    return (
+      <section id={section.id} className={cn(backgroundClasses[section.style.background], spacingClasses[section.style.spacing])}>
+        <div className={widthClasses[section.style.width]}><Heading section={section} /></div>
+        {rows.length ? <GalleryRows rows={rows} /> : <div className={widthClasses[section.style.width]}><EmptyContent /></div>}
+      </section>
+    );
   }
   const items = resolvePageSectionItems(section, data);
   return <SectionShell section={section}><Heading section={section} />
     {section.type === "course-carousel" && <CourseCards courses={items as CatalogCourse[]} />}
-    {section.type === "gallery-course-carousel" && <GalleryRows rows={items as HomeCarouselRow[]} />}
     {section.type === "article-carousel" && <ArticleCards articles={items as Article[]} />}
     {section.type === "profile-test-carousel" && <TestCards tests={items as ProfileTest[]} />}
   </SectionShell>;
 }
 
-export function PageRenderer({ document, data, className }: { document: PageDocument; data: PageBuilderData; className?: string }) {
-  return <div className={cn("w-full overflow-hidden", className)}>{document.sections.map((section) => <RenderSection key={section.id} section={section} data={data} />)}</div>;
+export function PageRenderer({
+  document,
+  data,
+  className,
+  offsetForFixedHeader = false,
+}: {
+  document: PageDocument;
+  data: PageBuilderData;
+  className?: string;
+  /** A NavBar pública é fixa (76px) — passe true para páginas renderizadas
+   * sob ela. O preview do editor não tem NavBar por cima, então deixa `false`. */
+  offsetForFixedHeader?: boolean;
+}) {
+  return (
+    <div className={cn("w-full overflow-hidden", offsetForFixedHeader && "pt-[76px]", className)}>
+      {document.sections.map((section) => <RenderSection key={section.id} section={section} data={data} />)}
+    </div>
+  );
 }

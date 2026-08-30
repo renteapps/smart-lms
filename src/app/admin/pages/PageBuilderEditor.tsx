@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -19,8 +19,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Button } from "@heroui/react";
+import { AlertDialog, Button } from "@heroui/react";
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowLeft,
   ArrowUp,
@@ -46,7 +47,7 @@ import { PageHeader } from "@/components/ui/editorial";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { PandaVideoSelector } from "@/components/admin/integracoes/PandaVideoSelector";
 import { PageRenderer } from "@/components/page-builder/PageRenderer";
-import { createSection, PAGE_LABELS } from "@/lib/pageBuilder";
+import { createSection } from "@/lib/pageBuilder";
 import { cn } from "@/lib/utils";
 import type { ContentSource, PageBuilderData, PageCta, PageDraft, PageKey, PageSection } from "@/types/pageBuilder";
 import { publishPage, savePageDraft } from "./actions";
@@ -64,17 +65,38 @@ const SECTION_LIBRARY: Array<{ type: PageSection["type"]; label: string; icon: t
 
 const sectionLabel = (type: PageSection["type"]) => SECTION_LIBRARY.find((item) => item.type === type)?.label ?? type;
 
-export function PageBuilderEditor({ pageKey, initialDraft, catalog }: { pageKey: PageKey; initialDraft: PageDraft; catalog: PageBuilderData }) {
+export function PageBuilderEditor({
+  pageKey,
+  pageLabel,
+  initialDraft,
+  catalog,
+}: {
+  pageKey: PageKey;
+  pageLabel: { title: string; description: string };
+  initialDraft: PageDraft;
+  catalog: PageBuilderData;
+}) {
   const [draft, setDraft] = useState<PageDraft>(initialDraft);
   const [dirty, setDirty] = useState(false);
   const [preview, setPreview] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [status, setStatus] = useState<{ tone: "success" | "danger" | "neutral"; message: string } | null>(null);
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-  const pageLabel = PAGE_LABELS[pageKey];
+
+  // Fechar a aba ou recarregar com alterações não salvas perde o rascunho em
+  // memória — o navegador intercepta e pergunta antes de deixar isso acontecer.
+  useEffect(() => {
+    if (!dirty) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [dirty]);
 
   const setSections = (sections: PageSection[]) => {
     setDraft((current) => ({ ...current, document: { ...current.document, sections } }));
@@ -102,8 +124,8 @@ export function PageBuilderEditor({ pageKey, initialDraft, catalog }: { pageKey:
     }
   });
 
-  const handlePublish = () => {
-    if (!window.confirm(`Publicar “${pageLabel.title}” agora?`)) return;
+  const confirmPublish = () => {
+    setPublishConfirmOpen(false);
     startTransition(async () => {
       const result = await publishPage(pageKey, draft.revision);
       setStatus({ tone: result.success ? "success" : "danger", message: result.message });
@@ -130,9 +152,31 @@ export function PageBuilderEditor({ pageKey, initialDraft, catalog }: { pageKey:
         <div className="flex flex-wrap gap-2">
           {dirty && <span className="inline-flex items-center gap-1.5 self-center rounded-full bg-warning-soft px-2.5 py-1 text-xs font-bold text-warning-soft-foreground">Não salvo</span>}
           <Button variant="outline" onPress={handleSave} isDisabled={isPending || !dirty}><Save className="size-4" /> Salvar rascunho</Button>
-          <Button variant="primary" onPress={handlePublish} isDisabled={isPending || dirty || draft.revision === 0}>Publicar</Button>
+          <Button variant="primary" onPress={() => setPublishConfirmOpen(true)} isDisabled={isPending || dirty || draft.revision === 0}>Publicar</Button>
         </div>
       </div>
+
+      <AlertDialog.Root isOpen={publishConfirmOpen} onOpenChange={setPublishConfirmOpen}>
+        <AlertDialog.Backdrop>
+          <AlertDialog.Container size="md">
+            <AlertDialog.Dialog>
+              <AlertDialog.Header>
+                <AlertDialog.Icon status="accent">
+                  <Save className="size-5" aria-hidden="true" />
+                </AlertDialog.Icon>
+                <AlertDialog.Heading>Publicar “{pageLabel.title}”?</AlertDialog.Heading>
+              </AlertDialog.Header>
+              <AlertDialog.Body>
+                <p>O conteúdo publicado fica visível imediatamente para quem acessa a página. Esta ação substitui a versão publicada atual.</p>
+              </AlertDialog.Body>
+              <AlertDialog.Footer>
+                <Button variant="tertiary" onClick={() => setPublishConfirmOpen(false)}>Cancelar</Button>
+                <Button variant="primary" onClick={confirmPublish}>Publicar</Button>
+              </AlertDialog.Footer>
+            </AlertDialog.Dialog>
+          </AlertDialog.Container>
+        </AlertDialog.Backdrop>
+      </AlertDialog.Root>
 
       {status && <div role="status" className={cn("rounded-xl border px-4 py-3 text-sm font-semibold", status.tone === "success" ? "border-success/30 bg-success-soft text-success-soft-foreground" : status.tone === "danger" ? "border-danger/30 bg-danger-soft text-danger-soft-foreground" : "border-border bg-default text-foreground")}>{status.message}</div>}
 
@@ -161,7 +205,7 @@ export function PageBuilderEditor({ pageKey, initialDraft, catalog }: { pageKey:
                       const index = draft.document.sections.findIndex((item) => item.id === section.id);
                       const next = [...draft.document.sections]; next.splice(index + 1, 0, copy); setSections(next);
                     }}
-                    onDelete={() => window.confirm("Remover esta seção?") && setSections(draft.document.sections.filter((item) => item.id !== section.id))}
+                    onDelete={() => setSections(draft.document.sections.filter((item) => item.id !== section.id))}
                   />
                 ))}
               </div>
@@ -191,6 +235,7 @@ export function PageBuilderEditor({ pageKey, initialDraft, catalog }: { pageKey:
 
 function SortableSectionCard({ section, catalog, onPatch, onDuplicate, onDelete }: { section: PageSection; catalog: PageBuilderData; onPatch: (patch: Partial<PageSection>) => void; onDuplicate: () => void; onDelete: () => void }) {
   const [open, setOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={cn("rounded-2xl border border-border bg-surface shadow-elev-1", isDragging && "z-20 opacity-70 shadow-elev-3")}>
@@ -202,9 +247,34 @@ function SortableSectionCard({ section, catalog, onPatch, onDuplicate, onDelete 
         </button>
         <Button isIconOnly size="sm" variant="ghost" aria-label={section.visible ? "Ocultar" : "Exibir"} onPress={() => onPatch({ visible: !section.visible } as Partial<PageSection>)}>{section.visible ? <Eye className="size-4" /> : <EyeOff className="size-4" />}</Button>
         <Button isIconOnly size="sm" variant="ghost" aria-label="Duplicar" onPress={onDuplicate}><Copy className="size-4" /></Button>
-        <Button isIconOnly size="sm" variant="ghost" aria-label="Remover" className="text-danger" onPress={onDelete}><Trash2 className="size-4" /></Button>
+        <Button isIconOnly size="sm" variant="ghost" aria-label="Remover" className="text-danger" onPress={() => setDeleteConfirmOpen(true)}><Trash2 className="size-4" /></Button>
       </div>
       {open && <div className="space-y-5 border-t border-border p-4"><SectionFields section={section} catalog={catalog} onPatch={onPatch} /></div>}
+
+      <AlertDialog.Root isOpen={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialog.Backdrop>
+          <AlertDialog.Container size="md">
+            <AlertDialog.Dialog>
+              <AlertDialog.Header>
+                <AlertDialog.Icon status="danger">
+                  <AlertTriangle className="size-5" aria-hidden="true" />
+                </AlertDialog.Icon>
+                <AlertDialog.Heading>Remover esta seção?</AlertDialog.Heading>
+              </AlertDialog.Header>
+              <AlertDialog.Body>
+                <p>“{section.title}” ({sectionLabel(section.type)}) será removida do documento. Isso só é definitivo depois de salvar o rascunho.</p>
+              </AlertDialog.Body>
+              <AlertDialog.Footer>
+                <Button variant="tertiary" onClick={() => setDeleteConfirmOpen(false)}>Cancelar</Button>
+                <Button variant="danger" onClick={() => { setDeleteConfirmOpen(false); onDelete(); }}>
+                  <Trash2 className="size-4" aria-hidden="true" />
+                  Remover seção
+                </Button>
+              </AlertDialog.Footer>
+            </AlertDialog.Dialog>
+          </AlertDialog.Container>
+        </AlertDialog.Backdrop>
+      </AlertDialog.Root>
     </div>
   );
 }
@@ -219,10 +289,15 @@ function SectionFields({ section, catalog, onPatch }: { section: PageSection; ca
   return <>
     <div className="grid grid-cols-2 gap-3">
       <Field label="Fundo"><select className={inputClass} value={section.style.background} onChange={(event) => onPatch({ style: { ...section.style, background: event.target.value as typeof section.style.background } } as Partial<PageSection>)}><option value="default">Padrão</option><option value="muted">Suave</option><option value="accent">Cor da marca</option><option value="dark">Escuro</option></select></Field>
-      <Field label="Largura"><select className={inputClass} value={section.style.width} onChange={(event) => onPatch({ style: { ...section.style, width: event.target.value as typeof section.style.width } } as Partial<PageSection>)}><option value="narrow">Estreita</option><option value="normal">Normal</option><option value="wide">Ampla</option></select></Field>
+      {section.type !== "gallery-course-carousel" && (
+        <Field label="Largura"><select className={inputClass} value={section.style.width} onChange={(event) => onPatch({ style: { ...section.style, width: event.target.value as typeof section.style.width } } as Partial<PageSection>)}><option value="narrow">Estreita</option><option value="normal">Normal</option><option value="wide">Ampla</option></select></Field>
+      )}
       <Field label="Espaçamento"><select className={inputClass} value={section.style.spacing} onChange={(event) => onPatch({ style: { ...section.style, spacing: event.target.value as typeof section.style.spacing } } as Partial<PageSection>)}><option value="compact">Compacto</option><option value="normal">Normal</option><option value="spacious">Amplo</option></select></Field>
       <Field label="Alinhamento"><select className={inputClass} value={section.style.alignment} onChange={(event) => onPatch({ style: { ...section.style, alignment: event.target.value as typeof section.style.alignment } } as Partial<PageSection>)}><option value="left">Esquerda</option><option value="center">Centro</option></select></Field>
     </div>
+    {section.type === "gallery-course-carousel" && (
+      <p className="text-xs text-muted">Este bloco usa a largura padrão do site em cada fileira de curso, para acompanhar o mesmo carrossel usado no restante da plataforma.</p>
+    )}
     {"eyebrow" in section && <Field label="Chamada curta"><input className={inputClass} value={section.eyebrow ?? ""} onChange={(event) => update("eyebrow", event.target.value)} maxLength={100} /></Field>}
     {"title" in section && <Field label="Título"><input className={inputClass} value={section.title} onChange={(event) => update("title", event.target.value)} maxLength={180} /></Field>}
     {"text" in section && <Field label="Texto"><textarea className={cn(inputClass, "min-h-24 resize-y")} value={section.text ?? ""} onChange={(event) => update("text", event.target.value)} maxLength={section.type === "text-cta" ? 4000 : 1200} /></Field>}
@@ -277,7 +352,7 @@ function SourceEditor({ section, catalog, onPatch }: { section: Extract<PageSect
   const categories = [...new Set(options.map((item) => item.category).filter(Boolean))] as string[];
   return <div className="space-y-4 rounded-xl border border-border bg-default p-4">
     <div className="grid grid-cols-2 gap-3"><Field label="Fonte"><select className={inputClass} value={source.mode} onChange={(event) => patchSource({ mode: event.target.value as ContentSource["mode"] })}><option value="automatic">Automática</option><option value="manual">Manual</option></select></Field><Field label="Quantidade"><input className={inputClass} type="number" min={1} max={20} value={source.limit} onChange={(event) => patchSource({ limit: Math.max(1, Math.min(20, Number(event.target.value) || 1)) })} /></Field></div>
-    {source.mode === "automatic" ? <div className="grid grid-cols-2 gap-3"><Field label="Regra"><select className={inputClass} value={source.rule} onChange={(event) => patchSource({ rule: event.target.value as ContentSource["rule"] })}><option value="all">Todos</option><option value="featured">Destaques</option><option value="recent">Mais recentes</option>{categories.length > 0 && <option value="category">Categoria</option>}</select></Field>{source.rule === "category" && <Field label="Categoria"><select className={inputClass} value={source.category ?? ""} onChange={(event) => patchSource({ category: event.target.value })}><option value="">Selecione</option>{categories.map((category) => <option key={category}>{category}</option>)}</select></Field>}</div> : <ManualPicker options={options} selected={source.itemIds} onChange={(itemIds) => patchSource({ itemIds })} />}
+    {source.mode === "automatic" ? <div className="grid grid-cols-2 gap-3"><Field label="Regra"><select className={inputClass} value={source.rule} onChange={(event) => patchSource({ rule: event.target.value as ContentSource["rule"] })}><option value="all">Todos</option>{section.type !== "profile-test-carousel" && <option value="featured">Destaques</option>}<option value="recent">Mais recentes</option>{categories.length > 0 && <option value="category">Categoria</option>}</select></Field>{source.rule === "category" && <Field label="Categoria"><select className={inputClass} value={source.category ?? ""} onChange={(event) => patchSource({ category: event.target.value })}><option value="">Selecione</option>{categories.map((category) => <option key={category}>{category}</option>)}</select></Field>}</div> : <ManualPicker options={options} selected={source.itemIds} onChange={(itemIds) => patchSource({ itemIds })} />}
   </div>;
 }
 

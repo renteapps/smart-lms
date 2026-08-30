@@ -1,12 +1,90 @@
 import { cloneDefaultPage, selectPageItems, validatePageDocument } from "@/lib/pageBuilder";
 import { isEnrollmentActive, isSubscriptionActive } from "@/lib/courseAccess";
-import type { PageBuilderData, PageDocument, PageDraft, PageKey, PageSection } from "@/types/pageBuilder";
+import type { PageBuilderData, PageDocument, PageDraft, PageKey, PageRegistryEntry, PageSection } from "@/types/pageBuilder";
 import { getAllArticles } from "@/lib/data/blog";
 import { getCatalogCourses, getPageGalleryRows } from "@/lib/data/courses";
 import { getAccessibleProfileTests, getProfileTests } from "@/lib/data/profileTests";
 import { logQueryError, type DB, type Row } from "./types";
 
 export const publishedPageSettingKey = (pageKey: PageKey) => `page-builder:${pageKey}`;
+
+/**
+ * Quais dessas páginas já têm um `app_settings` publicado — uma consulta só
+ * para todas, em vez de uma por página. Usado pela lista do admin para
+ * distinguir "publicada" de "só rascunho salvo".
+ */
+export async function getPublishedPageSlugs(db: DB, slugs: string[]): Promise<Set<string>> {
+  if (slugs.length === 0) return new Set();
+  const { data, error } = await db
+    .from("app_settings")
+    .select("key")
+    .in("key", slugs.map(publishedPageSettingKey));
+
+  logQueryError("getPublishedPageSlugs", error);
+  const prefix = "page-builder:";
+  return new Set((data ?? []).map((row: Row) => String(row.key).slice(prefix.length)));
+}
+
+function toPageRegistryEntry(row: Row): PageRegistryEntry {
+  return {
+    slug: row.slug,
+    title: row.title,
+    description: row.description ?? null,
+    kind: row.kind === "system" ? "system" : "custom",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+/** Todas as páginas cadastradas — as 2 de sistema e as páginas custom, nessa ordem. */
+export async function listPages(db: DB): Promise<PageRegistryEntry[]> {
+  const { data, error } = await db
+    .from("pages")
+    .select("slug, title, description, kind, created_at, updated_at")
+    .order("kind", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  logQueryError("listPages", error);
+  return (data ?? []).map(toPageRegistryEntry);
+}
+
+export async function getPageRegistryEntry(db: DB, slug: string): Promise<PageRegistryEntry | null> {
+  const { data, error } = await db
+    .from("pages")
+    .select("slug, title, description, kind, created_at, updated_at")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  logQueryError(`getPageRegistryEntry:${slug}`, error);
+  return data ? toPageRegistryEntry(data) : null;
+}
+
+/**
+ * Página custom publicada, para a rota pública `/pagina/[slug]`. Confere o
+ * registro E o conteúdo (não só `app_settings`): uma página criada mas nunca
+ * publicada deve dar 404, e uma página excluída não deve continuar
+ * respondendo por um resquício de `app_settings` órfão.
+ */
+export async function getPublishedCustomPage(
+  db: DB,
+  slug: string,
+): Promise<{ document: PageDocument; title: string; description: string | null } | null> {
+  const entry = await getPageRegistryEntry(db, slug);
+  if (!entry || entry.kind !== "custom") return null;
+
+  const { data, error } = await db
+    .from("app_settings")
+    .select("value")
+    .eq("key", publishedPageSettingKey(slug))
+    .maybeSingle();
+  logQueryError(`getPublishedCustomPage:${slug}`, error);
+  if (!data?.value) return null;
+
+  const parsed = validatePageDocument(data.value, slug);
+  if (!parsed.success) return null;
+
+  return { document: parsed.document, title: entry.title, description: entry.description };
+}
 
 export async function getPublishedPage(db: DB, pageKey: PageKey): Promise<PageDocument> {
   const { data, error } = await db
@@ -115,6 +193,7 @@ export function resolvePageSectionItems(section: PageSection, data: PageBuilderD
       id: (course) => course.id,
       featured: (course) => Boolean(course.isFeatured),
       category: (course) => course.category,
+      date: (course) => course.createdAt,
     });
   }
   if (section.type === "gallery-course-carousel") {
@@ -122,6 +201,7 @@ export function resolvePageSectionItems(section: PageSection, data: PageBuilderD
       id: (row) => row.courseId,
       featured: (row) => Boolean(row.isFeatured),
       category: (row) => row.category,
+      date: (row) => row.createdAt,
     });
   }
   if (section.type === "article-carousel") {
@@ -129,11 +209,13 @@ export function resolvePageSectionItems(section: PageSection, data: PageBuilderD
       id: (article) => article.slug,
       featured: (article) => Boolean(article.featured),
       category: (article) => article.category,
+      date: (article) => article.publishedAt,
     });
   }
   if (section.type === "profile-test-carousel") {
     return selectPageItems(data.profileTests, section.source, {
       id: (test) => test.id,
+      date: (test) => test.createdAt,
     });
   }
   return [];

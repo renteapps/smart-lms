@@ -207,6 +207,7 @@ export type CatalogCourse = {
   level: 'Essencial' | 'Intermediário' | 'Avançado' | string;
   isFeatured?: boolean;
   orderIndex?: number;
+  createdAt?: string;
   /** Só vem preenchido quando há um aluno na sessão. */
   progress?: number;
   /** Configuração acadêmica usada para decidir o CTA ao concluir. */

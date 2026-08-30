@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, Home, Palette, Navigation, PanelsTopLeft, Plug, WalletCards } from "lucide-react";
+import { Bot, Palette, Navigation, PanelsTopLeft, Plug, WalletCards } from "lucide-react";
 import { Card } from "@heroui/react/card";
 import { PageHeader } from "@/components/ui/editorial";
 import { requireAdmin } from "@/lib/supabase/auth";
@@ -9,15 +9,8 @@ const settingsCards = [
     href: "/admin/pages",
     icon: PanelsTopLeft,
     title: "Páginas",
-    description: "Monte a home pública e a vitrine para quem ainda não tem produtos.",
+    description: "Monte a home pública, a vitrine sem produtos e crie novas páginas.",
     tone: "bg-info-soft text-info-soft-foreground",
-  },
-  {
-    href: "/admin/home",
-    icon: Home,
-    title: "Home Page",
-    description: "Configure o banner e os módulos da página inicial.",
-    tone: "bg-accent-soft text-accent-soft-foreground",
   },
   {
     href: "/admin/aparencia",
