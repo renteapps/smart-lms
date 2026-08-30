@@ -8,7 +8,8 @@ import { getPageDraft, getPublishedPageSlugs, listPages } from "@/lib/data/pages
 import { SYSTEM_PAGE_LABELS } from "@/lib/pageBuilder";
 import type { SystemPageKey } from "@/types/pageBuilder";
 import { CreatePageDialog } from "./CreatePageDialog";
-import { CustomPagesGrid, PAGE_STATUS_LABEL, PAGE_STATUS_TONE, resolvePageStatus } from "./CustomPagesGrid";
+import { CustomPagesGrid } from "./CustomPagesGrid";
+import { PAGE_STATUS_LABEL, PAGE_STATUS_TONE, resolvePageStatus } from "./pageStatus";
 
 const SYSTEM_PAGE_ICONS: Record<SystemPageKey, typeof Home> = {
   "public-home": Home,

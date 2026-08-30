@@ -8,24 +8,7 @@ import { EmptyState } from "@heroui/react/empty-state";
 import { Button } from "@heroui/react";
 import { StatusBadge } from "@/components/ui/editorial";
 import { DeletePageDialog } from "./DeletePageDialog";
-
-export type PageStatus = "published" | "draft" | "unconfigured";
-
-export function resolvePageStatus(hasDraft: boolean, isPublished: boolean): PageStatus {
-  if (isPublished) return "published";
-  return hasDraft ? "draft" : "unconfigured";
-}
-
-export const PAGE_STATUS_LABEL: Record<PageStatus, string> = {
-  published: "Publicado",
-  draft: "Rascunho não publicado",
-  unconfigured: "Não configurada",
-};
-export const PAGE_STATUS_TONE: Record<PageStatus, "positive" | "warning" | "neutral"> = {
-  published: "positive",
-  draft: "warning",
-  unconfigured: "neutral",
-};
+import { PAGE_STATUS_LABEL, PAGE_STATUS_TONE, type PageStatus } from "./pageStatus";
 
 type CustomPageItem = { slug: string; title: string; description: string | null; status: PageStatus };
 
