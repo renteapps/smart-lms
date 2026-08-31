@@ -9,6 +9,8 @@ import {
   percentageChange,
   type AnalyticsPeriod,
 } from "@/lib/analytics";
+import { CAREER_ROLES } from "@/lib/profilePreferences";
+import { BRAZILIAN_STATES } from "@/lib/locationData";
 
 /*
  * MRR/ARR liam `plans.interval` e comparavam com "month"/"year". Essa coluna
@@ -886,6 +888,120 @@ export async function getSubscriptionsAnalytics(period: AnalyticsPeriod = "30d")
   };
 }
 
+// Paleta compartilhada pelos recortes de alunos (perfis comportamentais +
+// demografia). Vive no módulo para o helper de distribuição abaixo poder usá-la.
+const STUDENT_DISTRIBUTION_PALETTE = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4"];
+
+type DistributionRow = { label: string; count: number; percentage: number; color: string };
+type Distribution = { rows: DistributionRow[]; answered: number };
+
+/**
+ * Conta rótulos e devolve as fatias ordenadas por volume.
+ *
+ * `answered` é quantos alunos têm o campo preenchido — e é **sobre ele** que a
+ * porcentagem é calculada, nunca sobre o total de matriculados. Conta criada
+ * pelo webhook de compra (Eduzz/Hotmart) entra sem gênero/idade/cargo até
+ * passar por /completar-cadastro; dividir pelo total afundaria todo percentual
+ * e faria parecer que "ninguém é de tal grupo" quando na verdade ninguém
+ * respondeu.
+ *
+ * Com `limit`, a cauda vira uma única fatia `"<otherLabel> (N)"` sempre no fim,
+ * mesmo que a soma dela supere a maior categoria.
+ */
+function buildDistribution(
+  labels: (string | null | undefined)[],
+  { limit, otherLabel = "Outros" }: { limit?: number; otherLabel?: string } = {},
+): Distribution {
+  const counts = new Map<string, number>();
+  let answered = 0;
+  for (const raw of labels) {
+    const label = typeof raw === "string" ? raw.trim() : "";
+    if (!label) continue;
+    answered += 1;
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+
+  let entries = Array.from(counts, ([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
+  if (limit && entries.length > limit) {
+    const tail = entries.slice(limit);
+    entries = [
+      ...entries.slice(0, limit),
+      { label: `${otherLabel} (${tail.length})`, count: tail.reduce((sum, e) => sum + e.count, 0) },
+    ];
+  }
+
+  const rows = entries.map((entry, idx) => ({
+    label: entry.label,
+    count: entry.count,
+    percentage: answered ? Math.round((entry.count / answered) * 100) : 0,
+    color: STUDENT_DISTRIBUTION_PALETTE[idx % STUDENT_DISTRIBUTION_PALETTE.length],
+  }));
+  return { rows, answered };
+}
+
+/** Reordena as fatias por uma ordem canônica (idade, senioridade…), com o que não estiver na lista no fim. */
+function orderDistribution(dist: Distribution, order: readonly string[]): Distribution {
+  const rank = (label: string) => {
+    const idx = order.indexOf(label);
+    return idx === -1 ? order.length : idx;
+  };
+  return { ...dist, rows: [...dist.rows].sort((a, b) => rank(a.label) - rank(b.label)) };
+}
+
+/**
+ * Idade em anos a partir de `birth_date`, ou null quando o valor não dá pra
+ * confiar. A guarda 13–100 existe porque o banco real tem lixo em `birth_date`
+ * (a média crua deu 430 anos) — datas com placeholder tipo ano 1600 ou futuro.
+ */
+function ageFromBirthDate(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  const birth = new Date(iso);
+  if (Number.isNaN(birth.getTime())) return null;
+  const now = new Date();
+  let age = now.getUTCFullYear() - birth.getUTCFullYear();
+  const monthDelta = now.getUTCMonth() - birth.getUTCMonth();
+  if (monthDelta < 0 || (monthDelta === 0 && now.getUTCDate() < birth.getUTCDate())) age -= 1;
+  return age >= 13 && age <= 100 ? age : null;
+}
+
+const AGE_BUCKET_ORDER = ["< 18", "18–24", "25–34", "35–44", "45–54", "55+"] as const;
+function ageBucket(age: number): string {
+  if (age < 18) return "< 18";
+  if (age <= 24) return "18–24";
+  if (age <= 34) return "25–34";
+  if (age <= 44) return "35–44";
+  if (age <= 54) return "45–54";
+  return "55+";
+}
+
+// `gender` deveria vir sempre de GENDER_OPTIONS, mas o banco tem drift de caixa
+// ("feminino" gravado por um caminho antigo vs "Feminino" no formulário atual).
+// Normaliza pela chave minúscula sem acento; valor desconhecido passa direto.
+const GENDER_CANONICAL: Record<string, string> = {
+  "feminino": "Feminino",
+  "masculino": "Masculino",
+  "nao-binario": "Não-binário",
+  "nao binario": "Não-binário",
+  "não-binário": "Não-binário",
+  "não binário": "Não-binário",
+  "prefiro nao informar": "Prefiro não informar",
+  "prefiro não informar": "Prefiro não informar",
+  "outro": "Outro",
+};
+function canonicalGender(value: string | null | undefined): string {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return "";
+  const key = raw.toLowerCase().normalize("NFC");
+  return GENDER_CANONICAL[key] ?? raw;
+}
+
+/** "são paulo" → "São Paulo"; usado para país/cidade digitados à mão. */
+function titleCase(value: string): string {
+  return value.replace(/\S+/g, (word) => word.charAt(0).toLocaleUpperCase("pt-BR") + word.slice(1).toLocaleLowerCase("pt-BR"));
+}
+
+const UF_TO_NAME = new Map(BRAZILIAN_STATES.map((state) => [state.uf, state.name]));
+
 export async function getStudentsAnalytics(period: AnalyticsPeriod = "30d") {
   const supabase = await createClient();
   const { start, previousStart } = getAnalyticsPeriodBounds(period);
@@ -909,7 +1025,11 @@ export async function getStudentsAnalytics(period: AnalyticsPeriod = "30d") {
     trailActivityResult,
   ] = await Promise.all([
     supabase.from("enrollments").select("user_id"),
-    supabase.from("profiles").select("id, full_name, last_access_at, onboarding_completed_at"),
+    supabase
+      .from("profiles")
+      .select(
+        "id, last_access_at, onboarding_completed_at, created_at, birth_date, gender, career_role, company, country, state, city, weekly_goal",
+      ),
     supabase.from("profile_test_results").select("user_id, category_name"),
     supabase.from("pilula_interactions").select("user_id, completed"),
     progressActivityQuery,
@@ -1007,12 +1127,11 @@ export async function getStudentsAnalytics(period: AnalyticsPeriod = "30d") {
     categoryCount.set(label, (categoryCount.get(label) ?? 0) + 1);
   }
   const totalResults = Array.from(categoryCount.values()).reduce((sum, count) => sum + count, 0);
-  const PALETTE = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4"];
   const profilesDistribution = Array.from(categoryCount, ([profile, count], idx) => ({
     profile,
     count,
     percentage: totalResults ? Math.round((count / totalResults) * 100) : 0,
-    color: PALETTE[idx % PALETTE.length],
+    color: STUDENT_DISTRIBUTION_PALETTE[idx % STUDENT_DISTRIBUTION_PALETTE.length],
   })).sort((a, b) => b.count - a.count);
 
   const onboardingDone = studentProfiles.filter((p) => p.onboarding_completed_at).length;
@@ -1028,6 +1147,76 @@ export async function getStudentsAnalytics(period: AnalyticsPeriod = "30d") {
     { title: "Concluíram Onboarding Inicial", count: onboardingDone, share: sharePct(onboardingDone, totalProfiles) },
     { title: "Realizaram Teste de Perfil", count: profileTestTakers, share: sharePct(profileTestTakers, totalProfiles) },
   ];
+
+  // --- Demografia dos alunos matriculados ----------------------------------
+  // Cada recorte sai de `buildDistribution`, que divide pela base que
+  // respondeu aquele campo (ver a nota no helper). "Aluno" aqui já é matrícula,
+  // não role — `studentProfiles` foi filtrado por `enrolledStudentIds`.
+  const genderDistribution = buildDistribution(studentProfiles.map((p) => canonicalGender(p.gender)));
+
+  const ages = studentProfiles
+    .map((p) => ageFromBirthDate(p.birth_date))
+    .filter((age): age is number => age !== null);
+  const ageRangeDistribution = orderDistribution(buildDistribution(ages.map(ageBucket)), AGE_BUCKET_ORDER);
+  const averageAge = ages.length ? Math.round(ages.reduce((sum, age) => sum + age, 0) / ages.length) : null;
+
+  const careerRoleDistribution = orderDistribution(
+    buildDistribution(studentProfiles.map((p) => p.career_role)),
+    CAREER_ROLES,
+  );
+
+  const companyDistribution = buildDistribution(
+    studentProfiles.map((p) => p.company),
+    { limit: 8, otherLabel: "Outras" },
+  );
+
+  const countryDistribution = buildDistribution(
+    studentProfiles.map((p) => (typeof p.country === "string" && p.country.trim() ? titleCase(p.country.trim()) : "")),
+    { limit: 6 },
+  );
+  const stateDistribution = buildDistribution(
+    studentProfiles.map((p) => {
+      const uf = typeof p.state === "string" ? p.state.trim().toUpperCase() : "";
+      return uf ? UF_TO_NAME.get(uf) ?? uf : "";
+    }),
+    { limit: 8 },
+  );
+  const cityDistribution = buildDistribution(
+    studentProfiles.map((p) => (typeof p.city === "string" && p.city.trim() ? titleCase(p.city.trim()) : "")),
+    { limit: 8, otherLabel: "Outras" },
+  );
+
+  const weeklyGoalDistribution = orderDistribution(
+    buildDistribution(studentProfiles.map((p) => (p.weekly_goal ? `${p.weekly_goal} aulas por semana` : ""))),
+    ["2 aulas por semana", "3 aulas por semana", "4 aulas por semana", "5 aulas por semana"],
+  );
+
+  const hasText = (value: unknown): boolean => typeof value === "string" && value.trim().length > 0;
+  const filledCount = (predicate: (profile: (typeof studentProfiles)[number]) => boolean) =>
+    studentProfiles.filter(predicate).length;
+  const completeness = [
+    { field: "Gênero", filled: filledCount((p) => hasText(p.gender)) },
+    { field: "Data de nascimento", filled: filledCount((p) => hasText(p.birth_date)) },
+    { field: "Cargo / Momento de carreira", filled: filledCount((p) => hasText(p.career_role)) },
+    { field: "Empresa", filled: filledCount((p) => hasText(p.company)) },
+    { field: "Localização", filled: filledCount((p) => hasText(p.country) || hasText(p.state) || hasText(p.city)) },
+  ].map((row) => ({
+    ...row,
+    total: totalProfiles,
+    percentage: totalProfiles ? Math.round((row.filled / totalProfiles) * 100) : 0,
+  }));
+
+  const demographics = {
+    base: totalProfiles,
+    gender: genderDistribution,
+    ageRange: ageRangeDistribution,
+    averageAge,
+    careerRole: careerRoleDistribution,
+    company: companyDistribution,
+    location: { country: countryDistribution, state: stateDistribution, city: cityDistribution },
+    weeklyGoal: weeklyGoalDistribution,
+    completeness,
+  };
 
   return {
     period,
@@ -1047,6 +1236,7 @@ export async function getStudentsAnalytics(period: AnalyticsPeriod = "30d") {
     activityByHour,
     profilesDistribution,
     engagementBadges,
+    demographics,
   };
 }
 

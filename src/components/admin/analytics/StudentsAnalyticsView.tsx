@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
+  Activity,
   ArrowLeft,
   Award,
   Download,
   Flame,
-  HeartHandshake,
   UserCheck,
   Users,
 } from "lucide-react";
@@ -38,13 +38,27 @@ export function StudentsAnalyticsView({ basePath = "/admin/analises", data }: St
   const [period, setPeriod] = useState<TimePeriod>("30d");
   const [selectedTab, setSelectedTab] = useState("visao_geral");
 
-  const { kpis, activityByHour, profilesDistribution, engagementBadges } = data;
+  const { kpis, activityByHour, profilesDistribution, engagementBadges, demographics } = data;
 
   const barChartData = activityByHour.map((a: any) => ({
     label: a.hour,
     value: a.activeUsers,
     formattedValue: `${a.activeUsers} alunos ativos`,
   }));
+
+  // DAU/MAU: aderência diária real, derivada dos dois números que já vêm no payload.
+  const dauMauRatio = kpis.monthlyActiveUsers
+    ? Math.round((kpis.dailyActiveUsers / kpis.monthlyActiveUsers) * 100)
+    : 0;
+  const activeChange: number | null = kpis.activeStudentsChange ?? null;
+  const activeTrend =
+    activeChange !== null
+      ? {
+          value: `${activeChange > 0 ? "+" : ""}${activeChange}%`,
+          isPositive: activeChange >= 0,
+          isNeutral: activeChange === 0,
+        }
+      : undefined;
 
   const handleExport = () => {
     toast.success("Exportando métricas de engajamento...", {
@@ -84,42 +98,35 @@ export function StudentsAnalyticsView({ basePath = "/admin/analises", data }: St
         <MetricCard
           label="Retenção 30 Dias"
           value={`${kpis.retention30d}%`}
-          helper="+3.8% vs mês anterior"
+          helper={`${kpis.monthlyActiveUsers} de ${kpis.totalStudents} alunos ativos`}
           icon={UserCheck}
           tone="sage"
-          tooltipText="Percentual de alunos que continuam consumindo aulas após 30 dias do cadastro."
-          trend={{ value: "+3.8%", isPositive: true }}
-          sparklineData={[62, 65, 68, 70, 71, 73, 74.2]}
+          tooltipText="Percentual dos alunos matriculados que acessaram a plataforma nos últimos 30 dias."
         />
         <MetricCard
           label="Streak Médio de Estudo"
           value={kpis.avgStudyStreak}
-          helper="dias consecutivos de estudo"
+          helper="dias consecutivos com atividade"
           icon={Flame}
           tone="terracotta"
-          tooltipText="Média de dias seguidos que os alunos completam ao menos 1 atividade diária."
-          trend={{ value: "+0.6d", isPositive: true }}
-          sparklineData={[3.2, 3.6, 4.0, 4.2, 4.5, 4.8]}
+          tooltipText="Média de dias seguidos, terminando hoje ou ontem, em que os alunos completam ao menos 1 atividade."
         />
         <MetricCard
-          label="NPS dos Alunos"
-          value={`+${kpis.npsScore}`}
-          helper="Zona de Excelência"
-          icon={HeartHandshake}
+          label="Alunos Ativos no Período"
+          value={`${kpis.activeStudentsInPeriod}`}
+          helper={`${kpis.activeRate}% da base`}
+          icon={Users}
           tone="primary"
-          tooltipText="Net Promoter Score avaliado diretamente pelos alunos na plataforma."
-          trend={{ value: "+4 pts", isPositive: true }}
-          sparklineData={[70, 72, 74, 75, 76, 78]}
+          tooltipText="Alunos que acessaram a plataforma dentro do período selecionado."
+          trend={activeTrend}
         />
         <MetricCard
           label="Usuários Ativos (DAU / MAU)"
           value={`${kpis.dailyActiveUsers} / ${kpis.monthlyActiveUsers}`}
-          helper="54.2% de engajamento diário"
-          icon={Users}
+          helper={`${dauMauRatio}% de aderência diária`}
+          icon={Activity}
           tone="purple"
-          tooltipText="Relação entre usuários ativos diários (DAU) e mensais (MAU)."
-          trend={{ value: "+8.2%", isPositive: true }}
-          sparklineData={[480, 520, 560, 590, 620, 640]}
+          tooltipText="Usuários ativos hoje (DAU) e nos últimos 30 dias (MAU). A aderência é a razão DAU/MAU."
         />
       </section>
 
@@ -172,10 +179,65 @@ export function StudentsAnalyticsView({ basePath = "/admin/analises", data }: St
                         <span className="text-muted">({item.count})</span>
                       </div>
                     </div>
-                    <ProgressBar
-                      aria-label={`Perfil ${item.profile}`}
+                    <Bar label={`Perfil ${item.profile}`} value={item.percentage} />
+                  </div>
+                ))}
+              </Card.Content>
+            </Card>
+          </div>
+
+          {/* Demografia: quem são os alunos */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-display text-lg font-bold text-foreground">Quem são os alunos</h3>
+              <p className="text-xs text-muted">
+                Cada recorte considera só quem preencheu o campo — contas criadas por compra entram
+                sem esses dados até completarem o cadastro.
+              </p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              <DistributionCard title="Gênero" dist={demographics.gender} />
+              <DistributionCard
+                title="Faixa etária"
+                dist={demographics.ageRange}
+                description={
+                  demographics.averageAge ? `Idade média: ${demographics.averageAge} anos` : undefined
+                }
+              />
+              <DistributionCard title="Cargo / Momento de carreira" dist={demographics.careerRole} />
+              <DistributionCard title="Empresa" dist={demographics.company} />
+              <DistributionCard title="Localização · Estado" dist={demographics.location.state} />
+              <DistributionCard title="Localização · Cidade" dist={demographics.location.city} />
+              <DistributionCard title="Localização · País" dist={demographics.location.country} />
+              <DistributionCard title="Meta semanal de estudo" dist={demographics.weeklyGoal} />
+            </div>
+
+            <Card>
+              <Card.Header className="pb-2">
+                <Card.Title className="font-display text-base font-bold text-foreground">
+                  Completude de cadastro
+                </Card.Title>
+                <Card.Description>
+                  % dos {demographics.base} alunos com cada dado preenchido
+                </Card.Description>
+              </Card.Header>
+              <Card.Content className="grid gap-3.5 pt-2 sm:grid-cols-2">
+                {demographics.completeness.map((item: any) => (
+                  <div key={item.field} className="space-y-1 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-foreground">{item.field}</span>
+                      <div className="flex items-center gap-1">
+                        <strong className="text-foreground">{item.percentage}%</strong>
+                        <span className="text-muted">
+                          ({item.filled}/{item.total})
+                        </span>
+                      </div>
+                    </div>
+                    <Bar
+                      label={`Preenchimento de ${item.field}`}
                       value={item.percentage}
-                      color="accent"
+                      color={item.percentage >= 60 ? "success" : item.percentage >= 30 ? "warning" : "danger"}
                     />
                   </div>
                 ))}
@@ -198,11 +260,7 @@ export function StudentsAnalyticsView({ basePath = "/admin/analises", data }: St
                     <span className="text-muted">Participação na base:</span>
                     <strong className="text-foreground text-sm">{item.percentage}%</strong>
                   </div>
-                  <ProgressBar
-                    aria-label={`Share ${item.profile}`}
-                    value={item.percentage}
-                    color="accent"
-                  />
+                  <Bar label={`Share ${item.profile}`} value={item.percentage} />
                 </Card.Content>
               </Card>
             ))}
@@ -230,5 +288,74 @@ export function StudentsAnalyticsView({ basePath = "/admin/analises", data }: St
         </Tabs.Panel>
       </Tabs.Root>
     </div>
+  );
+}
+
+/**
+ * `<ProgressBar>` do HeroUI é composto: sem `Track`/`Fill` como filhos ele
+ * renderiza só o wrapper e a barra fica invisível. Encapsula o preenchimento
+ * correto (ver `AudioUpload.tsx`) para as distribuições desta tela.
+ */
+function Bar({
+  label,
+  value,
+  color = "accent",
+}: {
+  label: string;
+  value: number;
+  color?: "accent" | "success" | "warning" | "danger";
+}) {
+  return (
+    <ProgressBar aria-label={label} value={value} color={color}>
+      <ProgressBar.Track>
+        <ProgressBar.Fill />
+      </ProgressBar.Track>
+    </ProgressBar>
+  );
+}
+
+type DistributionRow = { label: string; count: number; percentage: number; color: string };
+
+/**
+ * Barra de distribuição de um recorte demográfico. Mesmo visual da "Distribuição
+ * por Perfil", com a base que respondeu no subtítulo e um vazio explícito
+ * quando ninguém preencheu o campo (comum para empresa/localização).
+ */
+function DistributionCard({
+  title,
+  description,
+  dist,
+}: {
+  title: string;
+  description?: string;
+  dist: { rows: DistributionRow[]; answered: number };
+}) {
+  return (
+    <Card>
+      <Card.Header className="pb-2">
+        <Card.Title className="font-display text-base font-bold text-foreground">{title}</Card.Title>
+        <Card.Description>
+          {description ?? (dist.answered > 0 ? `${dist.answered} alunos informaram` : "Sem dados ainda")}
+        </Card.Description>
+      </Card.Header>
+      <Card.Content className="space-y-3 pt-2">
+        {dist.rows.length === 0 ? (
+          <p className="py-6 text-center text-xs text-muted">Nenhum aluno preencheu este campo ainda.</p>
+        ) : (
+          dist.rows.map((row) => (
+            <div key={row.label} className="space-y-1 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-foreground">{row.label}</span>
+                <div className="flex items-center gap-1">
+                  <strong className="text-foreground">{row.percentage}%</strong>
+                  <span className="text-muted">({row.count})</span>
+                </div>
+              </div>
+              <Bar label={`${title}: ${row.label}`} value={row.percentage} />
+            </div>
+          ))
+        )}
+      </Card.Content>
+    </Card>
   );
 }
