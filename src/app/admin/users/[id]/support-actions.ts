@@ -35,6 +35,19 @@ function firstName(name?: string | null) {
   return name?.trim().split(/\s+/)[0] || "aluno(a)";
 }
 
+/** Corta a espera se o provedor de e-mail travar — o link já está pronto e não pode ficar refém do envio. */
+async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 /**
  * `admin.auth.admin.generateLink()` **não envia e-mail** — apenas devolve a URL e
  * o `hashed_token`. Quem entrega é o Resend, com os templates que já existem no
@@ -43,6 +56,9 @@ function firstName(name?: string | null) {
  * Montamos uma URL de primeira parte apontando para `/auth/confirm`, que consome
  * `token_hash` + `type` via `verifyOtp` — funciona independente do fluxo (PKCE ou
  * implícito). Se o token não vier, caímos no `action_link` cru do Supabase.
+ *
+ * O envio é best-effort: uma vez que o link foi gerado, ele **sempre** volta pro
+ * admin, mesmo que o e-mail falhe, trave ou o Resend não esteja configurado.
  */
 async function generateAndSendAccessLink(opts: {
   kind: "magiclink" | "recovery";
@@ -80,35 +96,42 @@ async function generateAndSendAccessLink(opts: {
       ? { link_recuperacao: link, link_login: link }
       : { link_login: link };
 
-  const result = await sendConfiguredEmail(admin, {
-    to: opts.email,
-    subject: "",
-    template: opts.template,
-    data: {
-      nome: firstName(opts.name),
-      email: opts.email,
-      ...linkData,
-    },
-    tags: [{ name: "origem", value: "admin-suporte" }],
-  });
+  let sendError: string | null = null;
+  let emailSent = false;
 
-  if (!result.success) {
-    console.error("[support-actions] envio de e-mail falhou", result.error);
+  try {
+    const result = await withTimeout(
+      sendConfiguredEmail(admin, {
+        to: opts.email,
+        subject: "",
+        template: opts.template,
+        data: {
+          nome: firstName(opts.name),
+          email: opts.email,
+          ...linkData,
+        },
+        tags: [{ name: "origem", value: "admin-suporte" }],
+      }),
+      12_000,
+      { success: false, error: "Tempo esgotado ao contatar o provedor de e-mail." },
+    );
+
+    // `simulated` = Resend sem chave de API: nada saiu de fato.
+    emailSent = result.success && !result.simulated;
+    sendError = result.success
+      ? result.simulated
+        ? "Integração de e-mail (Resend) não configurada neste ambiente."
+        : null
+      : result.error ?? "Falha ao enviar o e-mail.";
+  } catch (e) {
+    sendError = e instanceof Error ? e.message : "Falha ao enviar o e-mail.";
   }
 
-  // `simulated` = Resend sem chave de API: nada saiu de fato, então tratamos
-  // como não enviado para o admin priorizar o repasse manual do link.
-  const emailSent = result.success && !result.simulated;
+  if (sendError) {
+    console.error("[support-actions] envio de e-mail falhou", sendError);
+  }
 
-  return {
-    link,
-    emailSent,
-    error: result.success
-      ? result.simulated
-        ? "Integração de e-mail (Resend) não configurada."
-        : null
-      : result.error ?? "Falha ao enviar o e-mail.",
-  };
+  return { link, emailSent, error: sendError };
 }
 
 export async function resendAccessEmail(
