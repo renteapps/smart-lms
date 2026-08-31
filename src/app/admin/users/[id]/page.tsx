@@ -228,7 +228,7 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
             <CardDescription>Resolva problemas de acesso do usuário</CardDescription>
           </CardHeader>
           <CardContent>
-            <SupportActions userId={id} userEmail={profile.email} />
+            <SupportActions userId={id} userEmail={profile.email} userName={profile.fullName} />
           </CardContent>
         </Card>
       </div>
