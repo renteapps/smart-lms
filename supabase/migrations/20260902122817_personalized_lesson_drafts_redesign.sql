@@ -174,7 +174,7 @@ set search_path = ''
 as $$
 declare
   config public.personalized_lesson_configs%rowtype;
-  variable_key text;
+  v_var_key text;
 begin
   if new.type <> 'personalized_ai' or new.is_published is not true then
     return new;
@@ -190,44 +190,44 @@ begin
     raise check_violation using message = 'O modelo da aula personalizada não está habilitado e precificado.';
   end if;
   if exists (
-    select 1 from jsonb_array_elements(config.questions) question
-    where jsonb_typeof(question) <> 'object'
-       or nullif(btrim(question->>'key'), '') is null
-       or not ((question->>'key') ~ '^[a-z][a-z0-9_]{0,63}$')
-       or nullif(btrim(question->>'label'), '') is null
-       or coalesce(question->>'type', '') not in ('short_text', 'long_text', 'single', 'multiple')
-       or not (question ? 'required')
-       or coalesce(jsonb_typeof(question->'required'), '') <> 'boolean'
-       or (question->>'type' in ('single', 'multiple') and case
-            when jsonb_typeof(question->'options') = 'array' then jsonb_array_length(question->'options') < 2
+    select 1 from jsonb_array_elements(config.questions) q_item
+    where jsonb_typeof(q_item) <> 'object'
+       or nullif(btrim(q_item->>'key'), '') is null
+       or not ((q_item->>'key') ~ '^[a-z][a-z0-9_]{0,63}$')
+       or nullif(btrim(q_item->>'label'), '') is null
+       or coalesce(q_item->>'type', '') not in ('short_text', 'long_text', 'single', 'multiple')
+       or not (q_item ? 'required')
+       or coalesce(jsonb_typeof(q_item->'required'), '') <> 'boolean'
+       or (q_item->>'type' in ('single', 'multiple') and case
+            when jsonb_typeof(q_item->'options') = 'array' then jsonb_array_length(q_item->'options') < 2
             else true
           end)
   ) then
     raise check_violation using message = 'Há uma pergunta incompleta ou inválida na aula personalizada.';
   end if;
   if exists (
-    select 1 from jsonb_array_elements(config.questions) question
-    group by lower(question->>'key') having count(*) > 1
+    select 1 from jsonb_array_elements(config.questions) q_item
+    group by lower(q_item->>'key') having count(*) > 1
   ) then
     raise check_violation using message = 'As chaves das perguntas não podem se repetir.';
   end if;
   if exists (
-    select 1 from jsonb_array_elements(config.variable_bindings) binding
-    where jsonb_typeof(binding) <> 'object'
-       or nullif(btrim(binding->>'key'), '') is null
-       or not ((binding->>'key') ~ '^[a-z][a-z0-9_]{0,63}$')
-       or coalesce(binding->>'source', '') not in ('profile', 'onboarding', 'profile_test', 'collected')
-       or nullif(btrim(binding->>'sourceRef'), '') is null
+    select 1 from jsonb_array_elements(config.variable_bindings) b_item
+    where jsonb_typeof(b_item) <> 'object'
+       or nullif(btrim(b_item->>'key'), '') is null
+       or not ((b_item->>'key') ~ '^[a-z][a-z0-9_]{0,63}$')
+       or coalesce(b_item->>'source', '') not in ('profile', 'onboarding', 'profile_test', 'collected')
+       or nullif(btrim(b_item->>'sourceRef'), '') is null
   ) then
     raise check_violation using message = 'Há uma variável autorizada incompleta ou inválida.';
   end if;
   if exists (
     select 1 from (
-      select lower(question->>'key') variable_key from jsonb_array_elements(config.questions) question
+      select lower(q_sub->>'key') as var_key from jsonb_array_elements(config.questions) q_sub
       union all
-      select lower(binding->>'key') from jsonb_array_elements(config.variable_bindings) binding
+      select lower(b_sub->>'key') as var_key from jsonb_array_elements(config.variable_bindings) b_sub
     ) authorized_variables
-    group by variable_key having count(*) > 1
+    group by authorized_variables.var_key having count(*) > 1
   ) then
     raise check_violation using message = 'Cada variável pode ter somente uma origem autorizada.';
   end if;
@@ -254,16 +254,16 @@ begin
   ) then
     raise check_violation using message = 'Uma das fontes selecionadas não existe ou não pode ser usada.';
   end if;
-  for variable_key in
+  for v_var_key in
     select lower(matches[1])
     from regexp_matches(config.prompt_template, '\{\{\s*([a-zA-Z][a-zA-Z0-9_.-]*)\s*(?:\|[^{}]*)?\}\}', 'g') matches
   loop
     if not exists (
-      select 1 from jsonb_array_elements(config.questions) question where lower(question->>'key') = variable_key
+      select 1 from jsonb_array_elements(config.questions) q_search where lower(q_search->>'key') = v_var_key
       union all
-      select 1 from jsonb_array_elements(config.variable_bindings) binding where lower(binding->>'key') = variable_key
+      select 1 from jsonb_array_elements(config.variable_bindings) b_search where lower(b_search->>'key') = v_var_key
     ) then
-      raise check_violation using message = format('Variável desconhecida no prompt: {{%s}}.', variable_key);
+      raise check_violation using message = format('Variável desconhecida no prompt: {{%s}}.', v_var_key);
     end if;
   end loop;
   if exists (
