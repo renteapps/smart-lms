@@ -221,7 +221,9 @@ BEGIN
   VALUES
     (v_next_version, 'published', p_questions, p_notes, timezone('utc'::text, now()), auth.uid());
 
-  UPDATE public.onboarding_variable_definitions SET active = FALSE;
+  UPDATE public.onboarding_variable_definitions
+  SET active = FALSE
+  WHERE active IS DISTINCT FROM FALSE;
 
   INSERT INTO public.onboarding_variable_definitions
     (variable_key, question_id, question_text, question_type, active, published_version, updated_at)
