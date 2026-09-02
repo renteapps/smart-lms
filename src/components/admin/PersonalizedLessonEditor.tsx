@@ -249,8 +249,8 @@ export default function PersonalizedLessonEditor({
     touch();
   };
 
-  const searchSources = (page = 0) => startSourceSearch(async () => {
-    const result = await searchPersonalizedLessonSources({ lessonId, query: sourceQuery, kind: sourceKind, page });
+  const searchSources = (page = 0, kind = sourceKind, query = sourceQuery) => startSourceSearch(async () => {
+    const result = await searchPersonalizedLessonSources({ lessonId, courseId, query, kind, page });
     if (!result.success) return;
     const nextResults = result.data.map((item) => ({ ...item, groupLabel: SOURCE_LABELS[item.kind] }));
     setSourceResults((current) => page === 0 ? nextResults : [
@@ -530,7 +530,136 @@ export default function PersonalizedLessonEditor({
 
           <SectionCard id="knowledge" active={activeSection === "knowledge"} complete={sectionComplete.knowledge} error={errors.knowledge} onOpen={() => setActiveSection("knowledge")}>
             <div className="space-y-6">
-              <div><div className="flex items-center justify-between gap-3"><div><h3 className="font-bold">Conteúdos da plataforma</h3><p className="text-sm text-muted">Escolha materiais que a IA poderá consultar.</p></div><button type="button" onClick={() => setSourcePickerOpen((open) => !open)} className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-bold"><Plus className="size-4" /> Adicionar fonte</button></div>{sourcePickerOpen && <div className="mt-3 rounded-xl border border-border bg-background p-4"><div className="grid gap-2 sm:grid-cols-[1fr_9rem_auto]"><input value={sourceQuery} onChange={(event) => setSourceQuery(event.target.value)} onKeyDown={(event) => event.key === "Enter" && searchSources()} className={INPUT_CLASS} placeholder="Buscar pelo título" /><select value={sourceKind} onChange={(event) => setSourceKind(event.target.value as typeof sourceKind)} className={INPUT_CLASS}><option value="all">Todos</option>{Object.entries(SOURCE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><button type="button" onClick={() => searchSources(0)} className="grid size-11 place-items-center rounded-xl bg-accent text-on-primary">{isSearchingSources ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}</button></div><div className="mt-3 max-h-64 space-y-1 overflow-auto">{sourceResults.map((option) => { const selected = sources.some((source) => source.kind === option.kind && source.id === option.id); return <label key={`${option.kind}:${option.id}`} className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-surface"><input type="checkbox" checked={selected} onChange={() => { setSources((current) => selected ? current.filter((item) => !(item.kind === option.kind && item.id === option.id)) : [...current, { kind: option.kind, id: option.id, title: option.title }]); touch(); }} /><span className="min-w-0 flex-1 truncate text-sm">{option.title}</span><span className="text-xs text-muted">{SOURCE_LABELS[option.kind]}</span></label>; })}</div></div>}<div className="mt-3 flex flex-wrap gap-2">{sources.map((source) => <span key={`${source.kind}:${source.id}`} className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-semibold"><span>{SOURCE_LABELS[source.kind]}: {source.title}</span><button type="button" aria-label={`Remover ${source.title}`} onClick={() => { setSources((current) => current.filter((item) => !(item.kind === source.kind && item.id === source.id))); touch(); }}>×</button></span>)}{sources.length === 0 && <p className="text-sm text-muted">Nenhum conteúdo selecionado.</p>}</div></div>
+              <div>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold">Conteúdos da plataforma</h3>
+                    <p className="text-sm text-muted">Aulas e módulos deste curso, ou artigos da plataforma para a IA consultar.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const willOpen = !sourcePickerOpen;
+                      setSourcePickerOpen(willOpen);
+                      if (willOpen && sourceResults.length === 0) {
+                        searchSources(0);
+                      }
+                    }}
+                    className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-bold hover:bg-surface transition-colors"
+                  >
+                    <Plus className="size-4" /> Adicionar fonte
+                  </button>
+                </div>
+
+                {sourcePickerOpen && (
+                  <div className="mt-3 rounded-2xl border border-border bg-background p-4 shadow-sm space-y-3">
+                    <div className="grid gap-2 sm:grid-cols-[1fr_13rem_auto]">
+                      <input
+                        value={sourceQuery}
+                        onChange={(event) => setSourceQuery(event.target.value)}
+                        onKeyDown={(event) => event.key === "Enter" && searchSources(0)}
+                        className={INPUT_CLASS}
+                        placeholder="Buscar pelo título..."
+                      />
+                      <select
+                        value={sourceKind}
+                        onChange={(event) => {
+                          const nextKind = event.target.value as typeof sourceKind;
+                          setSourceKind(nextKind);
+                          searchSources(0, nextKind);
+                        }}
+                        className={INPUT_CLASS}
+                      >
+                        <option value="all">Todos (aulas, módulos e artigos)</option>
+                        <option value="module">Módulos deste curso</option>
+                        <option value="lesson">Aulas deste curso</option>
+                        <option value="article">Artigos da plataforma</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => searchSources(0)}
+                        className="grid size-11 place-items-center rounded-xl bg-accent text-on-primary hover:opacity-90 transition-opacity"
+                        title="Buscar"
+                      >
+                        {isSearchingSources ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
+                      </button>
+                    </div>
+
+                    <div className="max-h-64 space-y-1.5 overflow-auto rounded-xl border border-border/50 bg-surface/50 p-2">
+                      {sourceResults.length === 0 && !isSearchingSources && (
+                        <p className="p-4 text-center text-xs text-muted">Nenhum conteúdo encontrado para os filtros informados.</p>
+                      )}
+                      {sourceResults.map((option) => {
+                        const selected = sources.some((source) => source.kind === option.kind && source.id === option.id);
+                        return (
+                          <label
+                            key={`${option.kind}:${option.id}`}
+                            className={cn(
+                              "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors cursor-pointer border",
+                              selected
+                                ? "border-accent/40 bg-accent-soft/40"
+                                : "border-transparent hover:bg-surface"
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              onChange={() => {
+                                setSources((current) =>
+                                  selected
+                                    ? current.filter((item) => !(item.kind === option.kind && item.id === option.id))
+                                    : [...current, { kind: option.kind, id: option.id, title: option.title }]
+                                );
+                                touch();
+                              }}
+                              className="size-4 rounded border-border text-accent focus:ring-accent"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-sm text-foreground truncate">{option.title}</span>
+                                <span className={cn(
+                                  "rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shrink-0",
+                                  option.kind === "module" ? "bg-blue-500/10 text-blue-500" :
+                                  option.kind === "lesson" ? "bg-emerald-500/10 text-emerald-500" :
+                                  "bg-purple-500/10 text-purple-500"
+                                )}>
+                                  {SOURCE_LABELS[option.kind]}
+                                </span>
+                              </div>
+                              {(option as any).subtitle && (
+                                <p className="text-xs text-muted mt-0.5 truncate">{(option as any).subtitle}</p>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {sources.map((source) => (
+                    <span
+                      key={`${source.kind}:${source.id}`}
+                      className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent border border-accent/20"
+                    >
+                      <span>{SOURCE_LABELS[source.kind]}: {source.title}</span>
+                      <button
+                        type="button"
+                        aria-label={`Remover ${source.title}`}
+                        onClick={() => {
+                          setSources((current) => current.filter((item) => !(item.kind === source.kind && item.id === source.id)));
+                          touch();
+                        }}
+                        className="text-muted hover:text-danger ml-0.5 font-bold"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  {sources.length === 0 && <p className="text-sm text-muted">Nenhum conteúdo selecionado.</p>}
+                </div>
+              </div>
               <DocumentsEditor documents={documents} draftDocuments={draftDocuments} isUploading={isUploading} uploadFiles={uploadFiles} removeDocument={removeDocument} />
               <label className="block space-y-1.5 border-t border-border pt-5 text-sm font-semibold">Notas e orientações adicionais <span className="font-normal text-muted">(opcional)</span><textarea rows={5} maxLength={120_000} value={context} onChange={(event) => { setContext(event.target.value); touch(); }} className={INPUT_CLASS} placeholder="Fatos, limites ou instruções que não estão nas fontes..." /></label>
               <SaveSectionButton busy={isSaving || isUploading} label="Salvar seção" onClick={() => handleSave("knowledge")} />

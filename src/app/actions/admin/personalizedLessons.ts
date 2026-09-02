@@ -93,6 +93,23 @@ export async function savePersonalizedLessonDraft(input: {
       ["course", "module", "lesson", "article"].includes(ref.kind) && Boolean(ref.id && ref.title),
     );
 
+    if (input.section === "knowledge" || input.section === "all") {
+      for (const ref of sourceRefs) {
+        if (ref.kind === "module") {
+          const { data: mod } = await adminClient.from("modules").select("course_id").eq("id", ref.id).maybeSingle();
+          if (!mod || mod.course_id !== input.courseId) {
+            return { success: false, message: `O módulo "${ref.title}" não pertence a este curso.`, field: "knowledge" };
+          }
+        } else if (ref.kind === "lesson") {
+          const { data: les } = await adminClient.from("lessons").select("id, modules!inner(course_id)").eq("id", ref.id).maybeSingle();
+          const mod = Array.isArray(les?.modules) ? les.modules[0] : les?.modules;
+          if (!les || les.id === input.lessonId || mod?.course_id !== input.courseId) {
+            return { success: false, message: `A aula "${ref.title}" não pertence a este curso.`, field: "knowledge" };
+          }
+        }
+      }
+    }
+
     if ((input.section === "basic" || input.section === "all") && !basic.title) {
       return { success: false, message: "Informe o título da aula.", field: "title" };
     }
@@ -227,6 +244,7 @@ export async function discardPersonalizedLessonDraft(input: { lessonId: string; 
 
 export async function searchPersonalizedLessonSources(input: {
   lessonId: string;
+  courseId?: string;
   query: string;
   kind: PersonalizedSourceKind | "all";
   page?: number;
@@ -234,20 +252,94 @@ export async function searchPersonalizedLessonSources(input: {
   const { adminClient } = await requireAdmin();
   const query = input.query.trim().slice(0, 100);
   const page = Math.max(0, input.page ?? 0);
-  const kinds: PersonalizedSourceKind[] = input.kind === "all" ? ["course", "module", "lesson", "article"] : [input.kind];
-  const pageSize = input.kind === "all" ? 5 : 20;
-  const from = page * pageSize;
-  const results: Array<{ kind: PersonalizedSourceKind; id: string; title: string }> = [];
-  let hasMore = false;
-  for (const kind of kinds) {
-    const table = kind === "course" ? "courses" : kind === "module" ? "modules" : kind === "lesson" ? "lessons" : "articles";
-    let request = adminClient.from(table).select("id, title").order("title").range(from, from + pageSize);
-    if (query) request = request.ilike("title", `%${query.replace(/[%_]/g, "")}%`);
-    const { data } = await request;
-    const rows = data ?? [];
-    if (rows.length > pageSize) hasMore = true;
-    results.push(...rows.slice(0, pageSize).filter((row: Row) => kind !== "lesson" || row.id !== input.lessonId).map((row: Row) => ({ kind, id: row.id, title: row.title })));
+
+  let courseId = input.courseId;
+  if (!courseId) {
+    const { data: lessonRow } = await adminClient
+      .from("lessons")
+      .select("id, module_id, modules!inner(course_id)")
+      .eq("id", input.lessonId)
+      .maybeSingle();
+    const moduleRow = Array.isArray(lessonRow?.modules) ? lessonRow.modules[0] : lessonRow?.modules;
+    courseId = moduleRow?.course_id;
   }
+
+  const allowedKinds: PersonalizedSourceKind[] = ["module", "lesson", "article"];
+  const kinds: PersonalizedSourceKind[] = input.kind === "all"
+    ? allowedKinds
+    : allowedKinds.includes(input.kind as PersonalizedSourceKind)
+      ? [input.kind as PersonalizedSourceKind]
+      : [];
+
+  const pageSize = input.kind === "all" ? 10 : 25;
+  const from = page * pageSize;
+  const results: Array<{ kind: PersonalizedSourceKind; id: string; title: string; subtitle?: string }> = [];
+  let hasMore = false;
+
+  for (const kind of kinds) {
+    if (kind === "module") {
+      if (!courseId) continue;
+      let request = adminClient
+        .from("modules")
+        .select("id, title, order_index")
+        .eq("course_id", courseId)
+        .order("order_index", { ascending: true })
+        .order("title")
+        .range(from, from + pageSize);
+
+      if (query) request = request.ilike("title", `%${query.replace(/[%_]/g, "")}%`);
+      const { data } = await request;
+      const rows = data ?? [];
+      if (rows.length > pageSize) hasMore = true;
+      results.push(...rows.slice(0, pageSize).map((row: Row) => ({
+        kind,
+        id: row.id,
+        title: row.title,
+        subtitle: "Módulo deste curso",
+      })));
+    } else if (kind === "lesson") {
+      if (!courseId) continue;
+      let request = adminClient
+        .from("lessons")
+        .select("id, title, module_id, modules!inner(id, title, course_id)")
+        .eq("modules.course_id", courseId)
+        .neq("id", input.lessonId)
+        .order("title")
+        .range(from, from + pageSize);
+
+      if (query) request = request.ilike("title", `%${query.replace(/[%_]/g, "")}%`);
+      const { data } = await request;
+      const rows = data ?? [];
+      if (rows.length > pageSize) hasMore = true;
+      results.push(...rows.slice(0, pageSize).map((row: Row) => {
+        const mod = Array.isArray(row.modules) ? row.modules[0] : row.modules;
+        return {
+          kind,
+          id: row.id,
+          title: row.title,
+          subtitle: mod?.title ? `Módulo: ${mod.title}` : "Aula deste curso",
+        };
+      }));
+    } else if (kind === "article") {
+      let request = adminClient
+        .from("articles")
+        .select("id, title")
+        .order("title")
+        .range(from, from + pageSize);
+
+      if (query) request = request.ilike("title", `%${query.replace(/[%_]/g, "")}%`);
+      const { data } = await request;
+      const rows = data ?? [];
+      if (rows.length > pageSize) hasMore = true;
+      results.push(...rows.slice(0, pageSize).map((row: Row) => ({
+        kind,
+        id: row.id,
+        title: row.title,
+        subtitle: "Artigo da plataforma",
+      })));
+    }
+  }
+
   return { success: true, data: results, hasMore };
 }
 

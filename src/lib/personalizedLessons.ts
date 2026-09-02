@@ -452,25 +452,35 @@ export async function getPersonalizedLessonStudentState(
 }
 
 export async function getPersonalizedLessonAdminData(admin: DB, lessonId: string): Promise<PersonalizedLessonAdminData> {
-  const [configResult, draftResult, lessonResult, documentsResult, settings, modelsResult, onboardingResult, testsResult, collectedResult, coursesResult, modulesResult, lessonsResult, articlesResult] = await Promise.all([
+  const [configResult, draftResult, lessonResult, documentsResult, settings, modelsResult, onboardingResult, testsResult, collectedResult] = await Promise.all([
     admin.from("personalized_lesson_configs").select("*").eq("lesson_id", lessonId).maybeSingle(),
     admin.from("personalized_lesson_drafts").select("*").eq("lesson_id", lessonId).maybeSingle(),
-    admin.from("lessons").select("id, module_id, title, duration_in_minutes, short_description, cover_url, topics, solves, level, objective, audience, prerequisites, is_eligible_for_trail").eq("id", lessonId).single(),
+    admin.from("lessons").select("id, module_id, title, duration_in_minutes, short_description, cover_url, topics, solves, level, objective, audience, prerequisites, is_eligible_for_trail, modules!inner(id, course_id)").eq("id", lessonId).single(),
     admin.from("personalized_lesson_documents").select("*").eq("lesson_id", lessonId).order("created_at"),
     getPlatformAssistantSettings(admin),
     admin.from("ai_model_pricing").select("model, display_name").eq("enabled", true).order("display_name"),
     admin.from("onboarding_variable_definitions").select("variable_key, question_text").eq("active", true).order("variable_key"),
     admin.from("profile_tests").select("id, title").order("title"),
     admin.from("student_variable_definitions").select("variable_key, label").eq("active", true).order("variable_key"),
-    admin.from("courses").select("id, title").neq("status", "Arquivado").order("title").limit(5),
-    admin.from("modules").select("id, title").order("title").limit(5),
-    admin.from("lessons").select("id, title").order("title").limit(6),
-    admin.from("articles").select("id, title").order("title").limit(5),
   ]);
 
   if (lessonResult.error || !lessonResult.data) {
     throw new PersonalizedLessonError("Não foi possível carregar os dados básicos da aula.", 404, "lesson_not_found");
   }
+
+  const moduleRow = Array.isArray(lessonResult.data.modules) ? lessonResult.data.modules[0] : lessonResult.data.modules;
+  const courseId = moduleRow?.course_id;
+
+  const [modulesResult, lessonsResult, articlesResult] = await Promise.all([
+    courseId
+      ? admin.from("modules").select("id, title, order_index").eq("course_id", courseId).order("order_index", { ascending: true }).order("title")
+      : { data: [], error: null },
+    courseId
+      ? admin.from("lessons").select("id, title, module_id, modules!inner(id, title, course_id)").eq("modules.course_id", courseId).neq("id", lessonId).order("title")
+      : { data: [], error: null },
+    admin.from("articles").select("id, title").order("title").limit(10),
+  ]);
+
   const config = configResult.data ? mapConfig(configResult.data) : null;
   const lessonDocumentIds = (documentsResult.data ?? []).map((row: Row) => row.id);
   const documentRefsResult = lessonDocumentIds.length
@@ -492,10 +502,17 @@ export async function getPersonalizedLessonAdminData(admin: DB, lessonId: string
     ...(collectedResult.data ?? []).map((row: Row) => ({ key: row.variable_key, label: row.label, source: "collected" as const, sourceRef: row.variable_key, groupLabel: "Variáveis já coletadas" })),
   ];
   const sourceOptions: PersonalizedAdminSourceOption[] = [
-    ...(coursesResult.data ?? []).map((row: Row) => ({ kind: "course" as const, id: row.id, title: row.title, groupLabel: "Cursos" })),
-    ...(modulesResult.data ?? []).map((row: Row) => ({ kind: "module" as const, id: row.id, title: row.title, groupLabel: "Módulos" })),
-    ...(lessonsResult.data ?? []).filter((row: Row) => row.id !== lessonId).map((row: Row) => ({ kind: "lesson" as const, id: row.id, title: row.title, groupLabel: "Aulas" })),
-    ...(articlesResult.data ?? []).map((row: Row) => ({ kind: "article" as const, id: row.id, title: row.title, groupLabel: "Artigos" })),
+    ...(modulesResult.data ?? []).map((row: Row) => ({ kind: "module" as const, id: row.id, title: row.title, groupLabel: "Módulos deste curso" })),
+    ...(lessonsResult.data ?? []).filter((row: Row) => row.id !== lessonId).map((row: Row) => {
+      const mod = Array.isArray(row.modules) ? row.modules[0] : row.modules;
+      return {
+        kind: "lesson" as const,
+        id: row.id,
+        title: row.title,
+        groupLabel: mod?.title ? `Aulas (${mod.title})` : "Aulas deste curso",
+      };
+    }),
+    ...(articlesResult.data ?? []).map((row: Row) => ({ kind: "article" as const, id: row.id, title: row.title, groupLabel: "Artigos da plataforma" })),
   ];
   return {
     config,

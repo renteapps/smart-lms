@@ -175,10 +175,14 @@ as $$
 declare
   config public.personalized_lesson_configs%rowtype;
   v_var_key text;
+  v_lesson_course_id uuid;
 begin
   if new.type <> 'personalized_ai' or new.is_published is not true then
     return new;
   end if;
+
+  select m.course_id into v_lesson_course_id
+  from public.modules m where m.id = new.module_id;
 
   select * into config from public.personalized_lesson_configs where lesson_id = new.id;
   if not found or char_length(btrim(config.prompt_template)) = 0 then
@@ -246,9 +250,10 @@ begin
     where (source_ref->>'kind' = 'course' and not exists (
             select 1 from public.courses where id = (source_ref->>'id')::uuid and status <> 'Arquivado'))
        or (source_ref->>'kind' = 'module' and not exists (
-            select 1 from public.modules where id = (source_ref->>'id')::uuid))
+            select 1 from public.modules where id = (source_ref->>'id')::uuid and (v_lesson_course_id is null or course_id = v_lesson_course_id)))
        or (source_ref->>'kind' = 'lesson' and ((source_ref->>'id')::uuid = new.id or not exists (
-            select 1 from public.lessons where id = (source_ref->>'id')::uuid)))
+            select 1 from public.lessons l join public.modules m on m.id = l.module_id
+            where l.id = (source_ref->>'id')::uuid and (v_lesson_course_id is null or m.course_id = v_lesson_course_id))))
        or (source_ref->>'kind' = 'article' and not exists (
             select 1 from public.articles where id = (source_ref->>'id')::uuid))
   ) then
