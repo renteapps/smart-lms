@@ -1,3 +1,4 @@
+import type { LessonContentBlock } from "@/types/course";
 import type { AssistantAvatarType, AssistantIconKey } from "@/types/platformAssistant";
 
 export type PersonalizedQuestionType = "short_text" | "long_text" | "single" | "multiple";
@@ -100,6 +101,7 @@ export type PersonalizedGenerationPublic = {
   id: string;
   version: number;
   contentMarkdown: string;
+  contentBlocks: LessonContentBlock[];
   creditsCharged: number;
   model: string;
   createdAt: string;

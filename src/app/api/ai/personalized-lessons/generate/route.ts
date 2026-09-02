@@ -12,6 +12,7 @@ import {
   preparePersonalizedLesson,
 } from "@/lib/personalizedLessons";
 import { sanitizeGeneratedMarkdown } from "@/lib/personalizedLessonCore";
+import { markdownToLessonBlocks } from "@/lib/personalizedLessonBlocks";
 import {
   getOpenRouterResponseText,
   getOpenRouterServerConfig,
@@ -40,6 +41,7 @@ function publicGeneration(row: Record<string, unknown>) {
     id: String(row.id),
     version: Number(row.version),
     contentMarkdown: String(row.content_markdown ?? ""),
+    contentBlocks: Array.isArray(row.content_blocks) ? row.content_blocks : [],
     creditsCharged: Number(row.credits_charged) || 0,
     model: String(row.model),
     createdAt: String(row.created_at),
@@ -174,10 +176,13 @@ export async function POST(request: Request) {
     }, serverConfig);
     const content = sanitizeGeneratedMarkdown(getOpenRouterResponseText(providerResponse) ?? "");
     if (!content) throw new PersonalizedLessonError(providerResponse.error || "A IA não devolveu conteúdo utilizável.", 502, "provider_empty_response");
+    const contentBlocks = markdownToLessonBlocks(content);
+    if (!contentBlocks.length) console.warn("[personalized-lesson] conversão gerou zero blocos", generationId);
     const settlement = calculateAiSettlement(reservation, providerResponse);
     const { data: settled, error: settlementError } = await admin.rpc("complete_personalized_lesson_generation", {
       p_generation_id: generationId,
       p_content_markdown: content,
+      p_content_blocks: contentBlocks,
       p_credits_charged: settlement.creditsCharged,
       p_provider_cost_usd: settlement.providerCostUsd,
       p_provider_cost_brl: settlement.providerCostBrl,

@@ -30,6 +30,25 @@ export const GUIDED_TONE_LABELS: Record<PersonalizedGuidedConfig["tone"], string
   formal: "Formal e profissional",
 };
 
+/** Instruções de formatação anexadas ao prompt guiado — o servidor converte esse
+ * vocabulário de texto puro em blocos visuais (títulos, grifo, caixas, citação). */
+const FORMATTING_GUIDANCE = [
+  "FORMATAÇÃO (texto puro, com moderação — será convertida em blocos visuais):",
+  '- Títulos: "## Seção" e "### Subseção" (nunca "# ").',
+  '- **negrito** em termos-chave; listas "- "/"1. "; tabelas com "|"; "> " para citar terceiros; código entre três crases.',
+  "- ==frase== para grifar no máximo UMA frase por seção (apenas texto simples entre ==).",
+  "- Caixa de apoio (1 a 3 na aula toda, nunca aninhada, nunca abrindo a aula):",
+  "  :::dica",
+  "  Comece pela conversa mais urgente da sua lista.",
+  "  :::",
+  '  Use ":::atencao" para riscos e ":::reflexao" para provocar reflexão.',
+  "- Citação de autor:",
+  '  :::citacao autor="Paulo Freire"',
+  "  Ninguém educa ninguém.",
+  "  :::",
+  '- Feche sempre todo bloco ":::" com uma linha ":::". Não gere HTML.',
+].join("\n");
+
 export function normalizeGuidedConfig(value: unknown): PersonalizedGuidedConfig {
   const row = value && typeof value === "object" ? value as Record<string, unknown> : {};
   const tone = ["didactic", "direct", "inspiring", "formal"].includes(String(row.tone))
@@ -83,6 +102,7 @@ export function compileGuidedPrompt(input: {
       : "Adapte exemplos, contexto e linguagem aos dados autorizados disponíveis.",
     `TOM:\n${GUIDED_TONE_LABELS[input.guided.tone].toLowerCase()}`,
     structure ? `ESTRUTURA ESPERADA:\n${structure}` : "",
+    FORMATTING_GUIDANCE,
     variableLines.length
       ? `DADOS AUTORIZADOS DO ALUNO:\n${variableLines.join("\n")}`
       : "Não há dados individuais autorizados; não invente características do aluno.",

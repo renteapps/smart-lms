@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(35);
+select plan(38);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
 values
@@ -67,6 +67,14 @@ select extensions.ok(has_table_privilege('authenticated', 'public.personalized_l
 select extensions.ok(not has_table_privilege('anon', 'public.personalized_lesson_generations', 'SELECT'), 'anon não recebe acesso às gerações');
 select extensions.ok(has_table_privilege('authenticated', 'public.ai_model_pricing', 'SELECT'), 'authenticated pode consultar modelos sujeito a RLS');
 select extensions.ok(not has_table_privilege('anon', 'public.ai_model_pricing', 'SELECT'), 'anon não recebe acesso aos modelos');
+select extensions.has_column('public', 'personalized_lesson_generations', 'content_blocks', 'geração guarda os blocos do BlockViewer');
+select extensions.is(
+  (select pg_get_function_identity_arguments(p.oid)
+     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'complete_personalized_lesson_generation'),
+  'p_generation_id uuid, p_content_markdown text, p_credits_charged numeric, p_provider_cost_usd numeric, p_provider_cost_brl numeric, p_protected_cost_brl numeric, p_prompt_tokens bigint, p_completion_tokens bigint, p_reasoning_tokens bigint, p_cached_tokens bigint, p_provider_generation_id text, p_pricing_source text, p_metadata jsonb, p_content_blocks jsonb'::text,
+  'RPC de conclusão recebe p_content_blocks por último'
+);
 select extensions.has_table('public', 'personalized_lesson_drafts', 'existe tabela privada de rascunhos');
 select extensions.ok(has_table_privilege('authenticated', 'public.personalized_lesson_drafts', 'SELECT'), 'authenticated acessa rascunhos sujeito a RLS');
 select extensions.ok(not has_table_privilege('anon', 'public.personalized_lesson_drafts', 'SELECT'), 'anon não recebe acesso aos rascunhos');
@@ -164,6 +172,12 @@ select extensions.throws_ok(
       (request_key, lesson_id, user_id, version, config_revision, input_signature, status, model, assistant_name)
     values ('59000000-0000-0000-0000-000000000024', '59000000-0000-0000-0000-000000000012', '59000000-0000-0000-0000-000000000001', 3, 1, 'sig-pending-2', 'generating', 'google/gemini-2.0-flash-001', 'Assistente')$$,
   '23505', null, 'só existe uma geração em andamento por aluno/aula'
+);
+select extensions.throws_ok(
+  $$insert into public.personalized_lesson_generations
+      (request_key, lesson_id, user_id, version, config_revision, input_signature, status, model, assistant_name, content_blocks)
+    values ('59000000-0000-0000-0000-000000000025', '59000000-0000-0000-0000-000000000012', '59000000-0000-0000-0000-000000000002', 4, 1, 'sig-blocks', 'failed', 'google/gemini-2.0-flash-001', 'Assistente', '{}'::jsonb)$$,
+  '23514', null, 'content_blocks precisa ser um array JSON'
 );
 select extensions.throws_ok(
   $$update public.personalized_lesson_generations set content_markdown = '# alterada' where request_key = '59000000-0000-0000-0000-000000000021'$$,

@@ -63,6 +63,11 @@ describe("personalizedLessonCore", () => {
       .toBe("# Aula\n\n[clique](about:blank)\n**seguro**");
   });
 
+  it("normaliza quebras de linha e colapsa linhas em branco em excesso", () => {
+    expect(sanitizeGeneratedMarkdown("a\r\nb\r\n")).toBe("a\nb");
+    expect(sanitizeGeneratedMarkdown("## A\n\n\n\n\n:::dica\nx\n:::")).toBe("## A\n\n:::dica\nx\n:::");
+  });
+
   it("compila o editor guiado e inclui automaticamente os dados autorizados", () => {
     const prompt = compileGuidedPrompt({
       basic: { title: "Liderança", objective: "Conduzir conversas difíceis", audience: "Gestores", level: "intermediario" },
@@ -73,6 +78,8 @@ describe("personalizedLessonCore", () => {
     expect(prompt).toContain("{{career_role|não informado}}");
     expect(prompt).toContain("{{desafio_atual}}");
     expect(prompt).toContain("Situação realista personalizada");
+    expect(prompt).toContain("FORMATAÇÃO");
+    expect(prompt).toContain(":::dica");
   });
 
   it("gera chaves legíveis e sem colisão para perguntas", () => {

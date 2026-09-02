@@ -13,9 +13,11 @@ import {
   X,
 } from "lucide-react";
 import { AgentMarkdown } from "@/components/agentes/AgentMarkdown";
+import BlockViewer from "@/components/classroom/BlockViewer";
 import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
 import { formatAiCredits } from "@/lib/aiCredits";
 import { requireAdmin } from "@/lib/supabase/auth";
+import type { LessonContentBlock } from "@/types/course";
 
 const PAGE_SIZE = 20;
 const EMPTY_USER_ID = "00000000-0000-0000-0000-000000000000";
@@ -353,7 +355,13 @@ export default async function PersonalizedLessonHistoryPage({ searchParams }: { 
           </div>
 
           {selected.status === "ready" ? (
-            <article className="px-5 py-7 sm:px-8"><AgentMarkdown text={String(selectedRaw.content_markdown ?? "")} /></article>
+            <article className="px-5 py-7 sm:px-8">
+              {Array.isArray(selectedRaw.content_blocks) && selectedRaw.content_blocks.length ? (
+                <BlockViewer blocks={selectedRaw.content_blocks as LessonContentBlock[]} />
+              ) : (
+                <AgentMarkdown text={String(selectedRaw.content_markdown ?? "")} />
+              )}
+            </article>
           ) : (
             <div className="p-6"><div className="rounded-xl bg-background p-4"><p className="font-semibold text-foreground">Esta tentativa não possui conteúdo concluído.</p><p className="mt-1 text-sm text-muted">Código registrado: {selected.errorCode ?? "não informado"}</p></div></div>
           )}

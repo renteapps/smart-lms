@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AlertTriangle, Coins, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { Button, Modal } from "@heroui/react";
 import { AgentMarkdown } from "@/components/agentes/AgentMarkdown";
+import BlockViewer from "@/components/classroom/BlockViewer";
 import { AssistantAvatar } from "@/components/platform-assistant/AssistantAvatar";
 import { formatAiCredits } from "@/lib/aiCredits";
 import type {
@@ -176,7 +177,11 @@ export default function PersonalizedLessonExperience({
 
       {generation && !editing && (
         <article className="rounded-3xl border border-border bg-surface px-5 py-7 shadow-sm sm:px-8 sm:py-9">
-          <AgentMarkdown text={generation.contentMarkdown} />
+          {generation.contentBlocks?.length ? (
+            <BlockViewer blocks={generation.contentBlocks} />
+          ) : (
+            <AgentMarkdown text={generation.contentMarkdown} />
+          )}
           <div className="mt-8 flex flex-col gap-3 border-t border-border pt-5 text-sm sm:flex-row sm:items-center sm:justify-between">
             <div className="text-muted">
               <p>Versão {generation.version} · {formatAiCredits(generation.creditsCharged)} crédito(s) cobrados</p>

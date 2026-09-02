@@ -358,11 +358,10 @@ function lastListItem(blocks: Draft[]): Draft | null {
 function assignIds(blocks: Draft[]): LessonContentBlock[] {
   let counter = 0;
   const walk = (list: Draft[]): LessonContentBlock[] =>
-    list.map((block) => {
+    list.map(({ children, ...rest }) => {
       const id = `pl-${counter++}`;
-      const children = block.children?.length ? walk(block.children) : undefined;
-      const { children: _drop, ...rest } = block;
-      return children ? { id, ...rest, children } : { id, ...rest };
+      const kids = children?.length ? walk(children) : undefined;
+      return kids ? { id, ...rest, children: kids } : { id, ...rest };
     });
   return walk(blocks);
 }

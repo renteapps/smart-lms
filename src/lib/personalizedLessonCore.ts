@@ -182,11 +182,13 @@ export function sanitizeExtractedText(value: string): string {
 /** Mantém Markdown/GFM, mas descarta HTML bruto antes da persistência. */
 export function sanitizeGeneratedMarkdown(value: string): string {
   return value
+    .replace(/\r\n?/g, "\n")
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
     .replace(/<!--([\s\S]*?)-->/g, "")
     .replace(/<[^>]+>/g, "")
     .replace(/\]\(\s*(?:javascript|vbscript|data):[^\n]*\)/gi, "](about:blank)")
+    .replace(/\n{3,}/g, "\n\n")
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
     .trim();
 }

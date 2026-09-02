@@ -189,8 +189,8 @@ function RenderBlock({ block }: { block: LessonContentBlock }) {
       if (level === 3) return <><h4 className="mt-7 text-xl font-bold text-foreground">{content}</h4>{children}</>;
       return <><h3 className="mt-8 text-2xl font-bold text-foreground">{content}</h3>{children}</>;
     }
-    case "bulletListItem": return <ul className="ml-6 list-disc"><li className="my-2 leading-8">{content}{children}</li></ul>;
-    case "numberedListItem": return <ol className="ml-6 list-decimal"><li className="my-2 leading-8">{content}{children}</li></ol>;
+    case "bulletListItem":
+    case "numberedListItem": return <li className="my-2 leading-8">{content}{children}</li>;
     case "checkListItem": return <label className="my-2 flex gap-3 leading-8"><input type="checkbox" checked={Boolean(block.props.checked)} readOnly /> <span>{content}</span></label>;
     case "lessonVideo": return <ReadOnlyVideo block={block} />;
     case "quiz": return <ReadOnlyQuiz block={block} />;
@@ -201,6 +201,7 @@ function RenderBlock({ block }: { block: LessonContentBlock }) {
       return <div className={cn("my-6 rounded-xl border-l-4 p-4", variant.className)}><p className="eyebrow mb-2 flex items-center gap-2"><Icon className="size-4" />{variant.label}</p><div className="leading-7">{content}</div>{children}</div>;
     }
     case "citation": return <blockquote className="my-7 border-l-4 border-border pl-5"><div className="font-display text-xl italic leading-relaxed">{content}</div>{block.props.author ? <cite className="mt-2 block text-sm font-semibold not-italic text-muted">— {String(block.props.author)}</cite> : null}</blockquote>;
+    case "quote": return <blockquote className="my-5 border-l-3 border-accent/50 bg-background-secondary px-4 py-2 leading-8 text-muted">{content}{children}</blockquote>;
     case "codeBlock": return <pre className="my-6 overflow-x-auto rounded-xl bg-foreground p-4 text-sm text-background"><code>{inlineText(block.content)}</code></pre>;
     case "table": {
       const table = block.content as { rows?: Array<{ cells?: unknown[] }> } | undefined;
@@ -229,8 +230,41 @@ function legacyToBlock(block: ContentBlock): LessonContentBlock | null {
   return { id: block.id, type: "paragraph", props: {}, content: stripHtml(block.content) };
 }
 
+const LIST_TAGS: Record<string, "ul" | "ol"> = { bulletListItem: "ul", numberedListItem: "ol" };
+
+/** Agrupa itens de lista consecutivos do mesmo tipo num único <ul>/<ol> — sem
+ * isso, cada `numberedListItem` vira um <ol> próprio e reinicia em "1.". */
 function BlockList({ blocks }: { blocks: LessonContentBlock[] }) {
-  return <>{blocks.map((block, index) => <RenderBlock key={block.id || index} block={block} />)}</>;
+  const out: ReactNode[] = [];
+  let run: LessonContentBlock[] = [];
+  let runTag: "ul" | "ol" | null = null;
+
+  const flush = () => {
+    if (!run.length || !runTag) return;
+    const Tag = runTag;
+    const items = run;
+    out.push(
+      <Tag key={`list-${out.length}`} className={cn("my-3 ml-6", Tag === "ul" ? "list-disc" : "list-decimal")}>
+        {items.map((block, index) => <RenderBlock key={block.id || index} block={block} />)}
+      </Tag>,
+    );
+    run = [];
+    runTag = null;
+  };
+
+  for (const block of blocks) {
+    const tag = LIST_TAGS[block.type];
+    if (tag) {
+      if (runTag && runTag !== tag) flush();
+      runTag = tag;
+      run.push(block);
+    } else {
+      flush();
+      out.push(<RenderBlock key={block.id || `block-${out.length}`} block={block} />);
+    }
+  }
+  flush();
+  return <>{out}</>;
 }
 
 export default function BlockViewer({ blocks }: BlockViewerProps) {
