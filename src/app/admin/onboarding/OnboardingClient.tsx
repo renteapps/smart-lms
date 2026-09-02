@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Reorder } from 'framer-motion';
 import {
   Save, PlayCircle, BarChart3, ListChecks, Plus, TriangleAlert, Activity,
@@ -86,6 +87,7 @@ interface OnboardingClientProps {
 export function OnboardingClient({
   initialDraft, initialPublished, initialVersions, contentItems, eligibleLessons, initialVariableDefinitions,
 }: OnboardingClientProps) {
+  const router = useRouter();
   const index = useMemo(() => createContentIndex(contentItems, eligibleLessons), [contentItems, eligibleLessons]);
 
   const initialQuestions = initialDraft?.questions ?? initialPublished?.questions ?? [];
@@ -321,6 +323,12 @@ export function OnboardingClient({
       clearBackup();
       toast.success(`Questionário publicado — v${res.data.version}.`);
       refreshVersions();
+      router.refresh();
+    } catch (error) {
+      console.error('Erro inesperado ao publicar questionário:', error);
+      toast.error('Não foi possível publicar o questionário.', {
+        description: error instanceof Error ? error.message : 'Tente novamente em instantes.',
+      });
     } finally {
       setIsPublishing(false);
     }
