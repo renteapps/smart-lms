@@ -96,8 +96,12 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString(),
     }).eq("id", documentId);
     if (updateError) throw updateError;
-    const { data: revision } = await adminClient.rpc("touch_personalized_lesson_revision", { p_lesson_id: lessonId });
-    return NextResponse.json({ id: documentId, status: "ready", revision: Number(revision) || undefined });
+    const { error: refError } = await adminClient.from("personalized_lesson_document_refs").upsert({
+      document_id: documentId,
+      scope: "draft",
+    }, { onConflict: "document_id,scope" });
+    if (refError) throw refError;
+    return NextResponse.json({ id: documentId, status: "ready" });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Falha ao processar o documento.";
     if (documentId) {

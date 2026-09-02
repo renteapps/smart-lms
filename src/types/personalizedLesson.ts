@@ -1,6 +1,31 @@
 import type { AssistantAvatarType, AssistantIconKey } from "@/types/platformAssistant";
 
 export type PersonalizedQuestionType = "short_text" | "long_text" | "single" | "multiple";
+export type PersonalizedAuthoringMode = "guided" | "advanced";
+export type PersonalizedLessonTone = "didactic" | "direct" | "inspiring" | "formal";
+export type PersonalizedLessonSection = "explanation" | "scenario" | "example" | "exercise" | "action_plan" | "summary";
+
+export type PersonalizedGuidedConfig = {
+  coreInstructions: string;
+  personalizationInstructions: string;
+  tone: PersonalizedLessonTone;
+  sections: PersonalizedLessonSection[];
+};
+
+export type PersonalizedLessonBasicDraft = {
+  moduleId: string;
+  title: string;
+  durationInMinutes: number;
+  shortDescription: string;
+  coverUrl: string;
+  topics: string[];
+  solves: string[];
+  level: "iniciante" | "intermediario" | "avancado";
+  objective: string;
+  audience: string;
+  prerequisites: string[];
+  isEligibleForTrail: boolean;
+};
 
 export type PersonalizedLessonQuestion = {
   id: string;
@@ -45,6 +70,8 @@ export type PersonalizedLessonConfig = {
   questions: PersonalizedLessonQuestion[];
   variableBindings: PersonalizedVariableBinding[];
   sourceRefs: PersonalizedSourceRef[];
+  authoringMode: PersonalizedAuthoringMode;
+  guidedConfig: PersonalizedGuidedConfig;
   revision: number;
   updatedAt?: string;
 };
@@ -57,6 +84,16 @@ export type PersonalizedLessonDocument = {
   status: "processing" | "ready" | "failed";
   errorMessage?: string;
   createdAt: string;
+  inDraft?: boolean;
+  inPublished?: boolean;
+};
+
+export type PersonalizedLessonDraft = Omit<PersonalizedLessonConfig, "revision" | "updatedAt"> & {
+  basic: PersonalizedLessonBasicDraft;
+  baseRevision: number;
+  draftVersion: number;
+  publishedDraftVersion: number;
+  updatedAt?: string;
 };
 
 export type PersonalizedGenerationPublic = {
@@ -101,6 +138,7 @@ export type PersonalizedAdminSourceOption = PersonalizedSourceRef & {
 
 export type PersonalizedLessonAdminData = {
   config: PersonalizedLessonConfig | null;
+  draft: PersonalizedLessonDraft;
   documents: PersonalizedLessonDocument[];
   assistant: PersonalizedAssistantIdentity;
   models: Array<{ id: string; name: string }>;

@@ -182,6 +182,70 @@ export default function AulaAdminForm({
 
   const youtubeId = formData.videoUrl ? extractYouTubeId(formData.videoUrl) : null;
 
+  if (!isNew && initialLesson?.type === "personalized_ai" && personalizedData) {
+    return (
+      <PersonalizedLessonEditor
+        lessonId={aulaId}
+        courseId={courseId}
+        initialData={personalizedData}
+        initiallyPublished={initialLesson.isPublished ?? false}
+        modules={modules}
+        initialLesson={initialLesson}
+        courseLayout={courseLayout}
+      />
+    );
+  }
+
+  if (isNew && formData.type === "personalized_ai") {
+    return (
+      <div className="mx-auto max-w-3xl pb-12">
+        <Link href={`/admin/cursos/${courseId}/modulos`} className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-muted hover:text-accent">
+          <ArrowLeft className="size-4" /> Voltar para módulos
+        </Link>
+        <div className="mb-6">
+          <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent">Aula personalizada</span>
+          <h1 className="mt-3 font-display text-3xl font-bold">Comece pelo essencial</h1>
+          <p className="mt-2 text-muted">Vamos criar o rascunho e abrir o construtor guiado para configurar a personalização.</p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
+          <label className="block space-y-1.5 text-sm font-semibold">Tipo de aula
+            <select name="type" value={formData.type} onChange={handleChange} className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:border-accent">
+              <option value="video">Vídeo</option><option value="text">Texto / Artigo</option><option value="quiz">Questionário (Quiz)</option><option value="personalized_ai">Aula personalizada (IA)</option>
+            </select>
+          </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block space-y-1.5 text-sm font-semibold">Título da aula
+              <input name="title" required value={formData.title || ""} onChange={handleChange} className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:border-accent" placeholder="Ex.: Liderança em conversas difíceis" />
+            </label>
+            <label className="block space-y-1.5 text-sm font-semibold">Módulo
+              <select name="moduleId" value={formData.moduleId || moduleId || ""} onChange={handleChange} className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:border-accent">
+                <option value="">Selecione</option>{modules.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+              </select>
+            </label>
+          </div>
+          <label className="block space-y-1.5 text-sm font-semibold">O que o aluno deverá aprender ou conseguir fazer?
+            <textarea name="objective" rows={3} required value={formData.objective || ""} onChange={handleChange} className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:border-accent" placeholder="Ex.: conduzir uma conversa difícil com clareza e empatia" />
+          </label>
+          <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
+            <label className="block space-y-1.5 text-sm font-semibold">Descrição curta <span className="font-normal text-muted">(opcional)</span>
+              <textarea name="shortDescription" rows={2} maxLength={200} value={formData.shortDescription || ""} onChange={handleChange} className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:border-accent" />
+            </label>
+            <label className="block space-y-1.5 text-sm font-semibold">Duração
+              <input name="durationInMinutes" type="number" min={1} required value={formData.durationInMinutes || 10} onChange={handleChange} className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:border-accent" />
+            </label>
+          </div>
+          {saveError && <p role="alert" className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{saveError}</p>}
+          <div className="flex justify-end border-t border-border pt-5">
+            <button type="submit" disabled={isSaving} className="inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-on-primary disabled:opacity-50">
+              {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+              {isSaving ? "Criando rascunho..." : "Criar rascunho e configurar"}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto pb-12">
 
@@ -635,14 +699,6 @@ export default function AulaAdminForm({
         </div>
       </form>
 
-      {!isNew && formData.type === "personalized_ai" && personalizedData && (
-        <PersonalizedLessonEditor
-          lessonId={aulaId}
-          courseId={courseId}
-          initialData={personalizedData}
-          initiallyPublished={initialLesson?.isPublished ?? false}
-        />
-      )}
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   answersAsVariables,
+  compileGuidedPrompt,
+  createQuestionKey,
   createPersonalizedInputSignature,
   mergePersonalizedVariables,
   normalizeQuestionAnswers,
@@ -59,5 +61,23 @@ describe("personalizedLessonCore", () => {
   it("remove HTML executável e preserva Markdown", () => {
     expect(sanitizeGeneratedMarkdown("# Aula\n<script>alert(1)</script>\n[clique](javascript:alert(2))\n**seguro**"))
       .toBe("# Aula\n\n[clique](about:blank)\n**seguro**");
+  });
+
+  it("compila o editor guiado e inclui automaticamente os dados autorizados", () => {
+    const prompt = compileGuidedPrompt({
+      basic: { title: "Liderança", objective: "Conduzir conversas difíceis", audience: "Gestores", level: "intermediario" },
+      guided: { coreInstructions: "Explique escuta ativa.", personalizationInstructions: "Use o desafio relatado.", tone: "didactic", sections: ["scenario", "exercise"] },
+      questions: [question],
+      bindings: [{ key: "career_role", label: "Cargo", source: "profile", sourceRef: "career_role" }],
+    });
+    expect(prompt).toContain("{{career_role|não informado}}");
+    expect(prompt).toContain("{{desafio_atual}}");
+    expect(prompt).toContain("Situação realista personalizada");
+  });
+
+  it("gera chaves legíveis e sem colisão para perguntas", () => {
+    expect(createQuestionKey("Qual é seu desafio atual?", ["qual_e_seu_desafio_atual"]))
+      .toBe("qual_e_seu_desafio_atual_2");
+    expect(createQuestionKey("123")).toBe("resposta_123");
   });
 });

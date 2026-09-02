@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(35);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
 values
@@ -65,6 +65,11 @@ select extensions.has_index('public', 'personalized_lesson_generations', 'person
 select extensions.has_index('public', 'personalized_lesson_generations', 'personalized_lesson_generations_user_created_idx', 'histórico por aluno tem índice');
 select extensions.ok(has_table_privilege('authenticated', 'public.personalized_lesson_generations', 'SELECT'), 'authenticated recebe SELECT explícito nas gerações');
 select extensions.ok(not has_table_privilege('anon', 'public.personalized_lesson_generations', 'SELECT'), 'anon não recebe acesso às gerações');
+select extensions.ok(has_table_privilege('authenticated', 'public.ai_model_pricing', 'SELECT'), 'authenticated pode consultar modelos sujeito a RLS');
+select extensions.ok(not has_table_privilege('anon', 'public.ai_model_pricing', 'SELECT'), 'anon não recebe acesso aos modelos');
+select extensions.has_table('public', 'personalized_lesson_drafts', 'existe tabela privada de rascunhos');
+select extensions.ok(has_table_privilege('authenticated', 'public.personalized_lesson_drafts', 'SELECT'), 'authenticated acessa rascunhos sujeito a RLS');
+select extensions.ok(not has_table_privilege('anon', 'public.personalized_lesson_drafts', 'SELECT'), 'anon não recebe acesso aos rascunhos');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '59000000-0000-0000-0000-000000000001', true);
@@ -79,14 +84,75 @@ select extensions.results_eq(
   'aluno lê somente as próprias variáveis'
 );
 select extensions.is_empty($$select lesson_id from public.personalized_lesson_configs$$, 'aluno não lê prompt nem configuração');
+select extensions.is_empty($$select model from public.ai_model_pricing$$, 'aluno não lê a tabela de modelos');
+select extensions.is_empty($$select lesson_id from public.personalized_lesson_drafts$$, 'aluno não lê rascunhos administrativos');
 select extensions.throws_ok(
   $$select public.complete_personalized_lesson_generation('59000000-0000-0000-0000-000000000021', '# invasão', 0, 0, 0, 0, 0, 0)$$,
   '42501', null, 'aluno não executa finalização financeira'
+);
+select extensions.throws_ok(
+  $$select public.publish_personalized_lesson_draft('59000000-0000-0000-0000-000000000012', 1)$$,
+  '42501', null, 'aluno não publica rascunho administrativo'
 );
 
 select set_config('request.jwt.claim.sub', '59000000-0000-0000-0000-000000000003', true);
 select extensions.is((select count(*) from public.personalized_lesson_configs), 1::bigint, 'admin lê a configuração privada');
 select extensions.is((select count(*) from public.personalized_lesson_generations), 2::bigint, 'admin audita todas as versões');
+select extensions.ok((select count(*) > 0 from public.ai_model_pricing), 'admin lê os modelos habilitados');
+select extensions.lives_ok(
+  $$insert into public.personalized_lesson_drafts (
+      lesson_id, lesson_payload, authoring_mode, guided_config, prompt_template, model,
+      questions, variable_bindings, source_refs, base_revision, draft_version, updated_by
+    ) values (
+      '59000000-0000-0000-0000-000000000012',
+      '{"moduleId":"59000000-0000-0000-0000-000000000011","title":"Aula IA revisada","durationInMinutes":15,"shortDescription":"","coverUrl":"","topics":[],"solves":[],"level":"iniciante","objective":"Aplicar o conteúdo","audience":"","prerequisites":[],"isEligibleForTrail":true}',
+      'guided', '{"coreInstructions":"Ensine com um caso prático.","personalizationInstructions":"","tone":"didactic","sections":["scenario"]}',
+      'Nova aula para {{objetivo}}.', 'google/gemini-2.0-flash-001',
+      '[{"id":"q1","key":"objetivo","label":"Qual objetivo?","type":"short_text","required":true,"options":[],"order":0}]',
+      '[]', '[]', 1, 1, '59000000-0000-0000-0000-000000000003'
+    )$$,
+  'admin cria rascunho separado'
+);
+select extensions.is(
+  (select prompt_template from public.personalized_lesson_configs where lesson_id = '59000000-0000-0000-0000-000000000012'),
+  'Crie uma aula para {{objetivo}}.'::text,
+  'salvar rascunho não altera configuração ativa'
+);
+select extensions.throws_ok(
+  $$select public.save_personalized_lesson_draft(
+      '59000000-0000-0000-0000-000000000012', 0, '{}'::jsonb, '{}'::uuid[]
+    )$$,
+  '40001', null, 'versão esperada impede sobrescrever rascunho concorrente'
+);
+select extensions.lives_ok(
+  $$select public.save_personalized_lesson_draft(
+      lesson_id,
+      1,
+      jsonb_build_object(
+        'lessonPayload', lesson_payload,
+        'authoringMode', authoring_mode,
+        'guidedConfig', guided_config,
+        'promptTemplate', prompt_template,
+        'context', context,
+        'model', model,
+        'questions', questions,
+        'variableBindings', variable_bindings,
+        'sourceRefs', source_refs
+      ),
+      '{}'::uuid[]
+    ) from public.personalized_lesson_drafts
+    where lesson_id = '59000000-0000-0000-0000-000000000012'$$,
+  'admin salva seção do rascunho atomicamente'
+);
+select extensions.lives_ok(
+  $$select public.publish_personalized_lesson_draft('59000000-0000-0000-0000-000000000012', 2)$$,
+  'admin publica o rascunho transacionalmente'
+);
+select extensions.is(
+  (select prompt_template from public.personalized_lesson_configs where lesson_id = '59000000-0000-0000-0000-000000000012'),
+  'Nova aula para {{objetivo}}.'::text,
+  'publicação promove o novo prompt'
+);
 
 reset role;
 set local role service_role;

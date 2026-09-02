@@ -18,6 +18,7 @@ export const PERSONALIZED_LESSON_CONTEXT_LIMIT = 120_000;
 export const PERSONALIZED_LESSON_SOURCE_LIMIT = 14_000;
 
 export type PersonalizedAnswerInput = Record<string, unknown>;
+export { compileGuidedPrompt, createQuestionKey, DEFAULT_GUIDED_CONFIG, normalizeGuidedConfig } from "@/lib/personalizedLessonAuthoring";
 
 export class PersonalizedLessonError extends Error {
   constructor(

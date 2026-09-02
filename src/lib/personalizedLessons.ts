@@ -27,6 +27,7 @@ import {
   validatePersonalizedLessonConfig,
   type PersonalizedAnswerInput,
 } from "@/lib/personalizedLessonCore";
+import { normalizeGuidedConfig } from "@/lib/personalizedLessonAuthoring";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { normalizeUserVariableValue } from "@/lib/userVariables";
 import type { OpenRouterChatMessage } from "@/types/openrouter";
@@ -37,6 +38,8 @@ import type {
   PersonalizedGenerationPublic,
   PersonalizedLessonAdminData,
   PersonalizedLessonConfig,
+  PersonalizedLessonBasicDraft,
+  PersonalizedLessonDraft,
   PersonalizedLessonDocument,
   PersonalizedLessonStudentState,
   PersonalizedSourceRef,
@@ -102,6 +105,8 @@ function mapConfig(row: Row): PersonalizedLessonConfig {
     questions: normalizeQuestions(row.questions),
     variableBindings: normalizeBindings(row.variable_bindings),
     sourceRefs: Array.isArray(row.source_refs) ? row.source_refs as PersonalizedSourceRef[] : [],
+    authoringMode: row.authoring_mode === "guided" ? "guided" : "advanced",
+    guidedConfig: normalizeGuidedConfig(row.guided_config),
     revision: Number(row.revision) || 1,
     updatedAt: row.updated_at ?? undefined,
   };
@@ -116,6 +121,52 @@ function mapDocument(row: Row): PersonalizedLessonDocument {
     status: row.status,
     errorMessage: row.error_message ?? undefined,
     createdAt: row.created_at,
+    inDraft: row.inDraft,
+    inPublished: row.inPublished,
+  };
+}
+
+function mapBasicDraft(lesson: Row, payload: unknown): PersonalizedLessonBasicDraft {
+  const row = payload && typeof payload === "object" ? payload as Row : {};
+  const strings = (value: unknown) => Array.isArray(value) ? value.map(String).filter(Boolean) : [];
+  return {
+    moduleId: String(row.moduleId ?? lesson.module_id ?? ""),
+    title: String(row.title ?? lesson.title ?? ""),
+    durationInMinutes: Math.max(1, Number(row.durationInMinutes ?? lesson.duration_in_minutes) || 10),
+    shortDescription: String(row.shortDescription ?? lesson.short_description ?? ""),
+    coverUrl: String(row.coverUrl ?? lesson.cover_url ?? ""),
+    topics: strings(row.topics ?? lesson.topics),
+    solves: strings(row.solves ?? lesson.solves),
+    level: ["iniciante", "intermediario", "avancado"].includes(String(row.level ?? lesson.level))
+      ? (row.level ?? lesson.level) as PersonalizedLessonBasicDraft["level"]
+      : "iniciante",
+    objective: String(row.objective ?? lesson.objective ?? ""),
+    audience: String(row.audience ?? lesson.audience ?? ""),
+    prerequisites: strings(row.prerequisites ?? lesson.prerequisites),
+    isEligibleForTrail: typeof row.isEligibleForTrail === "boolean"
+      ? row.isEligibleForTrail
+      : lesson.is_eligible_for_trail !== false,
+  };
+}
+
+function mapDraft(row: Row | null, lesson: Row, config: PersonalizedLessonConfig | null, defaultModel: string): PersonalizedLessonDraft {
+  return {
+    lessonId: String(lesson.id),
+    basic: mapBasicDraft(lesson, row?.lesson_payload),
+    promptTemplate: String(row?.prompt_template ?? config?.promptTemplate ?? ""),
+    context: String(row?.context ?? config?.context ?? ""),
+    model: String(row?.model ?? config?.model ?? defaultModel),
+    questions: normalizeQuestions(row?.questions ?? config?.questions),
+    variableBindings: normalizeBindings(row?.variable_bindings ?? config?.variableBindings),
+    sourceRefs: Array.isArray(row?.source_refs) ? row.source_refs as PersonalizedSourceRef[] : config?.sourceRefs ?? [],
+    authoringMode: row
+      ? (row.authoring_mode === "advanced" ? "advanced" : "guided")
+      : (config?.authoringMode ?? "guided"),
+    guidedConfig: normalizeGuidedConfig(row?.guided_config ?? config?.guidedConfig),
+    baseRevision: Number(row?.base_revision ?? config?.revision) || 0,
+    draftVersion: Number(row?.draft_version) || 0,
+    publishedDraftVersion: Number(row?.published_draft_version) || 0,
+    updatedAt: row?.updated_at ?? undefined,
   };
 }
 
@@ -289,11 +340,18 @@ async function loadSelectedSources(
     }
   }
 
-  const { data: documents, error } = await admin.from("personalized_lesson_documents")
-    .select("id, file_name, extracted_text, status")
+  const { data: lessonDocuments, error: lessonDocumentsError } = await admin.from("personalized_lesson_documents")
+    .select("id, file_name, extracted_text, status, created_at")
     .eq("lesson_id", config.lessonId)
     .order("created_at");
-  if (error) throw new PersonalizedLessonError("Não foi possível ler os documentos privados.", 503, "documents_unavailable");
+  if (lessonDocumentsError) throw new PersonalizedLessonError("Não foi possível ler os documentos privados.", 503, "documents_unavailable");
+  const lessonDocumentIds = (lessonDocuments ?? []).map((row: Row) => String(row.id));
+  const refsResult = lessonDocumentIds.length
+    ? await admin.from("personalized_lesson_document_refs").select("document_id").eq("scope", "published").in("document_id", lessonDocumentIds)
+    : { data: [], error: null };
+  if (refsResult.error) throw new PersonalizedLessonError("Não foi possível ler as fontes publicadas.", 503, "documents_unavailable");
+  const publishedIds = new Set((refsResult.data ?? []).map((row: Row) => String(row.document_id)));
+  const documents = (lessonDocuments ?? []).filter((row: Row) => publishedIds.has(String(row.id)));
   const unfinished = (documents ?? []).filter((row: Row) => row.status !== "ready");
   if (unfinished.length) throw new PersonalizedLessonError("Há documento ainda não processado ou com falha.", 409, "documents_not_ready");
   for (const document of documents ?? []) {
@@ -394,19 +452,32 @@ export async function getPersonalizedLessonStudentState(
 }
 
 export async function getPersonalizedLessonAdminData(admin: DB, lessonId: string): Promise<PersonalizedLessonAdminData> {
-  const [configResult, documentsResult, settings, modelsResult, onboardingResult, testsResult, collectedResult, coursesResult, modulesResult, lessonsResult, articlesResult] = await Promise.all([
+  const [configResult, draftResult, lessonResult, documentsResult, settings, modelsResult, onboardingResult, testsResult, collectedResult, coursesResult, modulesResult, lessonsResult, articlesResult] = await Promise.all([
     admin.from("personalized_lesson_configs").select("*").eq("lesson_id", lessonId).maybeSingle(),
+    admin.from("personalized_lesson_drafts").select("*").eq("lesson_id", lessonId).maybeSingle(),
+    admin.from("lessons").select("id, module_id, title, duration_in_minutes, short_description, cover_url, topics, solves, level, objective, audience, prerequisites, is_eligible_for_trail").eq("id", lessonId).single(),
     admin.from("personalized_lesson_documents").select("*").eq("lesson_id", lessonId).order("created_at"),
     getPlatformAssistantSettings(admin),
     admin.from("ai_model_pricing").select("model, display_name").eq("enabled", true).order("display_name"),
     admin.from("onboarding_variable_definitions").select("variable_key, question_text").eq("active", true).order("variable_key"),
     admin.from("profile_tests").select("id, title").order("title"),
     admin.from("student_variable_definitions").select("variable_key, label").eq("active", true).order("variable_key"),
-    admin.from("courses").select("id, title").neq("status", "Arquivado").order("title"),
-    admin.from("modules").select("id, title").order("title"),
-    admin.from("lessons").select("id, title").order("title"),
-    admin.from("articles").select("id, title").order("title"),
+    admin.from("courses").select("id, title").neq("status", "Arquivado").order("title").limit(5),
+    admin.from("modules").select("id, title").order("title").limit(5),
+    admin.from("lessons").select("id, title").order("title").limit(6),
+    admin.from("articles").select("id, title").order("title").limit(5),
   ]);
+
+  if (lessonResult.error || !lessonResult.data) {
+    throw new PersonalizedLessonError("Não foi possível carregar os dados básicos da aula.", 404, "lesson_not_found");
+  }
+  const config = configResult.data ? mapConfig(configResult.data) : null;
+  const lessonDocumentIds = (documentsResult.data ?? []).map((row: Row) => row.id);
+  const documentRefsResult = lessonDocumentIds.length
+    ? await admin.from("personalized_lesson_document_refs").select("document_id, scope").in("document_id", lessonDocumentIds)
+    : { data: [], error: null };
+  const draftIds = new Set((documentRefsResult.data ?? []).filter((row: Row) => row.scope === "draft").map((row: Row) => row.document_id));
+  const publishedIds = new Set((documentRefsResult.data ?? []).filter((row: Row) => row.scope === "published").map((row: Row) => row.document_id));
 
   const variableOptions: PersonalizedAdminVariableOption[] = [
     ...PROFILE_VARIABLES,
@@ -427,8 +498,13 @@ export async function getPersonalizedLessonAdminData(admin: DB, lessonId: string
     ...(articlesResult.data ?? []).map((row: Row) => ({ kind: "article" as const, id: row.id, title: row.title, groupLabel: "Artigos" })),
   ];
   return {
-    config: configResult.data ? mapConfig(configResult.data) : null,
-    documents: (documentsResult.data ?? []).map(mapDocument),
+    config,
+    draft: mapDraft(draftResult.data, lessonResult.data, config, String(modelsResult.data?.[0]?.model ?? "")),
+    documents: (documentsResult.data ?? []).map((row: Row) => mapDocument({
+      ...row,
+      inDraft: draftIds.has(row.id) || (!draftResult.data && publishedIds.has(row.id)),
+      inPublished: publishedIds.has(row.id),
+    })),
     assistant: asIdentity(settings),
     models: (modelsResult.data ?? []).map((row: Row) => ({ id: row.model, name: row.display_name || row.model })),
     variableOptions,
