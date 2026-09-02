@@ -101,14 +101,6 @@ export function validatePersonalizedLessonConfig(
     }
   }
 
-  for (const binding of config.variableBindings) {
-    if (keys.has(binding.key)) errors.push(`A variável {{${binding.key}}} está vinculada mais de uma vez.`);
-    keys.add(binding.key);
-  }
-
-  for (const referencedKey of extractTemplateVariableKeys(prompt)) {
-    if (!keys.has(referencedKey)) errors.push(`A variável {{${referencedKey}}} não foi autorizada nesta aula.`);
-  }
   return [...new Set(errors)];
 }
 
@@ -154,14 +146,14 @@ export function mergePersonalizedVariables(
 
 export function renderPersonalizedPrompt(template: string, variables: Record<string, string>) {
   const rendered = interpolateUserPrompt(template, variables);
-  if (rendered.missingKeys.length) {
-    throw new PersonalizedLessonError(
-      `Faltam valores para: ${rendered.missingKeys.map((key) => `{{${key}}}`).join(", ")}.`,
-      422,
-      "variable_value_missing",
-    );
+  if (rendered.missingKeys.length === 0) {
+    return rendered.value;
   }
-  return rendered.value;
+  const filledVariables = { ...variables };
+  for (const key of rendered.missingKeys) {
+    filledVariables[key] = "(não informado)";
+  }
+  return interpolateUserPrompt(template, filledVariables).value;
 }
 
 function stable(value: unknown): unknown {

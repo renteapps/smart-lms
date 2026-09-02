@@ -23,15 +23,15 @@ const question: PersonalizedLessonQuestion = {
 };
 
 describe("personalizedLessonCore", () => {
-  it("recusa variável que não foi explicitamente autorizada", () => {
+  it("permite usar qualquer variável no prompt sem rejeição", () => {
     const errors = validatePersonalizedLessonConfig({
-      promptTemplate: "Olá {{full_name}} e {{segredo}}",
+      promptTemplate: "Olá {{full_name}} e {{qualquer_coisa}}",
       context: "",
       model: "model-a",
       questions: [],
       variableBindings: [{ key: "full_name", label: "Nome", source: "profile", sourceRef: "full_name" }],
     }, { allowedModels: new Set(["model-a"]) });
-    expect(errors).toContain("A variável {{segredo}} não foi autorizada nesta aula.");
+    expect(errors).toEqual([]);
   });
 
   it("aplica fallback e escapa resposta inserida no prompt", () => {

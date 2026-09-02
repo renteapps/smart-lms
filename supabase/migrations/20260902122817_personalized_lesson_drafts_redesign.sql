@@ -174,7 +174,6 @@ set search_path = ''
 as $$
 declare
   config public.personalized_lesson_configs%rowtype;
-  v_var_key text;
   v_lesson_course_id uuid;
 begin
   if new.type <> 'personalized_ai' or new.is_published is not true then
@@ -226,16 +225,6 @@ begin
     raise check_violation using message = 'Há uma variável autorizada incompleta ou inválida.';
   end if;
   if exists (
-    select 1 from (
-      select lower(q_sub->>'key') as var_key from jsonb_array_elements(config.questions) q_sub
-      union all
-      select lower(b_sub->>'key') as var_key from jsonb_array_elements(config.variable_bindings) b_sub
-    ) authorized_variables
-    group by authorized_variables.var_key having count(*) > 1
-  ) then
-    raise check_violation using message = 'Cada variável pode ter somente uma origem autorizada.';
-  end if;
-  if exists (
     select 1 from jsonb_array_elements(config.source_refs) source_ref
     where jsonb_typeof(source_ref) <> 'object'
        or coalesce(source_ref->>'kind', '') not in ('course', 'module', 'lesson', 'article')
@@ -259,18 +248,6 @@ begin
   ) then
     raise check_violation using message = 'Uma das fontes selecionadas não existe ou não pode ser usada.';
   end if;
-  for v_var_key in
-    select lower(matches[1])
-    from regexp_matches(config.prompt_template, '\{\{\s*([a-zA-Z][a-zA-Z0-9_.-]*)\s*(?:\|[^{}]*)?\}\}', 'g') matches
-  loop
-    if not exists (
-      select 1 from jsonb_array_elements(config.questions) q_search where lower(q_search->>'key') = v_var_key
-      union all
-      select 1 from jsonb_array_elements(config.variable_bindings) b_search where lower(b_search->>'key') = v_var_key
-    ) then
-      raise check_violation using message = format('Variável desconhecida no prompt: {{%s}}.', v_var_key);
-    end if;
-  end loop;
   if exists (
     select 1
     from public.personalized_lesson_document_refs ref

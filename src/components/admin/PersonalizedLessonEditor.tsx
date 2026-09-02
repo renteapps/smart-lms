@@ -110,8 +110,35 @@ export default function PersonalizedLessonEditor({
   const bindings = useMemo(() => {
     const allText = authoringMode === "guided" ? `${guided.coreInstructions} ${guided.personalizationInstructions}` : promptTemplate;
     const usedKeys = new Set(Array.from(allText.matchAll(/\{\{\s*([a-zA-Z0-9_.-]+)\s*(?:\|[^{}]*)?\}\}/g)).map(m => m[1].toLowerCase()));
-    return initialData.variableOptions.filter(opt => usedKeys.has(opt.key.toLowerCase())).map(opt => ({ key: opt.key, label: opt.label, source: opt.source as any, sourceRef: opt.sourceRef }));
-  }, [authoringMode, guided.coreInstructions, guided.personalizationInstructions, promptTemplate, initialData.variableOptions]);
+    const questionKeys = new Set(questions.map(q => q.key.toLowerCase()));
+
+    const result: PersonalizedVariableBinding[] = [];
+    const seen = new Set<string>();
+
+    for (const key of usedKeys) {
+      if (questionKeys.has(key)) continue;
+      if (seen.has(key)) continue;
+
+      const known = initialData.variableOptions.find(opt => opt.key.toLowerCase() === key);
+      if (known) {
+        result.push({
+          key: known.key,
+          label: known.label,
+          source: known.source as any,
+          sourceRef: known.sourceRef,
+        });
+      } else {
+        result.push({
+          key,
+          label: key,
+          source: "collected",
+          sourceRef: key,
+        });
+      }
+      seen.add(key);
+    }
+    return result;
+  }, [authoringMode, guided.coreInstructions, guided.personalizationInstructions, promptTemplate, questions, initialData.variableOptions]);
   
   const [sources, setSources] = useState<PersonalizedSourceRef[]>(draft.sourceRefs);
   const [documents, setDocuments] = useState(initialData.documents);
