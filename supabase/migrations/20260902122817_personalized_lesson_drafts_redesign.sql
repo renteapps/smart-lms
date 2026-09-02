@@ -382,7 +382,7 @@ as $$
 declare
   draft public.personalized_lesson_drafts%rowtype;
   current_config public.personalized_lesson_configs%rowtype;
-  question jsonb;
+  v_question jsonb;
   existing_definition public.student_variable_definitions%rowtype;
   next_revision integer;
   target_module_id uuid;
@@ -439,21 +439,21 @@ begin
     raise check_violation using message = 'A aula pode usar no máximo 10 documentos.';
   end if;
 
-  for question in select value from jsonb_array_elements(draft.questions)
+  for v_question in select value from jsonb_array_elements(draft.questions)
   loop
     select * into existing_definition
     from public.student_variable_definitions
-    where variable_key = question->>'key';
+    where variable_key = v_question->>'key';
     if found and (
-      existing_definition.question_type <> question->>'type'
-      or existing_definition.options is distinct from coalesce(question->'options', '[]'::jsonb)
+      existing_definition.question_type <> v_question->>'type'
+      or existing_definition.options is distinct from coalesce(v_question->'options', '[]'::jsonb)
     ) then
-      raise unique_violation using message = format('A chave {{%s}} já existe com outro tipo ou opções.', question->>'key');
+      raise unique_violation using message = format('A chave {{%s}} já existe com outro tipo ou opções.', v_question->>'key');
     end if;
     insert into public.student_variable_definitions (
       variable_key, label, question_type, options, source_lesson_id, active, created_by, updated_at
     ) values (
-      question->>'key', question->>'label', question->>'type', coalesce(question->'options', '[]'::jsonb),
+      v_question->>'key', v_question->>'label', v_question->>'type', coalesce(v_question->'options', '[]'::jsonb),
       p_lesson_id, true, (select auth.uid()), now()
     )
     on conflict (variable_key) do update
@@ -464,8 +464,8 @@ begin
   set active = false, updated_at = now()
   where source_lesson_id = p_lesson_id
     and not exists (
-      select 1 from jsonb_array_elements(draft.questions) question
-      where question->>'key' = student_variable_definitions.variable_key
+      select 1 from jsonb_array_elements(draft.questions) q_elem
+      where q_elem->>'key' = student_variable_definitions.variable_key
     );
 
   select * into current_config from public.personalized_lesson_configs where lesson_id = p_lesson_id;
