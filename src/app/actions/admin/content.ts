@@ -478,6 +478,9 @@ export async function publishQuestionnaire(
       { lockedVariableKeys },
     );
     if (errors.length > 0) {
+      console.warn("Publicação do questionário bloqueada pela validação", {
+        errorCount: errors.length,
+      });
       return { success: false, message: errors.join(" ") };
     }
 
@@ -488,7 +491,13 @@ export async function publishQuestionnaire(
       p_notes: notes ?? null,
     });
 
-    if (error) return { success: false, message: error.message };
+    if (error) {
+      console.error("Falha no RPC de publicação do questionário", {
+        code: error.code,
+        message: error.message,
+      });
+      return { success: false, message: error.message };
+    }
 
     await adminClient.from("audit_logs").insert({
       actor_id: user.id,
@@ -502,6 +511,7 @@ export async function publishQuestionnaire(
     revalidatePath("/admin/onboarding");
     return { success: true, data: { version: version as number } };
   } catch (error) {
+    console.error("Falha inesperada ao publicar questionário", error);
     return { success: false, message: (error as Error).message };
   }
 }

@@ -5,6 +5,7 @@ import { cn, getContrastForeground } from "@/lib/utils";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppearanceConfig } from "@/lib/data/appearance";
 import { AppearanceProvider } from "@/contexts/AppearanceContext";
+import { Toaster } from "sonner";
 
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
@@ -76,6 +77,7 @@ export default async function RootLayout({
       <body>
         <AppearanceProvider value={appearance}>
           {children}
+          <Toaster position="top-right" richColors closeButton />
         </AppearanceProvider>
       </body>
     </html>
