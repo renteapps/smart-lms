@@ -4,6 +4,61 @@ import { mockQuestionnaire, TRAIL_CONTENT_INDEX } from './seed/questionnaire';
 import { ContentMapping, LearningTrail, LearningTrailItem, Questionnaire } from '@/types/trilha';
 
 describe('adaptive learning trail', () => {
+  it('aceita perguntas abertas sem opções e não as usa como sinal de recomendação', () => {
+    const questionnaire: Questionnaire = {
+      version: 1,
+      status: 'draft',
+      questions: [
+        { id: 'q_contexto', type: 'open', role: 'contexto', text: 'Conte seu objetivo', maxLength: 700, options: [] },
+        { id: 'q_disp', type: 'availability', role: 'disponibilidade', text: 'Quando?', options: [] },
+      ],
+    };
+
+    expect(validateQuestionnaire(questionnaire, TRAIL_CONTENT_INDEX)).toEqual([]);
+    expect(generateLearningTrail('u1', { q_contexto: ['Quero aprender com confiança.'] }, questionnaire, { weekdays: [1], minutesPerSession: 30 }, undefined, new Date(2026, 7, 10), TRAIL_CONTENT_INDEX).items).toEqual([]);
+  });
+
+  it('rejeita conteúdo em pergunta aberta e valida variáveis em ordem', () => {
+    const questionnaire: Questionnaire = {
+      version: 1,
+      status: 'draft',
+      questions: [
+        {
+          id: 'q_cargo', type: 'single', role: 'perfil', text: 'Qual cargo?', variableKey: 'cargo_pretendido',
+          options: [{ label: 'Liderança', contentMappings: [] }],
+        },
+        {
+          id: 'q_contexto', type: 'open', role: 'contexto', text: 'Por que {{cargo_pretendido}}?',
+          options: [{ label: 'inválida', contentMappings: [] }],
+        },
+        { id: 'q_disp', type: 'availability', role: 'disponibilidade', text: 'Quando?', options: [] },
+      ],
+    };
+    expect(validateQuestionnaire(questionnaire, TRAIL_CONTENT_INDEX)).toContain(
+      'A pergunta aberta “Por que {{cargo_pretendido}}?” não pode ter opções ou conteúdos mapeados.',
+    );
+
+    questionnaire.questions[1].options = [];
+    questionnaire.questions[0].text = 'Escolha {{objetivo_futuro|seu objetivo}}';
+    expect(validateQuestionnaire(questionnaire, TRAIL_CONTENT_INDEX)).toContain(
+      'A variável “objetivo_futuro” em “Escolha {{objetivo_futuro|seu objetivo}}” precisa ser criada por uma pergunta anterior.',
+    );
+  });
+
+  it('bloqueia renomear uma variável já publicada', () => {
+    const questionnaire: Questionnaire = {
+      version: 2,
+      status: 'draft',
+      questions: [
+        { id: 'q_cargo', type: 'single', role: 'perfil', text: 'Cargo', variableKey: 'novo_cargo', options: [{ label: 'Gestão' }] },
+        { id: 'q_disp', type: 'availability', role: 'disponibilidade', text: 'Quando?', options: [] },
+      ],
+    };
+    expect(validateQuestionnaire(questionnaire, TRAIL_CONTENT_INDEX, {
+      lockedVariableKeys: { q_cargo: 'cargo_pretendido' },
+    })).toContain('A variável publicada “cargo_pretendido” não pode ser renomeada.');
+  });
+
   it('deduplicates mappings, adds prerequisites and raises content matched by more answers', () => {
     const trail = generateLearningTrail('u1', {
       q_formato: ['Prática Rápida (Mão na massa)'],

@@ -22,7 +22,7 @@ const DAYS: Array<{ value: Weekday; label: string }> = [
 const roleLabels = { essential: 'Essencial', deepening: 'Aprofundamento', extra: 'Extra' };
 
 export const TrailPreview: React.FC<TrailPreviewProps> = ({ questionnaire, index }) => {
-  const contentQuestions = questionnaire.questions.filter((question) => question.type !== 'availability');
+  const contentQuestions = questionnaire.questions.filter((question) => question.type !== 'availability' && question.type !== 'open');
   const [answers, setAnswers] = useState<Record<string, string[]>>(() => Object.fromEntries(
     contentQuestions.map((question) => [question.id, question.options[0] ? [question.options[0].label] : []]),
   ));

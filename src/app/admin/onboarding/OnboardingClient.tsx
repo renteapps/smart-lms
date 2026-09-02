@@ -24,6 +24,7 @@ import { ContentPickerModal } from '@/components/admin/onboarding/ContentPickerM
 import { TrailPreview } from '@/components/admin/onboarding/TrailPreview';
 import { VersionHistoryPanel } from '@/components/admin/onboarding/VersionHistoryPanel';
 import { PageHeader, StatusBadge } from '@/components/ui/editorial';
+import type { OnboardingVariableDefinition } from '@/lib/userVariables';
 
 const BACKUP_KEY = 'smartlms_onboarding_draft_backup_v1';
 
@@ -49,6 +50,18 @@ function createDefaultAvailabilityQuestion(): Question {
   };
 }
 
+function createEmptyOpenQuestion(): Question {
+  return {
+    id: `q_contexto_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+    type: 'open',
+    text: 'O que mais devemos saber sobre o seu momento, {{nome}}?',
+    role: 'contexto',
+    options: [],
+    placeholder: 'Conte em poucas palavras o que seria mais útil para você agora.',
+    maxLength: 700,
+  };
+}
+
 function readBackup(): Question[] | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -67,10 +80,11 @@ interface OnboardingClientProps {
   initialVersions: QuestionnaireVersion[];
   contentItems: ContentItem[];
   eligibleLessons: EligibleLesson[];
+  initialVariableDefinitions: OnboardingVariableDefinition[];
 }
 
 export function OnboardingClient({
-  initialDraft, initialPublished, initialVersions, contentItems, eligibleLessons,
+  initialDraft, initialPublished, initialVersions, contentItems, eligibleLessons, initialVariableDefinitions,
 }: OnboardingClientProps) {
   const index = useMemo(() => createContentIndex(contentItems, eligibleLessons), [contentItems, eligibleLessons]);
 
@@ -83,6 +97,7 @@ export function OnboardingClient({
     initialPublished ? { version: initialPublished.version } : null,
   );
   const [publishedQuestions, setPublishedQuestions] = useState<Question[]>(initialPublished?.questions ?? []);
+  const [variableDefinitions, setVariableDefinitions] = useState(initialVariableDefinitions);
   const [versions, setVersions] = useState<QuestionnaireVersion[]>(initialVersions);
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialQuestions));
 
@@ -115,9 +130,13 @@ export function OnboardingClient({
     () => ({ version: draftVersion ?? 0, status: 'draft', questions }),
     [draftVersion, questions],
   );
+  const lockedVariableKeys = useMemo(
+    () => Object.fromEntries(variableDefinitions.map((definition) => [definition.questionId, definition.key])),
+    [variableDefinitions],
+  );
   const validationErrors = useMemo(
-    () => validateQuestionnaire(questionnaireForValidation, index),
-    [questionnaireForValidation, index],
+    () => validateQuestionnaire(questionnaireForValidation, index, { lockedVariableKeys }),
+    [questionnaireForValidation, index, lockedVariableKeys],
   );
   const diagnostics = useMemo(
     () => analyzeQuestionnaire(questionnaireForValidation, index),
@@ -189,6 +208,15 @@ export function OnboardingClient({
     });
   };
 
+  const handleAddOpenQuestion = () => {
+    setQuestions((current) => {
+      const availabilityIdx = current.findIndex((q) => q.type === 'availability');
+      const next = [...current];
+      next.splice(availabilityIdx < 0 ? next.length : availabilityIdx, 0, createEmptyOpenQuestion());
+      return next;
+    });
+  };
+
   const handleDeleteQuestion = (id: string) => {
     setQuestions((current) => current.filter((q) => q.id !== id));
   };
@@ -201,6 +229,7 @@ export function OnboardingClient({
         ...current[idx],
         id: `q_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
         text: `${current[idx].text} (cópia)`,
+        variableKey: undefined,
       };
       const next = [...current];
       next.splice(idx + 1, 0, copy);
@@ -264,10 +293,28 @@ export function OnboardingClient({
         toast.error(res.message || 'Erro ao publicar.');
         return;
       }
+      const publishedVersion = res.data.version;
       setHasDraft(false);
       setDraftVersion(null);
-      setPublishedInfo({ version: res.data.version });
+      setPublishedInfo({ version: publishedVersion });
       setPublishedQuestions(questions);
+      setVariableDefinitions((current) => {
+        const activeKeys = new Set(questions.map((question) => question.variableKey).filter(Boolean));
+        const previous = current.map((definition) => ({ ...definition, active: activeKeys.has(definition.key) }));
+        questions.forEach((question) => {
+          if (!question.variableKey || previous.some((definition) => definition.key === question.variableKey)) return;
+          if (question.type === 'availability') return;
+          previous.push({
+            key: question.variableKey,
+            questionId: question.id,
+            questionText: question.text,
+            questionType: question.type,
+            active: true,
+            publishedVersion,
+          });
+        });
+        return previous;
+      });
       setSavedSnapshot(JSON.stringify(questions));
       setPublishNotes('');
       setIsPublishDialogOpen(false);
@@ -473,18 +520,32 @@ export function OnboardingClient({
                     onDuplicate={() => handleDuplicateQuestion(question.id)}
                     contentIndex={index}
                     issueCount={issuesByQuestionId.get(question.id) || 0}
+                    lockedVariableKey={lockedVariableKeys[question.id]}
+                    availableVariableKeys={questions
+                      .slice(0, questions.findIndex((item) => item.id === question.id))
+                      .map((item) => item.variableKey)
+                      .filter((key): key is string => Boolean(key))}
                   />
                 </Reorder.Item>
               ))}
             </Reorder.Group>
 
-            <button
-              onClick={handleAddQuestion}
-              className="flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed border-border/60 rounded-2xl text-muted font-bold hover:border-accent hover:text-accent hover:bg-accent/5 transition-all"
-            >
-              <Plus size={20} />
-              Adicionar Nova Pergunta
-            </button>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                onClick={handleAddQuestion}
+                className="flex items-center justify-center gap-2 py-4 border-2 border-dashed border-border/60 rounded-2xl text-muted font-bold hover:border-accent hover:text-accent hover:bg-accent/5 transition-all"
+              >
+                <Plus size={20} />
+                Pergunta de escolha
+              </button>
+              <button
+                onClick={handleAddOpenQuestion}
+                className="flex items-center justify-center gap-2 py-4 border-2 border-dashed border-primary/35 rounded-2xl text-primary font-bold hover:border-primary hover:bg-primary-pale/45 transition-all"
+              >
+                <Plus size={20} />
+                Pergunta aberta para IA
+              </button>
+            </div>
 
             {availabilityQuestion ? (
               <AvailabilityQuestionCard

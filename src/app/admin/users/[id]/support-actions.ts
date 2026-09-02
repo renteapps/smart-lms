@@ -62,6 +62,7 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Pro
  */
 async function generateAndSendAccessLink(opts: {
   kind: "magiclink" | "recovery";
+  userId: string;
   email: string;
   name?: string | null;
   next: string;
@@ -103,6 +104,7 @@ async function generateAndSendAccessLink(opts: {
     const result = await withTimeout(
       sendConfiguredEmail(admin, {
         to: opts.email,
+        userId: opts.userId,
         subject: "",
         template: opts.template,
         data: {
@@ -143,6 +145,7 @@ export async function resendAccessEmail(
 
   const { link, emailSent, error } = await generateAndSendAccessLink({
     kind: "magiclink",
+    userId,
     email,
     name,
     next: "/minha-trilha",
@@ -172,6 +175,7 @@ export async function resetUserPassword(
 
   const { link, emailSent, error } = await generateAndSendAccessLink({
     kind: "recovery",
+    userId,
     email,
     name,
     next: "/resetar-senha",

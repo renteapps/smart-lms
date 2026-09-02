@@ -99,6 +99,14 @@ describe('salesUrlHelper', () => {
       const resolved = resolveDynamicSalesUrl(template, context, { encodeQueryValues: false });
       expect(resolved).toBe('https://kiwify.com?email=user@teste.com&unknown=');
     });
+
+    it('should resolve onboarding variables and optional fallbacks', () => {
+      const resolved = resolveDynamicSalesUrl(
+        'https://checkout.com?role={{cargo_pretendido}}&level={{senioridade|nao_informada}}',
+        { userVariables: { cargo_pretendido: 'Gestão de Produto' } },
+      );
+      expect(resolved).toBe('https://checkout.com?role=Gest%C3%A3o%20de%20Produto&level=nao_informada');
+    });
   });
 
   describe('extractDynamicVariables', () => {

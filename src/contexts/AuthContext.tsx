@@ -12,6 +12,11 @@ import {
   PROFILE_STORAGE_KEY,
   type ProfilePreferences,
 } from "@/lib/profilePreferences";
+import {
+  nativeUserVariables,
+  USER_VARIABLES_UPDATED_EVENT,
+  type UserVariableMap,
+} from "@/lib/userVariables";
 
 /** Marca presença no máximo uma vez por sessão do browser (o evento SIGNED_IN
  *  também dispara a cada carga de página com sessão viva, não só no login). */
@@ -34,6 +39,8 @@ interface AuthContextType {
   profileRole: string | null;
   isManager: boolean;
   isCapabilitiesLoading: boolean;
+  userVariables: UserVariableMap;
+  isUserVariablesLoading: boolean;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
 }
@@ -47,7 +54,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profileRole, setProfileRole] = useState<string | null>(null);
   const [isManager, setIsManager] = useState(false);
   const [isCapabilitiesLoading, setIsCapabilitiesLoading] = useState(true);
-  const [isPending, startTransition] = useTransition();
+  const [userVariables, setUserVariables] = useState<UserVariableMap>({});
+  const [isUserVariablesLoading, setIsUserVariablesLoading] = useState(true);
+  const [, startTransition] = useTransition();
   const router = useRouter();
   const supabase = createClient();
 
@@ -65,9 +74,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(initialSession);
           setUser(initialSession?.user ?? null);
           if (initialSession?.user) {
+            // syncUserProfile is declared below to keep the provider's state setup together.
+            // eslint-disable-next-line react-hooks/immutability
             syncUserProfile(initialSession.user);
           } else {
             setIsCapabilitiesLoading(false);
+            setIsUserVariablesLoading(false);
           }
         }
       } catch (err) {
@@ -96,6 +108,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             router.refresh();
           });
         } else if (event === "SIGNED_OUT") {
+          setUserVariables({});
+          setIsUserVariablesLoading(false);
           startTransition(() => {
             router.refresh();
           });
@@ -109,8 +123,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [router, supabase]);
 
+  useEffect(() => {
+    const refreshVariables = () => {
+      if (user) syncUserProfile(user);
+    };
+    window.addEventListener(USER_VARIABLES_UPDATED_EVENT, refreshVariables);
+    return () => window.removeEventListener(USER_VARIABLES_UPDATED_EVENT, refreshVariables);
+  }, [user]);
+
   async function syncUserProfile(currentUser: User) {
     setIsCapabilitiesLoading(true);
+    setIsUserVariablesLoading(true);
     try {
       const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
       let profile: ProfilePreferences = defaultProfile;
@@ -125,7 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Tenta buscar dados mais recentes da tabela profiles
       let dbProfile: Record<string, unknown> | null = null;
       try {
-        const [{ data }, { data: memberships }] = await Promise.all([
+        const [{ data }, { data: memberships }, { data: onboardingAnswers }] = await Promise.all([
           supabase
             .from("profiles")
             .select("full_name, username, avatar_url, email, phone, birth_date, gender, career_role, role, company, country, state, city, bio, weekly_goal, lesson_reminders, email_digest, achievement_alerts")
@@ -138,8 +161,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .in("role", ["owner", "admin", "manager"])
             .neq("status", "disabled")
             .limit(1),
+          supabase
+            .from("student_onboarding_answers")
+            .select("variable_key, answer")
+            .eq("user_id", currentUser.id)
+            .not("variable_key", "is", null),
         ]);
         dbProfile = (data as Record<string, unknown>) || null;
+        const native = nativeUserVariables({
+          fullName: (dbProfile?.full_name as string) || currentUser.user_metadata?.full_name || currentUser.user_metadata?.name,
+          email: (dbProfile?.email as string) || currentUser.email,
+        });
+        const custom = Object.fromEntries(
+          (onboardingAnswers ?? []).flatMap((row) => (
+            typeof row.variable_key === "string" && typeof row.answer === "string"
+              ? [[row.variable_key, row.answer] as const]
+              : []
+          )),
+        );
+        setUserVariables({ ...native, ...custom, "contact.id": currentUser.id });
         setProfileRole(
           (dbProfile?.role as string) ||
           (currentUser.app_metadata?.role as string) ||
@@ -195,6 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Ignora erro em ambientes sem localStorage
     } finally {
       setIsCapabilitiesLoading(false);
+      setIsUserVariablesLoading(false);
     }
   }
 
@@ -220,11 +261,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfileRole(null);
       setIsManager(false);
       setIsCapabilitiesLoading(false);
+      setUserVariables({});
+      setIsUserVariablesLoading(false);
       toast.success("Sessão encerrada com sucesso.");
       router.push("/acessar");
       router.refresh();
-    } catch (error: any) {
-      toast.danger("Erro ao sair da conta", { description: error?.message });
+    } catch (error) {
+      toast.danger("Erro ao sair da conta", {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -240,6 +285,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profileRole,
         isManager,
         isCapabilitiesLoading,
+        userVariables,
+        isUserVariablesLoading,
         signOut,
         refreshSession,
       }}

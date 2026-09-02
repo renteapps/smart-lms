@@ -10,6 +10,8 @@ import { AvailabilityMode, LearningTrail, Questionnaire, StudyAvailability, Week
 import { OnboardingIntro } from '@/components/onboarding/OnboardingIntro';
 import { getOnboardingData, generateTrail, trackTrailEvent } from '@/app/actions/trail';
 import { clampSessionMinutes, weeklyMinutes } from '@/lib/matching';
+import { openAnswerMaxLength, personalizeOnboardingTemplate } from '@/lib/onboarding';
+import { USER_VARIABLES_UPDATED_EVENT, type UserVariableMap } from '@/lib/userVariables';
 import { cn } from '@/lib/utils';
 
 const PhysicsKeywordSelector = dynamic(
@@ -35,6 +37,7 @@ export default function OnboardingPage() {
   const [direction, setDirection] = useState(1);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [questionnaire, setQuestionnaire] = useState<Questionnaire | null>(null);
+  const [variables, setVariables] = useState<UserVariableMap>({});
   const [availability, setAvailability] = useState<StudyAvailability>({ weekdays: [1, 3, 5], minutesPerSession: 30, mode: 'uniform' });
   const [existingTrail, setExistingTrail] = useState<LearningTrail | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -42,9 +45,13 @@ export default function OnboardingPage() {
   const questions = questionnaire?.questions || [];
   const question = questions[currentStep];
   const currentAnswers = question ? answers[question.id] || [] : [];
+  const currentOpenAnswer = currentAnswers[0] || '';
+  const questionText = question && questionnaire
+    ? personalizeOnboardingTemplate(question.text, variables, questionnaire, answers)
+    : '';
   const progress = questions.length ? ((currentStep + 1) / questions.length) * 100 : 0;
-  /** Meio minuto por pergunta é o ritmo real de quem só marca opções. */
-  const estimatedMinutes = Math.max(2, Math.ceil(questions.length / 2));
+  /** Perguntas abertas pedem um pouco mais de tempo do que uma escolha em card. */
+  const estimatedMinutes = Math.max(2, Math.ceil((questions.length + questions.filter((item) => item.type === 'open').length) / 2));
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
@@ -56,6 +63,7 @@ export default function OnboardingPage() {
         const res = await getOnboardingData();
         if (res.success && res.questionnaire) {
           setQuestionnaire(res.questionnaire);
+          setVariables(res.variables || {});
         }
         if (res.success && res.existing) {
           setExistingTrail(res.existing);
@@ -75,12 +83,12 @@ export default function OnboardingPage() {
     if (!hasStarted || !question?.text) return;
     trackTrailEvent('onboarding_step_viewed', {
       step: currentStep + 1,
-      label: question.text,
+      label: questionText,
     }).catch(() => {});
-  }, [hasStarted, currentStep, question?.text]);
+  }, [hasStarted, currentStep, question?.text, questionText]);
 
   const handleToggleSelect = (optionLabel: string) => {
-    if (question.type === 'availability') return;
+    if (question.type === 'availability' || question.type === 'open') return;
     const isSingle = question.type === 'single';
 
     setAnswers((current) => {
@@ -94,6 +102,12 @@ export default function OnboardingPage() {
           : [...selected, optionLabel],
       };
     });
+  };
+
+  const handleOpenAnswer = (value: string) => {
+    if (!question || question.type !== 'open') return;
+    const maxLength = openAnswerMaxLength(question);
+    setAnswers((current) => ({ ...current, [question.id]: [value.slice(0, maxLength)] }));
   };
 
   const toggleWeekday = (weekday: Weekday) => {
@@ -138,7 +152,9 @@ export default function OnboardingPage() {
     setIsGenerating(true);
     const waitPromise = new Promise(resolve => setTimeout(resolve, 2500));
     try {
-      await generateTrail(answers, availability);
+      const result = await generateTrail(answers, availability);
+      if (!result.success) throw new Error(result.message || 'Não foi possível criar sua trilha.');
+      window.dispatchEvent(new Event(USER_VARIABLES_UPDATED_EVENT));
       await waitPromise;
       router.push('/minha-trilha');
     } catch (e) {
@@ -261,9 +277,15 @@ export default function OnboardingPage() {
           >
             <div className="border-b border-border/70 px-5 py-7 text-center sm:px-10 sm:py-9">
               <p className="eyebrow">Pergunta {currentStep + 1}</p>
-              <h1 className="mx-auto mt-3 max-w-3xl text-3xl font-extrabold leading-[1.08] tracking-[-0.045em] text-ink sm:text-4xl md:text-[44px]">{question.text}</h1>
+              <h1 className="mx-auto mt-3 max-w-3xl text-3xl font-extrabold leading-[1.08] tracking-[-0.045em] text-ink sm:text-4xl md:text-[44px]">{questionText}</h1>
               <p className="mt-4 text-sm font-medium text-text-mute">
-                {question.type === 'availability' ? 'Monte uma rotina realista — você poderá ajustá-la quando precisar.' : question.type === 'multiple' ? 'Você pode selecionar mais de uma opção.' : 'Escolha a opção que melhor representa você agora.'}
+                {question.type === 'availability'
+                  ? 'Monte uma rotina realista — você poderá ajustá-la quando precisar.'
+                  : question.type === 'open'
+                    ? 'Sua resposta fica privada e nos ajuda a tornar suas próximas interações mais relevantes.'
+                    : question.type === 'multiple'
+                      ? 'Você pode selecionar mais de uma opção.'
+                      : 'Escolha a opção que melhor representa você agora.'}
               </p>
             </div>
 
@@ -364,8 +386,46 @@ export default function OnboardingPage() {
                     </div>
                   </fieldset>
                 </div>
+              ) : question.type === 'open' ? (
+                <div className="mx-auto max-w-3xl">
+                  <label className="sr-only" htmlFor={`onboarding-answer-${question.id}`}>Sua resposta</label>
+                  <textarea
+                    id={`onboarding-answer-${question.id}`}
+                    value={currentOpenAnswer}
+                    onChange={(event) => handleOpenAnswer(event.target.value)}
+                    maxLength={openAnswerMaxLength(question)}
+                    rows={7}
+                    autoFocus
+                    placeholder={questionnaire
+                      ? personalizeOnboardingTemplate(question.placeholder || 'Escreva com suas próprias palavras…', variables, questionnaire, answers)
+                      : question.placeholder || 'Escreva com suas próprias palavras…'}
+                    className="min-h-48 w-full resize-y rounded-[12px] border border-border bg-surface px-5 py-4 text-base leading-7 text-ink outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/15 placeholder:text-text-mute"
+                  />
+                  <div className="mt-3 flex items-center justify-between gap-4 text-xs font-semibold text-text-mute">
+                    <span>Quanto mais contexto você compartilhar, mais pessoais poderão ser as orientações.</span>
+                    <span className="shrink-0">{currentOpenAnswer.length}/{openAnswerMaxLength(question)}</span>
+                  </div>
+                </div>
               ) : question.visualType === 'physics' ? (
-                <PhysicsKeywordSelector options={question.options} selectedLabels={currentAnswers} onToggleSelect={handleToggleSelect} />
+                <PhysicsKeywordSelector
+                  options={question.options.map((option) => ({
+                    ...option,
+                    label: questionnaire ? personalizeOnboardingTemplate(option.label, variables, questionnaire, answers) : option.label,
+                    description: option.description && questionnaire
+                      ? personalizeOnboardingTemplate(option.description, variables, questionnaire, answers)
+                      : option.description,
+                  }))}
+                  selectedLabels={currentAnswers.map((label) => {
+                    const option = question.options.find((item) => item.label === label);
+                    return option && questionnaire ? personalizeOnboardingTemplate(option.label, variables, questionnaire, answers) : label;
+                  })}
+                  onToggleSelect={(displayLabel) => {
+                    const original = question.options.find((option) => (
+                      questionnaire ? personalizeOnboardingTemplate(option.label, variables, questionnaire, answers) : option.label
+                    ) === displayLabel);
+                    if (original) handleToggleSelect(original.label);
+                  }}
+                />
               ) : question.visualType === 'cards' ? (
                 <div className="grid gap-4 sm:grid-cols-2">
                   {question.options.map((option, index) => {
@@ -390,10 +450,13 @@ export default function OnboardingPage() {
                       >
                         <span className={cn('absolute inset-y-3 left-0 w-1 rounded-r-full transition-colors', selected ? 'bg-primary' : 'bg-transparent group-hover:bg-primary/25')} />
                         <span className="flex w-full items-start justify-between gap-4">
-                          <span className="text-xs font-extrabold tracking-[0.12em] text-text-mute">{String(index + 1).padStart(2, '0')}</span>
+                          <span className="grid h-12 w-12 place-items-center rounded-[10px] bg-canvas-soft text-2xl shadow-sm">{option.emoji || String(index + 1).padStart(2, '0')}</span>
                           <span className={cn('grid h-8 w-8 place-items-center rounded-[8px] border transition-colors', selected ? 'border-primary bg-primary text-on-primary' : 'border-border bg-canvas-soft text-transparent')}><Check className="h-4 w-4 stroke-[3]" /></span>
                         </span>
-                        <span className={cn('max-w-[22ch] font-display text-xl font-extrabold leading-tight tracking-[-0.025em] sm:text-2xl', selected ? 'text-primary-active' : 'text-ink')}>{option.label}</span>
+                        <span className="space-y-2">
+                          <span className={cn('block max-w-[22ch] font-display text-xl font-extrabold leading-tight tracking-[-0.025em] sm:text-2xl', selected ? 'text-primary-active' : 'text-ink')}>{questionnaire ? personalizeOnboardingTemplate(option.label, variables, questionnaire, answers) : option.label}</span>
+                          {option.description && <span className="block max-w-sm text-sm leading-6 text-text-soft">{questionnaire ? personalizeOnboardingTemplate(option.description, variables, questionnaire, answers) : option.description}</span>}
+                        </span>
                       </motion.button>
                     );
                   })}
@@ -418,7 +481,7 @@ export default function OnboardingPage() {
                         )}
                       >
                         <span className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-[8px] border text-xs font-extrabold', selected ? 'border-primary bg-primary text-on-primary' : 'border-border bg-canvas-soft text-text-mute')}>{selected ? <Check className="h-4 w-4 stroke-[3]" /> : String(index + 1).padStart(2, '0')}</span>
-                        <span className={cn('flex-1 text-base font-bold sm:text-lg', selected ? 'text-primary-active' : 'text-ink')}>{option.label}</span>
+                        <span className={cn('flex-1 text-base font-bold sm:text-lg', selected ? 'text-primary-active' : 'text-ink')}>{questionnaire ? personalizeOnboardingTemplate(option.label, variables, questionnaire, answers) : option.label}</span>
                         <ArrowRight02Icon size={16} className={cn('transition-[opacity,transform]', selected ? 'translate-x-0 text-primary opacity-100' : '-translate-x-1 text-text-mute opacity-0 group-hover:translate-x-0 group-hover:opacity-100')} />
                       </motion.button>
                     );
@@ -432,13 +495,15 @@ export default function OnboardingPage() {
               <p className="order-first w-full text-center text-xs font-semibold text-text-mute sm:order-none sm:w-auto">
                 {question.type === 'availability'
                   ? availability.weekdays.length > 0 ? `${availability.weekdays.length} ${availability.weekdays.length === 1 ? 'dia escolhido' : 'dias escolhidos'} · ${weeklyMinutes(availability)} min por semana` : 'Escolha ao menos um dia'
+                  : question.type === 'open'
+                    ? currentOpenAnswer.trim().length > 0 ? `${currentOpenAnswer.trim().length} caracteres escritos` : 'Escreva uma resposta para continuar'
                   : currentAnswers.length > 0 ? `${currentAnswers.length} ${currentAnswers.length === 1 ? 'resposta selecionada' : 'respostas selecionadas'}` : 'Selecione uma resposta para continuar'}
               </p>
               <motion.button
                 whileHover={reduceMotion ? undefined : { y: -1 }}
                 whileTap={reduceMotion ? undefined : { scale: 0.985 }}
                 onClick={handleNext}
-                disabled={question.type === 'availability' ? availability.weekdays.length === 0 || availability.minutesPerSession < 10 : currentAnswers.length === 0}
+                disabled={question.type === 'availability' ? availability.weekdays.length === 0 || availability.minutesPerSession < 10 : question.type === 'open' ? currentOpenAnswer.trim().length === 0 : currentAnswers.length === 0}
                 className="inline-flex min-h-12 items-center gap-2 rounded-[9px] bg-primary px-6 font-bold text-on-primary shadow-md hover:bg-primary-active disabled:cursor-not-allowed disabled:opacity-35"
               >
                 {currentStep === questions.length - 1 ? 'Montar trilha' : 'Continuar'} <ArrowRight02Icon size={16} />

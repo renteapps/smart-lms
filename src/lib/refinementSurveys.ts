@@ -131,7 +131,7 @@ export function pickRecalibration({
    * ontem não insiste hoje de novo.
    */
   for (const question of questions) {
-    if (question.type === 'availability') continue;
+    if (question.type === 'availability' || question.type === 'open') continue;
     if ((trail.answers?.[question.id]?.length ?? 0) > 0) continue;
 
     const { due, reason, isNew } = surveyIsDue(question, trail, signals, refinement, now);
@@ -166,7 +166,7 @@ export function pickRecalibration({
 
   for (const question of ordered) {
     // A disponibilidade tem tela própria em /minha-trilha ("Ajustar rotina").
-    if (question.type === 'availability') continue;
+    if (question.type === 'availability' || question.type === 'open') continue;
 
     const { due, reason, isNew } = surveyIsDue(question, trail, signals, refinement, now);
     if (due) {

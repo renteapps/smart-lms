@@ -51,7 +51,11 @@ export type ContentMapping = {
 };
 
 export type QuestionOption = {
+  /** Título exibido da resposta e valor usado pelo motor de trilhas. */
   label: string;
+  /** Elementos visuais opcionais usados quando a pergunta é exibida como card. */
+  emoji?: string;
+  description?: string;
   tags?: string[];
   weight?: number;
   contentMappings?: ContentMapping[];
@@ -67,11 +71,16 @@ export type AvailabilityQuestionConfig = {
 
 export type Question = {
   id: string;
-  type: 'single' | 'multiple' | 'availability';
+  type: 'single' | 'multiple' | 'open' | 'availability';
   text: string;
-  role: 'perfil' | 'problema' | 'interesse' | 'nivel' | 'restricao' | 'disponibilidade';
+  /** Chave estável usada em templates, sem as chaves: `cargo_pretendido`. */
+  variableKey?: string;
+  role: 'perfil' | 'problema' | 'interesse' | 'nivel' | 'restricao' | 'contexto' | 'disponibilidade';
   visualType?: 'list' | 'physics' | 'cards';
   options: QuestionOption[];
+  /** Configuração exclusiva de perguntas abertas; não influencia a trilha. */
+  placeholder?: string;
+  maxLength?: number;
   availabilityConfig?: AvailabilityQuestionConfig;
 };
 

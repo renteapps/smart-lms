@@ -40,6 +40,7 @@ import {
   type DynamicVariableCategory,
 } from "@/lib/salesUrlHelper";
 import { saveCourseSales } from "@/app/actions/admin/catalog";
+import { UserVariablePicker } from "@/components/admin/UserVariablePicker";
 import type { Course } from "@/types/course";
 
 export function CourseSalesForm({ course }: { course: Course }) {
@@ -492,6 +493,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
                   );
                 })}
               </div>
+              <UserVariablePicker onSelect={insertVariableIntoSalesUrl} compact />
             </div>
 
             {/* Página de Vendas Institucional (Opcional) */}

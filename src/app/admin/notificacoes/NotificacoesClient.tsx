@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
+import { UserVariablePicker } from "@/components/admin/UserVariablePicker";
 import { AutomationsTab } from "./AutomationsTab";
 import { CustomEmailTemplate, EmailTemplateType } from "@/types/resend";
 import {
@@ -229,42 +230,11 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
       });
 
       setCampaigns((prev) => [newCampaign, ...prev]);
-
-      // 2. Se o canal de e-mail estiver selecionado, dispara via Resend
-      if (channels.includes("email")) {
-        const recipient =
-          targetAudience === "user" && targetId.includes("@")
-            ? targetId
-            : "alunos@smartlms.com";
-
-        const res = await fetch("/api/email/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: recipient,
-            subject: emailSubject || `🔔 ${title}`,
-            template: emailTemplate,
-            data: {
-              notificationTitle: emailTitle || title,
-              notificationMessage: emailBody || message,
-              previewText: emailPreviewText || title,
-              actionUrl: emailButtonUrl || "https://smartlms.com/cursos",
-              actionText: emailButtonText || "Acessar Plataforma",
-              nome: "Aluno(a)",
-            },
-          }),
-        });
-
-        const data = await res.json();
-        if (data.success) {
-          toast.success(
-            data.simulated
-              ? "Notificação criada e e-mail simulado no Resend (Sandbox)!"
-              : "Notificação e e-mail disparados via Resend com sucesso!"
-          );
-        } else {
-          toast.warning(data.error || "Notificação salva, mas houve aviso no envio de e-mail.");
-        }
+      const delivery = newCampaign.emailDelivery;
+      if (channels.includes("email") && delivery?.failed) {
+        toast.warning(`Campanha criada: ${delivery.sent} e-mails enviados e ${delivery.failed} falharam.`);
+      } else if (channels.includes("email")) {
+        toast.success(`Campanha personalizada criada e ${delivery?.sent || 0} e-mails processados.`);
       } else {
         toast.success("Notificação enviada com sucesso!");
       }
@@ -688,6 +658,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                           </button>
                         ))}
                       </div>
+                      <UserVariablePicker onSelect={handleInsertTag} compact />
                     </div>
                   </div>
                 )}

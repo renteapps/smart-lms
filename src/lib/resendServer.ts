@@ -7,6 +7,7 @@ import { DEFAULT_RESEND_CONFIG, sendEmail } from "@/lib/resendService";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServiceRoleKey } from "@/lib/supabase/env";
 import type { EmailLog, EmailSendPayload, EmailSendResponse, ResendConfig } from "@/types/resend";
+import { getUserTemplateVariables } from "@/lib/data/userVariables";
 
 type IntegrationRow = {
   enabled: boolean | null;
@@ -94,18 +95,30 @@ export async function sendConfiguredEmail(
   configOverride?: Partial<ResendConfig>,
 ): Promise<EmailSendResponse> {
   const config = { ...(await getResendServerConfig(db)), ...(configOverride ?? {}) };
-  let resolvedPayload = payload;
+  const userVariables = payload.userId ? await getUserTemplateVariables(db, payload.userId) : {};
+  const templateData = { ...payload.data, userVariables, appName: config.fromName };
+  let resolvedPayload: EmailSendPayload = { ...payload, data: templateData };
 
   if (payload.template && payload.template !== "test") {
     const template = await getEmailTemplate(db, payload.template);
     if (template) {
-      const templateData = { ...payload.data, appName: config.fromName };
       resolvedPayload = {
         ...payload,
-        subject: payload.subject || interpolateVariables(template.subject, templateData),
-        html: payload.html || interpolateVariables(template.html, templateData),
+        data: templateData,
+        subject: interpolateVariables(payload.subject || template.subject, templateData, { diagnosticContext: "email-subject" }),
+        html: payload.html
+          ? interpolateVariables(payload.html, templateData, { html: true, diagnosticContext: "email-html" })
+          : interpolateVariables(template.html, templateData, { html: true, diagnosticContext: "email-html" }),
       };
     }
+  } else {
+    resolvedPayload = {
+      ...payload,
+      data: templateData,
+      subject: interpolateVariables(payload.subject || '', templateData, { diagnosticContext: "email-subject" }),
+      html: payload.html ? interpolateVariables(payload.html, templateData, { html: true, diagnosticContext: "email-html" }) : payload.html,
+      text: payload.text ? interpolateVariables(payload.text, templateData, { diagnosticContext: "email-text" }) : payload.text,
+    };
   }
 
   const result = await sendEmail(resolvedPayload, config);

@@ -8,6 +8,7 @@ import { generateLearningTrail, replanLearningTrail, restoreLegacyOverdueMarkers
 import { getCachedContentIndex, getContentIndex } from "@/lib/data/content";
 import { getPublishedQuestionnaire, saveLearningTrail as persistTrail } from "@/lib/data/trail";
 import * as trailData from "@/lib/data/trail";
+import { getUserTemplateVariables } from "@/lib/data/userVariables";
 import type { ActionResult } from "./progress";
 
 /**
@@ -68,7 +69,10 @@ export async function generateTrail(
       catalogStamp: catalogStamp ?? undefined,
     };
 
-    await persistTrail(supabase, user.id, trail);
+    await Promise.all([
+      persistTrail(supabase, user.id, trail),
+      trailData.saveOnboardingAnswers(supabase, user.id, questionnaire, answers),
+    ]);
     await trailData.recordTrailEvent(supabase, user.id, "plan_generated", {
       items: trail.items.length,
     });
@@ -361,16 +365,24 @@ export async function setTrailItemCompletion(
 export async function getOnboardingData() {
   try {
     const { supabase, user } = await requireUser();
-    const [questionnaire, existing] = await Promise.all([
+    const [questionnaire, existing, profile, variables] = await Promise.all([
       trailData.getPublishedQuestionnaire(supabase),
       trailData.getLearningTrail(supabase, user.id),
+      supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+      getUserTemplateVariables(supabase, user.id),
     ]);
     
     if (!questionnaire) {
       return { success: false, message: "Nenhum questionário publicado." };
     }
     
-    return { success: true, questionnaire, existing };
+    return {
+      success: true,
+      questionnaire,
+      existing,
+      userName: profile.data?.full_name ?? user.user_metadata?.full_name ?? user.user_metadata?.name ?? null,
+      variables,
+    };
   } catch (error) {
     return { success: false, message: (error as Error).message };
   }

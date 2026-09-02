@@ -15,7 +15,7 @@ import { sendConfiguredEmail } from "@/lib/resendServer";
  */
 export async function sendPurchaseWelcomeEmail(
   db: DB,
-  input: { email: string; name?: string; productName: string },
+  input: { userId?: string; email: string; name?: string; productName: string },
 ): Promise<boolean> {
   try {
     const { data, error } = await db.auth.admin.generateLink({
@@ -33,6 +33,7 @@ export async function sendPurchaseWelcomeEmail(
 
     const result = await sendConfiguredEmail(db, {
       to: input.email,
+      userId: input.userId,
       subject: "",
       template: "welcome",
       data: {

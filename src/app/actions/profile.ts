@@ -154,6 +154,7 @@ export async function sendProfileTestResultEmail(result: ProfileTestResult): Pro
     
     const emailResult = await sendPlatformEmail({
       to: user.email,
+      userId: user.id,
       subject: `Seu resultado do teste: ${result.testTitle}`,
       html: htmlContent,
     });

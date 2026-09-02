@@ -87,6 +87,7 @@ async function processEvent(db: DB, event: NormalizedBillingEvent, authoritative
     });
     if (user.created) {
       await sendPurchaseWelcomeEmail(db, {
+        userId: user.userId,
         email: user.email,
         name: event.buyer.name,
         productName: target.kind === "plan" ? target.planName : target.courseTitle,

@@ -1,4 +1,5 @@
 import { CustomEmailTemplate, EmailTemplateType, EmailTemplateVariable } from "@/types/resend";
+import { escapeHtml, interpolateUserTemplate, warnMissingUserVariables, type UserVariableMap } from "@/lib/userVariables";
 
 export interface EmailTemplateData {
   name?: string;
@@ -32,6 +33,7 @@ export interface EmailTemplateData {
   dias_inativo?: number;
   appName?: string;
   nome_plataforma?: string;
+  userVariables?: UserVariableMap;
   [key: string]: unknown;
 }
 
@@ -603,7 +605,7 @@ export function getDefaultTemplateDefinitions(): CustomEmailTemplate[] {
 }
 
 // In-memory cache for server-side
-let serverCustomTemplates: Record<string, CustomEmailTemplate> = {};
+const serverCustomTemplates: Record<string, CustomEmailTemplate> = {};
 
 export function getCustomTemplates(): Record<string, CustomEmailTemplate> {
   const defaults = getDefaultTemplateDefinitions();
@@ -684,7 +686,11 @@ export function resetCustomTemplate(type: EmailTemplateType): CustomEmailTemplat
  * Universal tag / variable interpolator.
  * Replaces {{tag}} or {{ tag }} with data values.
  */
-export function interpolateVariables(template: string, data: EmailTemplateData = {}): string {
+export function interpolateVariables(
+  template: string,
+  data: EmailTemplateData = {},
+  options: { html?: boolean; diagnosticContext?: string } = {},
+): string {
   if (!template) return "";
 
   const name = data.name || data.nome || "Estudante";
@@ -708,6 +714,7 @@ export function interpolateVariables(template: string, data: EmailTemplateData =
   const actionText = data.actionText || data.texto_acao || "Acessar Plataforma";
 
   const map: Record<string, string> = {
+    ...(data.userVariables || {}),
     nome: name,
     name: name,
     email: email,
@@ -753,9 +760,12 @@ export function interpolateVariables(template: string, data: EmailTemplateData =
     }
   });
 
-  return template.replace(/\{\{\s*([a-zA-Z0-9_-]+)\s*\}\}/g, (match, key) => {
-    return map[key] !== undefined ? map[key] : match;
-  });
+  const customKeys = new Set(Object.keys(data.userVariables || {}));
+  const result = interpolateUserTemplate(template, map, (value, key) => (
+    options.html && customKeys.has(key) ? escapeHtml(value) : value
+  ));
+  if (options.diagnosticContext) warnMissingUserVariables(options.diagnosticContext, result.missingKeys);
+  return result.value;
 }
 
 export function generateEmailHtml(
@@ -767,7 +777,7 @@ export function generateEmailHtml(
 
   const subject = interpolateVariables(template.subject, data);
   const previewText = interpolateVariables(template.previewText, data);
-  const html = interpolateVariables(template.html, data);
+  const html = interpolateVariables(template.html, data, { html: true });
 
   return { subject, html, previewText };
 }

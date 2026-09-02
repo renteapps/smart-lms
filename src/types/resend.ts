@@ -59,6 +59,8 @@ export interface ResendConfig {
 
 export interface EmailSendPayload {
   to: string | string[];
+  /** Usuário cujo perfil deve resolver as variáveis personalizadas. */
+  userId?: string;
   subject: string;
   template?: EmailTemplateType;
   html?: string;

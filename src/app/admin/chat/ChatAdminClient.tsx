@@ -53,6 +53,7 @@ import {
 import { AssistantAvatar, ASSISTANT_ICON_LABELS, getContrastText } from "@/components/platform-assistant/AssistantAvatar";
 import { AgentMarkdown } from "@/components/agentes/AgentMarkdown";
 import { ImageUpload } from "@/components/ui/ImageUpload";
+import { UserVariablePicker } from "@/components/admin/UserVariablePicker";
 import type { OpenRouterModel } from "@/types/openrouter";
 import {
   ASSISTANT_ICON_KEYS,
@@ -720,6 +721,7 @@ export function ChatAdminClient({
                 <TextArea rows={8} maxLength={20_000} className="resize-y font-mono text-sm" />
                 <p className="text-right text-xs text-muted">{draft.systemPrompt.length.toLocaleString("pt-BR")}/20.000</p>
               </TextField>
+              <div className="mt-3"><UserVariablePicker /></div>
             </Card.Content>
           </Card>
 

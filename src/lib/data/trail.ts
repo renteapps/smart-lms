@@ -1,4 +1,7 @@
 import type { LearningTrail, Questionnaire, QuestionnaireVersion } from "@/types/trilha";
+import { collectPersistedOnboardingAnswers, formatOpenOnboardingAnswersForAi, type OpenOnboardingAnswer } from "@/lib/onboarding";
+import { formatUserVariableValues, interpolateUserText, normalizeVariableKey } from "@/lib/userVariables";
+import { getUserTemplateVariables } from "./userVariables";
 import type {
   TrailAnalyticsData,
   TrailAnalyticsEvent,
@@ -99,6 +102,130 @@ export async function saveLearningTrail(db: DB, userId: string, trail: LearningT
   );
 
   if (error) throw new Error(error.message);
+}
+
+/** Resposta textual do onboarding, separada da trilha para uso privado pelas IAs. */
+export type StoredOpenOnboardingAnswer = OpenOnboardingAnswer & {
+  updatedAt: string;
+};
+
+/**
+ * Atualiza as respostas abertas da versão atual sem apagar perguntas antigas
+ * que saíram do questionário. Assim, a equipe não perde contexto que o aluno
+ * já havia compartilhado, mas uma resposta em branco remove a resposta atual
+ * daquela pergunta quando ela é refeita.
+ */
+export async function saveOnboardingAnswers(
+  db: DB,
+  userId: string,
+  questionnaire: Questionnaire,
+  answers: Record<string, string[]>,
+): Promise<void> {
+  const persistedQuestions = questionnaire.questions.filter(
+    (question) => question.type === "open" || (question.type !== "availability" && Boolean(question.variableKey?.trim())),
+  );
+  if (!persistedQuestions.length) return;
+
+  const variableMap = await getUserTemplateVariables(db, userId);
+  const displayAnswers: Record<string, string[]> = {};
+  questionnaire.questions.forEach((question) => {
+    const rawValues = Array.isArray(answers[question.id]) ? answers[question.id] : [];
+    const values = question.type === "open"
+      ? rawValues
+      : rawValues.map((rawValue) => {
+          const option = question.options.find((item) => item.label === rawValue);
+          return interpolateUserText(option?.label ?? rawValue, variableMap).value;
+        });
+    displayAnswers[question.id] = values;
+    const key = normalizeVariableKey(question.variableKey);
+    const display = formatUserVariableValues(values);
+    if (key && display) variableMap[key] = display;
+  });
+
+  const collected = collectPersistedOnboardingAnswers(questionnaire, displayAnswers);
+  const answeredIds = new Set(collected.map((answer) => answer.questionId));
+  const unansweredIds = persistedQuestions
+    .map((question) => question.id)
+    .filter((questionId) => !answeredIds.has(questionId));
+  const now = new Date().toISOString();
+
+  const writes: Array<Promise<void>> = [];
+  if (collected.length) {
+    writes.push((async () => {
+      const { error } = await db.from("student_onboarding_answers").upsert(
+        collected.map((answer) => ({
+          user_id: userId,
+          question_id: answer.questionId,
+          question_text: answer.questionText,
+          variable_key: answer.variableKey,
+          question_type: answer.questionType,
+          answer_values: answer.values,
+          answer: answer.answer,
+          questionnaire_version: questionnaire.version,
+          answered_at: now,
+          updated_at: now,
+        })),
+        { onConflict: "user_id,question_id" },
+      );
+      if (error) throw new Error(error.message);
+    })());
+  }
+
+  if (unansweredIds.length) {
+    writes.push((async () => {
+      const { error } = await db
+        .from("student_onboarding_answers")
+        .delete()
+        .eq("user_id", userId)
+        .in("question_id", unansweredIds);
+      if (error) throw new Error(error.message);
+    })());
+  }
+
+  await Promise.all(writes);
+}
+
+export async function getOpenOnboardingAnswers(
+  db: DB,
+  userId: string,
+): Promise<StoredOpenOnboardingAnswer[]> {
+  const { data, error } = await db
+    .from("student_onboarding_answers")
+    .select("question_id, question_text, answer, updated_at")
+    .eq("user_id", userId)
+    .eq("question_type", "open")
+    .order("updated_at", { ascending: false });
+
+  logQueryError("getOpenOnboardingAnswers", error);
+  return (data ?? []).flatMap((row: Row) => {
+    if (typeof row.question_id !== "string" || typeof row.question_text !== "string" || typeof row.answer !== "string") return [];
+    return [{
+      questionId: row.question_id,
+      questionText: row.question_text,
+      answer: row.answer,
+      updatedAt: typeof row.updated_at === "string" ? row.updated_at : "",
+    }];
+  });
+}
+
+/** Contexto delimitado e com tamanho controlado para agentes e Assistente IA. */
+export async function getOpenOnboardingAnswersAiContext(db: DB, userId: string): Promise<string> {
+  const { data, error } = await db
+    .from("student_onboarding_answers")
+    .select("question_id, question_text, answer, updated_at")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false });
+  logQueryError("getOpenOnboardingAnswersAiContext", error);
+  const answers: StoredOpenOnboardingAnswer[] = (data ?? []).flatMap((row: Row) => {
+    if (typeof row.question_id !== "string" || typeof row.question_text !== "string" || typeof row.answer !== "string") return [];
+    return [{
+      questionId: row.question_id,
+      questionText: row.question_text,
+      answer: row.answer,
+      updatedAt: typeof row.updated_at === "string" ? row.updated_at : "",
+    }];
+  });
+  return formatOpenOnboardingAnswersForAi(answers);
 }
 
 /**

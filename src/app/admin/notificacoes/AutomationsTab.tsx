@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge } from "@/components/ui/editorial";
+import { UserVariablePicker } from "@/components/admin/UserVariablePicker";
 import { EmailTemplateType } from "@/types/resend";
 import { createAutomation, deleteAutomation, toggleAutomationStatus } from "./actions";
 
@@ -466,6 +467,7 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
                     </button>
                   ))}
                 </div>
+                <UserVariablePicker onSelect={handleCopyTag} compact />
               </div>
             </div>
           )}

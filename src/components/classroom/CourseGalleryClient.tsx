@@ -50,7 +50,7 @@ export default function CourseGalleryClient({
   isCompleted = false,
   certificateUrl,
 }: CourseGalleryClientProps) {
-  const { user } = useAuth();
+  const { user, userVariables } = useAuth();
   const isCertificateEnabled = course.enableCertificates !== false;
   const targetCertificateUrl = certificateUrl || `/certificados?curso=${encodeURIComponent(course.id)}`;
   const heroCover = (course.coverUrl && course.coverUrl.trim() !== "") ? course.coverUrl : FALLBACK_COVER;
@@ -65,6 +65,7 @@ export default function CourseGalleryClient({
           id: user?.id,
         },
         course: { id: course.id, title: course.title, slug: course.slug },
+        userVariables,
       })
     : null;
 

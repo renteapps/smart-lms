@@ -1,6 +1,9 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getUsersTemplateVariables } from "@/lib/data/userVariables";
+import { interpolateUserText } from "@/lib/userVariables";
+import { sendConfiguredEmail } from "@/lib/resendServer";
 
 export async function getNotificationCampaigns() {
   const supabase = await createClient();
@@ -47,23 +50,38 @@ export async function createNotificationCampaign(campaignData: any) {
     throw new Error(error.message);
   }
 
-  // Handle platform notifications
-  if (campaignData.channels?.includes("platform")) {
-    let targetUserIds: string[] = [];
+  let targetUserIds: string[] = [];
 
-    if (campaignData.targetAudience === "profile_test_category") {
+  if (campaignData.targetAudience === "all") {
+    const { data: profiles } = await supabase.from("profiles").select("id");
+    targetUserIds = (profiles ?? []).map((profile) => profile.id);
+  } else if (campaignData.targetAudience === "user") {
+    const lookup = String(campaignData.targetId || '').trim();
+    const query = lookup.includes('@')
+      ? supabase.from("profiles").select("id").eq("email", lookup)
+      : supabase.from("profiles").select("id").eq("id", lookup);
+    const { data: profiles } = await query;
+    targetUserIds = (profiles ?? []).map((profile) => profile.id);
+  } else if (campaignData.targetAudience === "course") {
+    const { data: enrollments } = await supabase
+      .from("enrollments")
+      .select("user_id")
+      .eq("course_id", campaignData.targetId)
+      .eq("status", "active");
+    targetUserIds = (enrollments ?? []).map((enrollment) => enrollment.user_id);
+  } else if (campaignData.targetAudience === "profile_test_category") {
       const { data: results } = await supabase
         .from("profile_test_results")
         .select("user_id")
         .eq("category_id", campaignData.targetId);
-      if (results) targetUserIds = results.map(r => r.user_id);
-    } else if (campaignData.targetAudience === "profile_test_completed") {
+    if (results) targetUserIds = results.map(r => r.user_id);
+  } else if (campaignData.targetAudience === "profile_test_completed") {
       const { data: results } = await supabase
         .from("profile_test_results")
         .select("user_id")
         .eq("test_id", campaignData.targetId);
-      if (results) targetUserIds = results.map(r => r.user_id);
-    } else if (campaignData.targetAudience === "profile_test_not_completed") {
+    if (results) targetUserIds = results.map(r => r.user_id);
+  } else if (campaignData.targetAudience === "profile_test_not_completed") {
       const { data: profiles } = await supabase.from("profiles").select("id");
       const { data: results } = await supabase
         .from("profile_test_results")
@@ -74,15 +92,22 @@ export async function createNotificationCampaign(campaignData: any) {
       if (profiles) {
         targetUserIds = profiles.map(p => p.id).filter(id => !completedUserIds.has(id));
       }
-    }
+  }
 
+  targetUserIds = [...new Set(targetUserIds.filter(Boolean))];
+  const variablesByUser = await getUsersTemplateVariables(supabase, targetUserIds);
+
+  // Cada linha é renderizada para seu dono; nenhuma resposta vaza entre alunos.
+  if (campaignData.channels?.includes("platform")) {
     if (targetUserIds.length > 0) {
       const notifications = targetUserIds.map(id => ({
         user_id: id,
-        title: campaignData.title,
-        message: campaignData.message,
+        title: interpolateUserText(campaignData.title, variablesByUser.get(id) ?? {}).value,
+        message: interpolateUserText(campaignData.message, variablesByUser.get(id) ?? {}).value,
         type: "campaign",
-        link: campaignData.emailDetails?.buttonUrl || null,
+        link: campaignData.emailDetails?.buttonUrl
+          ? interpolateUserText(campaignData.emailDetails.buttonUrl, variablesByUser.get(id) ?? {}).value
+          : null,
       }));
 
       // Insert in chunks
@@ -94,7 +119,37 @@ export async function createNotificationCampaign(campaignData: any) {
     }
   }
 
-  return data;
+  let sentEmails = 0;
+  let failedEmails = 0;
+  if (campaignData.channels?.includes("email") && targetUserIds.length > 0) {
+    const { data: recipients } = await supabase
+      .from("profiles")
+      .select("id, email")
+      .in("id", targetUserIds)
+      .not("email", "is", null);
+
+    // Lotes pequenos protegem o provedor e ainda permitem conteúdo individual.
+    const rows = recipients ?? [];
+    for (let index = 0; index < rows.length; index += 10) {
+      const batch = rows.slice(index, index + 10);
+      const results = await Promise.all(batch.map((recipient) => sendConfiguredEmail(supabase, {
+        to: recipient.email,
+        userId: recipient.id,
+        subject: campaignData.emailDetails?.subject || campaignData.title,
+        template: campaignData.emailDetails?.template || "notification",
+        data: {
+          notificationTitle: campaignData.emailDetails?.emailTitle || campaignData.title,
+          notificationMessage: campaignData.emailDetails?.emailBody || campaignData.message,
+          previewText: campaignData.emailDetails?.previewText || campaignData.title,
+          actionUrl: campaignData.emailDetails?.buttonUrl || "",
+          actionText: campaignData.emailDetails?.buttonText || "Acessar Plataforma",
+        },
+      })));
+      results.forEach((result) => result.success ? sentEmails += 1 : failedEmails += 1);
+    }
+  }
+
+  return { ...data, emailDelivery: { sent: sentEmails, failed: failedEmails } };
 }
 
 export async function deleteNotificationCampaign(id: string) {

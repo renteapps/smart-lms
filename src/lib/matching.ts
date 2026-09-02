@@ -10,6 +10,11 @@ import {
   Weekday,
 } from '@/types/trilha';
 import { EMPTY_CONTENT_INDEX, type ContentIndex, type ContentResolver } from '@/lib/contentCatalog';
+import {
+  extractTemplateVariableKeys,
+  isValidUserVariableKey,
+  normalizeVariableKey,
+} from '@/lib/userVariables';
 
 type UserAnswers = Record<string, string[]>;
 type GenerateTrailOptions = {
@@ -166,6 +171,7 @@ function normalizeIndex(indexOrResolver?: ContentIndex | ContentResolver): Conte
 export function validateQuestionnaire(
   questionnaire: Questionnaire,
   indexOrResolver?: ContentIndex | ContentResolver,
+  options: { lockedVariableKeys?: Record<string, string> } = {},
 ): string[] {
   const index = normalizeIndex(indexOrResolver);
   const errors: string[] = [];
@@ -174,10 +180,72 @@ export function validateQuestionnaire(
   if (availabilityQuestions.length !== 1) errors.push('Mantenha exatamente uma pergunta de disponibilidade.');
   if (questionnaire.questions.at(-1)?.type !== 'availability') errors.push('A disponibilidade precisa ser a última pergunta.');
 
+  const declaredKeys = new Map<string, string>();
+  const lockedOwners = new Map(
+    Object.entries(options.lockedVariableKeys ?? {}).map(([questionId, key]) => [key, questionId]),
+  );
+  questionnaire.questions.forEach((question) => {
+    const rawKey = question.variableKey?.trim() ?? '';
+    const key = normalizeVariableKey(rawKey);
+    if (!key) return;
+    if (question.type === 'availability') {
+      errors.push('A pergunta de disponibilidade não pode criar uma variável.');
+      return;
+    }
+    if (rawKey !== key || !isValidUserVariableKey(key)) {
+      errors.push(`A variável “${key}” deve usar snake_case e não pode ser um nome reservado.`);
+    }
+    const owner = declaredKeys.get(key);
+    if (owner && owner !== question.id) errors.push(`A variável “${key}” está repetida.`);
+    declaredKeys.set(key, question.id);
+
+    const lockedKey = options.lockedVariableKeys?.[question.id];
+    if (lockedKey && lockedKey !== key) errors.push(`A variável publicada “${lockedKey}” não pode ser renomeada.`);
+    const lockedOwner = lockedOwners.get(key);
+    if (lockedOwner && lockedOwner !== question.id) errors.push(`A variável publicada “${key}” não pode ser reutilizada.`);
+  });
+
+  Object.entries(options.lockedVariableKeys ?? {}).forEach(([questionId, lockedKey]) => {
+    const current = questionnaire.questions.find((question) => question.id === questionId);
+    if (current && !normalizeVariableKey(current.variableKey)) {
+      errors.push(`A variável publicada “${lockedKey}” não pode ser removida.`);
+    }
+  });
+
+  const nativeKeys = new Set([
+    'first_name', 'last_name', 'full_name', 'nome', 'name', 'email', 'user_email',
+    'contact.name', 'contact.first_name', 'contact.last_name', 'contact.email', 'contact.id',
+  ]);
+  const previousKeys = new Set<string>();
+  questionnaire.questions.forEach((question) => {
+    const templates = [
+      question.text,
+      question.placeholder ?? '',
+      ...question.options.flatMap((option) => [option.label, option.description ?? '']),
+    ];
+    templates.flatMap(extractTemplateVariableKeys).forEach((key) => {
+      if (nativeKeys.has(key)) return;
+      if (!previousKeys.has(key)) {
+        errors.push(`A variável “${key}” em “${question.text}” precisa ser criada por uma pergunta anterior.`);
+      }
+    });
+    const key = normalizeVariableKey(question.variableKey);
+    if (key) previousKeys.add(key);
+  });
+
   questionnaire.questions.forEach((question) => {
     if (question.type === 'availability') return;
+    if (!question.text.trim()) errors.push('Toda pergunta precisa de um título.');
+    if (question.type === 'open') {
+      if (question.options.length > 0) errors.push(`A pergunta aberta “${question.text}” não pode ter opções ou conteúdos mapeados.`);
+      if (question.maxLength !== undefined && (!Number.isInteger(question.maxLength) || question.maxLength < 1 || question.maxLength > 2_000)) {
+        errors.push(`A pergunta “${question.text}” precisa aceitar entre 1 e 2000 caracteres.`);
+      }
+      return;
+    }
     if (question.options.length === 0) errors.push(`A pergunta “${question.text}” precisa ter ao menos uma opção.`);
     question.options.forEach((option) => {
+      if (!option.label.trim()) errors.push(`Uma resposta em “${question.text}” está sem título.`);
       option.contentMappings?.forEach((mapping) => {
         const resolved = index.resolve(mapping);
         if (resolved.length === 0) errors.push(`“${mapping.title}” não pôde ser encontrado ou expandido.`);
@@ -214,7 +282,7 @@ function collectAffinitySignals(answers: UserAnswers, questionnaire: Questionnai
   const signals: AffinitySignal[] = [];
 
   questionnaire.questions.forEach((question) => {
-    if (question.type === 'availability') return;
+    if (question.type === 'availability' || question.type === 'open') return;
     const selected = answers[question.id] || [];
     question.options.forEach((option) => {
       if (!selected.includes(option.label)) return;
@@ -316,7 +384,7 @@ function collectCandidates(
 
   questionnaire.questions.forEach((question) => {
     const selected = answers[question.id] || [];
-    if (question.type === 'availability' || selected.length === 0) return;
+    if (question.type === 'availability' || question.type === 'open' || selected.length === 0) return;
 
     question.options.forEach((option) => {
       if (!selected.includes(option.label)) return;

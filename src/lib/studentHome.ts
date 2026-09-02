@@ -332,7 +332,9 @@ export function deriveProfileSummary(
     if (!Array.isArray(values) || values.length === 0) return;
 
     const question = known.get(questionId);
-    if (question?.type === 'availability') return;
+    // Respostas abertas têm uma finalidade privada para as IAs; não devem virar
+    // chips na home, onde poderiam expor texto pessoal por acidente.
+    if (question?.type === 'availability' || question?.type === 'open') return;
 
     const label = ROLE_LABELS[question?.role ?? ''] ?? 'Sua resposta';
     const existing = byLabel.get(label);

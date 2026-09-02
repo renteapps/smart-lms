@@ -12,6 +12,7 @@ import {
 } from "@/lib/profileTestAccess";
 import { getContentIndex } from "@/lib/data/content";
 import { listQuestionnaireVersions } from "@/lib/data/trail";
+import { getOnboardingVariableDefinitions } from "@/lib/data/userVariables";
 import { validateQuestionnaire } from "@/lib/matching";
 import type { Agent, AgentFormPayload } from "@/types/agente";
 import type { Pilula, PilulaStatus } from "@/types/pilula";
@@ -464,8 +465,18 @@ export async function publishQuestionnaire(
   try {
     const { supabase, adminClient, user } = await requireAdmin();
 
-    const index = await getContentIndex(adminClient);
-    const errors = validateQuestionnaire({ version: 0, status: "draft", questions }, index);
+    const [index, definitions] = await Promise.all([
+      getContentIndex(adminClient),
+      getOnboardingVariableDefinitions(adminClient),
+    ]);
+    const lockedVariableKeys = Object.fromEntries(
+      definitions.map((definition) => [definition.questionId, definition.key]),
+    );
+    const errors = validateQuestionnaire(
+      { version: 0, status: "draft", questions },
+      index,
+      { lockedVariableKeys },
+    );
     if (errors.length > 0) {
       return { success: false, message: errors.join(" ") };
     }

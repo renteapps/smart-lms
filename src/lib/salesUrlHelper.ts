@@ -41,6 +41,7 @@ export interface SalesResolutionContext {
   contact?: SalesContactContext;
   course?: SalesCourseContext;
   tracking?: SalesTrackingContext;
+  userVariables?: UserVariableMap;
   [key: string]: unknown;
 }
 
@@ -206,6 +207,7 @@ export function resolveDynamicSalesUrl(
   const inferredLastName = contact.last_name || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : '');
 
   const map: Record<string, string> = {
+    ...(context.userVariables || {}),
     'contact.name': fullName,
     'contact.first_name': inferredFirstName,
     'contact.last_name': inferredLastName,
@@ -223,19 +225,26 @@ export function resolveDynamicSalesUrl(
     'utm_term': tracking.utm_term || '',
     'coupon.code': tracking.coupon_code || '',
     'affiliate.id': tracking.affiliate_id || '',
+    first_name: inferredFirstName,
+    last_name: inferredLastName,
+    full_name: fullName,
+    email: contact.email || '',
   };
 
   // Replace all {{key}} occurrences
-  return urlTemplate.replace(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g, (match, rawKey) => {
+  return urlTemplate.replace(/\{\{\s*([a-zA-Z][a-zA-Z0-9_.-]*)\s*(?:\|\s*([^{}]*?))?\s*\}\}/g, (match, rawKey, rawFallback) => {
     const key = rawKey.toLowerCase();
     if (Object.prototype.hasOwnProperty.call(map, key)) {
       const val = map[key];
-      return encodeQueryValues ? encodeURIComponent(val) : val;
+      const resolved = val || String(rawFallback || '').trim();
+      return encodeQueryValues ? encodeURIComponent(resolved) : resolved;
     }
     // Check root context
     if (context[key] !== undefined && typeof context[key] === 'string') {
       return encodeQueryValues ? encodeURIComponent(context[key]) : context[key];
     }
+    const fallback = String(rawFallback || '').trim();
+    if (fallback) return encodeQueryValues ? encodeURIComponent(fallback) : fallback;
     return fallbackToEmpty ? '' : match;
   });
 }
@@ -245,8 +254,8 @@ export function resolveDynamicSalesUrl(
  */
 export function extractDynamicVariables(urlTemplate: string): string[] {
   if (!urlTemplate) return [];
-  const matches = urlTemplate.match(/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g) || [];
-  return Array.from(new Set(matches.map(m => m.replace(/[\s{}]/g, '').toLowerCase())));
+  const matches = [...urlTemplate.matchAll(/\{\{\s*([a-zA-Z][a-zA-Z0-9_.-]*)\s*(?:\|\s*[^{}]*?)?\s*\}\}/g)];
+  return Array.from(new Set(matches.map((match) => match[1].toLowerCase())));
 }
 
 /**
@@ -374,3 +383,4 @@ export function getDefaultCourseSalesConfig(courseId: string, _defaultCourseTitl
     updatedAt: new Date().toISOString(),
   };
 }
+import type { UserVariableMap } from '@/lib/userVariables';

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getContentIndex } from "@/lib/data/content";
 import { getDraftQuestionnaire, getPublishedQuestionnaire, listQuestionnaireVersions } from "@/lib/data/trail";
+import { getOnboardingVariableDefinitions } from "@/lib/data/userVariables";
 import { OnboardingClient } from "./OnboardingClient";
 
 export const dynamic = "force-dynamic";
@@ -19,11 +20,12 @@ export const dynamic = "force-dynamic";
 export default async function AdminOnboardingPage() {
   const supabase = await createClient();
 
-  const [draft, published, versions, index] = await Promise.all([
+  const [draft, published, versions, index, variableDefinitions] = await Promise.all([
     getDraftQuestionnaire(supabase),
     getPublishedQuestionnaire(supabase),
     listQuestionnaireVersions(supabase),
     getContentIndex(supabase),
+    getOnboardingVariableDefinitions(supabase),
   ]);
 
   return (
@@ -33,6 +35,7 @@ export default async function AdminOnboardingPage() {
       initialVersions={versions}
       contentItems={index.items}
       eligibleLessons={index.eligibleLessons}
+      initialVariableDefinitions={variableDefinitions}
     />
   );
 }

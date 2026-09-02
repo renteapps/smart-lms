@@ -48,6 +48,7 @@ import {
 } from "@/lib/emailTemplates";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { UserVariablePicker } from "@/components/admin/UserVariablePicker";
 
 interface EmailTemplateEditorProps {
   initialType?: EmailTemplateType;
@@ -97,11 +98,6 @@ export function EmailTemplateEditor({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load templates on mount
-  useEffect(() => {
-    loadTemplates();
-  }, []);
-
   const loadTemplates = () => {
     const loaded = getCustomTemplates();
     setTemplates(loaded);
@@ -111,6 +107,12 @@ export function EmailTemplateEditor({
     setHtmlContent(active.html);
     setIsCustomized(!!active.isCustomized);
   };
+
+  // Load templates on mount
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadTemplates();
+  }, []);
 
   const handleSelectTemplate = (type: EmailTemplateType) => {
     setSelectedType(type);
@@ -453,6 +455,7 @@ export function EmailTemplateEditor({
                 </Tooltip.Root>
               ))}
             </div>
+            <UserVariablePicker onSelect={handleInsertTag} compact />
           </div>
         </Card.Content>
       </Card>

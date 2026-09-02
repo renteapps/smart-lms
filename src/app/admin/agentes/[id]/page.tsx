@@ -65,6 +65,7 @@ import {
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 import { AgentAvatar } from "@/components/agentes/AgentAvatar";
 import { AgentScriptTester } from "@/components/admin/agentes/AgentScriptTester";
+import { UserVariablePicker } from "@/components/admin/UserVariablePicker";
 import { useAgentCatalog } from "@/contexts/AgentCatalogContext";
 import { collectScriptWarnings } from "@/lib/agentDraft";
 import {
@@ -1582,6 +1583,8 @@ Descreva aqui o tom, a persona, as regras estritas e os passos que o agente deve
                       Dica: Use seções estruturadas como <code># Persona</code>, <code># Regras de Conduta</code> e <code># O que NUNCA fazer</code>.
                     </Description>
                   </TextField>
+
+                  <UserVariablePicker />
 
                   <Separator />
 

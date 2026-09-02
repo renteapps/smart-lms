@@ -128,16 +128,26 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
         onChange={(event) => handleCoverSelected(event.target.files?.[0])}
       />
 
-      {/* Top Row: Label and Tags */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Top Row: card identity and tags */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-1 items-center gap-3">
           <GripVertical size={16} className="cursor-grab text-muted hover:text-foreground" />
+          <input
+            type="text"
+            value={option.emoji || ''}
+            onChange={(event) => onUpdate({ ...option, emoji: event.target.value.slice(0, 8) })}
+            className="w-11 rounded-lg border border-border/60 bg-background px-1 py-1.5 text-center text-lg outline-none focus:border-accent"
+            placeholder="✨"
+            aria-label={`Emoji da resposta ${option.label}`}
+            title="Emoji do card"
+          />
           <input
             type="text"
             value={option.label}
             onChange={(e) => onUpdate({ ...option, label: e.target.value })}
             className="flex-1 bg-transparent text-sm font-medium outline-none border-b border-transparent focus:border-accent px-1 py-0.5 transition-colors"
-            placeholder="Texto da Opção"
+            placeholder="Título do card"
+            aria-label="Título do card"
           />
         </div>
 
@@ -177,6 +187,19 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
             <X size={16} />
           </button>
         </div>
+      </div>
+
+      <div className="pl-7">
+        <label className="text-xs font-semibold text-muted">
+          Descrição do card <span className="font-normal">(opcional)</span>
+          <textarea
+            value={option.description || ''}
+            onChange={(event) => onUpdate({ ...option, description: event.target.value.slice(0, 280) })}
+            rows={2}
+            placeholder="Explique rapidamente o que esta escolha representa."
+            className="mt-1.5 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+          />
+        </label>
       </div>
 
       {/* Content Mappings Area */}

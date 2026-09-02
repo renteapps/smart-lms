@@ -75,7 +75,7 @@ export default function LessonThumbCard({
   salesUrl,
 }: LessonThumbCardProps) {
   const { triggerTransition } = useCardTransition();
-  const { user } = useAuth();
+  const { user, userVariables } = useAuth();
   const [failedCover, setFailedCover] = useState(false);
   const imgSrc = failedCover ? FALLBACK_COVER : (lesson.cover || FALLBACK_COVER);
   const isLarge = size === "lg";
@@ -89,6 +89,7 @@ export default function LessonThumbCard({
           id: user?.id,
         },
         course: { id: courseId, title: courseTitle, slug: courseSlug },
+        userVariables,
       })
     : null;
 

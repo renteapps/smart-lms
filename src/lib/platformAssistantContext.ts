@@ -16,7 +16,7 @@ export const ASSISTANT_MAX_CHARS_PER_SOURCE = 14_000;
 
 export type AssistantContextSource = {
   id: string;
-  kind: "manual" | "article" | "course" | "lesson" | "plan" | "pilula" | "map";
+  kind: "manual" | "article" | "course" | "lesson" | "plan" | "pilula" | "map" | "onboarding";
   title: string;
   content: string;
   /**

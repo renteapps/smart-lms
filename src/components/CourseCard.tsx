@@ -62,7 +62,7 @@ export default function CourseCard({
   hideMeta = false,
 }: CourseCardProps) {
   const { triggerTransition } = useCardTransition();
-  const { user } = useAuth();
+  const { user, userVariables } = useAuth();
   const hasMeta = Boolean(duration) || lessonCount !== undefined || Boolean(level);
 
   const state: StudentCourseState = studentState ?? (
@@ -82,6 +82,7 @@ export default function CourseCard({
           id: user?.id,
         },
         course: { id, title, slug, category },
+        userVariables,
       })
     : null;
   const action = getStudentCourseAction({

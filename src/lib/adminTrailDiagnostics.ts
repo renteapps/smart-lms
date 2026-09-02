@@ -29,7 +29,7 @@ export function analyzeQuestionnaire(
   const knownContentIds = new Set(index.items.map((item) => item.id));
   const allResolved = new Map<string, ResolvedContent>();
 
-  questionnaire.questions.filter((question) => question.type !== 'availability').forEach((question) => {
+  questionnaire.questions.filter((question) => question.type !== 'availability' && question.type !== 'open').forEach((question) => {
     question.options.forEach((option, optionIndex) => {
       if (!option.contentMappings?.length) diagnostics.push({
         id: `empty-${question.id}-${optionIndex}`,
@@ -87,7 +87,7 @@ export function analyzeQuestionnaire(
   });
 
   const defaultAnswers = Object.fromEntries(questionnaire.questions
-    .filter((question) => question.type !== 'availability')
+    .filter((question) => question.type !== 'availability' && question.type !== 'open')
     .map((question) => [question.id, question.options[0] ? [question.options[0].label] : []]));
   const preview = generateLearningTrail('diagnostic', defaultAnswers, questionnaire, DEFAULT_AVAILABILITY, undefined, new Date(), index);
   const sessionLoads = Object.values(preview.items.reduce<Record<string, number>>((groups, item) => {
