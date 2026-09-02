@@ -23,6 +23,7 @@ import {
   Users,
   CreditCard,
   FileText,
+  Sparkles,
 } from "lucide-react";
 import {
   Badge,
@@ -50,6 +51,7 @@ const navGroups = [
     links: [
       { href: "/admin/onboarding", icon: Route, label: "Onboarding & Trilhas" },
       { href: "/admin/cursos", icon: BookOpen, label: "Cursos" },
+      { href: "/admin/aulas-personalizadas", icon: Sparkles, label: "Aulas personalizadas" },
       { href: "/admin/blog", icon: Newspaper, label: "Blog" },
       { href: "/admin/testes-perfil", icon: ClipboardCheck, label: "Testes de Perfil" },
       { href: "/admin/pilulas", icon: Lightbulb, label: "Pílulas" },
@@ -113,6 +115,7 @@ const segmentLabels: Record<string, string> = {
   modulos: "Módulos",
   configuracoes: "Configurações",
   aulas: "Aulas",
+  "aulas-personalizadas": "Aulas personalizadas",
   planos: "Planos de Assinatura",
   integracoes: "Integrações",
   eduzz: "Eduzz",

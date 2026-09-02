@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition, type DragEvent, type KeyboardEvent } from "react";
-import { GripVertical, Plus, Edit2, Trash2, ChevronDown, ChevronUp, PlayCircle, FileText, CheckCircle, Brain, SkipForward, RotateCcw, Image as ImageIcon, HelpCircle, LoaderCircle } from "lucide-react";
+import { GripVertical, Plus, Edit2, Trash2, ChevronDown, ChevronUp, PlayCircle, FileText, CheckCircle, Brain, SkipForward, RotateCcw, Image as ImageIcon, HelpCircle, LoaderCircle, Sparkles } from "lucide-react";
 import { Course, Module, Lesson } from "@/types/course";
 import Link from "next/link";
 import { Button, Toast } from "@heroui/react";
@@ -472,6 +472,7 @@ export default function ModuleList({ courseId, initialCourse, lessonRatings }: M
   const getLessonIcon = (type: string) => {
     if (type === 'quiz') return <HelpCircle className="size-4 text-warning" aria-hidden="true" />;
     if (type === 'profile_test') return <Brain className="size-4 text-accent" aria-hidden="true" />;
+    if (type === 'personalized_ai') return <Sparkles className="size-4 text-accent" aria-hidden="true" />;
     if (type === 'video') return <PlayCircle className="size-4 text-accent" aria-hidden="true" />;
     if (type === 'text') return <FileText className="size-4 text-muted" aria-hidden="true" />;
     return <CheckCircle className="size-4 text-success" aria-hidden="true" />;
@@ -644,7 +645,7 @@ export default function ModuleList({ courseId, initialCourse, lessonRatings }: M
                               </div>
 
                               <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
-                                <span>{isProfileTest ? 'Diagnóstico' : lesson.type === 'video' ? 'Vídeo' : 'Texto'} • {lesson.durationInMinutes} min</span>
+                                <span>{isProfileTest ? 'Diagnóstico' : lesson.type === 'personalized_ai' ? 'Aula personalizada' : lesson.type === 'quiz' ? 'Quiz' : lesson.type === 'video' ? 'Vídeo' : 'Texto'} • {lesson.durationInMinutes} min</span>
 
                                 <span aria-hidden="true">•</span>
                                 <RatingSummary

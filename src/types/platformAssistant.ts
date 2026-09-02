@@ -120,6 +120,9 @@ export type PlatformAssistantSettings = {
   platformKnowledge: string;
   knowledgeMode: AssistantKnowledgeMode;
   knowledgeSources: AssistantKnowledgeSources;
+  startersPlatform: string[];
+  startersCourse: string[];
+  startersLesson: string[];
   updatedAt: string;
 };
 
@@ -133,6 +136,9 @@ export type PlatformAssistantPublicConfig = Pick<
   | "primaryColor"
   | "welcomeMessage"
   | "knowledgeMode"
+  | "startersPlatform"
+  | "startersCourse"
+  | "startersLesson"
 >;
 
 export type PlatformAssistantGetResponse = {

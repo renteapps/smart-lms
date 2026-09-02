@@ -40,6 +40,7 @@ export function ArticleAudioPlayer({ article }: { article: Article }) {
     skipBackward,
     skipForward,
     setPlaybackRate,
+    audioRef,
   } = useAudioPlayer();
 
   // Posição escolhida arrastando a onda com o áudio ainda parado. Enquanto for
@@ -108,6 +109,10 @@ export function ArticleAudioPlayer({ article }: { article: Article }) {
               peaks={audio.peaks}
               size="md"
               label={`Posição do áudio de ${article.title}`}
+              // Só a faixa deste artigo lê o tempo ao vivo. Sendo outro o áudio
+              // ativo, o que esta onda mostra é a posição salva, parada.
+              liveSource={isActive ? audioRef : undefined}
+              isPlaying={isActive && state.isPlaying}
             />
 
             <div className="mt-2 flex items-center justify-between text-xs font-semibold text-muted">

@@ -21,6 +21,16 @@ interface AudioPlayerContextType {
   closePlayer: () => void;
   skipForward: () => void;
   skipBackward: () => void;
+  /**
+   * O elemento de áudio em si, para quem precisa do tempo a cada quadro.
+   *
+   * `state.currentTime` é atualizado uma vez por segundo de propósito (é o que
+   * o relógio precisa, e re-renderizar a árvore 60x por segundo seria caro),
+   * mas isso faz a onda avançar aos saltos. Quem desenha progresso lê daqui e
+   * escreve direto no nó dentro de um `requestAnimationFrame` — a mesma técnica
+   * que o `Reveal` usa para o foco de luz (design.md §12).
+   */
+  audioRef: React.RefObject<HTMLAudioElement | null>;
 }
 
 const AudioPlayerContext = createContext<AudioPlayerContextType | undefined>(undefined);
@@ -111,9 +121,26 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     };
 
     const handlePlay = () => setState(prev => ({ ...prev, isPlaying: true }));
-    const handlePause = () => setState(prev => ({ ...prev, isPlaying: false }));
+
+    // Ao pausar ou buscar, o quadro a quadro para de valer e o estado do React
+    // volta a ser a fonte da posição — então ele precisa estar exato neste
+    // instante, não até um segundo atrás.
+    const syncTime = () => {
+      lastRenderedSecondRef.current = Math.floor(audio.currentTime);
+      setState(prev => ({
+        ...prev,
+        currentTime: audio.currentTime,
+        progress: audio.duration ? audio.currentTime / audio.duration : prev.progress,
+      }));
+    };
+
+    const handlePause = () => {
+      syncTime();
+      setState(prev => ({ ...prev, isPlaying: false }));
+    };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('seeked', syncTime);
     audio.addEventListener('durationchange', handleDurationChange);
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('play', handlePlay);
@@ -121,6 +148,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('seeked', syncTime);
       audio.removeEventListener('durationchange', handleDurationChange);
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('play', handlePlay);
@@ -215,7 +243,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         setPlaybackRate,
         closePlayer,
         skipForward,
-        skipBackward
+        skipBackward,
+        audioRef
       }}
     >
       {children}

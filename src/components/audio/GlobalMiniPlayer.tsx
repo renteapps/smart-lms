@@ -1,12 +1,20 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Headphones, Pause, Play, RotateCcw, RotateCw, X } from "lucide-react";
 import { Button, Tooltip } from "@heroui/react";
 import { AudioScrubber } from "@/components/audio/AudioScrubber";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { formatAudioDuration } from "@/lib/audioOptimization";
 import { cn } from "@/lib/utils";
+import type { Article } from "@/types/blog";
+
+/**
+ * Precisa casar com `--duration-md`, usado na saída: é o tempo que o nó fica
+ * montado depois de mandado embora, só para a transição ter onde acontecer.
+ */
+const EXIT_MS = 240;
 
 /**
  * Player persistente do áudio dos artigos.
@@ -28,9 +36,55 @@ export function GlobalMiniPlayer() {
     setPlaybackRate,
     skipBackward,
     skipForward,
+    audioRef,
   } = useAudioPlayer();
 
-  if (!article || pathname.startsWith("/admin") || /^\/courses\/[^/]+\/lessons/.test(pathname)) return null;
+  const isHiddenRoute = pathname.startsWith("/admin") || /^\/courses\/[^/]+\/lessons/.test(pathname);
+  const shouldShow = Boolean(article) && !isHiddenRoute;
+
+  /*
+   * `closePlayer()` zera o artigo no contexto na mesma hora — e é o certo, o som
+   * tem de parar imediatamente. Só que isso desmontava o painel junto, e sem nó
+   * na árvore não existe transição de saída. Daí a cópia local: o player segura
+   * o último artigo o tempo da animação e só então larga.
+   */
+  const [rendered, setRendered] = useState<Article | null>(null);
+  const [hasEntered, setHasEntered] = useState(false);
+
+  // Ajuste de estado durante o render — o padrão que o React documenta para
+  // estado derivado de props. Ele descarta este render e refaz na hora, sem
+  // pintar o intermediário; num efeito isso viraria um segundo passe visível.
+  if (shouldShow && article && article !== rendered) {
+    setRendered(article);
+  }
+
+  // `hasEntered` existe só para o primeiro quadro: o painel precisa ser pintado
+  // fechado uma vez antes de abrir, senão não há de onde animar. Na saída não é
+  // preciso estado nenhum — `shouldShow` já caiu.
+  const isOpen = shouldShow && hasEntered;
+
+  useEffect(() => {
+    if (shouldShow) {
+      // Dois quadros: o primeiro pinta o painel fechado, o segundo abre. Com um
+      // só, as duas mudanças podem cair no mesmo commit e a peça nasce aberta.
+      let inner = 0;
+      const outer = requestAnimationFrame(() => {
+        inner = requestAnimationFrame(() => setHasEntered(true));
+      });
+      return () => {
+        cancelAnimationFrame(outer);
+        cancelAnimationFrame(inner);
+      };
+    }
+
+    const timer = setTimeout(() => {
+      setRendered(null);
+      setHasEntered(false);
+    }, EXIT_MS);
+    return () => clearTimeout(timer);
+  }, [shouldShow]);
+
+  if (!rendered) return null;
 
   const cyclePlaybackRate = () => {
     const rates = [1, 1.25, 1.5, 2];
@@ -38,12 +92,34 @@ export function GlobalMiniPlayer() {
   };
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5 sm:pb-5">
+    /*
+      A entrada usa `--spring` e a saída `--ease-precise`, de propósito. A mola
+      passa de 1 antes de assentar, e num painel ancorado na borda inferior esse
+      overshoot mínimo é o que faz a peça parecer que encaixou; na saída ele
+      leria como defeito. Dispensar também deve ser mais rápido que chegar.
+
+      A transformação fica no invólucro externo, não no painel: a altura daqui
+      inclui o respiro de baixo, então `translate-y-full` leva a peça inteira
+      para fora sem deixar sobra na borda.
+    */
+    <div
+      inert={!isOpen}
+      className={cn(
+        "pointer-events-none fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5 sm:pb-5",
+        "transition-[transform,opacity]",
+        isOpen
+          ? "translate-y-0 opacity-100 duration-[var(--duration-lg)] ease-[var(--spring)]"
+          : "translate-y-full opacity-0 duration-[var(--duration-md)] ease-[var(--ease-precise)]",
+      )}
+    >
       <div
         className={cn(
           "editorial-container pointer-events-auto overflow-hidden rounded-2xl",
           "border border-hairline-strong bg-surface/90 shadow-elev-4 dark:bg-surface/85",
-          "backdrop-blur-2xl backdrop-saturate-150 transition-all duration-[var(--duration-md)]",
+          // `transition-all` aqui repintava também o desfoque a cada mudança de
+          // estado, e design.md §9 o proíbe: só cor e sombra precisam transitar.
+          "backdrop-blur-2xl backdrop-saturate-150",
+          "transition-[background-color,box-shadow] duration-[var(--duration-md)]",
         )}
         style={{
           WebkitBackdropFilter: "blur(24px) saturate(180%)",
@@ -59,13 +135,13 @@ export function GlobalMiniPlayer() {
 
           {/* Título e informações */}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-foreground sm:text-base">{article.title}</p>
+            <p className="truncate text-sm font-bold text-foreground sm:text-base">{rendered.title}</p>
             <p className="mt-0.5 truncate text-xs text-muted">
               <span className="sm:hidden" data-numeric>
                 {formatAudioDuration(currentTime)} / {formatAudioDuration(duration)}
               </span>
-              <span className="sm:hidden">{article.author ? ` · ${article.author}` : ""}</span>
-              <span className="hidden sm:inline">{article.author || "Versão em áudio"}</span>
+              <span className="sm:hidden">{rendered.author ? ` · ${rendered.author}` : ""}</span>
+              <span className="hidden sm:inline">{rendered.author || "Versão em áudio"}</span>
             </p>
           </div>
 
@@ -151,9 +227,11 @@ export function GlobalMiniPlayer() {
             currentTime={currentTime}
             duration={duration}
             onSeek={seekTo}
-            peaks={article.audio?.peaks}
+            peaks={rendered.audio?.peaks}
+            liveSource={audioRef}
+            isPlaying={isPlaying}
             size="sm"
-            label={`Posição do áudio de ${article.title}`}
+            label={`Posição do áudio de ${rendered.title}`}
           />
         </div>
       </div>

@@ -5,7 +5,7 @@ import { calculateAiPrice, calculateTokenCostUsd, estimateMessagesTokens, roundC
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServiceRoleKey } from "@/lib/supabase/env";
 
-export type AiFeature = "agent_chat" | "platform_assistant" | "admin_sandbox";
+export type AiFeature = "agent_chat" | "platform_assistant" | "admin_sandbox" | "personalized_lesson";
 
 type BillingRow = Record<string, unknown>;
 
@@ -33,6 +33,24 @@ export type AiUsageReservation = {
   reservedCredits: number;
   chargeUser: boolean;
   maxOutputTokens: number;
+};
+
+export type AiUsageQuote = Omit<AiUsageReservation, "eventId"> & {
+  estimatedPromptTokens: number;
+  estimatedProviderCostBrl: number;
+};
+
+export type AiSettlementInput = {
+  creditsCharged: number;
+  providerCostUsd: number;
+  providerCostBrl: number;
+  protectedCostBrl: number;
+  promptTokens: number;
+  completionTokens: number;
+  reasoningTokens: number;
+  cachedTokens: number;
+  providerGenerationId: string | null;
+  pricingSource: "provider" | "estimated";
 };
 
 export type AiSettlement = {
@@ -146,13 +164,13 @@ export async function getCurrentExchangeRate(admin = requireBillingAdmin()) {
   }
 }
 
-export async function reserveAiUsage(input: {
+export async function quoteAiUsage(input: {
   userId: string;
   feature: AiFeature;
   model: string;
   messages: OpenRouterChatMessage[];
   maxOutputTokens: number;
-}): Promise<AiUsageReservation> {
+}): Promise<AiUsageQuote> {
   const admin = requireBillingAdmin();
   const [{ data: settings, error: settingsError }, { data: policy, error: policyError }, { data: model, error: modelError }, exchangeRate] = await Promise.all([
     admin.from("ai_billing_settings").select("*").eq("id", 1).single(),
@@ -182,23 +200,7 @@ export async function reserveAiUsage(input: {
   const reservationFactor = 1 + asNumber(settings.reservation_buffer_percent) / 100;
   const reservedCredits = policy.charge_user ? roundCredits(price.credits * reservationFactor) : 0;
   const estimatedProviderCostBrl = price.providerCostBrl * reservationFactor;
-  const requestKey = crypto.randomUUID();
-
-  const { data, error } = await admin.rpc("reserve_ai_usage", {
-    p_user_id: input.userId,
-    p_feature: input.feature,
-    p_model: input.model,
-    p_request_key: requestKey,
-    p_estimated_cost_brl: estimatedProviderCostBrl,
-    p_reservation_credits: reservedCredits,
-    p_exchange_rate: exchangeRate,
-    p_charge_user: Boolean(policy.charge_user),
-  });
-  if (error) throw mapReservationError(error.message);
-  const row = data as BillingRow;
-
   return {
-    eventId: String(row.event_id),
     feature: input.feature,
     model: input.model,
     exchangeRate,
@@ -210,15 +212,63 @@ export async function reserveAiUsage(input: {
     reservedCredits,
     chargeUser: Boolean(policy.charge_user),
     maxOutputTokens: outputTokens,
+    estimatedPromptTokens: promptTokens,
+    estimatedProviderCostBrl,
   };
 }
 
-export async function settleAiUsage(
+export async function reserveAiUsage(input: {
+  userId: string;
+  feature: AiFeature;
+  model: string;
+  messages: OpenRouterChatMessage[];
+  maxOutputTokens: number;
+  requestKey?: string;
+  maximumConfirmedCredits?: number;
+}): Promise<AiUsageReservation> {
+  const admin = requireBillingAdmin();
+  const quote = await quoteAiUsage(input);
+  if (input.maximumConfirmedCredits != null
+    && quote.reservedCredits > input.maximumConfirmedCredits) {
+    throw new AiBillingError(
+      "A estimativa mudou antes da reserva. Confira a nova cotação para continuar.",
+      409,
+      "ai_quote_changed",
+    );
+  }
+  const { data, error } = await admin.rpc("reserve_ai_usage", {
+    p_user_id: input.userId,
+    p_feature: input.feature,
+    p_model: input.model,
+    p_request_key: input.requestKey ?? crypto.randomUUID(),
+    p_estimated_cost_brl: quote.estimatedProviderCostBrl,
+    p_reservation_credits: quote.reservedCredits,
+    p_exchange_rate: quote.exchangeRate,
+    p_charge_user: quote.chargeUser,
+  });
+  if (error) throw mapReservationError(error.message);
+  const row = data as BillingRow;
+
+  return {
+    eventId: String(row.event_id),
+    feature: quote.feature,
+    model: quote.model,
+    exchangeRate: quote.exchangeRate,
+    creditValueBrl: quote.creditValueBrl,
+    marginPercent: quote.marginPercent,
+    exchangeBufferPercent: quote.exchangeBufferPercent,
+    promptUsdPerMillion: quote.promptUsdPerMillion,
+    completionUsdPerMillion: quote.completionUsdPerMillion,
+    reservedCredits: quote.reservedCredits,
+    chargeUser: quote.chargeUser,
+    maxOutputTokens: quote.maxOutputTokens,
+  };
+}
+
+export function calculateAiSettlement(
   reservation: AiUsageReservation,
   response: OpenRouterChatResponse,
-  metadata: Record<string, unknown> = {},
-): Promise<AiSettlement> {
-  const admin = requireBillingAdmin();
+): AiSettlementInput {
   const usage = response.usage;
   const providerCostUsd = usage?.costUsd != null
     ? usage.costUsd
@@ -236,19 +286,40 @@ export async function settleAiUsage(
     marginPercent: reservation.marginPercent,
     creditValueBrl: reservation.creditValueBrl,
   });
-  const creditsCharged = reservation.chargeUser ? Math.min(price.credits, reservation.reservedCredits) : 0;
+
+  return {
+    creditsCharged: reservation.chargeUser ? Math.min(price.credits, reservation.reservedCredits) : 0,
+    providerCostUsd,
+    providerCostBrl: price.providerCostBrl,
+    protectedCostBrl: price.protectedCostBrl,
+    promptTokens: usage?.promptTokens ?? 0,
+    completionTokens: usage?.completionTokens ?? 0,
+    reasoningTokens: usage?.reasoningTokens ?? 0,
+    cachedTokens: usage?.cachedTokens ?? 0,
+    providerGenerationId: response.generationId ?? null,
+    pricingSource,
+  };
+}
+
+export async function settleAiUsage(
+  reservation: AiUsageReservation,
+  response: OpenRouterChatResponse,
+  metadata: Record<string, unknown> = {},
+): Promise<AiSettlement> {
+  const admin = requireBillingAdmin();
+  const settlement = calculateAiSettlement(reservation, response);
   const { data, error } = await admin.rpc("settle_ai_usage", {
     p_event_id: reservation.eventId,
-    p_credits_charged: creditsCharged,
-    p_provider_cost_usd: providerCostUsd,
-    p_provider_cost_brl: price.providerCostBrl,
-    p_protected_cost_brl: price.protectedCostBrl,
-    p_prompt_tokens: usage?.promptTokens ?? 0,
-    p_completion_tokens: usage?.completionTokens ?? 0,
-    p_reasoning_tokens: usage?.reasoningTokens ?? 0,
-    p_cached_tokens: usage?.cachedTokens ?? 0,
-    p_generation_id: response.generationId ?? null,
-    p_pricing_source: pricingSource,
+    p_credits_charged: settlement.creditsCharged,
+    p_provider_cost_usd: settlement.providerCostUsd,
+    p_provider_cost_brl: settlement.providerCostBrl,
+    p_protected_cost_brl: settlement.protectedCostBrl,
+    p_prompt_tokens: settlement.promptTokens,
+    p_completion_tokens: settlement.completionTokens,
+    p_reasoning_tokens: settlement.reasoningTokens,
+    p_cached_tokens: settlement.cachedTokens,
+    p_generation_id: settlement.providerGenerationId,
+    p_pricing_source: settlement.pricingSource,
     p_metadata: metadata,
   });
   if (error) throw new AiBillingError("A resposta foi gerada, mas a cobrança não pôde ser confirmada.", 503, "billing_settlement_failed");

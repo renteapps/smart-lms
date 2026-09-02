@@ -29,6 +29,9 @@ const FALLBACK_CONFIG: PlatformAssistantPublicConfig = {
   primaryColor: "#3157B7",
   welcomeMessage: "Olá! Como posso ajudar você hoje?",
   knowledgeMode: "adaptive",
+  startersPlatform: ["O que eu devo estudar agora?", "Quais cursos combinam com o meu objetivo?", "Como funciona a plataforma?"],
+  startersCourse: ["Do que trata este curso?", "Por onde eu começo?", "O que vou saber fazer no final?"],
+  startersLesson: ["Resuma esta aula em tópicos", "Explique isso de outro jeito", "Dê um exemplo prático"],
 };
 
 const REACH_LABELS: Record<AssistantReach, string> = {
@@ -240,7 +243,7 @@ export default function ChatSticker() {
             config={config}
             reachLabel={REACH_LABELS[serverReach ?? reachFor(config.knowledgeMode, scope.kind)]}
             messages={messages}
-            starters={assistantStarters(scope)}
+            starters={assistantStarters(scope, config)}
             isLoading={isLoading}
             isSending={isSending}
             isClearing={isClearing}

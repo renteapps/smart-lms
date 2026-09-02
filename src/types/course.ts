@@ -36,7 +36,7 @@ export type LessonAttachment = {
   url: string;
 };
 
-export type LessonType = 'video' | 'text' | 'quiz' | 'profile_test';
+export type LessonType = 'video' | 'text' | 'quiz' | 'profile_test' | 'personalized_ai';
 
 export type Lesson = {
   id: string;

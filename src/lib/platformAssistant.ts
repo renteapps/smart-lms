@@ -65,6 +65,9 @@ export const DEFAULT_PLATFORM_ASSISTANT_SETTINGS: PlatformAssistantSettings = {
   platformKnowledge: "",
   knowledgeMode: "adaptive",
   knowledgeSources: DEFAULT_ASSISTANT_SOURCES,
+  startersPlatform: ["O que eu devo estudar agora?", "Quais cursos combinam com o meu objetivo?", "Como funciona a plataforma?"],
+  startersCourse: ["Do que trata este curso?", "Por onde eu começo?", "O que vou saber fazer no final?"],
+  startersLesson: ["Resuma esta aula em tópicos", "Explique isso de outro jeito", "Dê um exemplo prático"],
   updatedAt: new Date(0).toISOString(),
 };
 
@@ -116,6 +119,9 @@ function mapSettings(row: Row | null | undefined): PlatformAssistantSettings {
     platformKnowledge: row.platform_knowledge || "",
     knowledgeMode: asKnowledgeMode(row.knowledge_mode),
     knowledgeSources: normalizeKnowledgeSources(row.knowledge_sources),
+    startersPlatform: Array.isArray(row.starters_platform) ? row.starters_platform : DEFAULT_PLATFORM_ASSISTANT_SETTINGS.startersPlatform,
+    startersCourse: Array.isArray(row.starters_course) ? row.starters_course : DEFAULT_PLATFORM_ASSISTANT_SETTINGS.startersCourse,
+    startersLesson: Array.isArray(row.starters_lesson) ? row.starters_lesson : DEFAULT_PLATFORM_ASSISTANT_SETTINGS.startersLesson,
     updatedAt: row.updated_at || DEFAULT_PLATFORM_ASSISTANT_SETTINGS.updatedAt,
   };
 }
@@ -130,6 +136,9 @@ export function publicAssistantConfig(settings: PlatformAssistantSettings): Plat
     primaryColor: settings.primaryColor,
     welcomeMessage: settings.welcomeMessage,
     knowledgeMode: settings.knowledgeMode,
+    startersPlatform: settings.startersPlatform,
+    startersCourse: settings.startersCourse,
+    startersLesson: settings.startersLesson,
   };
 }
 
@@ -405,6 +414,7 @@ async function buildTrustedContext(
   settings: PlatformAssistantSettings,
   scope: ResolvedScope,
   question: string,
+  userVariables: UserVariableMap,
 ): Promise<PackedAssistantContext> {
   const sources = settings.knowledgeSources;
   const onboardingAnswers = await getOpenOnboardingAnswersAiContext(sessionDb, userId);
@@ -456,7 +466,7 @@ async function buildTrustedContext(
   const platformContext = buildPlatformKnowledgeContext({
     index,
     sources,
-    manualKnowledge: settings.platformKnowledge,
+    manualKnowledge: interpolateUserPrompt(settings.platformKnowledge, userVariables).value,
     selected,
     budget: platformBudget,
     accessibleCourseIds,
@@ -553,10 +563,10 @@ export async function sendPlatformAssistantMessage(
       .update({ updated_at: new Date().toISOString(), last_lesson_id: scope.lessonId ?? null })
       .eq("id", conversation.id);
 
-    const [{ data: rows, error: historyError }, context, userVariables] = await Promise.all([
+    const userVariables = await getUserTemplateVariables(sessionDb, user.id);
+    const [{ data: rows, error: historyError }, context] = await Promise.all([
       visibleMessagesQuery(adminDb, conversation.id, conversation.cleared_at).order("created_at", { ascending: true }),
-      buildTrustedContext(sessionDb, adminDb, user.id, settings, scope, input.message),
-      getUserTemplateVariables(sessionDb, user.id),
+      buildTrustedContext(sessionDb, adminDb, user.id, settings, scope, input.message, userVariables),
     ]);
     if (historyError) throw new PlatformAssistantError("Não foi possível carregar o histórico.", 503, "history_unavailable");
     const recent = trimAssistantHistory((rows ?? []).map(mapMessage));

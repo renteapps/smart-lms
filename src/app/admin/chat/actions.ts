@@ -43,6 +43,10 @@ export async function savePlatformAssistantSettings(input: AssistantSettingsInpu
       avatarUrl = parsed.toString();
     }
 
+    const startersPlatform = Array.isArray(input.startersPlatform) ? input.startersPlatform.map(s => String(s).trim()).filter(Boolean) : [];
+    const startersCourse = Array.isArray(input.startersCourse) ? input.startersCourse.map(s => String(s).trim()).filter(Boolean) : [];
+    const startersLesson = Array.isArray(input.startersLesson) ? input.startersLesson.map(s => String(s).trim()).filter(Boolean) : [];
+
     const { error } = await adminClient.from("platform_assistant_settings").upsert({
       id: 1,
       enabled: Boolean(input.enabled),
@@ -57,6 +61,9 @@ export async function savePlatformAssistantSettings(input: AssistantSettingsInpu
       platform_knowledge: platformKnowledge,
       knowledge_mode: input.knowledgeMode,
       knowledge_sources: knowledgeSources,
+      starters_platform: startersPlatform,
+      starters_course: startersCourse,
+      starters_lesson: startersLesson,
       updated_by: user.id,
       updated_at: new Date().toISOString(),
     });

@@ -1,6 +1,16 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
+  type RefObject,
+} from "react";
 import { formatAudioDuration } from "@/lib/audioOptimization";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +25,13 @@ type AudioScrubberProps = {
   isDisabled?: boolean;
   label?: string;
   className?: string;
+  /**
+   * Elemento de áudio ao vivo. Com ele a onda avança quadro a quadro em vez de
+   * pular de segundo em segundo; sem ele o componente se vira com `currentTime`.
+   */
+  liveSource?: RefObject<HTMLAudioElement | null>;
+  /** Só vale a pena manter o laço de quadros enquanto realmente toca. */
+  isPlaying?: boolean;
 };
 
 const SIZE_CLASS = {
@@ -51,6 +68,8 @@ export function AudioScrubber({
   isDisabled = false,
   label = "Posição do áudio",
   className,
+  liveSource,
+  isPlaying = false,
 }: AudioScrubberProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [dragTime, setDragTime] = useState<number | null>(null);
@@ -82,6 +101,44 @@ export function AudioScrubber({
     },
     [duration, hasDuration]
   );
+
+  const writeProgress = useCallback((ratio: number) => {
+    const safe = Number.isFinite(ratio) ? Math.min(1, Math.max(0, ratio)) : 0;
+    trackRef.current?.style.setProperty("--audio-progress", String(safe));
+  }, []);
+
+  /*
+   * O progresso mora numa variável CSS no próprio nó, e o recorte da onda é uma
+   * expressão fixa que a lê — o avanço não passa pelo React, o laço abaixo
+   * escreve um número por quadro e o navegador recorta. Nenhuma re-renderização,
+   * nenhum layout. Mesmo desenho do `Reveal` (design.md §12).
+   *
+   * A variável tem **um dono só**, sempre imperativo. Escrevê-la também pelo
+   * `style` do JSX parecia inofensivo e não era: o React repinta uma vez por
+   * segundo com um valor até um segundo atrasado, e a onda recuava por um quadro
+   * a cada segundo — justamente o tranco que o laço veio tirar.
+   */
+  useEffect(() => {
+    // Arrastando, quem manda é o dedo — em qualquer estado de reprodução.
+    if (dragTime !== null) {
+      writeProgress(dragTime / duration);
+      return;
+    }
+
+    if (liveSource && isPlaying && hasDuration) {
+      let frame = requestAnimationFrame(function loop() {
+        const time = liveSource.current?.currentTime;
+        if (time !== undefined) writeProgress(time / duration);
+        frame = requestAnimationFrame(loop);
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+
+    // Parado, ou sem fonte ao vivo (a prévia do admin): uma escrita só, a partir
+    // do que o React sabe. Ao pausar isso vem do elemento via `seeked`/`pause`,
+    // então não há salto para trás.
+    writeProgress(progress);
+  }, [dragTime, liveSource, isPlaying, hasDuration, duration, progress, writeProgress]);
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (isDisabled || !hasDuration || event.button !== 0) return;
@@ -132,7 +189,11 @@ export function AudioScrubber({
     }
   };
 
-  const playedStyle = { clipPath: `inset(0 ${(1 - progress) * 100}% 0 0)` };
+  // Expressão fixa: o valor vem da variável escrita pelo laço de quadros (ou
+  // pelo render, quando não há fonte ao vivo).
+  const playedStyle: CSSProperties = {
+    clipPath: "inset(0 calc((1 - var(--audio-progress, 0)) * 100%) 0 0)",
+  };
 
   return (
     <div

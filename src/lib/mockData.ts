@@ -9,7 +9,7 @@ export type ContentBlock = {
 export type Lesson = {
   id: string;
   title: string;
-  type: 'video' | 'text' | 'quiz' | 'profile_test';
+  type: 'video' | 'text' | 'quiz' | 'profile_test' | 'personalized_ai';
   videoUrl?: string;
   content: string;
   blocks?: ContentBlock[];

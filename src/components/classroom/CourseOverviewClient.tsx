@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { Award, BookOpen, Brain, CheckCircle2, Clock3, FileText, Play, PlayCircle } from "lucide-react";
+import { Award, BookOpen, Brain, CheckCircle2, Clock3, FileText, Play, PlayCircle, Sparkles } from "lucide-react";
 import { Card, Chip, Disclosure, EmptyState, ProgressBar, Separator, buttonVariants } from "@heroui/react";
 import { CourseIcon } from "@/components/ui/AnimatedIcon";
 import { Reveal } from "@/components/ui/Reveal";
@@ -27,11 +27,13 @@ const LESSON_KIND: Record<string, string> = {
   video: "Vídeo",
   quiz: "Quiz",
   text: "Leitura",
+  personalized_ai: "Aula personalizada",
 };
 
 function lessonIcon(lesson: CourseOutlineLesson) {
   if (lesson.isCompleted) return <CheckCircle2 className="size-4" aria-hidden="true" />;
   if (lesson.type === "profile_test") return <Brain className="size-4" aria-hidden="true" />;
+  if (lesson.type === "personalized_ai") return <Sparkles className="size-4" aria-hidden="true" />;
   if (lesson.type === "video") return <PlayCircle className="size-4" aria-hidden="true" />;
   return <FileText className="size-4" aria-hidden="true" />;
 }

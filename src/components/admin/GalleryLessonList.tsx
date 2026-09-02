@@ -237,7 +237,7 @@ export default function GalleryLessonList({
                       )}
                     </div>
                     <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-                      <span>{lesson.type === "quiz" ? "Quiz" : lesson.type === "text" ? "Texto" : "Vídeo"} · {lesson.durationInMinutes} min</span>
+                      <span>{lesson.type === "personalized_ai" ? "Aula personalizada" : lesson.type === "quiz" ? "Quiz" : lesson.type === "text" ? "Texto" : "Vídeo"} · {lesson.durationInMinutes} min</span>
                       <span aria-hidden="true">·</span>
                       <RatingSummary
                         averageRating={lessonRatings[lesson.id]?.averageRating}

@@ -323,6 +323,14 @@ export async function setTrailItemCompletion(
 ): Promise<{ success: boolean; trail?: LearningTrail; message?: string }> {
   try {
     const { supabase, user } = await requireUser();
+    if (completed) {
+      const { data: lesson } = await supabase.from("lessons").select("type").eq("id", contentId).maybeSingle();
+      if (lesson?.type === "personalized_ai") {
+        const { data: ready } = await supabase.from("personalized_lesson_generations")
+          .select("id").eq("lesson_id", contentId).eq("user_id", user.id).eq("status", "ready").limit(1).maybeSingle();
+        if (!ready) return { success: false, message: "Gere a aula personalizada antes de concluí-la." };
+      }
+    }
     const trail = await trailData.getLearningTrail(supabase, user.id);
     if (!trail) return { success: false, message: "Você ainda não tem uma trilha." };
 

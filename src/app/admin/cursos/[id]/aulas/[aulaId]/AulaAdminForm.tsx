@@ -21,6 +21,8 @@ import { secondsToLessonMinutes } from "@/lib/pandavideo";
 import { cn } from "@/lib/utils";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { FileUpload } from "@/components/ui/FileUpload";
+import PersonalizedLessonEditor from "@/components/admin/PersonalizedLessonEditor";
+import type { PersonalizedLessonAdminData } from "@/types/personalizedLesson";
 
 const LessonBlockEditor = dynamic(() => import("@/components/admin/editor/LessonBlockEditor"), {
   ssr: false,
@@ -74,6 +76,7 @@ interface AulaAdminFormProps {
   initialLesson: Lesson | null;
   /** Só o curso galeria usa a thumb vertical — nos demais a aula herda a capa do curso. */
   courseLayout?: "modules" | "gallery";
+  personalizedData?: PersonalizedLessonAdminData | null;
 }
 
 export default function AulaAdminForm({
@@ -83,6 +86,7 @@ export default function AulaAdminForm({
   modules,
   initialLesson,
   courseLayout = "modules",
+  personalizedData = null,
 }: AulaAdminFormProps) {
   const router = useRouter();
   const isNew = aulaId === "nova";
@@ -156,9 +160,18 @@ export default function AulaAdminForm({
         ...formData,
         id: isNew ? undefined : aulaId,
         durationInMinutes: Number(formData.durationInMinutes) || 0,
+        isPublished: formData.type === "personalized_ai" && (isNew || initialLesson?.type !== "personalized_ai")
+          ? false
+          : formData.isPublished,
       });
 
       if (result.success) {
+        if (formData.type === "personalized_ai") {
+          const lessonId = result.data?.id ?? aulaId;
+          router.push(`/admin/cursos/${courseId}/aulas/${lessonId}?module=${targetModuleId}`);
+          router.refresh();
+          return;
+        }
         router.push(`/admin/cursos/${courseId}/modulos`);
         router.refresh();
       } else {
@@ -256,6 +269,7 @@ export default function AulaAdminForm({
               <option value="video">Vídeo</option>
               <option value="text">Texto / Artigo</option>
               <option value="quiz">Questionário (Quiz)</option>
+              <option value="personalized_ai">Aula personalizada (IA)</option>
             </select>
           </div>
 
@@ -423,7 +437,7 @@ export default function AulaAdminForm({
         )}
 
         {/* Editor de blocos */}
-        <div className="space-y-2">
+        {formData.type !== "personalized_ai" && <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="block text-sm font-medium text-foreground">
               Conteúdo da Aula
@@ -450,7 +464,7 @@ export default function AulaAdminForm({
               onChange={(blocks) => setFormData((prev) => ({ ...prev, blocks }))}
             />
           </div>
-        </div>
+        </div>}
 
         {/* Detalhes Adicionais */}
         <div className="pt-6 border-t border-border space-y-6">
@@ -589,12 +603,12 @@ export default function AulaAdminForm({
         </div>
 
         {/* Anexos */}
-        <div className="space-y-2">
+        {formData.type !== "personalized_ai" && <div className="space-y-2">
           <FileUpload 
             value={formData.attachments || []} 
             onChange={(files) => setFormData({ ...formData, attachments: files })} 
           />
-        </div>
+        </div>}
 
         {saveError && (
           <p role="alert" className="text-sm text-danger">
@@ -620,6 +634,15 @@ export default function AulaAdminForm({
           </button>
         </div>
       </form>
+
+      {!isNew && formData.type === "personalized_ai" && personalizedData && (
+        <PersonalizedLessonEditor
+          lessonId={aulaId}
+          courseId={courseId}
+          initialData={personalizedData}
+          initiallyPublished={initialLesson?.isPublished ?? false}
+        />
+      )}
     </div>
   );
 }

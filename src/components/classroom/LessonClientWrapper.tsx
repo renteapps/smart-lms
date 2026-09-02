@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ArrowLeft, Brain, Check, History, Maximize, Minimize, Star } from "lucide-react";
+import { ArrowLeft, Brain, Check, History, Maximize, Minimize, Sparkles, Star } from "lucide-react";
 import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { Button, Chip, Separator, Tooltip, buttonVariants } from "@heroui/react";
 import VideoPlayer from "./VideoPlayer";
@@ -20,6 +20,8 @@ import { rateLesson, saveWatchPosition, setLessonCompletion } from "@/app/action
 import { setTrailItemCompletion } from "@/app/actions/trail";
 import { formatPandaVideoDuration } from "@/lib/pandavideo";
 import { cn } from "@/lib/utils";
+import PersonalizedLessonExperience from "./PersonalizedLessonExperience";
+import type { PersonalizedLessonStudentState } from "@/types/personalizedLesson";
 
 /**
  * Fora do componente: `sendBeacon` precisa sobreviver ao descarregamento da
@@ -43,6 +45,7 @@ interface LessonClientWrapperProps {
   quizDraft?: QuizDraft | null;
   initialComments?: Comment[];
   currentUser?: User | null;
+  personalizedState?: PersonalizedLessonStudentState | null;
 }
 
 /**
@@ -64,6 +67,7 @@ export default function LessonClientWrapper({
   quizDraft = null,
   initialComments = [],
   currentUser = null,
+  personalizedState = null,
 }: LessonClientWrapperProps) {
   /*
    * O estado local é otimista: a marcação aparece na hora e a Server Action
@@ -73,6 +77,7 @@ export default function LessonClientWrapper({
   const [isCompleted, setIsCompleted] = useState(lesson.isCompleted || false);
   const [rating, setRating] = useState(lesson.userRating || 0);
   const [hoveredStar, setHoveredStar] = useState(0);
+  const [generatedPersonalizedLessonId, setGeneratedPersonalizedLessonId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const { isZenMode, toggleZenMode } = useZenMode();
 
@@ -150,6 +155,10 @@ export default function LessonClientWrapper({
   }, [lesson.id]);
 
   const isProfileTest = lesson.type === 'profile_test';
+  const isPersonalized = lesson.type === "personalized_ai";
+  const hasPersonalizedContent = !isPersonalized
+    || Boolean(personalizedState?.generation)
+    || generatedPersonalizedLessonId === lesson.id;
 
   const targetProfileTest = isProfileTest
     ? profileTests.find((test) => test.id === lesson.profileTestId) ?? profileTests[0] ?? null
@@ -173,7 +182,11 @@ export default function LessonClientWrapper({
 
   const persistCompletion = (completed: boolean) => {
     startTransition(async () => {
-      await setLessonCompletion(lesson.id, completed, courseId);
+      const result = await setLessonCompletion(lesson.id, completed, courseId);
+      if (!result.success) {
+        setIsCompleted(!completed);
+        return;
+      }
       // A aula também pode estar agendada na trilha; manter os dois em sincronia.
       await setTrailItemCompletion(lesson.id, completed);
     });
@@ -238,6 +251,12 @@ export default function LessonClientWrapper({
               Teste de perfil
             </Chip>
           )}
+          {isPersonalized && (
+            <Chip color="accent" variant="soft" size="sm">
+              <Sparkles className="size-3.5" aria-hidden="true" />
+              Aula personalizada
+            </Chip>
+          )}
           {isCompleted && (
             <Chip color="success" variant="soft" size="sm">
               <Check className="size-3.5" aria-hidden="true" />
@@ -262,6 +281,7 @@ export default function LessonClientWrapper({
                   onClick={handleToggleComplete}
                   aria-pressed={isCompleted}
                   className="w-full gap-2 sm:w-auto"
+                  isDisabled={isPersonalized && !hasPersonalizedContent}
                 >
                   <Check className={cn("size-4", isCompleted && "text-success")} aria-hidden="true" />
                   {isCompleted ? "Concluído" : "Marcar como concluído"}
@@ -368,7 +388,21 @@ export default function LessonClientWrapper({
       </header>
 
       {/* Main Content: Profile Test Runner vs Video Player vs Quiz Runner */}
-      {isProfileTest && targetProfileTest ? (
+      {isPersonalized ? (
+        personalizedState ? (
+          <PersonalizedLessonExperience
+            lessonId={lesson.id}
+            initialState={personalizedState}
+            onReady={() => setGeneratedPersonalizedLessonId(lesson.id)}
+          />
+        ) : (
+          <div className="rounded-3xl border border-border bg-surface p-8 text-center">
+            <Sparkles className="mx-auto size-8 text-accent" />
+            <h2 className="mt-4 text-xl font-bold text-foreground">Entre para gerar sua aula personalizada</h2>
+            <p className="mt-2 text-sm text-muted">A geração é individual e precisa de uma sessão autenticada.</p>
+          </div>
+        )
+      ) : isProfileTest && targetProfileTest ? (
         <ProfileTestRunner
           test={targetProfileTest}
           config={lesson.profileTestConfig}
@@ -401,7 +435,7 @@ export default function LessonClientWrapper({
       )}
 
       {/* Tabs */}
-      {lesson.type !== 'quiz' && (
+      {lesson.type !== 'quiz' && !isPersonalized && (
         <LessonTabs
           lesson={lesson}
           initialNote={initialNote}

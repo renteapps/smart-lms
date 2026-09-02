@@ -19,6 +19,20 @@ export async function setLessonCompletion(
   try {
     const { supabase, user } = await requireUser();
 
+    if (isCompleted) {
+      const { data: lesson } = await supabase.from("lessons").select("type").eq("id", lessonId).maybeSingle();
+      if (lesson?.type === "personalized_ai") {
+        const { data: ready } = await supabase.from("personalized_lesson_generations")
+          .select("id")
+          .eq("lesson_id", lessonId)
+          .eq("user_id", user.id)
+          .eq("status", "ready")
+          .limit(1)
+          .maybeSingle();
+        if (!ready) return { success: false, message: "Gere a aula personalizada antes de concluí-la." };
+      }
+    }
+
     const { error } = await supabase.from("lesson_progress").upsert(
       {
         user_id: user.id,

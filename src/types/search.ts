@@ -24,7 +24,7 @@ export interface SearchResultMetadata {
   courseTitle?: string;
   moduleTitle?: string;
   duration?: string | number;
-  lessonType?: "video" | "text" | "quiz" | "profile_test";
+  lessonType?: "video" | "text" | "quiz" | "profile_test" | "personalized_ai";
   level?: string;
   cover?: string;
   tags?: string[];

@@ -13,6 +13,8 @@ import {
   sendPlatformAssistantMessage,
 } from "@/lib/platformAssistant";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getUserTemplateVariables } from "@/lib/data/userVariables";
+import { interpolateUserText } from "@/lib/userVariables";
 import type { AssistantScope } from "@/types/platformAssistant";
 
 export const runtime = "nodejs";
@@ -43,12 +45,16 @@ function scopeFromSearchParams(params: URLSearchParams): AssistantScope {
 export async function GET(request: NextRequest) {
   try {
     const { supabase, user } = await requireUser();
+    const userVariables = await getUserTemplateVariables(supabase, user.id);
+
     if (request.nextUrl.searchParams.get("mode") === "config") {
       const settings = await getPlatformAssistantSettings(createAdminClient());
+      settings.welcomeMessage = interpolateUserText(settings.welcomeMessage, userVariables).value;
       return NextResponse.json({ config: publicAssistantConfig(settings) });
     }
     const scope = scopeFromSearchParams(request.nextUrl.searchParams);
     const settings = await getPlatformAssistantSettings(createAdminClient());
+    settings.welcomeMessage = interpolateUserText(settings.welcomeMessage, userVariables).value;
     const resolved = await resolveAssistantScope(supabase, user, scope, settings);
     const [conversation, balance] = await Promise.all([
       getOwnAssistantConversation(supabase, user.id, resolved.contextKey),

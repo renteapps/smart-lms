@@ -5,7 +5,7 @@
  * tradução de rota em escopo e a conta que mantém a conversa acima do teclado
  * no celular.
  */
-import type { AssistantScope } from "@/types/platformAssistant";
+import type { AssistantScope, PlatformAssistantPublicConfig } from "@/types/platformAssistant";
 
 /** Deriva curso/aula da URL — é o que dá contexto ao assistente. */
 export function scopeFromPath(pathname: string): AssistantScope {
@@ -58,16 +58,12 @@ export function keyboardInset(
 }
 
 /** Sugestões de abertura, coladas em onde o aluno está. */
-export function assistantStarters(scope: AssistantScope): string[] {
+export function assistantStarters(scope: AssistantScope, config: PlatformAssistantPublicConfig): string[] {
   if (scope.kind === "platform") {
-    return [
-      "O que eu devo estudar agora?",
-      "Quais cursos combinam com o meu objetivo?",
-      "Como funciona a plataforma?",
-    ];
+    return config.startersPlatform;
   }
   if (scope.lessonId) {
-    return ["Resuma esta aula em tópicos", "Explique isso de outro jeito", "Dê um exemplo prático"];
+    return config.startersLesson;
   }
-  return ["Do que trata este curso?", "Por onde eu começo?", "O que vou saber fazer no final?"];
+  return config.startersCourse;
 }

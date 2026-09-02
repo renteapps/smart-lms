@@ -149,6 +149,9 @@ function initialDraft(settings: PlatformAssistantSettings): AssistantSettingsInp
     platformKnowledge: settings.platformKnowledge,
     knowledgeMode: settings.knowledgeMode,
     knowledgeSources: settings.knowledgeSources,
+    startersPlatform: settings.startersPlatform || [],
+    startersCourse: settings.startersCourse || [],
+    startersLesson: settings.startersLesson || [],
   };
 }
 
@@ -454,6 +457,30 @@ export function ChatAdminClient({
                   <TextArea rows={4} maxLength={500} className="resize-none" />
                   <p className="text-right text-xs text-muted">{draft.welcomeMessage.length}/500</p>
                 </TextField>
+                <div><UserVariablePicker compact /></div>
+              </Card.Content>
+            </Card>
+
+            <Card>
+              <Card.Header>
+                <Card.Title>Sugestões de Gatilho</Card.Title>
+                <Card.Description>
+                  Perguntas pré-preenchidas para incentivar a interação, variando conforme a tela do aluno. Digite uma sugestão por linha.
+                </Card.Description>
+              </Card.Header>
+              <Card.Content className="space-y-6">
+                <TextField value={draft.startersPlatform.join("\n")} onChange={(value) => updateDraft("startersPlatform", value.split("\n"))}>
+                  <Label>Visão Geral (Home da plataforma)</Label>
+                  <TextArea rows={3} className="resize-y" placeholder="O que eu devo estudar agora?" />
+                </TextField>
+                <TextField value={draft.startersCourse.join("\n")} onChange={(value) => updateDraft("startersCourse", value.split("\n"))}>
+                  <Label>Visão de Curso (Catálogo / Visão geral)</Label>
+                  <TextArea rows={3} className="resize-y" placeholder="Por onde eu começo?" />
+                </TextField>
+                <TextField value={draft.startersLesson.join("\n")} onChange={(value) => updateDraft("startersLesson", value.split("\n"))}>
+                  <Label>Assistindo a uma Aula</Label>
+                  <TextArea rows={3} className="resize-y" placeholder="Resuma esta aula em tópicos" />
+                </TextField>
               </Card.Content>
             </Card>
           </div>
@@ -738,6 +765,7 @@ export function ChatAdminClient({
                 <TextArea rows={14} maxLength={120_000} className="resize-y" placeholder="Políticas, orientações de navegação, perguntas frequentes…" />
                 <p className="text-right text-xs text-muted">{draft.platformKnowledge.length.toLocaleString("pt-BR")}/120.000</p>
               </TextField>
+              <div className="mt-3"><UserVariablePicker /></div>
             </Card.Content>
           </Card>
         </div>

@@ -8,6 +8,7 @@ import { getLessonNote } from "@/lib/data/notes";
 import { getProfileTests } from "@/lib/data/profileTests";
 import { getLessonComments } from "@/lib/data/comments";
 import type { QuizDraft, QuizFeedbackMode } from "@/types/quiz";
+import { getPersonalizedLessonStudentState } from "@/lib/personalizedLessons";
 
 export default async function AulaPage({
   params,
@@ -107,6 +108,10 @@ export default async function AulaPage({
     getLessonComments(supabase, lesson.id),
   ]);
 
+  const personalizedState = lesson.type === "personalized_ai" && user
+    ? await getPersonalizedLessonStudentState(supabase, user, lesson.id)
+    : null;
+
   return (
     <LessonClientWrapper
       lesson={lesson}
@@ -119,6 +124,7 @@ export default async function AulaPage({
       quizDraft={quizDraft}
       initialComments={comments}
       currentUser={user}
+      personalizedState={personalizedState}
     />
   );
 }

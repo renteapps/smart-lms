@@ -65,9 +65,14 @@ describe("keyboardInset", () => {
 
 describe("assistantStarters", () => {
   it("sugere perguntas diferentes conforme a tela", () => {
-    const platform = assistantStarters({ kind: "platform" });
-    const course = assistantStarters({ kind: "course", courseId: "abc" });
-    const lesson = assistantStarters({ kind: "course", courseId: "abc", lessonId: "l1" });
+    const config = {
+      startersPlatform: ["P1"],
+      startersCourse: ["C1"],
+      startersLesson: ["L1"],
+    } as any;
+    const platform = assistantStarters({ kind: "platform" }, config);
+    const course = assistantStarters({ kind: "course", courseId: "abc" }, config);
+    const lesson = assistantStarters({ kind: "course", courseId: "abc", lessonId: "l1" }, config);
 
     expect(platform).not.toEqual(course);
     expect(course).not.toEqual(lesson);
