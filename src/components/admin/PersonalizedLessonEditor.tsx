@@ -36,7 +36,7 @@ import type {
 const INPUT_CLASS = "w-full rounded-xl border border-border bg-surface px-3.5 py-3 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15";
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = new Set(["pdf", "docx", "txt", "md", "markdown"]);
-const SECTION_IDS = ["basic", "ai", "personalization", "knowledge"] as const;
+const SECTION_IDS = ["basic", "personalization", "ai", "knowledge"] as const;
 type SectionId = typeof SECTION_IDS[number];
 
 const SECTION_META: Record<SectionId, { title: string; description: string; icon: typeof BookOpen }> = {
@@ -107,7 +107,12 @@ export default function PersonalizedLessonEditor({
   const [context, setContext] = useState(draft.context);
   const [model, setModel] = useState(draft.model);
   const [questions, setQuestions] = useState<PersonalizedLessonQuestion[]>(draft.questions);
-  const [bindings, setBindings] = useState<PersonalizedVariableBinding[]>(draft.variableBindings);
+  const bindings = useMemo(() => {
+    const allText = authoringMode === "guided" ? `${guided.coreInstructions} ${guided.personalizationInstructions}` : promptTemplate;
+    const usedKeys = new Set(Array.from(allText.matchAll(/\{\{\s*([a-zA-Z0-9_.-]+)\s*(?:\|[^{}]*)?\}\}/g)).map(m => m[1].toLowerCase()));
+    return initialData.variableOptions.filter(opt => usedKeys.has(opt.key.toLowerCase())).map(opt => ({ key: opt.key, label: opt.label, source: opt.source as any, sourceRef: opt.sourceRef }));
+  }, [authoringMode, guided.coreInstructions, guided.personalizationInstructions, promptTemplate, initialData.variableOptions]);
+  
   const [sources, setSources] = useState<PersonalizedSourceRef[]>(draft.sourceRefs);
   const [documents, setDocuments] = useState(initialData.documents);
   const [draftVersion, setDraftVersion] = useState(draft.draftVersion);
@@ -227,10 +232,20 @@ export default function PersonalizedLessonEditor({
     setQuestions((current) => { const next = [...current]; [next[index], next[target]] = [next[target], next[index]]; return next.map((question, order) => ({ ...question, order })); }); touch();
   };
 
-  const insertVariable = (key: string) => {
-    const token = `{{${key}}}`; const textarea = promptRef.current;
-    if (!textarea) setPromptTemplate((current) => `${current}${current ? " " : ""}${token}`);
-    else { const start = textarea.selectionStart; const end = textarea.selectionEnd; setPromptTemplate((current) => `${current.slice(0, start)}${token}${current.slice(end)}`); requestAnimationFrame(() => textarea.setSelectionRange(start + token.length, start + token.length)); }
+  const insertVariable = (key: string, field?: "core" | "personalization") => {
+    const token = `{{${key}}}`;
+    
+    if (authoringMode === "advanced") {
+      const textarea = promptRef.current;
+      if (!textarea) setPromptTemplate((current) => `${current}${current ? " " : ""}${token}`);
+      else { const start = textarea.selectionStart; const end = textarea.selectionEnd; setPromptTemplate((current) => `${current.slice(0, start)}${token}${current.slice(end)}`); requestAnimationFrame(() => { textarea.focus(); textarea.setSelectionRange(start + token.length, start + token.length); }); }
+    } else {
+      if (field === "personalization") {
+        patchGuided({ personalizationInstructions: `${guided.personalizationInstructions}${guided.personalizationInstructions.endsWith(' ') ? '' : ' '}${token}` });
+      } else {
+        patchGuided({ coreInstructions: `${guided.coreInstructions}${guided.coreInstructions.endsWith(' ') ? '' : ' '}${token}` });
+      }
+    }
     touch();
   };
 
@@ -316,25 +331,23 @@ export default function PersonalizedLessonEditor({
               <div className="grid grid-cols-2 gap-2 rounded-xl bg-background p-1"><button type="button" onClick={() => { setAuthoringMode("guided"); touch(); }} className={cn("rounded-lg px-3 py-2.5 text-sm font-bold", authoringMode === "guided" ? "bg-surface text-accent shadow-sm" : "text-muted")}>Editor guiado</button><button type="button" onClick={() => { setAuthoringMode("advanced"); setPromptTemplate(promptTemplate || compiledPrompt); touch(); }} className={cn("rounded-lg px-3 py-2.5 text-sm font-bold", authoringMode === "advanced" ? "bg-surface text-accent shadow-sm" : "text-muted")}>Prompt avançado</button></div>
               {authoringMode === "guided" ? <>
                 <label className="block space-y-1.5 text-sm font-semibold">
-                  Que conteúdo e situações a IA deve abordar?
+                  Que conteúdo e situações a IA deve abordar? <VariableInserter options={initialData.variableOptions} questions={questions} onInsert={(key) => insertVariable(key, "core")} />
                   <textarea id="personalized-coreInstructions" rows={6} value={guided.coreInstructions} onChange={(event) => patchGuided({ coreInstructions: event.target.value })} aria-invalid={fieldError?.field === "coreInstructions"} className={INPUT_CLASS} placeholder="Explique os assuntos, exemplos e limites importantes para esta aula..." />
                   <FieldError show={fieldError?.field === "coreInstructions"} message={fieldError?.message} />
                 </label>
-                <label className="block space-y-1.5 text-sm font-semibold">Como o conteúdo deve ser adaptado para cada aluno? <span className="font-normal text-muted">(opcional)</span><textarea rows={3} value={guided.personalizationInstructions} onChange={(event) => patchGuided({ personalizationInstructions: event.target.value })} className={INPUT_CLASS} placeholder="Ex.: use situações próximas ao cargo e ao desafio atual do aluno" /></label>
+                <label className="block space-y-1.5 text-sm font-semibold">Como o conteúdo deve ser adaptado para cada aluno? <span className="font-normal text-muted">(opcional)</span> <VariableInserter options={initialData.variableOptions} questions={questions} onInsert={(key) => insertVariable(key, "personalization")} /><textarea rows={3} value={guided.personalizationInstructions} onChange={(event) => patchGuided({ personalizationInstructions: event.target.value })} className={INPUT_CLASS} placeholder="Ex.: use situações próximas ao cargo e ao desafio atual do aluno" /></label>
                 <label className="block space-y-1.5 text-sm font-semibold">Tom da aula<select value={guided.tone} onChange={(event) => patchGuided({ tone: event.target.value as PersonalizedGuidedConfig["tone"] })} className={INPUT_CLASS}>{Object.entries(GUIDED_TONE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
                 <fieldset><legend className="mb-2 text-sm font-semibold">Estrutura desejada</legend><div className="grid gap-2 sm:grid-cols-2">{Object.entries(GUIDED_SECTION_LABELS).map(([value, label]) => { const selected = guided.sections.includes(value as PersonalizedLessonSection); return <label key={value} className={cn("flex items-start gap-2 rounded-xl border p-3 text-sm", selected ? "border-accent/40 bg-accent-soft" : "border-border")}><input type="checkbox" checked={selected} onChange={() => patchGuided({ sections: selected ? guided.sections.filter((item) => item !== value) : [...guided.sections, value as PersonalizedLessonSection] })} className="mt-0.5" /><span>{label}</span></label>; })}</div></fieldset>
-              </> : <div className="space-y-3"><label className="text-sm font-semibold">Prompt completo<textarea id="personalized-promptTemplate" ref={promptRef} rows={14} maxLength={20_000} value={promptTemplate} onChange={(event) => { setPromptTemplate(event.target.value); touch(); }} aria-invalid={fieldError?.field === "promptTemplate"} className={INPUT_CLASS} placeholder="Escreva as instruções completas para a IA..." /><FieldError show={fieldError?.field === "promptTemplate"} message={fieldError?.message} /></label><p className="text-xs text-muted">Use variáveis como <code>{"{{cargo}}"}</code> ou <code>{"{{cargo|não informado}}"}</code>.</p></div>}
+              </> : <div className="space-y-3"><div className="flex items-center justify-between mb-1"><span className="text-sm font-semibold">Prompt completo</span><VariableInserter options={initialData.variableOptions} questions={questions} onInsert={(key) => insertVariable(key)} /></div><label className="block"><textarea id="personalized-promptTemplate" ref={promptRef} rows={14} maxLength={20_000} value={promptTemplate} onChange={(event) => { setPromptTemplate(event.target.value); touch(); }} aria-invalid={fieldError?.field === "promptTemplate"} className={INPUT_CLASS} placeholder="Escreva as instruções completas para a IA..." /><FieldError show={fieldError?.field === "promptTemplate"} message={fieldError?.message} /></label><p className="text-xs text-muted">Use variáveis como <code>{"{{cargo}}"}</code> ou <code>{"{{cargo|não informado}}"}</code>.</p></div>}
               <details className="rounded-xl border border-border bg-background p-4"><summary className="cursor-pointer text-sm font-bold">Configurações avançadas</summary><div className="mt-4 space-y-4"><label className="block space-y-1.5 text-sm font-semibold">Modelo de IA<select id="personalized-model" value={model} onChange={(event) => { setModel(event.target.value); touch(); }} aria-invalid={fieldError?.field === "model"} className={INPUT_CLASS}><option value="">Selecione um modelo</option>{initialData.models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><FieldError show={fieldError?.field === "model"} message={fieldError?.message} /></label>{authoringMode === "guided" && <label className="block space-y-1.5 text-sm font-semibold">Prompt técnico gerado<textarea readOnly rows={10} value={compiledPrompt} className={cn(INPUT_CLASS, "bg-background text-muted")} /></label>}</div></details>
               <SaveSectionButton busy={isSaving} onClick={() => handleSave("ai")} />
             </div>
           </SectionCard>
 
-          <SectionCard id="personalization" active={activeSection === "personalization"} complete={sectionComplete.personalization} error={errors.personalization} onOpen={() => setActiveSection("personalization")}>
+                    <SectionCard id="personalization" active={activeSection === "personalization"} complete={sectionComplete.personalization} error={errors.personalization} onOpen={() => setActiveSection("personalization")}>
             <div className="space-y-6">
-              <div><h3 className="font-bold">Dados que a plataforma já conhece</h3><p className="mt-1 text-sm text-muted">Marque somente o que realmente ajuda a personalizar esta aula.</p></div>
-              <div className="grid gap-2 sm:grid-cols-2">{initialData.variableOptions.map((option) => { const selected = selectedBindingKeys.has(`${option.source}:${option.sourceRef}`); return <label key={`${option.source}:${option.sourceRef}`} className={cn("flex items-start gap-3 rounded-xl border p-3", selected ? "border-accent/40 bg-accent-soft" : "border-border")}><input type="checkbox" checked={selected} onChange={() => { setBindings((current) => selected ? current.filter((item) => !(item.source === option.source && item.sourceRef === option.sourceRef)) : [...current, { key: option.key, label: option.label, source: option.source, sourceRef: option.sourceRef }]); touch(); }} className="mt-1" /><span className="min-w-0"><span className="block text-sm font-semibold">{option.label}</span><span className="text-xs text-muted">{option.groupLabel}</span>{authoringMode === "advanced" && selected && <button type="button" onClick={(event) => { event.preventDefault(); insertVariable(option.key); }} className="mt-1 block text-xs font-bold text-accent">Inserir no prompt</button>}</span></label>; })}</div>
-              <div className="rounded-xl border border-success/25 bg-success-soft p-4 text-sm"><p className="font-bold text-foreground">Privacidade por padrão</p><p className="mt-1 text-muted">E-mail, telefone, nascimento e gênero nunca são enviados. A IA recebe apenas os {bindings.length} dados marcados e as respostas abaixo.</p></div>
-              <div className="border-t border-border pt-5"><div className="flex items-center justify-between gap-3"><div><h3 className="font-bold">Perguntas antes de gerar</h3><p className="text-sm text-muted">O aluno responde quando abrir esta aula.</p></div><button type="button" onClick={() => { setQuestions((current) => [...current, emptyQuestion(current.length, [...current.map((item) => item.key), ...bindings.map((item) => item.key)])]); touch(); }} className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-bold"><Plus className="size-4" /> Pergunta</button></div><div className="mt-4 space-y-3">{questions.length === 0 && <div className="rounded-xl border border-dashed border-border p-5 text-center text-sm text-muted">Nenhuma pergunta. A aula usará somente os dados já selecionados.</div>}{questions.map((question, index) => <QuestionCard key={question.id} question={question} index={index} count={questions.length} keyLocked={activeQuestionKeys.has(question.id)} authoringMode={authoringMode} bindings={bindings} questions={questions} updateQuestion={updateQuestion} moveQuestion={moveQuestion} remove={() => { setQuestions((current) => current.filter((item) => item.id !== question.id)); touch(); }} insertVariable={insertVariable} />)}</div></div>
+              <div className="flex items-center justify-between gap-3"><div><h3 className="font-bold">Perguntas antes de gerar</h3><p className="text-sm text-muted">O aluno responde quando abrir esta aula. As respostas podem ser usadas no prompt.</p></div><button type="button" onClick={() => { setQuestions((current) => [...current, emptyQuestion(current.length, [...current.map((item) => item.key), ...bindings.map((item) => item.key)])]); touch(); }} className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-bold"><Plus className="size-4" /> Pergunta</button></div>
+              <div className="mt-4 space-y-3">{questions.length === 0 && <div className="rounded-xl border border-dashed border-border p-5 text-center text-sm text-muted">Nenhuma pergunta cadastrada.</div>}{questions.map((question, index) => <QuestionCard key={question.id} question={question} index={index} count={questions.length} keyLocked={activeQuestionKeys.has(question.id)} authoringMode={authoringMode} bindings={bindings} questions={questions} updateQuestion={updateQuestion} moveQuestion={moveQuestion} remove={() => { setQuestions((current) => current.filter((item) => item.id !== question.id)); touch(); }} insertVariable={insertVariable} />)}</div>
               <SaveSectionButton busy={isSaving} onClick={() => handleSave("personalization")} />
             </div>
           </SectionCard>
@@ -384,4 +397,39 @@ function DocumentsEditor({ documents, draftDocuments, isUploading, uploadFiles, 
 function FieldError({ show, message }: { show: boolean; message?: string }) {
   if (!show || !message) return null;
   return <p role="alert" className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-danger"><AlertCircle className="size-4" /> {message}</p>;
+}
+
+function VariableInserter({ options, questions, onInsert }: { options: any[], questions: any[], onInsert: (key: string) => void }) {
+  return (
+    <details className="relative group" onToggle={(e) => {
+        if (!e.currentTarget.open) return;
+        const close = (evt: MouseEvent) => {
+            if (!(e.currentTarget as HTMLElement).contains(evt.target as Node)) {
+                (e.currentTarget as HTMLDetailsElement).open = false;
+                document.removeEventListener('click', close);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', close), 0);
+    }}>
+      <summary className="list-none cursor-pointer inline-flex items-center gap-1.5 text-xs font-bold text-accent hover:text-accent/80 transition-colors bg-accent-soft px-2.5 py-1.5 rounded-md">
+        <Plus className="size-3.5" /> Inserir variável
+      </summary>
+      <div className="absolute left-0 top-full mt-2 z-20 w-72 max-h-64 overflow-auto rounded-xl border border-border bg-surface p-2 shadow-elev-3">
+        {options.map((opt) => (
+           <button type="button" key={opt.key} onClick={(e) => { onInsert(opt.key); (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; }} className="w-full text-left px-3 py-2 text-xs hover:bg-surface-hover rounded-lg">
+             <span className="block font-semibold">{opt.label}</span>
+             <span className="text-muted block mt-0.5">{opt.groupLabel}</span>
+           </button>
+        ))}
+        {questions.length > 0 && <div className="mt-2 pt-2 border-t border-border">
+          <span className="px-3 text-[10px] uppercase font-bold text-muted">Perguntas da Aula</span>
+          {questions.map((q) => (
+            <button type="button" key={q.key} onClick={(e) => { onInsert(q.key); (e.currentTarget.closest('details') as HTMLDetailsElement).open = false; }} className="w-full text-left px-3 py-2 text-xs hover:bg-surface-hover rounded-lg mt-1">
+              <span className="block font-semibold">{q.label || "Pergunta sem nome"}</span>
+            </button>
+          ))}
+        </div>}
+      </div>
+    </details>
+  );
 }
