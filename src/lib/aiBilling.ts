@@ -83,6 +83,13 @@ const fortalezaDate = (value = new Date()) => new Intl.DateTimeFormat("sv-SE", {
 }).format(value);
 
 function mapReservationError(message: string) {
+  if (message.includes("AI_NO_ACTIVE_PLAN")) {
+    return new AiBillingError(
+      "Assine um plano para conversar com os agentes de IA.",
+      402,
+      "ai_no_active_plan",
+    );
+  }
   if (message.includes("AI_CREDITS_INSUFFICIENT")) {
     return new AiBillingError("Créditos de IA insuficientes.", 402, "ai_credits_insufficient");
   }

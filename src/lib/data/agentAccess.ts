@@ -1,6 +1,7 @@
 import { CATALOG_COURSES } from "@/lib/catalog";
+import { isEnrollmentActive, isSubscriptionActive } from "@/lib/courseAccess";
 import type { Agent } from "@/types/agente";
-import type { DB } from "./types";
+import { logQueryError, type DB, type Row } from "./types";
 
 export interface OptionItem {
   id: string;
