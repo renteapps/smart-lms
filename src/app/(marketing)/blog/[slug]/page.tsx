@@ -1,9 +1,11 @@
 import { notFound } from 'next/navigation';
 import { getArticleBySlug, getAllArticles } from '@/lib/data/blog';
+import { getMySubscription } from '@/lib/data/plans';
+import { getSessionUser } from '@/lib/supabase/auth';
 import { formatPlatformDate } from '@/lib/timezone';
 import { createClient } from '@/lib/supabase/server';
 import BlockViewer from '@/components/classroom/BlockViewer';
-import { Clock, Headphones, BookOpen, ArrowLeft } from 'lucide-react';
+import { Clock, Headphones, BookOpen, ArrowLeft, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { ArticleAudioPlayer } from '@/components/audio/ArticleAudioPlayer';
 import { buttonVariants } from '@/components/ui/button';
@@ -22,14 +24,69 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
+/**
+ * Artigo marcado "premium" no admin (`Reservado para assinantes`) era servido
+ * por inteiro pra qualquer visitante, logado ou não — o campo existia no
+ * banco e no formulário do admin, mas nada nunca checava. Aqui é a única
+ * checagem: sem ela o `BlockViewer` abaixo simplesmente não entra na árvore
+ * renderizada, então o corpo do artigo nem sai do servidor.
+ */
+async function hasPremiumArticleAccess(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string | undefined,
+): Promise<boolean> {
+  if (!userId) return false;
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle();
+  if (profile?.role === 'admin') return true;
+
+  const subscription = await getMySubscription(supabase, userId);
+  return Boolean(subscription);
+}
+
+function PremiumArticleLock({ isAuthenticated }: { isAuthenticated: boolean }) {
+  return (
+    <div className="flex flex-col items-center gap-5 rounded-[var(--radius-xl)] border border-border/40 bg-card p-10 text-center shadow-sm sm:p-14">
+      <span className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+        <Lock className="size-7" aria-hidden="true" />
+      </span>
+      <div className="max-w-md space-y-2">
+        <p className="text-lg font-bold text-foreground">Conteúdo exclusivo para assinantes</p>
+        <p className="text-sm text-muted-foreground">
+          Este artigo é reservado para quem tem um plano ativo na Smart LMS.
+          {isAuthenticated ? ' Assine um plano para continuar lendo.' : ' Entre ou crie sua conta e assine um plano para continuar lendo.'}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <Link
+          href="/criar-conta"
+          className={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'rounded-full px-8 font-bold text-on-primary')}
+        >
+          Assinar agora
+        </Link>
+        {!isAuthenticated && (
+          <Link
+            href="/acessar"
+            className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'rounded-full px-8 font-bold')}
+          >
+            Já tenho conta
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
-  const supabase = await createClient();
+  const { supabase, user } = await getSessionUser();
   const article = await getArticleBySlug(supabase, resolvedParams.slug);
 
   if (!article) {
     notFound();
   }
+
+  const hasAccess = !article.premium || (await hasPremiumArticleAccess(supabase, user?.id));
 
   const allArticles = await getAllArticles(supabase);
   const relatedArticles = allArticles.filter(a => a.slug !== article.slug).slice(0, 3);
@@ -137,13 +194,19 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
       {/* Content */}
       <div className="editorial-container max-w-3xl">
-        {(article.format === 'audio' || article.format === 'both') && article.audio && (
-          <ArticleAudioPlayer article={article} />
-        )}
+        {hasAccess ? (
+          <>
+            {(article.format === 'audio' || article.format === 'both') && article.audio && (
+              <ArticleAudioPlayer article={article} />
+            )}
 
-        <div className="max-w-none">
-          <BlockViewer blocks={article.blocks ?? []} />
-        </div>
+            <div className="max-w-none">
+              <BlockViewer blocks={article.blocks ?? []} />
+            </div>
+          </>
+        ) : (
+          <PremiumArticleLock isAuthenticated={Boolean(user)} />
+        )}
 
         {/* Author Bio Box */}
         {article.authorDetails && (

@@ -6,7 +6,7 @@ import { PageRenderer } from "@/components/page-builder/PageRenderer";
 import { getSessionUser } from "@/lib/supabase/auth";
 import { getCatalogCourses, getContinueLessons, getHomeCarouselRows } from "@/lib/data/courses";
 import { getAllArticles } from "@/lib/data/blog";
-import { getPageBuilderData, getPublishedPage, hasActiveProductAccess } from "@/lib/data/pages";
+import { getPageBuilderData, getProductAccess, getPublishedPage } from "@/lib/data/pages";
 
 export const metadata: Metadata = {
   title: "Início | Smart LMS",
@@ -36,8 +36,8 @@ export default async function Home() {
     );
   }
 
-  const hasProducts = await hasActiveProductAccess(supabase, user.id);
-  if (!hasProducts) {
+  const { hasAccess, hasPlan } = await getProductAccess(supabase, user.id);
+  if (!hasAccess) {
     const document = await getPublishedPage(supabase, "no-products");
     const data = await getPageBuilderData(supabase, document, user.id);
     return (
@@ -61,6 +61,7 @@ export default async function Home() {
         articles={articles}
         masterclassRows={masterclassRows}
         continueLessons={continueLessons}
+        hasPlan={hasPlan}
       />
     </StudentShell>
   );

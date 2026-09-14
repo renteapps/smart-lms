@@ -391,6 +391,18 @@
     border-radius: var(--radius-lg);
   }
 
+  /*
+   * O `.empty-state` do HeroUI não possui flexbox nem alinhamento central por padrão,
+   * fazendo com que ícones, textos e ações fiquem desalinhados à esquerda.
+   */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
   .editorial-card-interactive {
     transition:
       transform var(--duration-lg) var(--spring),

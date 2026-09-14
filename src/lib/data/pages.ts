@@ -156,35 +156,57 @@ export async function getPageBuilderAdminData(db: DB): Promise<PageBuilderData> 
   return { courses, galleryRows, articles, profileTests };
 }
 
-export async function hasActiveProductAccess(db: DB, userId: string, now = new Date()): Promise<boolean> {
+export type ProductAccess = {
+  /** Matrícula ativa e/ou plano ativo — gate genérico de acesso à home. */
+  hasAccess: boolean;
+  /** Assinatura ativa especificamente, distinta de matrícula individual. */
+  hasPlan: boolean;
+};
+
+/**
+ * Acesso a produto de um usuário, com matrícula e plano distinguidos.
+ *
+ * Uma consulta só para as duas perguntas: "tem algum acesso?" (gate da home)
+ * e "esse acesso vem de plano?" (a home de quem só comprou curso, sem plano,
+ * não convida para montar trilha — ver `StudentHomeClient`).
+ */
+export async function getProductAccess(db: DB, userId: string, now = new Date()): Promise<ProductAccess> {
   const [enrollments, subscriptions] = await Promise.all([
     db.from("enrollments").select("status, expires_at").eq("user_id", userId),
     db.from("subscriptions").select("status, current_period_end, plans!inner(is_active)").eq("user_id", userId),
   ]);
 
-  logQueryError("hasActiveProductAccess:enrollments", enrollments.error);
-  logQueryError("hasActiveProductAccess:subscriptions", subscriptions.error);
+  logQueryError("getProductAccess:enrollments", enrollments.error);
+  logQueryError("getProductAccess:subscriptions", subscriptions.error);
 
   // Em falha de leitura, preserva a home do aluno. É melhor mostrar o painel
   // existente do que tratar por engano um cliente pagante como sem produto.
-  if (enrollments.error || subscriptions.error) return true;
+  if (enrollments.error || subscriptions.error) return { hasAccess: true, hasPlan: true };
 
-  return deriveHasActiveProductAccess(enrollments.data ?? [], subscriptions.data ?? [], now);
+  const hasPlan = deriveHasActivePlan(subscriptions.data ?? [], now);
+  const hasAccess = hasPlan || deriveHasActiveEnrollment(enrollments.data ?? [], now);
+  return { hasAccess, hasPlan };
 }
 
-export function deriveHasActiveProductAccess(enrollments: Row[], subscriptions: Row[], now = new Date()): boolean {
-  const hasEnrollment = enrollments.some((row: Row) => isEnrollmentActive({
+function deriveHasActiveEnrollment(enrollments: Row[], now = new Date()): boolean {
+  return enrollments.some((row: Row) => isEnrollmentActive({
     status: row.status,
     expiresAt: row.expires_at,
   }, now));
-  const hasSubscription = subscriptions.some((row: Row) => {
+}
+
+export function deriveHasActivePlan(subscriptions: Row[], now = new Date()): boolean {
+  return subscriptions.some((row: Row) => {
     const plan = Array.isArray(row.plans) ? row.plans[0] : row.plans;
     return plan?.is_active !== false && isSubscriptionActive({
       status: row.status,
       currentPeriodEnd: row.current_period_end,
     }, now);
   });
-  return hasEnrollment || hasSubscription;
+}
+
+export function deriveHasActiveProductAccess(enrollments: Row[], subscriptions: Row[], now = new Date()): boolean {
+  return deriveHasActiveEnrollment(enrollments, now) || deriveHasActivePlan(subscriptions, now);
 }
 
 export function resolvePageSectionItems(section: PageSection, data: PageBuilderData) {

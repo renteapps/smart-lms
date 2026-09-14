@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/auth";
 import { getAgentReply } from "@/lib/agentChat";
+import { checkAgentAccess, getAgentUserAccessContext } from "@/lib/data/agentAccess";
 import {
   deriveConversationTitle,
   getAgentById,
@@ -34,6 +35,11 @@ export async function sendAgentMessage(
 
     const agent = await getAgentById(supabase, agentId);
     if (!agent) return { success: false, message: "Agente não encontrado." };
+
+    const accessContext = await getAgentUserAccessContext(supabase, user.id);
+    if (!checkAgentAccess(agent, accessContext).hasAccess) {
+      return { success: false, message: "Você não tem acesso a este agente." };
+    }
 
     let targetId = conversationId;
 
@@ -99,6 +105,11 @@ export async function startConversation(
 
     const agent = await getAgentById(supabase, agentId);
     if (!agent) return { success: false, message: "Agente não encontrado." };
+
+    const accessContext = await getAgentUserAccessContext(supabase, user.id);
+    if (!checkAgentAccess(agent, accessContext).hasAccess) {
+      return { success: false, message: "Você não tem acesso a este agente." };
+    }
 
     const { data, error } = await supabase
       .from("agent_conversations")

@@ -32,6 +32,7 @@ import DayCompleteHero from "@/components/home/DayCompleteHero";
 import DiscoverySection from "@/components/home/DiscoverySection";
 import HomeEmptyState from "@/components/home/HomeEmptyState";
 import HomeNoCourses from "@/components/home/HomeNoCourses";
+import HomeCoursesOnly from "@/components/home/HomeCoursesOnly";
 import ContinueWatchingCarousel from "@/components/home/ContinueWatchingCarousel";
 import MasterclassCarousel from "@/components/home/MasterclassCarousel";
 import NextStepHero from "@/components/home/NextStepHero";
@@ -106,11 +107,13 @@ export default function StudentHomeClient({
   articles = [],
   masterclassRows = [],
   continueLessons = [],
+  hasPlan,
 }: {
   courses: CatalogCourse[];
   articles?: Article[];
   masterclassRows?: HomeCarouselRow[];
   continueLessons?: ContinueLesson[];
+  hasPlan: boolean;
 }) {
   const { hydrated, trail, error, migrated } = useTrailStore();
   /*
@@ -347,6 +350,18 @@ export default function StudentHomeClient({
       return (
         <div className="pt-[76px]">
           <HomeNoCourses courses={courses} />
+        </div>
+      );
+    }
+
+    /*
+     * Curso avulso sem plano → sem trilha entre cursos para montar. O convite
+     * de onboarding vale só para quem tem plano.
+     */
+    if (!hasPlan) {
+      return (
+        <div className="pt-[76px]">
+          <HomeCoursesOnly courses={courses} continueLessons={continueLessons} />
         </div>
       );
     }

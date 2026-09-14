@@ -1,11 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   checkAgentAccess,
   formatAgentAccessSummary,
+  getAgentUserAccessContext,
   getAvailableCourses,
   getAvailablePlans,
 } from "./data/agentAccess";
 import type { Agent } from "@/types/agente";
+import type { DB, Row } from "./data/types";
 
 function makeMockAgent(overrides: Partial<Agent> = {}): Agent {
   return {
@@ -197,5 +199,67 @@ describe("getAvailableCourses e getAvailablePlans", () => {
     expect(plans.length).toBeGreaterThan(0);
     expect(plans[0]).toHaveProperty("id");
     expect(plans[0]).toHaveProperty("name");
+  });
+});
+
+function makeMockDb(params: {
+  profile?: Row | null;
+  enrollments?: Row[];
+  subscriptions?: Row[];
+}): DB {
+  const { profile = null, enrollments = [], subscriptions = [] } = params;
+
+  return {
+    from: vi.fn((table: string) => {
+      if (table === "profiles") {
+        return {
+          select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: profile, error: null }) }) }),
+        };
+      }
+      if (table === "enrollments") {
+        return {
+          select: () => ({ eq: () => Promise.resolve({ data: enrollments, error: null }) }),
+        };
+      }
+      if (table === "subscriptions") {
+        return {
+          select: () => ({ eq: () => Promise.resolve({ data: subscriptions, error: null }) }),
+        };
+      }
+      throw new Error(`unexpected table ${table}`);
+    }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any;
+}
+
+describe("getAgentUserAccessContext", () => {
+  it("marca isAdmin a partir de profiles.role", async () => {
+    const db = makeMockDb({ profile: { role: "admin" } });
+    const context = await getAgentUserAccessContext(db, "user-1");
+    expect(context.isAdmin).toBe(true);
+  });
+
+  it("só inclui matrículas ativas e não vencidas", async () => {
+    const db = makeMockDb({
+      enrollments: [
+        { course_id: "c1", status: "active", expires_at: null },
+        { course_id: "c2", status: "active", expires_at: "2020-01-01T00:00:00Z" },
+        { course_id: "c3", status: "canceled", expires_at: null },
+      ],
+    });
+    const context = await getAgentUserAccessContext(db, "user-1");
+    expect(context.enrolledCourseIds).toEqual(["c1"]);
+  });
+
+  it("só inclui assinaturas ativas de planos ativos", async () => {
+    const db = makeMockDb({
+      subscriptions: [
+        { plan_id: "p1", status: "active", current_period_end: null, plans: { is_active: true } },
+        { plan_id: "p2", status: "canceled", current_period_end: "2020-01-01T00:00:00Z", plans: { is_active: true } },
+        { plan_id: "p3", status: "active", current_period_end: null, plans: { is_active: false } },
+      ],
+    });
+    const context = await getAgentUserAccessContext(db, "user-1");
+    expect(context.activePlanIds).toEqual(["p1"]);
   });
 });

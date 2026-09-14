@@ -47,11 +47,11 @@ export default async function CertificadosPage({
 
       <main className="editorial-container py-10 sm:py-14">
         {certificates.length === 0 ? (
-          <EmptyState className="gap-5 py-16 px-4 sm:py-24 sm:px-0">
+          <EmptyState className="flex flex-col items-center justify-center text-center gap-5 py-16 px-4 sm:py-24 sm:px-0">
             <span className="grid size-16 place-items-center rounded-2xl bg-accent-soft text-accent-soft-foreground">
               <Award className="size-8" aria-hidden="true" />
             </span>
-            <div className="text-center">
+            <div className="flex flex-col items-center text-center">
               <p className="display-3 text-foreground">Seu próximo certificado começa agora</p>
               <p className="mt-2 max-w-lg text-sm leading-6 text-muted">
                 Quando você concluir um curso com certificação habilitada, ele aparecerá automaticamente aqui.

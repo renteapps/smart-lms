@@ -141,6 +141,38 @@ export function checkAgentAccess(
 }
 
 /**
+ * Monta o `UserAccessContext` de um usuário a partir do banco: mesma regra de
+ * matrícula/assinatura ativa que `getCourseAccessMap` usa para cursos — só que
+ * aqui o resultado alimenta `checkAgentAccess` em vez de travar um card de
+ * curso. Reaproveitada tanto pela listagem (esconder agente sem acesso) quanto
+ * pela rota de chat (bloquear a interação antes de reservar créditos).
+ */
+export async function getAgentUserAccessContext(db: DB, userId: string): Promise<UserAccessContext> {
+  const now = new Date();
+  const [{ data: profile }, enrollmentsResult, subscriptionsResult] = await Promise.all([
+    db.from("profiles").select("role").eq("id", userId).maybeSingle(),
+    db.from("enrollments").select("course_id, status, expires_at").eq("user_id", userId),
+    db.from("subscriptions").select("plan_id, status, current_period_end, plans!inner(is_active)").eq("user_id", userId),
+  ]);
+
+  const isAdmin = profile?.role === "admin";
+
+  const enrolledCourseIds = (enrollmentsResult.data ?? [])
+    .filter((row: Row) => isEnrollmentActive({ status: row.status, expiresAt: row.expires_at }, now))
+    .map((row: Row) => row.course_id as string);
+
+  const activePlanIds = (subscriptionsResult.data ?? [])
+    .filter((row: Row) => {
+      if (!isSubscriptionActive({ status: row.status, currentPeriodEnd: row.current_period_end }, now)) return false;
+      const plan = Array.isArray(row.plans) ? row.plans[0] : row.plans;
+      return plan?.is_active !== false;
+    })
+    .map((row: Row) => row.plan_id as string);
+
+  return { userId, isAdmin, enrolledCourseIds, activePlanIds };
+}
+
+/**
  * Retorna uma descrição amigável das regras de acesso ao agente.
  */
 export function formatAgentAccessSummary(

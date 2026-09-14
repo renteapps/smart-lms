@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseAgentChatRequest } from "@/lib/agentChatRequest";
 import { deriveConversationTitle, getAgentById } from "@/lib/data/agents";
+import { checkAgentAccess, getAgentUserAccessContext } from "@/lib/data/agentAccess";
 import {
   getOpenRouterResponseText,
   getOpenRouterServerConfig,
@@ -34,6 +35,18 @@ export async function POST(req: NextRequest) {
     const agent = await getAgentById(supabase, agentId);
     if (!agent || agent.status === "Em manutenção") {
       return NextResponse.json({ success: false, error: "Agente indisponível." }, { status: 404 });
+    }
+
+    const accessContext = await getAgentUserAccessContext(supabase, user.id);
+    if (!checkAgentAccess(agent, accessContext).hasAccess) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Você não tem acesso a este agente. Ele é exclusivo para alunos de determinado curso ou plano.",
+          code: "agent_access_denied",
+        },
+        { status: 403 },
+      );
     }
 
     let conversationId = body.conversationId;
