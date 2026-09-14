@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { outcomeGrantsAccess, resolveEduzzOutcome, resolveHotmartOutcome } from "./eventPolicy";
+import { outcomeGrantsAccess, resolveEduzzOutcome, resolveHotmartOutcome, resolveHotmartSubscriptionStatus } from "./eventPolicy";
 
 describe("resolveHotmartOutcome", () => {
   it.each([
@@ -47,6 +47,37 @@ describe("resolveHotmartOutcome", () => {
   it("ignora evento desconhecido em vez de conceder", () => {
     expect(resolveHotmartOutcome("EVENTO_QUE_NAO_EXISTE").action).toBe("ignore");
     expect(resolveHotmartOutcome("").action).toBe("ignore");
+  });
+});
+
+describe("resolveHotmartSubscriptionStatus", () => {
+  it("ACTIVE libera acesso", () => {
+    expect(resolveHotmartSubscriptionStatus("ACTIVE")).toEqual({
+      action: "grant", transactionStatus: "approved", localStatus: "active",
+    });
+  });
+
+  it("STARTED aguarda a primeira cobrança sem conceder", () => {
+    expect(resolveHotmartSubscriptionStatus("STARTED")).toMatchObject({ action: "sync", localStatus: "pending" });
+  });
+
+  it.each(["DELAYED", "OVERDUE"])("%s marca inadimplência sem revogar", (status) => {
+    expect(resolveHotmartSubscriptionStatus(status)).toMatchObject({ action: "past_due", localStatus: "past_due" });
+  });
+
+  it.each(["INACTIVE", "CANCELLED_BY_CUSTOMER", "CANCELLED_BY_SELLER", "CANCELLED_BY_ADMIN"])(
+    "%s preserva o período já pago",
+    (status) => {
+      expect(resolveHotmartSubscriptionStatus(status)).toEqual({
+        action: "revoke_at_period_end", transactionStatus: "canceled", localStatus: "canceled",
+      });
+    },
+  );
+
+  it("normaliza caixa e ignora status desconhecido", () => {
+    expect(resolveHotmartSubscriptionStatus("active").action).toBe("grant");
+    expect(resolveHotmartSubscriptionStatus("SEI_LA").action).toBe("ignore");
+    expect(resolveHotmartSubscriptionStatus(undefined).action).toBe("ignore");
   });
 });
 

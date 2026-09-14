@@ -17,9 +17,15 @@ vi.mock("./secrets", () => ({
   loadGatewayWebhookConfig: vi.fn(async () => ({ enabled: true, secrets: ["secret"], producerId: "producer-1" })),
 }));
 vi.mock("./welcome", () => ({ sendPurchaseWelcomeEmail: vi.fn() }));
+vi.mock("./hotmartApi", async () => {
+  const actual = await vi.importActual<typeof import("./hotmartApi")>("./hotmartApi");
+  return { ...actual, getHotmartAccessToken: vi.fn(), getHotmartSubscriberSnapshot: vi.fn() };
+});
 
 import { getSupabaseServiceRoleKey } from "@/lib/supabase/env";
+import { getHotmartAccessToken, getHotmartSubscriberSnapshot, HotmartApiError } from "./hotmartApi";
 import { checkWebhookRate, handleBillingWebhook } from "./handleWebhook";
+import { loadGatewayWebhookConfig } from "./secrets";
 
 const normalize = vi.fn(() => ({
   gateway: "eduzz" as const,
@@ -40,6 +46,10 @@ describe("handleBillingWebhook security boundary", () => {
     dbMocks.from.mockClear();
     dbMocks.rpc.mockClear();
     dbMocks.rpc.mockResolvedValue({ data: { state: "claimed", id: "row-1" }, error: null });
+    vi.mocked(loadGatewayWebhookConfig).mockClear();
+    vi.mocked(loadGatewayWebhookConfig).mockResolvedValue({ enabled: true, secrets: ["secret"], producerId: "producer-1" });
+    vi.mocked(getHotmartAccessToken).mockClear();
+    vi.mocked(getHotmartSubscriberSnapshot).mockClear();
   });
 
   it("aceita ping autenticado sem provisionar", async () => {
@@ -151,5 +161,82 @@ describe("handleBillingWebhook security boundary", () => {
     }
     expect(checkWebhookRate("rate-test", now)).toBe(false);
     expect(checkWebhookRate("rate-test", now + 60_001)).toBe(true);
+  });
+});
+
+describe("handleBillingWebhook enriquecimento Hotmart", () => {
+  beforeEach(() => {
+    dbMocks.eq.mockClear();
+    dbMocks.update.mockClear();
+    dbMocks.upsert.mockClear();
+    dbMocks.from.mockClear();
+    dbMocks.rpc.mockClear();
+    dbMocks.rpc.mockResolvedValue({ data: { state: "claimed", id: "row-1" }, error: null });
+    vi.mocked(loadGatewayWebhookConfig).mockClear();
+    vi.mocked(getHotmartAccessToken).mockClear();
+    vi.mocked(getHotmartSubscriberSnapshot).mockClear();
+  });
+
+  it("sem credenciais de API, usa o payload sem enriquecer", async () => {
+    vi.mocked(loadGatewayWebhookConfig).mockResolvedValue({ enabled: true, secrets: ["secret"] });
+
+    const result = await handleBillingWebhook({
+      gateway: "hotmart", rawBody: '{"event":"PURCHASE_CANCELED"}', clientIp: "hotmart-no-creds",
+      verifySignature: () => true,
+      normalize: () => ({
+        gateway: "hotmart", eventId: "evt-hm-1", eventType: "PURCHASE_CANCELED", action: "ignore",
+        subscription: { gatewaySubscriptionId: "SUB1", localStatus: "canceled" },
+      }),
+    });
+
+    expect(result.status).toBe(200);
+    expect(getHotmartAccessToken).not.toHaveBeenCalled();
+    expect(dbMocks.update).toHaveBeenCalledWith(expect.objectContaining({ api_enriched: false }));
+  });
+
+  it("com credenciais, busca o snapshot autoritativo antes de gravar", async () => {
+    vi.mocked(loadGatewayWebhookConfig).mockResolvedValue({
+      enabled: true, secrets: ["secret"],
+      hotmartCredentials: { clientId: "id", clientSecret: "secret" },
+    });
+    vi.mocked(getHotmartAccessToken).mockResolvedValue({ accessToken: "tok", expiresIn: 3600 });
+    vi.mocked(getHotmartSubscriberSnapshot).mockResolvedValue({
+      id: "SUB1", gatewayStatus: "CANCELLED_BY_CUSTOMER", localStatus: "canceled", nextDueAt: "2026-09-01T00:00:00.000Z",
+    });
+
+    const result = await handleBillingWebhook({
+      gateway: "hotmart", rawBody: '{"event":"SUBSCRIPTION_CANCELLATION"}', clientIp: "hotmart-enrich",
+      verifySignature: () => true,
+      normalize: () => ({
+        gateway: "hotmart", eventId: "evt-hm-2", eventType: "SUBSCRIPTION_CANCELLATION", action: "revoke_at_period_end",
+        subscription: { gatewaySubscriptionId: "SUB1", localStatus: "canceled" },
+      }),
+    });
+
+    expect(result.status).toBe(200);
+    expect(getHotmartAccessToken).toHaveBeenCalledWith({ clientId: "id", clientSecret: "secret" });
+    expect(getHotmartSubscriberSnapshot).toHaveBeenCalledWith({ accessToken: "tok", subscriberCode: "SUB1" });
+    expect(dbMocks.update).toHaveBeenCalledWith(expect.objectContaining({ api_enriched: true }));
+  });
+
+  it("401 da API marca a integração para reconectar e cai no payload", async () => {
+    vi.mocked(loadGatewayWebhookConfig).mockResolvedValue({
+      enabled: true, secrets: ["secret"],
+      hotmartCredentials: { clientId: "id", clientSecret: "secret" },
+    });
+    vi.mocked(getHotmartAccessToken).mockRejectedValue(new HotmartApiError("Credenciais recusadas.", 401));
+
+    const result = await handleBillingWebhook({
+      gateway: "hotmart", rawBody: '{"event":"PURCHASE_APPROVED"}', clientIp: "hotmart-401",
+      verifySignature: () => true,
+      normalize: () => ({
+        gateway: "hotmart", eventId: "evt-hm-3", eventType: "PURCHASE_APPROVED", action: "ignore",
+        subscription: { gatewaySubscriptionId: "SUB1" },
+      }),
+    });
+
+    expect(result.status).toBe(200);
+    expect(dbMocks.from).toHaveBeenCalledWith("integrations");
+    expect(dbMocks.update).toHaveBeenCalledWith({ status: "needs_reconnect" });
   });
 });

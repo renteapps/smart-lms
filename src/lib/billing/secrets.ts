@@ -38,6 +38,8 @@ export type GatewayWebhookConfig = {
   enabled: boolean;
   secrets: string[];
   apiAccessToken?: string;
+  /** Client-credentials da Hotmart — sem token cacheado, um novo é pedido a cada chamada (ver `getHotmartAccessToken`). */
+  hotmartCredentials?: { clientId: string; clientSecret: string; basicToken?: string };
   producerId?: string;
   status?: string;
 };
@@ -78,10 +80,17 @@ export async function loadGatewayWebhookConfig(
     ? publicConfig.producerId.trim()
     : undefined;
 
+  const clientId = typeof stored?.clientId === "string" ? stored.clientId.trim() : "";
+  const clientSecret = typeof stored?.clientSecret === "string" ? stored.clientSecret.trim() : "";
+  const hotmartCredentials = gateway === "hotmart" && clientId && clientSecret
+    ? { clientId, clientSecret, basicToken: typeof stored?.basicToken === "string" ? stored.basicToken.trim() || undefined : undefined }
+    : undefined;
+
   return {
     enabled: true,
     secrets: Array.from(new Set(secrets)),
     apiAccessToken,
+    hotmartCredentials,
     producerId,
     status: typeof data?.status === "string" ? data.status : undefined,
   };

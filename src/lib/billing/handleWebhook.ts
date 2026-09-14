@@ -4,6 +4,7 @@ import type { DB } from "@/lib/data/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServiceRoleKey } from "@/lib/supabase/env";
 import { EduzzApiError, getEduzzSubscriptionSnapshot, mergeEduzzEventWithSnapshot } from "./eduzzApi";
+import { getHotmartAccessToken, getHotmartSubscriberSnapshot, HotmartApiError, mergeHotmartEventWithSnapshot } from "./hotmartApi";
 import {
   applyGrant,
   findContractOwner,
@@ -171,6 +172,28 @@ async function enrichEduzzEvent(db: DB, event: NormalizedBillingEvent, config: G
   }
 }
 
+async function enrichHotmartEvent(db: DB, event: NormalizedBillingEvent, config: GatewayWebhookConfig) {
+  const subscriberCode = event.subscription?.gatewaySubscriptionId;
+  if (!subscriberCode || !config.hotmartCredentials) {
+    return {
+      event, authoritative: false,
+      warning: subscriberCode ? "API Hotmart não conectada; usando payload autenticado." : undefined,
+    };
+  }
+
+  try {
+    const token = await getHotmartAccessToken(config.hotmartCredentials);
+    const snapshot = await getHotmartSubscriberSnapshot({ accessToken: token.accessToken, subscriberCode });
+    return { event: mergeHotmartEventWithSnapshot(event, snapshot), authoritative: true, warning: undefined };
+  } catch (error) {
+    const apiError = error as HotmartApiError;
+    if (apiError.status === 401 || apiError.status === 403) {
+      await db.from("integrations").update({ status: "needs_reconnect" }).eq("slug", "hotmart");
+    }
+    return { event, authoritative: false, warning: apiError.message };
+  }
+}
+
 export async function handleBillingWebhook(input: {
   gateway: BillingGateway;
   rawBody: string;
@@ -240,7 +263,9 @@ export async function handleBillingWebhook(input: {
   try {
     const enriched = gateway === "eduzz"
       ? await enrichEduzzEvent(db, normalized, config)
-      : { event: normalized, authoritative: false, warning: undefined };
+      : gateway === "hotmart"
+        ? await enrichHotmartEvent(db, normalized, config)
+        : { event: normalized, authoritative: false, warning: undefined };
     const result = await processEvent(db, enriched.event, enriched.authoritative);
     await db.from("gateway_webhook_events").update({
       status: result.status, user_id: result.userId, subscription_id: result.subscriptionId,

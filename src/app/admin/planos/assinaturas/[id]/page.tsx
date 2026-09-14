@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ChevronLeft, Ban, PlayCircle, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getSubscriptionById, type Subscription } from "@/lib/data/plans";
+import { cancelHotmartSubscriptionAction, reactivateHotmartSubscriptionAction } from "@/app/actions/admin/hotmart";
 
 type SubscriptionDetail = Subscription & {
   history?: {
@@ -45,42 +46,59 @@ export default function AssinaturaDetalhePage() {
     loadData();
   }, [params.id, router]);
 
+  // Recarrega depois de cancelar/reativar — fora do efeito de montagem de
+  // propósito, para não acionar o lint de setState dentro de efeito.
+  async function reloadSubscription() {
+    const id = typeof params.id === "string" ? params.id : Array.isArray(params.id) ? params.id[0] : "";
+    if (!id) return;
+    const supabase = createClient();
+    try {
+      const data = await getSubscriptionById(supabase, id);
+      if (data) setSub((prev) => (prev ? { ...data, history: prev.history } : { ...data, history: [] }));
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   if (!sub) return null;
 
-  // ==== API Mocks (Simulando integrações com Eduzz) ====
-  
+  // A Hotmart é o único gateway com cancelamento/reativação implementados de
+  // verdade até agora (ver `lib/billing/hotmartApi.ts`) — os outros mostram um
+  // aviso em vez de fingir uma ação que não existe.
+  const isHotmart = sub.gateway === "hotmart";
+
   const handleCancelContract = async () => {
-    if (!confirm("Tem certeza que deseja cancelar essa assinatura na Eduzz?")) return;
-    
+    if (!sub.gatewaySubscriptionId) return toast.error("Assinatura sem identificador da Hotmart.");
+    if (!confirm("Cancelar esta assinatura na Hotmart? O acesso do assinante é mantido até o fim do período já pago.")) return;
+
     setIsProcessing(true);
-    // TODO: fetch('/api/eduzz/cancel-contract', { method: 'POST', body: JSON.stringify({ contractId: sub.id }) })
-    setTimeout(() => {
-      setSub({ ...sub, status: "canceled" });
-      setIsProcessing(false);
-      toast.success("Contrato cancelado com sucesso na Eduzz!");
-    }, 1000);
+    const result = await cancelHotmartSubscriptionAction(sub.gatewaySubscriptionId, true);
+    setIsProcessing(false);
+    if (!result.success) return toast.error(result.message ?? "Falha ao cancelar a assinatura.");
+    toast.success("Assinatura cancelada na Hotmart.");
+    await reloadSubscription();
   };
 
   const handleReactivateContract = async () => {
+    if (!sub.gatewaySubscriptionId) return toast.error("Assinatura sem identificador da Hotmart.");
+    if (!confirm("Enviar solicitação de reativação? A Hotmart manda um e-mail de aceite ao assinante (válido por 3 dias) — o acesso só volta quando ele aceitar.")) return;
+
     setIsProcessing(true);
-    // TODO: fetch('/api/eduzz/reactivate-contract', { method: 'POST', body: JSON.stringify({ contractId: sub.id }) })
-    setTimeout(() => {
-      setSub({ ...sub, status: "active" });
-      setIsProcessing(false);
-      toast.success("Contrato reativado com sucesso na Eduzz!");
-    }, 1000);
+    const result = await reactivateHotmartSubscriptionAction(sub.gatewaySubscriptionId, false);
+    setIsProcessing(false);
+    if (!result.success) return toast.error(result.message ?? "Falha ao solicitar a reativação.");
+    toast.success(result.message ?? "Solicitação de reativação enviada.");
+    await reloadSubscription();
   };
 
   const handleChangeCard = async () => {
     setIsProcessing(true);
-    // TODO: fetch('/api/eduzz/request-card-change', { method: 'POST', body: JSON.stringify({ contractId: sub.id }) })
+    // TODO: nenhum gateway integrado neste projeto tem endpoint de troca de cartão hoje.
     setTimeout(() => {
       setIsProcessing(false);
       toast.success("E-mail para alteração de cartão enviado ao aluno!");
     }, 1000);
   };
-
-  // =====================================================
 
   const isCanceled = sub.status === "cancelado" || sub.status === "canceled";
 
@@ -93,7 +111,7 @@ export default function AssinaturaDetalhePage() {
         <PageHeader
           eyebrow="Assinatura"
           title={sub.userName || "Assinatura"}
-          description={`Gerenciando contrato via ${sub.gateway || "Eduzz"}`}
+          description={`Gerenciando contrato via ${sub.gateway || "gateway desconhecido"}`}
         />
       </div>
 
@@ -173,19 +191,23 @@ export default function AssinaturaDetalhePage() {
             <h3 className="font-bold mb-4 text-sm uppercase text-muted tracking-wider">Ações ({sub.gateway})</h3>
             <div className="flex flex-col gap-3">
               {isCanceled ? (
-                <Button 
-                  variant="primary" 
-                  className="w-full justify-start gap-2"
-                  isDisabled={isProcessing}
-                  onPress={handleReactivateContract}
-                >
-                  <PlayCircle className="size-4" />
-                  Reativar Contrato
-                </Button>
+                isHotmart ? (
+                  <Button
+                    variant="primary"
+                    className="w-full justify-start gap-2"
+                    isDisabled={isProcessing}
+                    onPress={handleReactivateContract}
+                  >
+                    <PlayCircle className="size-4" />
+                    Reativar Contrato
+                  </Button>
+                ) : (
+                  <p className="text-sm text-muted">Reativação pela plataforma ainda não disponível para {sub.gateway ?? "este gateway"}.</p>
+                )
               ) : (
                 <>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="w-full justify-start gap-2"
                     isDisabled={isProcessing}
                     onPress={handleChangeCard}
@@ -193,15 +215,19 @@ export default function AssinaturaDetalhePage() {
                     <RefreshCw className="size-4" />
                     Solicitar Troca de Cartão
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start gap-2 text-danger hover:bg-danger/10 hover:text-danger"
-                    isDisabled={isProcessing}
-                    onPress={handleCancelContract}
-                  >
-                    <Ban className="size-4" />
-                    Cancelar Contrato
-                  </Button>
+                  {isHotmart ? (
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-2 text-danger hover:bg-danger/10 hover:text-danger"
+                      isDisabled={isProcessing}
+                      onPress={handleCancelContract}
+                    >
+                      <Ban className="size-4" />
+                      Cancelar Contrato
+                    </Button>
+                  ) : (
+                    <p className="text-sm text-muted">Cancelamento pela plataforma ainda não disponível para {sub.gateway ?? "este gateway"}.</p>
+                  )}
                 </>
               )}
             </div>

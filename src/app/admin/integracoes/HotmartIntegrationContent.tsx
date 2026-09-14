@@ -1,20 +1,51 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronDown, ChevronRight, Copy, KeyRound, ListChecks, Pencil, Plus, RefreshCw, Trash2, Webhook } from "lucide-react";
+import { Ban, CheckCircle2, ChevronDown, ChevronRight, Copy, KeyRound, ListChecks, Pencil, PlayCircle, Plus, RefreshCw, Repeat, Trash2, Webhook } from "lucide-react";
 import { toast } from "sonner";
 
 import {
+  cancelHotmartSubscriptionAction,
   clearHotmartApiCredentials,
   deleteHotmartMapping,
   getHotmartAdminConfig,
   listHotmartCatalog,
+  listHotmartSubscriptions,
+  reactivateHotmartSubscriptionAction,
   saveHotmartConfiguration,
   saveHotmartMapping,
+  syncHotmartSubscriptionAction,
   type HotmartAdminConfig,
 } from "@/app/actions/admin/hotmart";
-import type { HotmartProductSummary } from "@/lib/billing/hotmartApi";
+import type { HotmartProductSummary, HotmartSubscriberPageInfo, HotmartSubscriberSummary } from "@/lib/billing/hotmartApi";
 import { PageHeader } from "@/components/ui/editorial";
+
+const SUBSCRIPTION_STATUSES = [
+  { value: "ACTIVE", label: "Ativa" },
+  { value: "STARTED", label: "Iniciada" },
+  { value: "DELAYED", label: "Atrasada" },
+  { value: "OVERDUE", label: "Vencida" },
+  { value: "INACTIVE", label: "Inativa" },
+  { value: "CANCELLED_BY_CUSTOMER", label: "Cancelada pelo cliente" },
+  { value: "CANCELLED_BY_SELLER", label: "Cancelada pelo produtor" },
+  { value: "CANCELLED_BY_ADMIN", label: "Cancelada pelo admin" },
+] as const;
+
+function subscriptionStatusLabel(status: string): string {
+  return SUBSCRIPTION_STATUSES.find((item) => item.value === status)?.label ?? status;
+}
+
+function subscriptionStatusBadgeClass(status: string): string {
+  if (status === "ACTIVE") return "bg-success-soft text-success";
+  if (status === "DELAYED" || status === "OVERDUE") return "bg-warning-soft text-warning";
+  if (status === "STARTED") return "bg-accent-soft text-accent";
+  return "bg-danger-soft text-danger";
+}
+
+/** Reativar só faz sentido a partir de um estado que já parou de cobrar. */
+function canReactivateSubscription(status: string): boolean {
+  return status === "INACTIVE" || status.startsWith("CANCELLED_BY_");
+}
 
 const inputClass = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent";
 const buttonClass = "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50";
@@ -56,6 +87,16 @@ export function HotmartIntegrationContent() {
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogItems, setCatalogItems] = useState<HotmartProductSummary[]>([]);
+
+  const [subsOpen, setSubsOpen] = useState(false);
+  const [subsLoading, setSubsLoading] = useState(false);
+  const [subsItems, setSubsItems] = useState<HotmartSubscriberSummary[]>([]);
+  const [subsPageInfo, setSubsPageInfo] = useState<HotmartSubscriberPageInfo | null>(null);
+  const [subsCurrentToken, setSubsCurrentToken] = useState<string | undefined>(undefined);
+  const [subsStatusFilter, setSubsStatusFilter] = useState("");
+  const [subsEmailFilter, setSubsEmailFilter] = useState("");
+  const [subsProductFilter, setSubsProductFilter] = useState("");
+  const [subsBusyCode, setSubsBusyCode] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -124,6 +165,56 @@ export function HotmartIntegrationContent() {
   }
 
   const copyWebhookUrl = () => { void navigator.clipboard.writeText(webhookUrl); toast.success("URL copiada."); };
+
+  async function loadSubscriptions(pageToken?: string) {
+    setSubsLoading(true);
+    setSubsCurrentToken(pageToken);
+    const result = await listHotmartSubscriptions({
+      status: subsStatusFilter || undefined,
+      subscriberEmail: subsEmailFilter || undefined,
+      productId: subsProductFilter || undefined,
+      pageToken,
+    });
+    setSubsLoading(false);
+    if (!result.success || !result.data) return toast.error(result.message ?? "Não foi possível listar as assinaturas.");
+    setSubsItems(result.data.items);
+    setSubsPageInfo(result.data.pageInfo);
+  }
+
+  async function toggleSubscriptions() {
+    const next = !subsOpen;
+    setSubsOpen(next);
+    if (next && subsItems.length === 0 && !subsLoading) await loadSubscriptions();
+  }
+
+  async function handleCancelSubscription(subscriberCode: string) {
+    if (!confirm("Cancelar esta assinatura na Hotmart? O acesso do assinante é mantido até o fim do período já pago.")) return;
+    setSubsBusyCode(subscriberCode);
+    const result = await cancelHotmartSubscriptionAction(subscriberCode, true);
+    setSubsBusyCode(null);
+    if (!result.success) return toast.error(result.message ?? "Falha ao cancelar a assinatura.");
+    toast.success("Assinatura cancelada.");
+    await loadSubscriptions(subsCurrentToken);
+  }
+
+  async function handleReactivateSubscription(subscriberCode: string) {
+    if (!confirm("Enviar solicitação de reativação para o assinante? A Hotmart manda um e-mail de aceite (válido por 3 dias) — o acesso só volta quando ele aceitar.")) return;
+    setSubsBusyCode(subscriberCode);
+    const result = await reactivateHotmartSubscriptionAction(subscriberCode, false);
+    setSubsBusyCode(null);
+    if (!result.success) return toast.error(result.message ?? "Falha ao solicitar a reativação.");
+    toast.success(result.message ?? "Solicitação enviada.");
+    await loadSubscriptions(subsCurrentToken);
+  }
+
+  async function handleSyncSubscription(subscriberCode: string) {
+    setSubsBusyCode(subscriberCode);
+    const result = await syncHotmartSubscriptionAction(subscriberCode);
+    setSubsBusyCode(null);
+    if (!result.success) return toast.error(result.message ?? "Falha ao sincronizar.");
+    toast.success("Estado sincronizado com a Hotmart.");
+    await loadSubscriptions(subsCurrentToken);
+  }
 
   if (loading && !data) return <div className="p-8 text-center text-muted">Carregando integração…</div>;
 
@@ -296,6 +387,83 @@ export function HotmartIntegrationContent() {
           })}
           {data?.mappings.length === 0 && <p className="p-4 text-sm text-muted">Nenhum produto mapeado.</p>}
         </div>
+      </section>
+
+      <section className="rounded-xl border border-border bg-surface p-6 space-y-4">
+        <button type="button" className="flex w-full items-center justify-between gap-3 text-left" onClick={() => void toggleSubscriptions()}>
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-bold"><Repeat className="size-5 text-accent" /> Assinaturas</h2>
+            <p className="mt-1 text-sm text-muted">
+              Assinantes de produtos recorrentes na Hotmart. Reativar não é imediato — a Hotmart manda um e-mail de aceite ao assinante (válido por 3 dias) antes de voltar a cobrar.
+            </p>
+          </div>
+          {subsOpen ? <ChevronDown className="size-5 text-muted" /> : <ChevronRight className="size-5 text-muted" />}
+        </button>
+
+        {subsOpen && (
+          !data?.apiConnected ? (
+            <p className="rounded-lg bg-background-secondary p-4 text-sm text-muted">Conecte as credenciais de API acima para gerenciar assinaturas.</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid gap-3 md:grid-cols-4">
+                <select className={inputClass} value={subsStatusFilter} onChange={(e) => setSubsStatusFilter(e.target.value)}>
+                  <option value="">Todos os status</option>
+                  {SUBSCRIPTION_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </select>
+                <input className={inputClass} value={subsEmailFilter} onChange={(e) => setSubsEmailFilter(e.target.value)} placeholder="E-mail do assinante" />
+                <input className={inputClass} value={subsProductFilter} onChange={(e) => setSubsProductFilter(e.target.value)} placeholder="ID do produto" />
+                <button className={`${buttonClass} border border-border`} disabled={subsLoading} onClick={() => void loadSubscriptions()}>Buscar</button>
+              </div>
+
+              {subsLoading && <p className="p-4 text-center text-sm text-muted">Carregando assinaturas…</p>}
+              {!subsLoading && subsItems.length === 0 && <p className="p-4 text-sm text-muted">Nenhuma assinatura encontrada.</p>}
+
+              <div className="divide-y divide-border rounded-lg border border-border">
+                {subsItems.map((item) => {
+                  const busy = subsBusyCode === item.subscriberCode;
+                  return (
+                    <div key={item.subscriberCode} className="grid gap-2 p-3 text-sm md:grid-cols-[1.5fr_1fr_auto_auto] md:items-center">
+                      <div>
+                        <p className="font-semibold">{item.subscriber?.name ?? "Sem nome"}</p>
+                        <p className="text-xs text-muted">{item.subscriber?.email ?? "sem e-mail"} · {item.product?.name ?? item.product?.id ?? "produto removido"}{item.plan?.name ? ` · ${item.plan.name}` : ""}</p>
+                      </div>
+                      <div className="text-xs text-muted">
+                        {item.price?.value != null && <p>{item.price.currencyCode ?? "BRL"} {item.price.value.toFixed(2)}</p>}
+                        <p>{item.dateNextCharge ? `Próx. cobrança: ${new Date(item.dateNextCharge).toLocaleDateString("pt-BR")}` : "Sem próxima cobrança"}</p>
+                      </div>
+                      <span className={`w-fit rounded-full px-2 py-1 text-xs font-semibold ${subscriptionStatusBadgeClass(item.status)}`}>
+                        {subscriptionStatusLabel(item.status)}
+                      </span>
+                      <div className="flex items-center justify-end gap-2">
+                        <button aria-label="Sincronizar com a Hotmart" className={`${buttonClass} border border-border`} disabled={busy} onClick={() => void handleSyncSubscription(item.subscriberCode)}>
+                          <RefreshCw className="size-4" />
+                        </button>
+                        {item.status === "ACTIVE" && (
+                          <button aria-label="Cancelar assinatura" className={`${buttonClass} border border-danger/40 text-danger`} disabled={busy} onClick={() => void handleCancelSubscription(item.subscriberCode)}>
+                            <Ban className="size-4" /> Cancelar
+                          </button>
+                        )}
+                        {canReactivateSubscription(item.status) && (
+                          <button aria-label="Reativar assinatura" className={`${buttonClass} border border-border`} disabled={busy} onClick={() => void handleReactivateSubscription(item.subscriberCode)}>
+                            <PlayCircle className="size-4" /> Reativar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {(subsPageInfo?.nextPageToken || subsPageInfo?.prevPageToken) && (
+                <div className="flex items-center justify-center gap-3 text-sm text-muted">
+                  <button className={`${buttonClass} border border-border`} disabled={subsLoading || !subsPageInfo?.prevPageToken} onClick={() => void loadSubscriptions(subsPageInfo?.prevPageToken ?? undefined)}>Anterior</button>
+                  {subsPageInfo?.totalResults != null && <span>{subsPageInfo.totalResults} assinatura(s)</span>}
+                  <button className={`${buttonClass} border border-border`} disabled={subsLoading || !subsPageInfo?.nextPageToken} onClick={() => void loadSubscriptions(subsPageInfo?.nextPageToken ?? undefined)}>Próxima</button>
+                </div>
+              )}
+            </div>
+          )
+        )}
       </section>
 
       <section className="rounded-xl border border-border bg-surface p-6 space-y-4">

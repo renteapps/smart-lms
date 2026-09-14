@@ -124,6 +124,31 @@ export function resolveHotmartOutcome(eventType: string): BillingEventOutcome {
   return HOTMART_EVENTS[key] ?? IGNORE;
 }
 
+/**
+ * De-para do `status` retornado pela Subscription API (`GET /subscriptions`,
+ * cancelar, reativar) — vocabulário diferente do nome de evento de webhook que
+ * `resolveHotmartOutcome` trata. `STARTED` é a assinatura recém-criada
+ * aguardando a primeira cobrança confirmar, por isso não concede sozinho.
+ * `DELAYED`/`OVERDUE` são tentativas de cobrança em andamento — mantém acesso,
+ * não revoga. Os três `CANCELLED_BY_*` e o `INACTIVE` genérico caem na mesma
+ * política de cancelamento: revoga no fim do período já pago.
+ */
+const HOTMART_SUBSCRIPTION_STATUS: Record<string, BillingEventOutcome> = {
+  ACTIVE: { action: "grant", transactionStatus: "approved", localStatus: "active" },
+  STARTED: { action: "sync", transactionStatus: "pending", localStatus: "pending" },
+  DELAYED: { action: "past_due", transactionStatus: "pending", localStatus: "past_due" },
+  OVERDUE: { action: "past_due", transactionStatus: "pending", localStatus: "past_due" },
+  INACTIVE: { action: "revoke_at_period_end", transactionStatus: "canceled", localStatus: "canceled" },
+  CANCELLED_BY_CUSTOMER: { action: "revoke_at_period_end", transactionStatus: "canceled", localStatus: "canceled" },
+  CANCELLED_BY_SELLER: { action: "revoke_at_period_end", transactionStatus: "canceled", localStatus: "canceled" },
+  CANCELLED_BY_ADMIN: { action: "revoke_at_period_end", transactionStatus: "canceled", localStatus: "canceled" },
+};
+
+export function resolveHotmartSubscriptionStatus(status?: string | null): BillingEventOutcome {
+  const key = (status ?? "").trim().toUpperCase();
+  return HOTMART_SUBSCRIPTION_STATUS[key] ?? IGNORE;
+}
+
 /** Só `grant` estende acesso — usado para decidir se vale resolver o mapeamento. */
 export function outcomeGrantsAccess(outcome: BillingEventOutcome): boolean {
   return outcome.action === "grant";

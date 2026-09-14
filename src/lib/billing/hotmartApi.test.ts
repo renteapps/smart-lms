@@ -1,5 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
-import { HotmartApiError, getHotmartAccessToken, listHotmartProducts, normalizeHotmartProduct } from "./hotmartApi";
+import {
+  HotmartApiError,
+  cancelHotmartSubscription,
+  getHotmartAccessToken,
+  getHotmartSubscriberSnapshot,
+  listHotmartProducts,
+  listHotmartSubscribers,
+  mergeHotmartEventWithSnapshot,
+  normalizeHotmartProduct,
+  normalizeHotmartSubscriber,
+  normalizeHotmartSubscriberSnapshot,
+  reactivateHotmartSubscription,
+} from "./hotmartApi";
+import type { NormalizedBillingEvent } from "./types";
 
 function jsonResponse(body: unknown, status = 200) {
   return Promise.resolve(new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }));
@@ -93,5 +106,151 @@ describe("listHotmartProducts", () => {
     const fetchImpl = vi.fn(() => jsonResponse({}, 500));
     await expect(listHotmartProducts({ accessToken: "tok", fetchImpl }))
       .rejects.toMatchObject({ status: 500 });
+  });
+});
+
+// Exemplo oficial da documentação (GET /payments/api/v1/subscriptions).
+const subscriberPayload = {
+  subscriber_code: "ABC12DEF",
+  subscription_id: 123456,
+  status: "ACTIVE",
+  accession_date: 1577847600000,
+  end_accession_date: 1641005999000,
+  date_next_charge: 1580558059000,
+  trial: false,
+  transaction: "HP16616613605324",
+  plan: { name: "Plan name", id: 726420, recurrency_period: 30, max_charge_cycles: 6 },
+  product: { id: 123456, name: "Product Name", ucode: "12a34bcd-56e7-4847-fg89-h1i23j4567l8" },
+  price: { value: 123.45, currency_code: "BRL" },
+  subscriber: { name: "Subscriber name", email: "subscriber@email.com.br", ucode: "10a98bcd-76e5-4321-fg09-h8i76j5432l1" },
+};
+
+describe("normalizeHotmartSubscriber", () => {
+  it("normaliza o payload oficial completo", () => {
+    expect(normalizeHotmartSubscriber(subscriberPayload)).toMatchObject({
+      subscriberCode: "ABC12DEF",
+      subscriptionId: 123456,
+      status: "ACTIVE",
+      trial: false,
+      transaction: "HP16616613605324",
+      plan: { id: "726420", name: "Plan name", recurrencyPeriod: 30, maxChargeCycles: 6 },
+      // ucode tem precedência sobre id — mesmo critério do normalizador de webhook.
+      product: { id: "12a34bcd-56e7-4847-fg89-h1i23j4567l8", name: "Product Name" },
+      price: { value: 123.45, currencyCode: "BRL" },
+      subscriber: { name: "Subscriber name", email: "subscriber@email.com.br" },
+    });
+  });
+
+  it("sem subscriber_code ou status, descarta", () => {
+    expect(normalizeHotmartSubscriber({ status: "ACTIVE" })).toBeNull();
+    expect(normalizeHotmartSubscriber({ subscriber_code: "X" })).toBeNull();
+  });
+});
+
+describe("listHotmartSubscribers", () => {
+  it("monta a query string com os filtros e devolve items + page_info", async () => {
+    const fetchImpl = vi.fn(() => jsonResponse({
+      items: [subscriberPayload],
+      page_info: { total_results: 30, next_page_token: "next-tok", prev_page_token: "prev-tok", results_per_page: 10 },
+    }));
+
+    const page = await listHotmartSubscribers({
+      accessToken: "tok", status: "ACTIVE", productId: "123456", subscriberEmail: "a@b.com", pageToken: "cursor-1", fetchImpl,
+    });
+
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]!.subscriberCode).toBe("ABC12DEF");
+    expect(page.pageInfo).toEqual({ totalResults: 30, nextPageToken: "next-tok", prevPageToken: "prev-tok", resultsPerPage: 10 });
+
+    const [url, init] = fetchImpl.mock.calls[0]! as unknown as [string, RequestInit];
+    expect(url).toContain("developers.hotmart.com/payments/api/v1/subscriptions");
+    expect(url).toContain("status=ACTIVE");
+    expect(url).toContain("product_id=123456");
+    expect(url).toContain("page_token=cursor-1");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok");
+  });
+
+  it("descarta itens malformados sem quebrar a listagem", async () => {
+    const fetchImpl = vi.fn(() => jsonResponse({ items: [subscriberPayload, { status: "ACTIVE" }] }));
+    const page = await listHotmartSubscribers({ accessToken: "tok", fetchImpl });
+    expect(page.items).toHaveLength(1);
+  });
+
+  it("HTTP de erro vira HotmartApiError com o status", async () => {
+    const fetchImpl = vi.fn(() => jsonResponse({}, 500));
+    await expect(listHotmartSubscribers({ accessToken: "tok", fetchImpl })).rejects.toMatchObject({ status: 500 });
+  });
+});
+
+describe("cancelHotmartSubscription / reactivateHotmartSubscription", () => {
+  it("cancela com send_mail no corpo e POST no path certo", async () => {
+    const fetchImpl = vi.fn(() => jsonResponse({ status: "INACTIVE", subscriber_code: "9W2LNSG2" }));
+    const result = await cancelHotmartSubscription({ accessToken: "tok", subscriberCode: "9W2LNSG2", sendMail: true, fetchImpl });
+
+    expect(result).toEqual({ status: "INACTIVE", subscriberCode: "9W2LNSG2" });
+    const [url, init] = fetchImpl.mock.calls[0]! as unknown as [string, RequestInit];
+    expect(url).toBe("https://developers.hotmart.com/payments/api/v1/subscriptions/9W2LNSG2/cancel");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ send_mail: true });
+  });
+
+  it("reativa com charge:false por padrão", async () => {
+    const fetchImpl = vi.fn(() => jsonResponse({ status: "INACTIVE", subscriber_code: "9W2LNSG2" }));
+    await reactivateHotmartSubscription({ accessToken: "tok", subscriberCode: "9W2LNSG2", fetchImpl });
+
+    const [url, init] = fetchImpl.mock.calls[0]! as unknown as [string, RequestInit];
+    expect(url).toBe("https://developers.hotmart.com/payments/api/v1/subscriptions/9W2LNSG2/reactivate");
+    expect(JSON.parse(init.body as string)).toEqual({ charge: false });
+  });
+
+  it("HTTP de erro vira HotmartApiError com o status", async () => {
+    const fetchImpl = vi.fn(() => jsonResponse({}, 404));
+    await expect(cancelHotmartSubscription({ accessToken: "tok", subscriberCode: "X", fetchImpl }))
+      .rejects.toMatchObject({ status: 404 });
+  });
+});
+
+describe("getHotmartSubscriberSnapshot / normalizeHotmartSubscriberSnapshot", () => {
+  it("busca por subscriber_code e normaliza o snapshot", async () => {
+    const fetchImpl = vi.fn(() => jsonResponse({ items: [subscriberPayload], page_info: {} }));
+    const snapshot = await getHotmartSubscriberSnapshot({ accessToken: "tok", subscriberCode: "ABC12DEF", fetchImpl });
+
+    expect(snapshot).toMatchObject({
+      id: "ABC12DEF", gatewayStatus: "ACTIVE", localStatus: "active",
+      buyer: { email: "subscriber@email.com.br", name: "Subscriber name" },
+      product: { productId: "12a34bcd-56e7-4847-fg89-h1i23j4567l8" },
+      amount: 123.45, currency: "BRL",
+    });
+    const [url] = fetchImpl.mock.calls[0]! as unknown as [string];
+    expect(url).toContain("subscriber_code=ABC12DEF");
+  });
+
+  it("assinante não encontrado falha explicitamente", async () => {
+    const fetchImpl = vi.fn(() => jsonResponse({ items: [] }));
+    await expect(getHotmartSubscriberSnapshot({ accessToken: "tok", subscriberCode: "X", fetchImpl }))
+      .rejects.toBeInstanceOf(HotmartApiError);
+  });
+
+  it("status desconhecido falha em vez de assumir um padrão", () => {
+    const summary = normalizeHotmartSubscriber({ ...subscriberPayload, status: "SEI_LA" })!;
+    expect(() => normalizeHotmartSubscriberSnapshot(summary)).toThrow(/desconhecido/);
+  });
+});
+
+describe("mergeHotmartEventWithSnapshot", () => {
+  it("a API prevalece sobre o payload do webhook", () => {
+    const summary = normalizeHotmartSubscriber({ ...subscriberPayload, status: "CANCELLED_BY_CUSTOMER" })!;
+    const snapshot = normalizeHotmartSubscriberSnapshot(summary);
+    const event: NormalizedBillingEvent = {
+      gateway: "hotmart", eventId: "e1", eventType: "PURCHASE_APPROVED", action: "grant",
+      buyer: { email: "antigo@exemplo.com" }, product: { productId: "old" },
+      subscription: { gatewaySubscriptionId: "ABC12DEF", gatewayStatus: "ACTIVE", localStatus: "active" },
+    };
+
+    const merged = mergeHotmartEventWithSnapshot(event, snapshot);
+    expect(merged.action).toBe("revoke_at_period_end");
+    expect(merged.buyer?.email).toBe("subscriber@email.com.br");
+    expect(merged.product?.productId).toBe("12a34bcd-56e7-4847-fg89-h1i23j4567l8");
+    expect(merged.subscription?.localStatus).toBe("canceled");
   });
 });

@@ -2,7 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getHotmartAccessToken, listHotmartProducts, type HotmartProductSummary } from "@/lib/billing/hotmartApi";
+import { resolveHotmartSubscriptionStatus } from "@/lib/billing/eventPolicy";
+import {
+  cancelHotmartSubscription,
+  getHotmartAccessToken,
+  getHotmartSubscriberSnapshot,
+  listHotmartProducts,
+  listHotmartSubscribers,
+  reactivateHotmartSubscription,
+  type HotmartProductSummary,
+  type HotmartSubscriberPageInfo,
+  type HotmartSubscriberSummary,
+} from "@/lib/billing/hotmartApi";
+import { resolveGatewayTarget, syncSubscriptionSnapshot } from "@/lib/billing/provisioning";
+import type { HotmartSubscriptionSnapshot, NormalizedBillingEvent } from "@/lib/billing/types";
+import type { DB } from "@/lib/data/types";
 import { getSupabaseServiceRoleKey } from "@/lib/supabase/env";
 import { requireAdmin } from "@/lib/supabase/auth";
 
@@ -260,6 +274,134 @@ export async function listHotmartCatalog(): Promise<{ success: boolean; message?
     });
     const products = await listHotmartProducts({ accessToken: token.accessToken });
     return { success: true, data: products };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+/**
+ * Assinaturas (planos/assinantes) — mesmo desenho de credenciais das outras
+ * ações acima, mais reconciliação autoritativa depois de cancelar/reativar:
+ * o botão da tela não confia só no que o próprio POST devolveu, ele busca de
+ * novo o assinante na Hotmart e grava esse snapshot em `subscriptions`/
+ * `enrollments` via `sync_gateway_subscription`, do mesmo jeito que o webhook
+ * enriquecido (`enrichHotmartEvent` em `handleWebhook.ts`) já faz.
+ */
+
+async function getConnectedHotmartToken(adminClient: DB): Promise<string> {
+  const { data, error } = await adminClient.from("integrations").select("secrets").eq("slug", "hotmart").maybeSingle();
+  if (error) throw new Error(error.message);
+
+  const secrets = asRecord(data?.secrets);
+  const clientId = typeof secrets.clientId === "string" ? secrets.clientId : "";
+  const clientSecret = typeof secrets.clientSecret === "string" ? secrets.clientSecret : "";
+  if (!clientId || !clientSecret) {
+    throw new Error("Configure Client ID e Client Secret da Hotmart antes de gerenciar assinaturas.");
+  }
+
+  const token = await getHotmartAccessToken({
+    clientId, clientSecret,
+    basicToken: typeof secrets.basicToken === "string" ? secrets.basicToken : undefined,
+  });
+  return token.accessToken;
+}
+
+async function reconcileHotmartSubscriber(
+  db: DB,
+  accessToken: string,
+  subscriberCode: string,
+): Promise<HotmartSubscriptionSnapshot> {
+  const snapshot = await getHotmartSubscriberSnapshot({ accessToken, subscriberCode });
+  const target = snapshot.product?.productId
+    ? await resolveGatewayTarget(db, "hotmart", snapshot.product.productId)
+    : null;
+
+  const event: NormalizedBillingEvent = {
+    gateway: "hotmart",
+    eventId: `admin_sync_${subscriberCode}`,
+    eventType: "ADMIN_SYNC",
+    action: resolveHotmartSubscriptionStatus(snapshot.gatewayStatus).action,
+    buyer: snapshot.buyer,
+    product: snapshot.product,
+    subscription: {
+      gatewaySubscriptionId: snapshot.id,
+      currentPeriodEnd: snapshot.nextDueAt,
+      gatewayStatus: snapshot.gatewayStatus,
+      localStatus: snapshot.localStatus,
+      amount: snapshot.amount,
+      currency: snapshot.currency,
+      recurrence: snapshot.recurrence,
+    },
+  };
+
+  await syncSubscriptionSnapshot(db, event, {
+    planId: target?.kind === "plan" ? target.planId : null,
+    courseId: target?.kind === "course" ? target.courseId : null,
+    authoritative: true,
+  });
+
+  return snapshot;
+}
+
+export async function listHotmartSubscriptions(input: {
+  status?: string; productId?: string; subscriberEmail?: string; pageToken?: string;
+}): Promise<{ success: boolean; message?: string; data?: { items: HotmartSubscriberSummary[]; pageInfo: HotmartSubscriberPageInfo } }> {
+  try {
+    requireServiceRole();
+    const { adminClient } = await requireAdmin();
+    const accessToken = await getConnectedHotmartToken(adminClient);
+    const page = await listHotmartSubscribers({
+      accessToken,
+      status: clean(input.status),
+      productId: clean(input.productId),
+      subscriberEmail: clean(input.subscriberEmail),
+      pageToken: clean(input.pageToken),
+    });
+    return { success: true, data: page };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+export async function cancelHotmartSubscriptionAction(subscriberCode: string, sendMail = true) {
+  try {
+    requireServiceRole();
+    const { adminClient } = await requireAdmin();
+    const accessToken = await getConnectedHotmartToken(adminClient);
+    await cancelHotmartSubscription({ accessToken, subscriberCode, sendMail });
+    await reconcileHotmartSubscriber(adminClient, accessToken, subscriberCode);
+    revalidatePath(ADMIN_PATH);
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+export async function reactivateHotmartSubscriptionAction(subscriberCode: string, charge = false) {
+  try {
+    requireServiceRole();
+    const { adminClient } = await requireAdmin();
+    const accessToken = await getConnectedHotmartToken(adminClient);
+    await reactivateHotmartSubscription({ accessToken, subscriberCode, charge });
+    await reconcileHotmartSubscriber(adminClient, accessToken, subscriberCode);
+    revalidatePath(ADMIN_PATH);
+    return {
+      success: true,
+      message: "Solicitação enviada: o assinante recebeu um e-mail para aceitar a reativação (válido por 3 dias). O acesso só volta depois desse aceite.",
+    };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+export async function syncHotmartSubscriptionAction(subscriberCode: string) {
+  try {
+    requireServiceRole();
+    const { adminClient } = await requireAdmin();
+    const accessToken = await getConnectedHotmartToken(adminClient);
+    const snapshot = await reconcileHotmartSubscriber(adminClient, accessToken, subscriberCode);
+    revalidatePath(ADMIN_PATH);
+    return { success: true, data: snapshot };
   } catch (error) {
     return { success: false, message: (error as Error).message };
   }

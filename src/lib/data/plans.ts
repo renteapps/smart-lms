@@ -45,6 +45,8 @@ export type Subscription = {
   status: string;
   amount: number;
   gateway?: string;
+  /** Identidade estável no gateway (ex.: `subscriber_code` da Hotmart) — chave usada para cancelar/reativar. */
+  gatewaySubscriptionId?: string;
   startedAt?: string;
   currentPeriodEnd?: string;
   cancelAtPeriodEnd: boolean;
@@ -144,6 +146,7 @@ function mapSubscription(row: Row): Subscription {
     status: row.status ?? "active",
     amount: row.amount != null ? Number(row.amount) : 0,
     gateway: row.gateway ?? undefined,
+    gatewaySubscriptionId: row.gateway_subscription_id ?? undefined,
     startedAt: row.started_at ?? undefined,
     currentPeriodEnd: row.current_period_end ?? undefined,
     cancelAtPeriodEnd: row.cancel_at_period_end ?? false,

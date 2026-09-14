@@ -129,3 +129,27 @@ export type EduzzSubscriptionSnapshot = {
   amount?: number;
   currency?: string;
 };
+
+/** Status possíveis de uma assinatura na Subscription API da Hotmart (`GET /subscriptions`). */
+export type HotmartSubscriptionStatus =
+  | "ACTIVE"
+  | "INACTIVE"
+  | "DELAYED"
+  | "OVERDUE"
+  | "STARTED"
+  | "CANCELLED_BY_CUSTOMER"
+  | "CANCELLED_BY_SELLER"
+  | "CANCELLED_BY_ADMIN";
+
+export type HotmartSubscriptionSnapshot = {
+  /** É o `subscriber_code` — mesma identidade estável usada como `gateway_subscription_id`. */
+  id: string;
+  gatewayStatus: HotmartSubscriptionStatus;
+  localStatus: LocalSubscriptionStatus;
+  nextDueAt?: string | null;
+  buyer?: BillingBuyer;
+  product?: BillingProductRef;
+  amount?: number;
+  currency?: string;
+  recurrence?: { type?: string; value?: number; nextDueAt?: string | null };
+};
