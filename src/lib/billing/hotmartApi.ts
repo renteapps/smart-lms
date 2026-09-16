@@ -14,17 +14,15 @@ import type { HotmartSubscriptionSnapshot, HotmartSubscriptionStatus, Normalized
  * client-credentials — é o formulário que já existia em
  * `HotmartIntegrationContent.tsx`, só que sem nada por trás até agora.
  *
- * Endpoints confirmados: token em `api-sec-vlc.hotmart.com`, API de produto em
- * `api-hot-connect.hotmart.com`. A forma exata da resposta de listagem de
- * produto não tem um schema publicamente fixado como o da Eduzz, então a
- * leitura usa os mesmos caminhos candidatos de `payload.ts` — tolera variação
- * de formato em vez de quebrar quando a Hotmart ajustar um campo.
+ * Endpoints confirmados na documentação: token em `api-sec-vlc.hotmart.com`;
+ * produtos, ofertas, assinantes e cancelamento/reativação de assinatura ficam
+ * todos sob `developers.hotmart.com` (`/products/api/v1/...` e
+ * `/payments/api/v1/...`) — não `api-hot-connect.hotmart.com`, que devolve 401
+ * (era um host só suposto, nunca verificado contra a doc oficial).
  */
 
 const HOTMART_TOKEN_URL = "https://api-sec-vlc.hotmart.com/security/oauth/token";
-const HOTMART_API_BASE = "https://api-hot-connect.hotmart.com";
-/** Host confirmado na documentação para a Subscription API — diferente do host de produto acima. */
-const HOTMART_PAYMENTS_API_BASE = "https://developers.hotmart.com";
+const HOTMART_DEVELOPERS_API_BASE = "https://developers.hotmart.com";
 
 export class HotmartApiError extends Error {
   constructor(message: string, public readonly status?: number) {
@@ -102,7 +100,15 @@ export type HotmartProductSummary = {
   status: string | null;
 };
 
-const PRODUCT_ID_PATHS = ["id", "product.id", "productId"] as const;
+/**
+ * `ucode` primeiro, não o `id` numérico: é o mesmo identificador que o webhook
+ * manda em `data.product.ucode` (ver `PRODUCT_PATHS` em `lib/billing/hotmart.ts`)
+ * e que `SUBSCRIBER_PATHS.productId` usa mais abaixo. Se este catálogo
+ * preenchesse `id`, o botão "Usar produto" gravaria em `gateway_products` um
+ * valor que a compra de verdade nunca manda — o mapeamento pareceria salvo e
+ * nunca bateria com nenhum evento.
+ */
+const PRODUCT_ID_PATHS = ["ucode", "product.ucode", "id", "product.id", "productId"] as const;
 const PRODUCT_NAME_PATHS = ["name", "product.name", "productName"] as const;
 const PRODUCT_STATUS_PATHS = ["status", "product.status"] as const;
 
@@ -114,16 +120,7 @@ export function normalizeHotmartProduct(raw: unknown): HotmartProductSummary | n
   return { id, name, status: pickString(raw, PRODUCT_STATUS_PATHS) ?? null };
 }
 
-/**
- * Lista os produtos da conta autenticada.
- *
- * A Hotmart não documenta publicamente um endpoint de "ofertas por produto"
- * equivalente ao da Eduzz — o código de oferta (`off=` na URL de checkout) é
- * definido na página do produto e não tem uma listagem própria confirmada na
- * API pública. Por isso esta função só traz produtos; o campo de oferta no
- * mapeamento continua manual para a Hotmart, com uma nota explicando o motivo
- * na tela.
- */
+/** Lista os produtos da conta autenticada. Ofertas por produto: ver `listHotmartOffersForProduct` abaixo. */
 export async function listHotmartProducts(input: {
   accessToken: string;
   maxResults?: number;
@@ -132,7 +129,7 @@ export async function listHotmartProducts(input: {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8_000);
 
-  const url = new URL(`${HOTMART_API_BASE}/product/rest/v2/products`);
+  const url = new URL(`${HOTMART_DEVELOPERS_API_BASE}/products/api/v1/products`);
   if (input.maxResults) url.searchParams.set("max_results", String(input.maxResults));
 
   try {
@@ -163,6 +160,75 @@ export async function listHotmartProducts(input: {
     if (error instanceof HotmartApiError) throw error;
     if ((error as Error).name === "AbortError") throw new HotmartApiError("Timeout ao listar produtos na Hotmart.");
     throw new HotmartApiError(`Falha ao listar produtos na Hotmart: ${(error as Error).message}`);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export type HotmartOfferSummary = {
+  code: string;
+  name: string | null;
+  description: string | null;
+  priceValue: number | null;
+  currencyCode: string | null;
+  paymentMode: string | null;
+  isMainOffer: boolean;
+};
+
+export function normalizeHotmartOffer(raw: unknown): HotmartOfferSummary | null {
+  const code = pickString(raw, ["code"]);
+  if (!code) return null;
+
+  return {
+    code,
+    name: pickString(raw, ["name"]) ?? null,
+    description: pickString(raw, ["description"]) ?? null,
+    priceValue: pickNumber(raw, ["price.value"]) ?? null,
+    currencyCode: pickString(raw, ["price.currency_code"]) ?? null,
+    paymentMode: pickString(raw, ["payment_mode"]) ?? null,
+    isMainOffer: pickBoolean(raw, ["is_main_offer"]) ?? false,
+  };
+}
+
+/**
+ * Ofertas cadastradas para um produto (`GET /products/api/v1/products/:ucode/offers`)
+ * — popula o campo "oferta" do mapeamento. `productUcode` é o mesmo `ucode`
+ * que `HotmartProductSummary.id` já traz (ver `PRODUCT_ID_PATHS` acima).
+ */
+export async function listHotmartOffersForProduct(input: {
+  accessToken: string;
+  productUcode: string;
+  timeoutMs?: number;
+  fetchImpl?: typeof fetch;
+}): Promise<HotmartOfferSummary[]> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), input.timeoutMs ?? 8_000);
+
+  try {
+    const response = await (input.fetchImpl ?? fetch)(
+      `${HOTMART_DEVELOPERS_API_BASE}/products/api/v1/products/${encodeURIComponent(input.productUcode)}/offers`,
+      {
+        method: "GET",
+        headers: { Accept: "application/json", Authorization: `Bearer ${input.accessToken}` },
+        signal: controller.signal,
+        cache: "no-store",
+      },
+    );
+
+    if (!response.ok) {
+      throw new HotmartApiError(`Hotmart respondeu HTTP ${response.status} ao listar ofertas.`, response.status);
+    }
+
+    const payload = await response.json() as Record<string, unknown>;
+    const rawItems = Array.isArray(payload.items) ? payload.items : [];
+
+    return (rawItems as unknown[])
+      .map(normalizeHotmartOffer)
+      .filter((item): item is HotmartOfferSummary => item !== null);
+  } catch (error) {
+    if (error instanceof HotmartApiError) throw error;
+    if ((error as Error).name === "AbortError") throw new HotmartApiError("Timeout ao listar ofertas na Hotmart.");
+    throw new HotmartApiError(`Falha ao listar ofertas na Hotmart: ${(error as Error).message}`);
   } finally {
     clearTimeout(timeout);
   }
@@ -276,7 +342,7 @@ export async function listHotmartSubscribers(input: {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), input.timeoutMs ?? 8_000);
 
-  const url = new URL(`${HOTMART_PAYMENTS_API_BASE}/payments/api/v1/subscriptions`);
+  const url = new URL(`${HOTMART_DEVELOPERS_API_BASE}/payments/api/v1/subscriptions`);
   if (input.status) url.searchParams.set("status", input.status);
   if (input.productId) url.searchParams.set("product_id", input.productId);
   if (input.subscriberEmail) url.searchParams.set("subscriber_email", input.subscriberEmail);
@@ -332,7 +398,7 @@ async function postSubscriberAction(input: {
 
   try {
     const response = await (input.fetchImpl ?? fetch)(
-      `${HOTMART_PAYMENTS_API_BASE}/payments/api/v1/subscriptions/${encodeURIComponent(input.subscriberCode)}/${input.action}`,
+      `${HOTMART_DEVELOPERS_API_BASE}/payments/api/v1/subscriptions/${encodeURIComponent(input.subscriberCode)}/${input.action}`,
       {
         method: "POST",
         headers: {

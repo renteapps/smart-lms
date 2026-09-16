@@ -4,9 +4,11 @@ import {
   cancelHotmartSubscription,
   getHotmartAccessToken,
   getHotmartSubscriberSnapshot,
+  listHotmartOffersForProduct,
   listHotmartProducts,
   listHotmartSubscribers,
   mergeHotmartEventWithSnapshot,
+  normalizeHotmartOffer,
   normalizeHotmartProduct,
   normalizeHotmartSubscriber,
   normalizeHotmartSubscriberSnapshot,
@@ -71,6 +73,14 @@ describe("normalizeHotmartProduct", () => {
       .toEqual({ id: "2", name: "Curso Y", status: null });
   });
 
+  it("prefere ucode sobre id — é o que o webhook manda como productId", () => {
+    // Formato oficial de GET /products/api/v1/products.
+    expect(normalizeHotmartProduct({
+      id: 698441, name: "Product A", ucode: "f2b3be1f-313f-4a2d-b5b7-1c39d67dd3ee",
+      status: "DRAFT", created_at: 1586459699000, format: "EBOOK", is_subscription: false, warranty_period: 7,
+    })).toEqual({ id: "f2b3be1f-313f-4a2d-b5b7-1c39d67dd3ee", name: "Product A", status: "DRAFT" });
+  });
+
   it("sem id ou sem nome, descarta", () => {
     expect(normalizeHotmartProduct({ name: "Sem id" })).toBeNull();
     expect(normalizeHotmartProduct({ id: "1" })).toBeNull();
@@ -83,7 +93,7 @@ describe("listHotmartProducts", () => {
     const produtos = await listHotmartProducts({ accessToken: "tok", fetchImpl });
     expect(produtos).toEqual([{ id: "1", name: "A", status: null }]);
     const [url, init] = fetchImpl.mock.calls[0]! as unknown as [string, RequestInit];
-    expect(url).toContain("api-hot-connect.hotmart.com/product/rest/v2/products");
+    expect(url).toContain("developers.hotmart.com/products/api/v1/products");
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok");
   });
 
@@ -106,6 +116,43 @@ describe("listHotmartProducts", () => {
     const fetchImpl = vi.fn(() => jsonResponse({}, 500));
     await expect(listHotmartProducts({ accessToken: "tok", fetchImpl }))
       .rejects.toMatchObject({ status: 500 });
+  });
+});
+
+describe("normalizeHotmartOffer / listHotmartOffersForProduct", () => {
+  // Exemplo oficial da documentação (GET /products/api/v1/products/:ucode/offers).
+  const offerPayload = {
+    is_currency_conversion_enabled: true, is_main_offer: true, is_smart_recovery_enabled: false,
+    price: { value: 10, currency_code: "BRL" }, code: "02mhofjd", description: "", name: "", payment_mode: "PAY_IN_FULL",
+  };
+
+  it("normaliza o payload oficial", () => {
+    expect(normalizeHotmartOffer(offerPayload)).toEqual({
+      code: "02mhofjd", name: null, description: null, priceValue: 10, currencyCode: "BRL",
+      paymentMode: "PAY_IN_FULL", isMainOffer: true,
+    });
+  });
+
+  it("sem code, descarta", () => {
+    expect(normalizeHotmartOffer({ name: "Sem código" })).toBeNull();
+  });
+
+  it("busca por ucode no path certo", async () => {
+    const fetchImpl = vi.fn(() => jsonResponse({ items: [offerPayload] }));
+    const offers = await listHotmartOffersForProduct({ accessToken: "tok", productUcode: "f2b3be1f-313f", fetchImpl });
+
+    expect(offers).toEqual([{
+      code: "02mhofjd", name: null, description: null, priceValue: 10, currencyCode: "BRL",
+      paymentMode: "PAY_IN_FULL", isMainOffer: true,
+    }]);
+    const [url] = fetchImpl.mock.calls[0]! as unknown as [string];
+    expect(url).toBe("https://developers.hotmart.com/products/api/v1/products/f2b3be1f-313f/offers");
+  });
+
+  it("HTTP de erro vira HotmartApiError com o status", async () => {
+    const fetchImpl = vi.fn(() => jsonResponse({}, 404));
+    await expect(listHotmartOffersForProduct({ accessToken: "tok", productUcode: "x", fetchImpl }))
+      .rejects.toMatchObject({ status: 404 });
   });
 });
 

@@ -7,9 +7,11 @@ import {
   cancelHotmartSubscription,
   getHotmartAccessToken,
   getHotmartSubscriberSnapshot,
+  listHotmartOffersForProduct,
   listHotmartProducts,
   listHotmartSubscribers,
   reactivateHotmartSubscription,
+  type HotmartOfferSummary,
   type HotmartProductSummary,
   type HotmartSubscriberPageInfo,
   type HotmartSubscriberSummary,
@@ -274,6 +276,21 @@ export async function listHotmartCatalog(): Promise<{ success: boolean; message?
     });
     const products = await listHotmartProducts({ accessToken: token.accessToken });
     return { success: true, data: products };
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}
+
+/** Ofertas de um produto — `productUcode` é o `id` que `listHotmartCatalog` já devolve (é o `ucode` da Hotmart). */
+export async function listHotmartOffers(productUcode: string): Promise<{ success: boolean; message?: string; data?: HotmartOfferSummary[] }> {
+  try {
+    requireServiceRole();
+    const { adminClient } = await requireAdmin();
+    if (!productUcode.trim()) return { success: false, message: "Informe o produto." };
+
+    const accessToken = await getConnectedHotmartToken(adminClient);
+    const offers = await listHotmartOffersForProduct({ accessToken, productUcode: productUcode.trim() });
+    return { success: true, data: offers };
   } catch (error) {
     return { success: false, message: (error as Error).message };
   }

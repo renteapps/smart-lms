@@ -10,6 +10,7 @@ import {
   deleteHotmartMapping,
   getHotmartAdminConfig,
   listHotmartCatalog,
+  listHotmartOffers,
   listHotmartSubscriptions,
   reactivateHotmartSubscriptionAction,
   saveHotmartConfiguration,
@@ -17,7 +18,7 @@ import {
   syncHotmartSubscriptionAction,
   type HotmartAdminConfig,
 } from "@/app/actions/admin/hotmart";
-import type { HotmartProductSummary, HotmartSubscriberPageInfo, HotmartSubscriberSummary } from "@/lib/billing/hotmartApi";
+import type { HotmartOfferSummary, HotmartProductSummary, HotmartSubscriberPageInfo, HotmartSubscriberSummary } from "@/lib/billing/hotmartApi";
 import { PageHeader } from "@/components/ui/editorial";
 
 const SUBSCRIPTION_STATUSES = [
@@ -87,6 +88,9 @@ export function HotmartIntegrationContent() {
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogItems, setCatalogItems] = useState<HotmartProductSummary[]>([]);
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  const [offersByProduct, setOffersByProduct] = useState<Record<string, HotmartOfferSummary[]>>({});
+  const [offersLoadingId, setOffersLoadingId] = useState<string | null>(null);
 
   const [subsOpen, setSubsOpen] = useState(false);
   const [subsLoading, setSubsLoading] = useState(false);
@@ -157,11 +161,26 @@ export function HotmartIntegrationContent() {
     setCatalogItems(result.data);
   }
 
-  function applyProduct(product: HotmartProductSummary) {
+  async function toggleOffers(product: HotmartProductSummary) {
+    if (expandedProductId === product.id) {
+      setExpandedProductId(null);
+      return;
+    }
+    setExpandedProductId(product.id);
+    if (offersByProduct[product.id]) return;
+
+    setOffersLoadingId(product.id);
+    const result = await listHotmartOffers(product.id);
+    setOffersLoadingId(null);
+    if (!result.success || !result.data) return toast.error(result.message ?? "Não foi possível listar as ofertas.");
+    setOffersByProduct((prev) => ({ ...prev, [product.id]: result.data! }));
+  }
+
+  function applyProduct(product: HotmartProductSummary, offer?: HotmartOfferSummary) {
     setMappingId(undefined);
     setProductId(product.id);
-    setOfferId("");
-    toast.success(`Produto preenchido: ${product.name}`);
+    setOfferId(offer?.code ?? "");
+    toast.success(offer ? `Produto e oferta preenchidos: ${product.name} · ${offer.name ?? offer.code}` : `Produto preenchido: ${product.name}`);
   }
 
   const copyWebhookUrl = () => { void navigator.clipboard.writeText(webhookUrl); toast.success("URL copiada."); };
@@ -305,7 +324,7 @@ export function HotmartIntegrationContent() {
         <button type="button" className="flex w-full items-center justify-between gap-3 text-left" onClick={() => void toggleCatalog()}>
           <div>
             <h2 className="flex items-center gap-2 text-lg font-bold"><ListChecks className="size-5 text-accent" /> Lista de Produtos</h2>
-            <p className="mt-1 text-sm text-muted">Catálogo de produtos da conta conectada. A Hotmart não expõe uma listagem de ofertas por API — informe o código da oferta manualmente no mapeamento abaixo, se houver mais de uma.</p>
+            <p className="mt-1 text-sm text-muted">Catálogo de produtos e ofertas da conta conectada. Clique em &quot;Usar&quot; para preencher o mapeamento abaixo sem digitar códigos.</p>
           </div>
           {catalogOpen ? <ChevronDown className="size-5 text-muted" /> : <ChevronRight className="size-5 text-muted" />}
         </button>
@@ -319,11 +338,32 @@ export function HotmartIntegrationContent() {
               {!catalogLoading && catalogItems.length === 0 && <p className="p-4 text-sm text-muted">Nenhum produto encontrado.</p>}
               <div className="divide-y divide-border rounded-lg border border-border">
                 {catalogItems.map((product) => (
-                  <div key={product.id} className="flex flex-wrap items-center gap-3 p-3 text-sm">
-                    <code className="font-semibold">{product.id}</code>
-                    <span className="flex-1">{product.name}</span>
-                    {product.status && <span className="rounded-full bg-background-secondary px-2 py-1 text-xs">{product.status}</span>}
-                    <button className={`${buttonClass} border border-border`} onClick={() => applyProduct(product)}>Usar produto</button>
+                  <div key={product.id}>
+                    <div className="flex flex-wrap items-center gap-3 p-3 text-sm">
+                      <button type="button" className="text-muted" aria-label="Ver ofertas" onClick={() => void toggleOffers(product)}>
+                        {expandedProductId === product.id ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                      </button>
+                      <code className="font-semibold">{product.id}</code>
+                      <span className="flex-1">{product.name}</span>
+                      {product.status && <span className="rounded-full bg-background-secondary px-2 py-1 text-xs">{product.status}</span>}
+                      <button className={`${buttonClass} border border-border`} onClick={() => applyProduct(product)}>Usar produto</button>
+                    </div>
+                    {expandedProductId === product.id && (
+                      <div className="space-y-2 border-t border-border bg-background-secondary p-3">
+                        {offersLoadingId === product.id && <p className="text-xs text-muted">Carregando ofertas…</p>}
+                        {offersLoadingId !== product.id && (offersByProduct[product.id]?.length ?? 0) === 0 && (
+                          <p className="text-xs text-muted">Nenhuma oferta cadastrada para este produto.</p>
+                        )}
+                        {(offersByProduct[product.id] ?? []).map((offer) => (
+                          <div key={offer.code} className="flex flex-wrap items-center gap-3 text-xs">
+                            <code className="font-semibold">{offer.code}</code>
+                            <span className="flex-1">{offer.name || offer.code}{offer.isMainOffer ? " · principal" : ""}</span>
+                            {offer.priceValue != null && <span className="text-muted">{offer.currencyCode ?? "BRL"} {offer.priceValue.toFixed(2)}</span>}
+                            <button className={`${buttonClass} border border-border`} onClick={() => applyProduct(product, offer)}>Usar oferta</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
