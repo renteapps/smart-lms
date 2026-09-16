@@ -123,6 +123,12 @@ export function HotmartIntegrationContent() {
     ...(data?.courses ?? []).map((course) => ({ value: `course:${course.id}`, label: `Curso · ${course.title}` })),
   ], [data]);
 
+  /** Só preenche quando "Lista de Produtos" já foi aberta — graceful no-show fora disso. */
+  const catalogNumericIdByUcode = useMemo(
+    () => Object.fromEntries(catalogItems.map((product) => [product.id, product.numericId])),
+    [catalogItems],
+  );
+
   async function saveCredentials() {
     setBusy(true);
     const result = await saveHotmartConfiguration({
@@ -343,7 +349,10 @@ export function HotmartIntegrationContent() {
                       <button type="button" className="text-muted" aria-label="Ver ofertas" onClick={() => void toggleOffers(product)}>
                         {expandedProductId === product.id ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
                       </button>
-                      <code className="font-semibold">{product.id}</code>
+                      <div className="leading-tight">
+                        <code className="font-semibold" title="ID numérico (o mesmo do painel da Hotmart)">{product.numericId ?? "—"}</code>
+                        <code className="block text-[11px] text-muted" title="ucode — valor gravado no mapeamento">{product.id}</code>
+                      </div>
                       <span className="flex-1">{product.name}</span>
                       {product.status && <span className="rounded-full bg-background-secondary px-2 py-1 text-xs">{product.status}</span>}
                       <button className={`${buttonClass} border border-border`} onClick={() => applyProduct(product)}>Usar produto</button>
@@ -396,6 +405,11 @@ export function HotmartIntegrationContent() {
             return (
               <div key={mapping.id} className="flex items-center gap-3 p-3 text-sm">
                 <code className="font-semibold">{mapping.productId}</code>
+                {catalogNumericIdByUcode[mapping.productId] && (
+                  <span className="text-xs text-muted" title="ID numérico no painel da Hotmart">
+                    (ID {catalogNumericIdByUcode[mapping.productId]})
+                  </span>
+                )}
                 <span className="text-muted">{mapping.offerId ? `/ ${mapping.offerId}` : "/ qualquer oferta"}</span>
                 <span className="flex-1">→ {plan ? `Plano ${plan}` : `Curso ${course ?? "removido"}`}</span>
                 <button

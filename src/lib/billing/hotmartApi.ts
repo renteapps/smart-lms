@@ -96,6 +96,8 @@ export async function getHotmartAccessToken(input: {
 
 export type HotmartProductSummary = {
   id: string;
+  /** O id numérico curto que aparece no painel da Hotmart — só para o admin reconhecer o produto, não usado em nenhum lookup. */
+  numericId: string | null;
   name: string;
   status: string | null;
 };
@@ -109,6 +111,8 @@ export type HotmartProductSummary = {
  * nunca bateria com nenhum evento.
  */
 const PRODUCT_ID_PATHS = ["ucode", "product.ucode", "id", "product.id", "productId"] as const;
+/** O id numérico curto (o que o painel da Hotmart mostra) — campo à parte, só para exibição. */
+const PRODUCT_NUMERIC_ID_PATHS = ["id", "product.id", "productId"] as const;
 const PRODUCT_NAME_PATHS = ["name", "product.name", "productName"] as const;
 const PRODUCT_STATUS_PATHS = ["status", "product.status"] as const;
 
@@ -117,7 +121,12 @@ export function normalizeHotmartProduct(raw: unknown): HotmartProductSummary | n
   const name = pickString(raw, PRODUCT_NAME_PATHS);
   if (!id || !name) return null;
 
-  return { id, name, status: pickString(raw, PRODUCT_STATUS_PATHS) ?? null };
+  return {
+    id,
+    numericId: pickString(raw, PRODUCT_NUMERIC_ID_PATHS) ?? null,
+    name,
+    status: pickString(raw, PRODUCT_STATUS_PATHS) ?? null,
+  };
 }
 
 /** Lista os produtos da conta autenticada. Ofertas por produto: ver `listHotmartOffersForProduct` abaixo. */

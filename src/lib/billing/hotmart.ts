@@ -63,7 +63,24 @@ const TRANSACTION_PATHS = [
   "transaction",
 ] as const;
 
+/**
+ * Confirmado com payload real (webhook de teste da Hotmart, formato 2.0.0):
+ * em `PURCHASE_APPROVED`/`PURCHASE_COMPLETE` de assinatura, o `subscriber.code`
+ * fica dentro de `data.purchase.subscription`, não em `data.subscription`
+ * (que nem existe nesse formato). Em `SUBSCRIPTION_CANCELLATION` ele fica em
+ * `data.subscriber.code`, um objeto de nível diferente ainda.
+ *
+ * `data.subscription.id` continua como último recurso, mas é o número interno
+ * da assinatura, não o `subscriber_code` — nunca vai bater com a Subscription
+ * API. Sem os dois caminhos corretos acima, `gatewaySubscriptionId` saía
+ * `undefined` (compra) ou errado (cancelamento), e como
+ * `syncSubscriptionSnapshot` não escreve nada sem esse identificador, a compra
+ * era "processada" sem nenhuma linha em `subscriptions` — acesso pago e nunca
+ * concedido, sem erro nenhum indicando o problema.
+ */
 const SUBSCRIPTION_PATHS = [
+  "data.purchase.subscription.subscriber.code",
+  "data.subscriber.code",
   "data.subscription.subscriber.code",
   "data.subscription.subscriber_code",
   "data.subscription.id",
@@ -89,8 +106,16 @@ const OCCURRED_PATHS = [
   "creation_date",
 ] as const;
 
+/**
+ * `data.date_next_charge` (nível de `data`, não de `subscription`) é onde o
+ * payload real de `SUBSCRIPTION_CANCELLATION` traz a data — é o campo que, em
+ * assinatura cancelada, marca o último dia de acesso (documentado assim na
+ * Subscription API). `data.purchase.subscription.date_next_charge` cobre o
+ * mesmo aninhamento que `SUBSCRIPTION_PATHS` usa para compra de assinatura.
+ */
 const PERIOD_END_PATHS = [
   "data.purchase.date_next_charge",
+  "data.date_next_charge",
   "data.subscription.date_next_charge",
   "data.purchase.subscription.date_next_charge",
 ] as const;

@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 import { getArticleSlugs } from '@/lib/data/blog';
 import { createClient } from '@/lib/supabase/server';
 
-const URL = 'https://seusite.com.br'; // TODO: Replace with actual domain
+const URL = 'https://www.plataformag6.com';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient();

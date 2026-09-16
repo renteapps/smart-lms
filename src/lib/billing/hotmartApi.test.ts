@@ -65,20 +65,22 @@ describe("getHotmartAccessToken", () => {
 describe("normalizeHotmartProduct", () => {
   it("lê o caminho simples id/name/status", () => {
     expect(normalizeHotmartProduct({ id: "1", name: "Curso X", status: "ACTIVE" }))
-      .toEqual({ id: "1", name: "Curso X", status: "ACTIVE" });
+      .toEqual({ id: "1", numericId: "1", name: "Curso X", status: "ACTIVE" });
   });
 
   it("lê o caminho aninhado product.id/product.name", () => {
     expect(normalizeHotmartProduct({ product: { id: "2", name: "Curso Y" } }))
-      .toEqual({ id: "2", name: "Curso Y", status: null });
+      .toEqual({ id: "2", numericId: "2", name: "Curso Y", status: null });
   });
 
-  it("prefere ucode sobre id — é o que o webhook manda como productId", () => {
+  it("prefere ucode sobre id no campo `id` (usado no mapeamento), mas guarda o numérico à parte para exibição", () => {
     // Formato oficial de GET /products/api/v1/products.
     expect(normalizeHotmartProduct({
       id: 698441, name: "Product A", ucode: "f2b3be1f-313f-4a2d-b5b7-1c39d67dd3ee",
       status: "DRAFT", created_at: 1586459699000, format: "EBOOK", is_subscription: false, warranty_period: 7,
-    })).toEqual({ id: "f2b3be1f-313f-4a2d-b5b7-1c39d67dd3ee", name: "Product A", status: "DRAFT" });
+    })).toEqual({
+      id: "f2b3be1f-313f-4a2d-b5b7-1c39d67dd3ee", numericId: "698441", name: "Product A", status: "DRAFT",
+    });
   });
 
   it("sem id ou sem nome, descarta", () => {
@@ -91,7 +93,7 @@ describe("listHotmartProducts", () => {
   it("aceita resposta em items[]", async () => {
     const fetchImpl = vi.fn(() => jsonResponse({ items: [{ id: "1", name: "A" }] }));
     const produtos = await listHotmartProducts({ accessToken: "tok", fetchImpl });
-    expect(produtos).toEqual([{ id: "1", name: "A", status: null }]);
+    expect(produtos).toEqual([{ id: "1", numericId: "1", name: "A", status: null }]);
     const [url, init] = fetchImpl.mock.calls[0]! as unknown as [string, RequestInit];
     expect(url).toContain("developers.hotmart.com/products/api/v1/products");
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok");
