@@ -3,13 +3,11 @@ import { describe, expect, it } from "vitest";
 import { normalizeHotmartEvent } from "./hotmart";
 
 /**
- * Formato 2.0.0. O aninhamento de `subscription` aqui (dentro de
- * `data.purchase`, não em `data.subscription` solto) é o que o payload real
- * de "Enviar teste" da Hotmart manda — confirmado direto no
- * `gateway_webhook_events.payload` de um evento recebido de verdade. Um
- * fixture anterior usava `data.subscription.subscriber.code` (nível errado);
- * o código passava nos testes mas nunca extraía o `subscriber_code` de um
- * payload real, e a compra "processava" sem gravar assinatura nenhuma.
+ * Formato 2.0.0. `subscription` é **irmão** de `purchase` dentro de `data`
+ * (não aninhado nele) — verificado com `payload->'data'->'subscription'`
+ * direto no Postgres contra um evento real recebido via "Enviar teste" da
+ * Hotmart, não por leitura visual da string JSON escapada (isso já enganou
+ * uma revisão anterior aqui).
  */
 function compraAprovada(overrides: Record<string, unknown> = {}) {
   return {
@@ -33,10 +31,10 @@ function compraAprovada(overrides: Record<string, unknown> = {}) {
         price: { value: 497.0, currency_value: "BRL" },
         offer: { code: "oferta-black" },
         date_next_charge: 1790169600000,
-        subscription: {
-          status: "ACTIVE",
-          subscriber: { code: "SUB-XYZ-1" },
-        },
+      },
+      subscription: {
+        status: "ACTIVE",
+        subscriber: { code: "SUB-XYZ-1" },
       },
     },
     ...overrides,
@@ -48,7 +46,8 @@ function compraAprovada(overrides: Record<string, unknown> = {}) {
  * `gateway_webhook_events.payload` — sem editar a forma, só os dados de
  * exemplo (já fictícios/sandbox da própria Hotmart). `product.id` é `0` de
  * propósito nesse exemplo; `subscriber.code` fica em
- * `data.purchase.subscription.subscriber.code`.
+ * `data.subscription.subscriber.code` (irmão de `purchase`, confirmado via
+ * `payload->'data'->'subscription'->'subscriber'->>'code'` no Postgres).
  */
 function compraAssinaturaRealDaHotmart(overrides: Record<string, unknown> = {}) {
   return {
@@ -66,8 +65,8 @@ function compraAssinaturaRealDaHotmart(overrides: Record<string, unknown> = {}) 
         order_date: 1511783344000,
         approved_date: 1511783346000,
         transaction: "HP16015479281022",
-        subscription: { plan: { id: 123, name: "plano de teste" }, status: "ACTIVE", subscriber: { code: "I9OT62C3" } },
       },
+      subscription: { plan: { id: 123, name: "plano de teste" }, status: "ACTIVE", subscriber: { code: "I9OT62C3" } },
     },
     ...overrides,
   };
@@ -75,10 +74,10 @@ function compraAssinaturaRealDaHotmart(overrides: Record<string, unknown> = {}) 
 
 /**
  * Payload real de `SUBSCRIPTION_CANCELLATION` (mesma origem). O
- * `subscriber.code` fica direto em `data.subscriber.code` — nem em
- * `data.subscription` nem em `data.purchase.subscription`. `data.subscription.id`
- * (4148584) é o id interno da assinatura, não o `subscriber_code`; era o que o
- * código antigo pegava por engano.
+ * `subscriber.code` fica direto em `data.subscriber.code` — não em
+ * `data.subscription`, que não tem subscriber nenhum aqui, só `id`.
+ * `data.subscription.id` (4148584) é o id interno da assinatura, não o
+ * `subscriber_code`; era o que o código antigo pegava por engano.
  */
 function cancelamentoRealDaHotmart(overrides: Record<string, unknown> = {}) {
   return {
@@ -204,7 +203,7 @@ describe("normalizeHotmartEvent", () => {
   });
 
   describe("payloads reais capturados de gateway_webhook_events", () => {
-    it("compra de assinatura: subscriber_code vem de data.purchase.subscription.subscriber.code", () => {
+    it("compra de assinatura: subscriber_code vem de data.subscription.subscriber.code", () => {
       const evento = normalizeHotmartEvent(compraAssinaturaRealDaHotmart());
       expect(evento!.subscription?.gatewaySubscriptionId).toBe("I9OT62C3");
       expect(evento!.product).toEqual({ productId: "fb056612-bcc6-4217-9e6d-2a5d1110ac2f", offerId: "test" });
@@ -231,7 +230,7 @@ describe("normalizeHotmartEvent", () => {
 
     it("data.subscription.id nunca vence quando um caminho correto de subscriber.code existe", () => {
       const payload = compraAssinaturaRealDaHotmart();
-      (payload.data.purchase.subscription as Record<string, unknown>).id = 999999;
+      (payload.data.subscription as Record<string, unknown>).id = 999999;
       expect(normalizeHotmartEvent(payload)!.subscription?.gatewaySubscriptionId).toBe("I9OT62C3");
     });
   });

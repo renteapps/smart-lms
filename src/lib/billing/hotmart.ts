@@ -64,24 +64,25 @@ const TRANSACTION_PATHS = [
 ] as const;
 
 /**
- * Confirmado com payload real (webhook de teste da Hotmart, formato 2.0.0):
- * em `PURCHASE_APPROVED`/`PURCHASE_COMPLETE` de assinatura, o `subscriber.code`
- * fica dentro de `data.purchase.subscription`, não em `data.subscription`
- * (que nem existe nesse formato). Em `SUBSCRIPTION_CANCELLATION` ele fica em
- * `data.subscriber.code`, um objeto de nível diferente ainda.
+ * Verificado com `payload->'data'->...` direto no Postgres (não por leitura
+ * visual da string escapada — isso já me enganou uma vez) em dois eventos
+ * reais recebidos via "Enviar teste" da Hotmart:
  *
- * `data.subscription.id` continua como último recurso, mas é o número interno
- * da assinatura, não o `subscriber_code` — nunca vai bater com a Subscription
- * API. Sem os dois caminhos corretos acima, `gatewaySubscriptionId` saía
- * `undefined` (compra) ou errado (cancelamento), e como
- * `syncSubscriptionSnapshot` não escreve nada sem esse identificador, a compra
- * era "processada" sem nenhuma linha em `subscriptions` — acesso pago e nunca
- * concedido, sem erro nenhum indicando o problema.
+ *  - `PURCHASE_APPROVED` de assinatura: `subscription` é **irmão** de
+ *    `purchase` dentro de `data` — `data.subscription.subscriber.code`
+ *    (primeiro candidato abaixo, já existia).
+ *  - `SUBSCRIPTION_CANCELLATION`: o assinante fica solto em
+ *    `data.subscriber.code`, sem `data.subscription` ter subscriber nenhum —
+ *    só `data.subscription.id`, que é o número interno da assinatura, não o
+ *    `subscriber_code` (nunca bate com a Subscription API). Era esse `id`
+ *    que o código pegava por engano antes deste ajuste.
+ *
+ * Os dois formatos nunca têm os dois campos ao mesmo tempo, então a ordem dos
+ * dois primeiros candidatos não compete entre si.
  */
 const SUBSCRIPTION_PATHS = [
-  "data.purchase.subscription.subscriber.code",
-  "data.subscriber.code",
   "data.subscription.subscriber.code",
+  "data.subscriber.code",
   "data.subscription.subscriber_code",
   "data.subscription.id",
   "subscriber_code",
@@ -107,17 +108,16 @@ const OCCURRED_PATHS = [
 ] as const;
 
 /**
- * `data.date_next_charge` (nível de `data`, não de `subscription`) é onde o
- * payload real de `SUBSCRIPTION_CANCELLATION` traz a data — é o campo que, em
- * assinatura cancelada, marca o último dia de acesso (documentado assim na
- * Subscription API). `data.purchase.subscription.date_next_charge` cobre o
- * mesmo aninhamento que `SUBSCRIPTION_PATHS` usa para compra de assinatura.
+ * `data.date_next_charge` (irmão de `subscription` dentro de `data`, não
+ * aninhado nele) é onde o payload real de `SUBSCRIPTION_CANCELLATION` traz a
+ * data — confirmado via `payload->'data'->>'date_next_charge'` no Postgres. É
+ * o campo que, em assinatura cancelada, marca o último dia de acesso
+ * (documentado assim na Subscription API).
  */
 const PERIOD_END_PATHS = [
   "data.purchase.date_next_charge",
   "data.date_next_charge",
   "data.subscription.date_next_charge",
-  "data.purchase.subscription.date_next_charge",
 ] as const;
 
 export function normalizeHotmartEvent(payload: unknown): NormalizedBillingEvent | null {

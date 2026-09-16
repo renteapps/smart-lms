@@ -6,12 +6,23 @@ import { PageRenderer } from "@/components/page-builder/PageRenderer";
 import { getSessionUser } from "@/lib/supabase/auth";
 import { getCatalogCourses, getContinueLessons, getHomeCarouselRows } from "@/lib/data/courses";
 import { getAllArticles } from "@/lib/data/blog";
+import { getAppearanceConfig } from "@/lib/data/appearance";
 import { getPageBuilderData, getProductAccess, getPublishedPage } from "@/lib/data/pages";
+import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = {
-  title: "Início | Smart LMS",
-  description: "Seu próximo passo de estudo, organizado pela sua trilha personalizada.",
-};
+/**
+ * `page.tsx` e o `layout.tsx` raiz são o mesmo segmento de rota, então o
+ * `title.template` do layout não se aplica aqui (só em segmentos filhos) —
+ * por isso o nome da plataforma precisa ser montado manualmente.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const supabase = await createClient();
+  const appearance = await getAppearanceConfig(supabase);
+  return {
+    title: `Início | ${appearance.platformName}`,
+    description: "Seu próximo passo de estudo, organizado pela sua trilha personalizada.",
+  };
+}
 
 /**
  * Home do aluno — o painel do dia, ou Landing Page se não autenticado.

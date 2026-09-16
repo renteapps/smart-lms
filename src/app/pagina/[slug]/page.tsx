@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: PageParams): Promise<Metadata
   const custom = await getPublishedCustomPage(supabase, slug);
   if (!custom) return {};
   return {
-    title: `${custom.title} | Smart LMS`,
+    title: custom.title,
     description: custom.description ?? undefined,
   };
 }

@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: { params: Promise<{ hash: str
 
   if (!certificate) {
     return {
-      title: 'Certificado Inválido | Smart LMS',
+      title: 'Certificado Inválido',
     };
   }
 
