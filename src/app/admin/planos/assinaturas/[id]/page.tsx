@@ -9,6 +9,7 @@ import { ChevronLeft, Ban, PlayCircle, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getSubscriptionById, type Subscription } from "@/lib/data/plans";
 import { cancelHotmartSubscriptionAction, reactivateHotmartSubscriptionAction } from "@/app/actions/admin/hotmart";
+import { cancelManualSubscription } from "@/app/actions/admin/subscriptions";
 
 type SubscriptionDetail = Subscription & {
   history?: {
@@ -64,8 +65,10 @@ export default function AssinaturaDetalhePage() {
 
   // A Hotmart é o único gateway com cancelamento/reativação implementados de
   // verdade até agora (ver `lib/billing/hotmartApi.ts`) — os outros mostram um
-  // aviso em vez de fingir uma ação que não existe.
+  // aviso em vez de fingir uma ação que não existe. Assinaturas manuais
+  // (atribuídas pelo admin) têm seu próprio cancelamento simples.
   const isHotmart = sub.gateway === "hotmart";
+  const isManual = !sub.gateway || sub.gateway === "manual";
 
   const handleCancelContract = async () => {
     if (!sub.gatewaySubscriptionId) return toast.error("Assinatura sem identificador da Hotmart.");
@@ -88,6 +91,17 @@ export default function AssinaturaDetalhePage() {
     setIsProcessing(false);
     if (!result.success) return toast.error(result.message ?? "Falha ao solicitar a reativação.");
     toast.success(result.message ?? "Solicitação de reativação enviada.");
+    await reloadSubscription();
+  };
+
+  const handleCancelManual = async () => {
+    if (!confirm("Cancelar esta assinatura manual? O acesso ao plano será revogado imediatamente.")) return;
+
+    setIsProcessing(true);
+    const result = await cancelManualSubscription({ subscriptionId: sub.id, userId: sub.userId ?? "" });
+    setIsProcessing(false);
+    if (!result.success) return toast.error(result.message ?? "Falha ao cancelar a assinatura.");
+    toast.success("Assinatura manual cancelada.");
     await reloadSubscription();
   };
 
@@ -206,27 +220,41 @@ export default function AssinaturaDetalhePage() {
                 )
               ) : (
                 <>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2"
-                    isDisabled={isProcessing}
-                    onPress={handleChangeCard}
-                  >
-                    <RefreshCw className="size-4" />
-                    Solicitar Troca de Cartão
-                  </Button>
-                  {isHotmart ? (
+                  {isManual ? (
                     <Button
                       variant="ghost"
                       className="w-full justify-start gap-2 text-danger hover:bg-danger/10 hover:text-danger"
                       isDisabled={isProcessing}
-                      onPress={handleCancelContract}
+                      onPress={handleCancelManual}
                     >
                       <Ban className="size-4" />
-                      Cancelar Contrato
+                      Cancelar Assinatura Manual
                     </Button>
                   ) : (
-                    <p className="text-sm text-muted">Cancelamento pela plataforma ainda não disponível para {sub.gateway ?? "este gateway"}.</p>
+                    <>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start gap-2"
+                        isDisabled={isProcessing}
+                        onPress={handleChangeCard}
+                      >
+                        <RefreshCw className="size-4" />
+                        Solicitar Troca de Cartão
+                      </Button>
+                      {isHotmart ? (
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-start gap-2 text-danger hover:bg-danger/10 hover:text-danger"
+                          isDisabled={isProcessing}
+                          onPress={handleCancelContract}
+                        >
+                          <Ban className="size-4" />
+                          Cancelar Contrato
+                        </Button>
+                      ) : (
+                        <p className="text-sm text-muted">Cancelamento pela plataforma ainda não disponível para {sub.gateway ?? "este gateway"}.</p>
+                      )}
+                    </>
                   )}
                 </>
               )}

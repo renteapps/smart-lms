@@ -23,11 +23,13 @@ import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Card
 import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
 import { getProfile, getLastLessonActivityAt, pickLatestTimestamp } from "@/lib/data/profiles";
 import { getOverallProgress } from "@/lib/data/courses";
+import { getMySubscription, getPlans } from "@/lib/data/plans";
 import { getAiCreditBalance } from "@/lib/aiCredits";
 import { getAuthUserInfo } from "@/lib/supabase/authAdmin";
 import { createClient } from "@/lib/supabase/server";
 import { AiCreditAdminCard } from "./AiCreditAdminCard";
 import { SupportActions } from "./SupportActions";
+import { SubscriptionCard } from "./SubscriptionCard";
 
 export default async function AdminUserDashboard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -40,7 +42,7 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
 
   // Busca matrículas ativas do usuário
   const nowIso = new Date().toISOString();
-  const [aiCreditBalance, { count: enrollments }, overallProgress, lastLessonActivityAt, authInfo] =
+  const [aiCreditBalance, { count: enrollments }, overallProgress, lastLessonActivityAt, authInfo, subscription, plans] =
     await Promise.all([
       getAiCreditBalance(supabase, id),
       supabase
@@ -52,6 +54,8 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
       getOverallProgress(supabase, id),
       getLastLessonActivityAt(supabase, id),
       getAuthUserInfo(id),
+      getMySubscription(supabase, id),
+      getPlans(supabase, true),
     ]);
 
   const hasProgress = overallProgress.enrolledCourses > 0;
@@ -143,6 +147,13 @@ export default async function AdminUserDashboard({ params }: { params: Promise<{
         userId={id}
         userName={profile.fullName}
         initialBalance={aiCreditBalance}
+      />
+
+      <SubscriptionCard
+        userId={id}
+        userName={profile.fullName}
+        initialSubscription={subscription}
+        plans={plans}
       />
 
       <div className="grid grid-cols-1 gap-6 pt-2 lg:grid-cols-3">

@@ -140,7 +140,9 @@ export default function AdminComentarios() {
       setComments(formatted);
     } catch (err) {
       console.error(err);
-      toast.danger("Erro ao carregar comentários.");
+      toast.danger("Erro ao carregar comentários", {
+        description: err instanceof Error ? err.message : "Tente novamente.",
+      });
     } finally {
       setIsLoading(false);
     }
