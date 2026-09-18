@@ -22,12 +22,13 @@ import { PasswordInput } from "@/components/auth/PasswordInput";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppearance } from "@/contexts/AppearanceContext";
+import { safeRedirect } from "@/lib/safeRedirect";
 
 function AcessarContent() {
   const router = useRouter();
   const { platformName } = useAppearance();
   const searchParams = useSearchParams();
-  const next = searchParams.get("redirect") || searchParams.get("next") || "/";
+  const next = safeRedirect(searchParams.get("redirect") || searchParams.get("next"), "/");
   const urlError = searchParams.get("error");
   const urlMessage = searchParams.get("message");
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();

@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/supabase/auth";
 import { revalidatePath } from "next/cache";
 
 export async function updateUserProfile(id: string, data: {
@@ -18,7 +18,7 @@ export async function updateUserProfile(id: string, data: {
   city: string;
   state: string;
 }) {
-  const supabase = await createClient();
+  const { supabase, adminClient, user: currentUser } = await requireAdmin();
 
   const fullName = data.fullName;
   const email = data.email;
@@ -39,7 +39,7 @@ export async function updateUserProfile(id: string, data: {
   // Atualiza também no array preferences
   const { data: profile } = await supabase
     .from("profiles")
-    .select("preferences")
+    .select("preferences, email")
     .eq("id", id)
     .single();
 
@@ -54,11 +54,22 @@ export async function updateUserProfile(id: string, data: {
     neighborhood
   };
 
+  // profiles.email é espelho de auth.users (trigger sync_profile_email) e é a
+  // chave com que o webhook de pagamento acha o comprador. Trocar só o espelho
+  // descasava os dois; a troca vai pelo Auth e o trigger atualiza o perfil.
+  const normalizedEmail = email.trim().toLowerCase();
+  if (normalizedEmail && normalizedEmail !== (profile?.email ?? "").toLowerCase()) {
+    const { error: emailError } = await adminClient.auth.admin.updateUserById(id, { email: normalizedEmail });
+    if (emailError) {
+      console.error("Erro ao atualizar e-mail:", emailError);
+      return { error: "Não foi possível alterar o e-mail." };
+    }
+  }
+
   const { error } = await supabase
     .from("profiles")
     .update({
       full_name: fullName,
-      email: email,
       phone: phone || null,
       birth_date: birthDate || null,
       company: company || null,
@@ -74,18 +85,14 @@ export async function updateUserProfile(id: string, data: {
     return { error: "Não foi possível salvar as alterações." };
   }
 
-  // Registra no histórico de acesso
-  const { data: userResponse } = await supabase.auth.getUser();
-  const currentUser = userResponse.user;
-  
-  if (currentUser) {
-    await supabase.from("audit_logs").insert({
-      actor_id: id,
-      action: "update_profile",
-      metadata: { admin_id: currentUser.id },
-      ip_address: "::1", // Pelo server actions não temos o IP direto tão fácil, usando fallback
-    });
-  }
+  // Quem fez é o admin; o usuário editado é o alvo (o histórico lê as duas colunas).
+  await supabase.from("audit_logs").insert({
+    actor_id: currentUser.id,
+    action: "update_profile",
+    target_type: "user",
+    target_id: id,
+    metadata: { admin_id: currentUser.id },
+  });
 
   revalidatePath(`/admin/users/${id}`);
   revalidatePath(`/admin/users/${id}/editar`);

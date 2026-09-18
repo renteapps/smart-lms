@@ -29,8 +29,10 @@ export async function getLessonComments(db: DB, lessonId: string): Promise<Comme
 
   const userIds = Array.from(new Set(data.map((row: any) => row.user_id)));
   
+  // View só com nome/usuário/foto: a tabela profiles não é mais legível para
+  // perfis de outras pessoas (e-mail, telefone e nascimento ficavam expostos).
   const { data: profilesData } = await db
-    .from("profiles")
+    .from("public_profiles")
     .select("id, full_name, username, avatar_url")
     .in("id", userIds);
     

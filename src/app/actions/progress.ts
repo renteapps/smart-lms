@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getSupabaseServiceRoleKey } from "@/lib/supabase/env";
 import { computeQuizScore } from "@/lib/quiz/grading";
 import type { QuizQuestion } from "@/types/quiz";
 
@@ -102,25 +104,6 @@ export async function rateLesson(lessonId: string, rating: number): Promise<Acti
   }
 }
 
-export async function enrollInCourse(courseId: string): Promise<ActionResult> {
-  try {
-    const { supabase, user } = await requireUser();
-
-    const { error } = await supabase
-      .from("enrollments")
-      .upsert({ user_id: user.id, course_id: courseId, status: "active" }, { onConflict: "user_id,course_id" });
-
-    if (error) return { success: false, message: error.message };
-
-    revalidatePath("/cursos");
-    revalidatePath("/courses/[slug]", "page");
-    revalidatePath("/courses/[slug]/lessons/[lessonSlug]", "page");
-    return { success: true };
-  } catch (error) {
-    return { success: false, message: (error as Error).message };
-  }
-}
-
 export async function submitQuizResult(
   quizId: string,
   lessonId: string,
@@ -128,6 +111,17 @@ export async function submitQuizResult(
 ): Promise<{ success: boolean; data?: { score: number; passed: boolean }; message?: string }> {
   try {
     const { supabase, user } = await requireUser();
+
+    // O quiz precisa ser o da própria aula (e a aula visível para o aluno pela
+    // RLS): sem isso, a nota de um quiz fácil concluía outra aula qualquer.
+    const { data: lesson } = await supabase
+      .from("lessons")
+      .select("quiz_id")
+      .eq("id", lessonId)
+      .maybeSingle();
+    if (!lesson || lesson.quiz_id !== quizId) {
+      return { success: false, message: "Quiz não encontrado." };
+    }
 
     // Fetch quiz to calculate score
     const { data: quiz } = await supabase
@@ -146,7 +140,10 @@ export async function submitQuizResult(
       quiz.passing_score
     );
 
-    const { error } = await supabase.from("quiz_results").upsert(
+    // A nota é calculada aqui e gravada pelo servidor: o aluno não tem mais
+    // permissão de escrever em quiz_results (antes gravava score/passed livres).
+    const writer = getSupabaseServiceRoleKey() ? createAdminClient() : supabase;
+    const { error } = await writer.from("quiz_results").upsert(
       {
         quiz_id: quizId,
         user_id: user.id,
@@ -159,7 +156,8 @@ export async function submitQuizResult(
     );
 
     if (error) {
-      return { success: false, message: error.message };
+      console.error("[submitQuizResult] falha ao gravar resultado", error);
+      return { success: false, message: "Não foi possível salvar o resultado do quiz." };
     }
 
     // O rascunho salvo automaticamente não serve mais para nada depois do envio.

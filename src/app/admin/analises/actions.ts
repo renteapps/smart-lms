@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/supabase/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MOCK_ANALYTICS_CARDS } from "@/lib/mocks/analyticsMocks";
 import {
@@ -148,7 +148,7 @@ function splitCurrentAndPrevious<T>(
 }
 
 export async function getCoursesAnalytics(period: AnalyticsPeriod = "30d") {
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
   // `gateway_transactions` só concede SELECT para `service_role` — nenhuma
   // policy/grant libera `authenticated`. Sem o client admin aqui, o PostgREST
   // devolve "permission denied for table gateway_transactions" (42501) e a
@@ -382,7 +382,7 @@ export async function getCoursesAnalytics(period: AnalyticsPeriod = "30d") {
 }
 
 export async function getSalesAnalytics(period: AnalyticsPeriod = "30d") {
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
   // `gateway_transactions` só concede SELECT para `service_role` — ver nota em
   // getCoursesAnalytics. Sem isto, o PostgREST recusa a query com "permission
   // denied" e a página inteira de análises quebra.
@@ -600,7 +600,7 @@ export async function getSalesAnalytics(period: AnalyticsPeriod = "30d") {
 }
 
 export async function getAgentsAnalytics(period: AnalyticsPeriod = "30d") {
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
   const { start, previousStart } = getAnalyticsPeriodBounds(period);
 
   let conversationsQuery = supabase
@@ -764,7 +764,7 @@ export async function getAgentsAnalytics(period: AnalyticsPeriod = "30d") {
 }
 
 export async function getSubscriptionsAnalytics(period: AnalyticsPeriod = "30d") {
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
   const { start, previousStart } = getAnalyticsPeriodBounds(period);
 
   const { data: subscriptions, error: subscriptionsError } = await supabase
@@ -1003,7 +1003,7 @@ function titleCase(value: string): string {
 const UF_TO_NAME = new Map(BRAZILIAN_STATES.map((state) => [state.uf, state.name]));
 
 export async function getStudentsAnalytics(period: AnalyticsPeriod = "30d") {
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
   const { start, previousStart } = getAnalyticsPeriodBounds(period);
 
   let progressActivityQuery = supabase

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/supabase/auth";
 import { isProfileComplete } from "@/lib/profileCompleteness";
 import { CompleteProfileForm } from "./CompleteProfileForm";
+import { safeRedirect } from "@/lib/safeRedirect";
 
 export const metadata: Metadata = {
   title: "Complete seu cadastro",
@@ -48,8 +49,8 @@ export default async function CompletarCadastroPage({
     gender: profile.gender,
     careerRole: profile.career_role,
   })) {
-    redirect(next && next.startsWith("/") ? next : "/");
+    redirect(safeRedirect(next));
   }
 
-  return <CompleteProfileForm initial={initial} next={next && next.startsWith("/") ? next : "/"} />;
+  return <CompleteProfileForm initial={initial} next={safeRedirect(next)} />;
 }

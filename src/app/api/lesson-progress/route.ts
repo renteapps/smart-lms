@@ -14,7 +14,8 @@ import { requireUser } from "@/lib/supabase/auth";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const lessonId = typeof body?.lessonId === "string" ? body.lessonId : null;
+    const lessonId =
+      typeof body?.lessonId === "string" && /^[0-9a-f-]{36}$/i.test(body.lessonId) ? body.lessonId : null;
     const second = Number(body?.second);
 
     if (!lessonId || !Number.isFinite(second)) {
@@ -32,12 +33,18 @@ export async function POST(req: NextRequest) {
       { onConflict: "user_id,lesson_id" },
     );
 
-    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    if (error) {
+      console.error("[lesson-progress] falha ao gravar posição", error);
+      return NextResponse.json({ success: false, error: "Erro ao salvar progresso." }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Erro ao salvar progresso.";
-    const status = message.includes("Sessão") ? 401 : 500;
-    return NextResponse.json({ success: false, error: message }, { status });
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("Sessão")) {
+      return NextResponse.json({ success: false, error: "Sessão expirada." }, { status: 401 });
+    }
+    console.error("[lesson-progress] erro inesperado", error);
+    return NextResponse.json({ success: false, error: "Erro ao salvar progresso." }, { status: 500 });
   }
 }

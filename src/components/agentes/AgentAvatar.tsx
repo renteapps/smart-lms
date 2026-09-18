@@ -31,6 +31,24 @@ const avatars: Partial<Record<AgentAvatarKey, { icon: LucideIcon; tone: string }
   apresentacao: { icon: Presentation, tone: "bg-success-soft text-success-soft-foreground" },
 };
 
+/**
+ * O SVG colado pelo admin vira máscara (data URI), não HTML: SVG dentro de
+ * `mask-image` é renderizado como imagem, então `<script>`, `onload` e
+ * `<foreignObject>` não executam. Antes ia por `dangerouslySetInnerHTML` e era
+ * XSS armazenado para todo aluno que abrisse o catálogo. A cor vem de
+ * `currentColor` (background), igual aos ícones de biblioteca que já usam
+ * `stroke`/`fill="currentColor"`.
+ */
+export function svgToMaskImage(svg: string): string | null {
+  const trimmed = svg.trim();
+  if (!/^<svg[\s>]/i.test(trimmed)) return null;
+  // Como imagem avulsa o SVG precisa do namespace, que ícones colados costumam omitir.
+  const withNamespace = /\sxmlns=/.test(trimmed.slice(0, trimmed.indexOf(">")))
+    ? trimmed
+    : trimmed.replace(/^<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+  return `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(withNamespace)}")`;
+}
+
 const containerSizes = {
   sm: "size-8 rounded-lg",
   md: "size-12 rounded-xl",
@@ -75,6 +93,7 @@ export function AgentAvatar({ avatar, themeColor, iconSvg, photoUrl, size = "md"
   const avatarConfig = avatars[avatar];
   const tone = avatarConfig?.tone || "bg-accent-soft text-accent-soft-foreground";
   const customStyle = !isMuted && themeColor ? { backgroundColor: themeColor, color: "#ffffff" } : undefined;
+  const iconMask = iconSvg && !isMuted ? svgToMaskImage(iconSvg) : null;
 
   return (
     <span
@@ -87,10 +106,19 @@ export function AgentAvatar({ avatar, themeColor, iconSvg, photoUrl, size = "md"
         className,
       )}
     >
-      {iconSvg && !isMuted ? (
-        <div 
-          className={cn("flex items-center justify-center [&>svg]:size-full [&>svg]:max-w-full [&>svg]:max-h-full", iconSizes[size])} 
-          dangerouslySetInnerHTML={{ __html: iconSvg }} 
+      {iconMask ? (
+        <span
+          className={cn("block bg-current", iconSizes[size])}
+          style={{
+            maskImage: iconMask,
+            WebkitMaskImage: iconMask,
+            maskSize: "contain",
+            WebkitMaskSize: "contain",
+            maskRepeat: "no-repeat",
+            WebkitMaskRepeat: "no-repeat",
+            maskPosition: "center",
+            WebkitMaskPosition: "center",
+          }}
         />
       ) : avatarConfig ? (
         <avatarConfig.icon className={iconSizes[size]} />

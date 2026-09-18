@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { updateSession } from "@/lib/supabase/middleware";
+import { getClientIp } from "@/lib/clientIp";
 
 // Inicializa o Limitador usando o Upstash Redis
 // Permite 100 requisições a cada 10 segundos por IP (bloqueia robôs sem afetar alunos)
@@ -11,9 +12,55 @@ import { updateSession } from "@/lib/supabase/middleware";
 // disso e ele dobra o consumo de comandos.
 // `ephemeralCache` guarda localmente, na instância quente da function, os IPs que
 // já estouraram o limite, evitando bater no Redis de novo por eles até o cache local expirar.
-const ratelimit = {
-  limit: async (ip: string) => ({ success: true, limit: 100, reset: 0, remaining: 100 })
-};
+//
+// Sem as variáveis do Upstash (dev local) os limitadores ficam desligados.
+const hasUpstash = Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+
+const ratelimit = hasUpstash
+  ? new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(100, "10 s"),
+      analytics: false,
+      ephemeralCache: new Map(),
+      prefix: "rl:global",
+    })
+  : null;
+
+/**
+ * Rotas caras ou sensíveis a abuso: login/cadastro/recuperação (POST de server
+ * action, força bruta e e-mail bombing) e as rotas de IA (custo por chamada).
+ * Aqui o limite vale mesmo com cookie de sessão — o atalho do cookie só checa o
+ * NOME do cookie, então `Cookie: sb-x-auth-token=1` bastava para escapar.
+ */
+const sensitiveRatelimit = hasUpstash
+  ? new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(60, "60 s"),
+      analytics: false,
+      ephemeralCache: new Map(),
+      prefix: "rl:sensitive",
+    })
+  : null;
+
+const SENSITIVE_POST_PREFIXES = ["/acessar", "/criar-conta", "/resetar-senha", "/confirmar", "/api/ai/"];
+
+function isSensitiveRequest(request: NextRequest) {
+  if (request.method !== "POST") return false;
+  const { pathname } = request.nextUrl;
+  return SENSITIVE_POST_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+function tooManyRequests(limit: number, remaining: number, reset: number) {
+  return new NextResponse("Muitas requisições. Por favor, tente novamente mais tarde.", {
+    status: 429,
+    headers: {
+      "Retry-After": Math.max(1, Math.ceil((reset - Date.now()) / 1000)).toString(),
+      "X-RateLimit-Limit": limit.toString(),
+      "X-RateLimit-Remaining": remaining.toString(),
+      "X-RateLimit-Reset": reset.toString(),
+    },
+  });
+}
 
 /**
  * Nome dos cookies de sessão que o `@supabase/ssr` grava (`sb-<project-ref>-auth-token`,
@@ -35,25 +82,17 @@ export async function proxy(request: NextRequest) {
   // tira do Redis os pings de progresso de vídeo — Server Functions do Next.js
   // viram POST nesta mesma rota, então cada `saveWatchPosition` a cada 10s de
   // aula assistida também batia aqui antes desse corte.
-  if (!hasSupabaseSessionCookie(request)) {
-    // 1. Identifica o IP do usuário
-    const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
+  const ip = getClientIp(request.headers);
+  const limiter = isSensitiveRequest(request)
+    ? sensitiveRatelimit
+    : hasSupabaseSessionCookie(request)
+      ? null
+      : ratelimit;
 
-    // 2. Passa o IP pelo Rate Limiter
+  if (limiter) {
     try {
-      const { success, limit, reset, remaining } = await ratelimit.limit(ip);
-
-      // 3. Se excedeu o limite, bloqueia com 429 Too Many Requests
-      if (!success) {
-        return new NextResponse("Muitas requisições. Por favor, tente novamente mais tarde.", {
-          status: 429,
-          headers: {
-            "X-RateLimit-Limit": limit.toString(),
-            "X-RateLimit-Remaining": remaining.toString(),
-            "X-RateLimit-Reset": reset.toString(),
-          },
-        });
-      }
+      const { success, limit, reset, remaining } = await limiter.limit(ip);
+      if (!success) return tooManyRequests(limit, remaining, reset);
     } catch (error) {
       console.warn("[RateLimit Fallback] Falha ao consultar Upstash. Permitindo tráfego.", error);
     }

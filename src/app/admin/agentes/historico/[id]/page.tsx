@@ -63,6 +63,7 @@ import type {
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { getAgentConversations } from "@/lib/data/agents";
+import { escapeCsvCell } from "@/lib/downloadCsv";
 
 // Tipos de Filtro
 type PeriodOption = "hoje" | "7dias" | "mes" | "tudo";
@@ -269,8 +270,7 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
       conv.rating != null ? String(conv.rating) : "",
       String(conv.messageCount ?? conv.messages.length),
     ]);
-    const escape = (value: string) => `"${value.replace(/"/g, '""')}"`;
-    const csv = [header, ...rows].map((row) => row.map(escape).join(",")).join("\n");
+    const csv = [header, ...rows].map((row) => row.map((cell) => escapeCsvCell(cell, ",")).join(",")).join("\n");
 
     const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);

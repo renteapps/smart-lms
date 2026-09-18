@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/auth";
 import type { ProfileTestResult } from "@/lib/data/profileTests";
 import type { ActionResult } from "./progress";
+import { escapeHtml } from "@/lib/userVariables";
 
 export type ProfileUpdate = {
   fullName?: string;
@@ -132,14 +133,17 @@ export async function sendProfileTestResultEmail(result: ProfileTestResult): Pro
       return { success: false, message: "Usuário não possui e-mail cadastrado." };
     }
 
-    const percentagesHtml = result.scores?.map(s => (
-      `<li><strong>${s.categoryName}</strong>: ${s.percentage}%</li>`
-    )).join('') || '';
+    // Título, categoria e notas vêm do cliente: tudo escapado antes de virar HTML.
+    const testTitle = escapeHtml(String(result.testTitle ?? "").slice(0, 200));
+    const categoryName = escapeHtml(String(result.categoryName ?? "").slice(0, 200));
+    const percentagesHtml = (Array.isArray(result.scores) ? result.scores.slice(0, 20) : []).map(s => (
+      `<li><strong>${escapeHtml(String(s.categoryName ?? "").slice(0, 200))}</strong>: ${Math.round(Number(s.percentage) || 0)}%</li>`
+    )).join('');
 
     const htmlContent = `
-      <h2>Seu resultado do teste: ${result.testTitle}</h2>
+      <h2>Seu resultado do teste: ${testTitle}</h2>
       <p>Olá,</p>
-      <p>Seu perfil dominante identificado foi: <strong>${result.categoryName}</strong>.</p>
+      <p>Seu perfil dominante identificado foi: <strong>${categoryName}</strong>.</p>
       ${percentagesHtml ? `
         <h3>Análise completa:</h3>
         <ul>
@@ -155,7 +159,7 @@ export async function sendProfileTestResultEmail(result: ProfileTestResult): Pro
     const emailResult = await sendPlatformEmail({
       to: user.email,
       userId: user.id,
-      subject: `Seu resultado do teste: ${result.testTitle}`,
+      subject: `Seu resultado do teste: ${String(result.testTitle ?? "").slice(0, 200)}`,
       html: htmlContent,
     });
 

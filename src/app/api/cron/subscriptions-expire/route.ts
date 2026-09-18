@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServiceRoleKey } from "@/lib/supabase/env";
+import { safeEquals } from "@/lib/billing/signature";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   const authorization = request.headers.get("authorization");
-  if (!cronSecret || authorization !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || !safeEquals(authorization ?? "", `Bearer ${cronSecret}`)) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
   if (!getSupabaseServiceRoleKey()) {

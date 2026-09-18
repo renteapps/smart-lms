@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/supabase/auth";
 
 export async function updateCourseOrder(courseId: string, orderIndex: number) {
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
 
   const { error } = await supabase
     .from("courses")
@@ -23,7 +23,7 @@ export async function updateCourseOrder(courseId: string, orderIndex: number) {
 }
 
 export async function toggleCourseFeatured(courseId: string, isFeatured: boolean) {
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
 
   const { error } = await supabase
     .from("courses")
@@ -41,7 +41,7 @@ export async function toggleCourseFeatured(courseId: string, isFeatured: boolean
 }
 
 export async function updateCoursesOrderBulk(updates: { id: string, orderIndex: number }[]) {
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
 
   // Supabase doesn't have a single bulk update method out of the box for different values unless we do an upsert or multiple calls.
   // Using Promise.all for updates is fine for small lists (like 10-50 courses).

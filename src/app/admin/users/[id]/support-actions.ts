@@ -136,12 +136,27 @@ async function generateAndSendAccessLink(opts: {
   return { link, emailSent, error: sendError };
 }
 
+/**
+ * E-mail real da conta, lido do Auth pelo id. O e-mail recebido do cliente é
+ * ignorado: antes ele ia direto para o gerador de magic link, então qualquer
+ * admin obtinha um link de login para qualquer endereço (inclusive de outros
+ * admins) só trocando o argumento.
+ */
+async function getAccountEmail(userId: string): Promise<string | null> {
+  const { data, error } = await createAdminClient().auth.admin.getUserById(userId);
+  if (error || !data?.user?.email) return null;
+  return data.user.email;
+}
+
 export async function resendAccessEmail(
   userId: string,
-  email: string,
+  _clientEmail: string,
   name?: string,
 ): Promise<SupportActionResult> {
   if (!(await checkAdmin())) return { success: false, message: "Acesso negado." };
+
+  const email = await getAccountEmail(userId);
+  if (!email) return { success: false, message: "Conta não encontrada." };
 
   const { link, emailSent, error } = await generateAndSendAccessLink({
     kind: "magiclink",
@@ -168,10 +183,13 @@ export async function resendAccessEmail(
 
 export async function resetUserPassword(
   userId: string,
-  email: string,
+  _clientEmail: string,
   name?: string,
 ): Promise<SupportActionResult> {
   if (!(await checkAdmin())) return { success: false, message: "Acesso negado." };
+
+  const email = await getAccountEmail(userId);
+  if (!email) return { success: false, message: "Conta não encontrada." };
 
   const { link, emailSent, error } = await generateAndSendAccessLink({
     kind: "recovery",
@@ -210,8 +228,14 @@ export async function forceUserLogoff(userId: string): Promise<SupportActionResu
   return { success: true, message: "Logoff forçado com sucesso! Todas as sessões foram encerradas." };
 }
 
+const ALLOWED_STATUSES = new Set(["active", "inactive", "archived"]);
+const ALLOWED_ROLES = new Set(["student", "instructor", "admin"]);
+
 export async function updateUserConfig(userId: string, data: { status: string; role: string }) {
   if (!(await checkAdmin())) return { success: false, message: "Acesso negado." };
+  if (!ALLOWED_STATUSES.has(data.status) || !ALLOWED_ROLES.has(data.role)) {
+    return { success: false, message: "Papel ou status inválido." };
+  }
 
   const admin = createAdminClient();
 

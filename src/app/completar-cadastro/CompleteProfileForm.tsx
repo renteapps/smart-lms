@@ -66,13 +66,14 @@ export function CompleteProfileForm({ initial, next }: { initial: Initial; next:
       setIsCheckingUsername(true);
       try {
         const supabase = createClient();
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("username")
-          .eq("username", username.trim())
-          .maybeSingle();
+        // RPC em vez de ler profiles: perfis alheios não são mais legíveis e a
+        // função só responde "livre ou não", sem expor dados de ninguém.
+        const { data: available, error } = await supabase.rpc("username_available", {
+          p_username: username.trim(),
+        });
+        const taken = available === false;
 
-        setUsernameError(!error && data ? "Este nome de usuário já está em uso." : null);
+        setUsernameError(!error && taken ? "Este nome de usuário já está em uso." : null);
       } finally {
         setIsCheckingUsername(false);
       }

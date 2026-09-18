@@ -17,6 +17,7 @@ import { Alert, Button, buttonVariants, Spinner, toast } from "@heroui/react";
 import { AuthLayoutShell } from "@/components/auth/AuthLayoutShell";
 import { resendSignUpEmailAction } from "@/lib/auth/actions";
 import { useAppearance } from "@/contexts/AppearanceContext";
+import { safeRedirect } from "@/lib/safeRedirect";
 
 function getWebmailProviderUrl(email: string): { name: string; url: string } | null {
   const domain = email.split("@")[1]?.toLowerCase();
@@ -49,7 +50,7 @@ function ConfirmarContent() {
   const emailParam = searchParams.get("email") || "";
   const statusParam = searchParams.get("status");
   const errorParam = searchParams.get("error");
-  const next = searchParams.get("redirect") || searchParams.get("next") || "/onboarding";
+  const next = safeRedirect(searchParams.get("redirect") || searchParams.get("next"), "/onboarding");
 
   const isConfirmedSuccess = statusParam === "sucesso";
 
