@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isProfileComplete } from "@/lib/profileCompleteness";
 import { getSupabaseUrl, getSupabaseAnonKey } from "./env";
+import { safeRedirect } from "@/lib/safeRedirect";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -89,47 +90,44 @@ export async function updateSession(request: NextRequest) {
   // Redirect authenticated users away from auth pages (respeitando o redirect se houver)
   if (user && isAuthRoute) {
     const redirectParam = request.nextUrl.searchParams.get("redirect") || request.nextUrl.searchParams.get("next");
-    const targetPath = (redirectParam && redirectParam.startsWith("/") && !isAuthRoute) ? redirectParam : "/";
-    const url = request.nextUrl.clone();
-    url.pathname = targetPath;
-    url.searchParams.delete("redirect");
-    url.searchParams.delete("next");
-    return createRedirectResponse(url);
+    const target = new URL(safeRedirect(redirectParam, "/"), request.nextUrl.origin);
+    // Voltar para outra tela de login criaria um loop de redirecionamento.
+    const isAuthTarget = ["/acessar", "/criar-conta", "/resetar-senha"].some((prefix) =>
+      target.pathname.startsWith(prefix),
+    );
+    return createRedirectResponse(isAuthTarget ? new URL("/", request.nextUrl.origin) : target);
   }
 
   // Verify Admin access
   if (user && isAdminRoute) {
+    // app_metadata só é gravável pelo service role (sync_profile_role_to_app_metadata).
+    // user_metadata NÃO entra aqui: o próprio usuário edita via auth.updateUser().
     const isAppMetaAdmin = user.app_metadata?.role === "admin";
-    const isUserMetaAdmin = user.user_metadata?.role === "admin";
-    const isKnownAdminEmail = user.email?.toLowerCase() === "nohan@rente.com.br";
-    
-    let isProfileAdmin = false;
-    let dbError = null;
 
-    if (!isAppMetaAdmin && !isUserMetaAdmin && !isKnownAdminEmail) {
+    let isProfileAdmin = false;
+    let dbError: unknown = null;
+
+    if (!isAppMetaAdmin) {
       try {
         const { data: profile, error } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", user.id)
           .maybeSingle();
-        
+
         dbError = error;
         isProfileAdmin = profile?.role === "admin";
-      } catch (err: any) {
+      } catch (err) {
         dbError = err;
       }
     }
 
-    const hasAdminAccess = isAppMetaAdmin || isUserMetaAdmin || isProfileAdmin || isKnownAdminEmail;
-
-    if (!hasAdminAccess) {
+    if (!isAppMetaAdmin && !isProfileAdmin) {
+      if (dbError) console.error("[middleware] falha ao checar papel de admin", dbError);
       const url = request.nextUrl.clone();
       url.pathname = "/";
-      url.searchParams.set(
-        "blocked_reason",
-        dbError ? `db_error_${dbError.code || dbError.message}` : `not_admin`
-      );
+      url.search = "";
+      url.searchParams.set("blocked_reason", dbError ? "db_error" : "not_admin");
       return createRedirectResponse(url);
     }
   }

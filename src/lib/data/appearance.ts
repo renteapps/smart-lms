@@ -3,6 +3,30 @@ import type { DB } from "./types";
 
 export const APPEARANCE_SETTINGS_KEY = "appearance";
 
+const HEX_COLOR = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+
+/**
+ * `primaryColor` é interpolado dentro de um `<style>` no `<head>` de todas as
+ * páginas (app/layout.tsx): qualquer coisa além de uma cor hex permitiria
+ * fechar o `</style>` e injetar script para todos os visitantes.
+ */
+export function sanitizeHexColor(value: unknown): string | null {
+  return typeof value === "string" && HEX_COLOR.test(value.trim()) ? value.trim() : null;
+}
+
+/** Só https ou caminho relativo do próprio site — nada de javascript:/data:. */
+export function sanitizeAssetUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const raw = value.trim();
+  if (!raw) return null;
+  if (raw.startsWith("/") && !raw.startsWith("//") && !raw.startsWith("/\\")) return raw;
+  try {
+    return new URL(raw).protocol === "https:" ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Lê as configurações de identidade visual e marca da plataforma.
  *
@@ -28,13 +52,10 @@ export async function getAppearanceConfig(db: DB): Promise<AppearanceConfig> {
         ? v.platformName
         : DEFAULT_APPEARANCE.platformName,
     slogan: typeof v.slogan === "string" ? v.slogan : DEFAULT_APPEARANCE.slogan,
-    primaryColor:
-      typeof v.primaryColor === "string" && v.primaryColor
-        ? v.primaryColor
-        : DEFAULT_APPEARANCE.primaryColor,
+    primaryColor: sanitizeHexColor(v.primaryColor) ?? DEFAULT_APPEARANCE.primaryColor,
     theme: typeof v.theme === "string" ? v.theme : DEFAULT_APPEARANCE.theme,
-    logoUrl: typeof v.logoUrl === "string" ? v.logoUrl : null,
-    faviconUrl: typeof v.faviconUrl === "string" ? v.faviconUrl : null,
-    ogImageUrl: typeof v.ogImageUrl === "string" ? v.ogImageUrl : null,
+    logoUrl: sanitizeAssetUrl(v.logoUrl),
+    faviconUrl: sanitizeAssetUrl(v.faviconUrl),
+    ogImageUrl: sanitizeAssetUrl(v.ogImageUrl),
   };
 }

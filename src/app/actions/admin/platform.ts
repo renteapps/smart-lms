@@ -86,6 +86,39 @@ export async function deleteCompany(id: string): Promise<ActionResult> {
 // Convites e membros
 // ---------------------------------------------------------------------------
 
+type SessionClient = Awaited<ReturnType<typeof requireUser>>["supabase"];
+
+/**
+ * Gestor da organização (ou admin da plataforma). As actions abaixo recebem
+ * ids do cliente; sem esta checagem só a RLS separava um aluno qualquer de
+ * convidar, remover ou matricular gente em organizações alheias.
+ */
+async function requireOrgManager(companyId: string) {
+  const session = await requireUser();
+  const { data: allowed, error } = await session.supabase.rpc("is_org_admin", { org_id: companyId });
+  if (error || !allowed) {
+    const { data: isAdmin } = await session.supabase.rpc("is_admin");
+    if (!isAdmin) throw new Error("Acesso restrito aos gestores da empresa.");
+  }
+  return session;
+}
+
+async function organizationOf(
+  supabase: SessionClient,
+  table: "organization_members" | "organization_invites",
+  id: string,
+): Promise<string> {
+  const { data } = await supabase.from(table).select("organization_id").eq("id", id).maybeSingle();
+  if (!data?.organization_id) throw new Error("Registro não encontrado.");
+  return data.organization_id as string;
+}
+
+async function requireManagerOf(table: "organization_members" | "organization_invites", id: string) {
+  const { supabase } = await requireUser();
+  const companyId = await organizationOf(supabase, table, id);
+  return { ...(await requireOrgManager(companyId)), companyId };
+}
+
 /**
  * Convida alguém para a empresa.
  *
@@ -97,7 +130,7 @@ export async function inviteMember(
   input: { email: string; name?: string; department?: string; jobTitle?: string; role: MemberRole },
 ): Promise<ActionResult> {
   try {
-    const { supabase, user } = await requireUser();
+    const { supabase, user } = await requireOrgManager(companyId);
 
     const [{ data: company }, { count: used }] = await Promise.all([
       supabase.from("organizations").select("max_seats").eq("id", companyId).maybeSingle(),
@@ -148,7 +181,7 @@ export async function bulkInviteMembers(
 ): Promise<{ success: boolean; addedCount: number; errors: string[] }> {
   const result = { success: false, addedCount: 0, errors: [] as string[] };
   try {
-    const { supabase, user } = await requireUser();
+    const { supabase, user } = await requireOrgManager(companyId);
 
     const [{ data: company }, { count: used }] = await Promise.all([
       supabase.from("organizations").select("max_seats").eq("id", companyId).maybeSingle(),
@@ -210,7 +243,7 @@ export async function bulkInviteMembers(
 
 export async function revokeInvite(inviteId: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireUser();
+    const { supabase } = await requireManagerOf("organization_invites", inviteId);
     const { error } = await supabase
       .from("organization_invites")
       .update({ status: "revoked" })
@@ -227,7 +260,7 @@ export async function revokeInvite(inviteId: string): Promise<ActionResult> {
 
 export async function resendInvite(inviteId: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireUser();
+    const { supabase } = await requireManagerOf("organization_invites", inviteId);
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 14);
 
@@ -252,7 +285,7 @@ export async function updateMember(
   updates: { role?: MemberRole; department?: string; jobTitle?: string; status?: string; notes?: string },
 ): Promise<ActionResult> {
   try {
-    const { supabase } = await requireUser();
+    const { supabase } = await requireManagerOf("organization_members", memberId);
 
     const row: Record<string, unknown> = {};
     if (updates.role) row.role = toDbRole(updates.role);
@@ -273,7 +306,7 @@ export async function updateMember(
 
 export async function removeMember(memberId: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireUser();
+    const { supabase } = await requireManagerOf("organization_members", memberId);
     const { error } = await supabase.from("organization_members").delete().eq("id", memberId);
     if (error) return { success: false, message: error.message };
 
@@ -290,7 +323,7 @@ export async function assignCoursesToMember(
   courseIds: string[],
 ): Promise<ActionResult> {
   try {
-    const { supabase } = await requireUser();
+    const { supabase } = await requireManagerOf("organization_members", memberId);
 
     await supabase.from("organization_member_courses").delete().eq("member_id", memberId);
 
@@ -332,7 +365,7 @@ export async function assignCoursesToDepartment(
   courseIds: string[],
 ): Promise<ActionResult & { affectedMembersCount?: number }> {
   try {
-    const { supabase } = await requireUser();
+    const { supabase } = await requireOrgManager(companyId);
 
     const { data: members, error: membersError } = await supabase
       .from("organization_members")

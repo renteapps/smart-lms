@@ -682,6 +682,9 @@ export function resetCustomTemplate(type: EmailTemplateType): CustomEmailTemplat
   return { ...original, isCustomized: false };
 }
 
+/** Variáveis cujo conteúdo é escrito pelo admin e pode conter HTML intencional. */
+const ADMIN_AUTHORED_HTML_KEYS = new Set(["mensagem_notificacao", "notification_message"]);
+
 /**
  * Universal tag / variable interpolator.
  * Replaces {{tag}} or {{ tag }} with data values.
@@ -760,9 +763,11 @@ export function interpolateVariables(
     }
   });
 
-  const customKeys = new Set(Object.keys(data.userVariables || {}));
+  // Em HTML, todo valor é escapado: nome e dados do comprador vêm do webhook de
+  // pagamento e do cadastro, e sem escape viravam HTML injetado no e-mail.
+  // Só o corpo da campanha, escrito pelo admin, pode trazer marcação própria.
   const result = interpolateUserTemplate(template, map, (value, key) => (
-    options.html && customKeys.has(key) ? escapeHtml(value) : value
+    options.html && !ADMIN_AUTHORED_HTML_KEYS.has(key) ? escapeHtml(value) : value
   ));
   if (options.diagnosticContext) warnMissingUserVariables(options.diagnosticContext, result.missingKeys);
   return result.value;

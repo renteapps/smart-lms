@@ -58,6 +58,7 @@ import { useCompanyManager } from "@/hooks/useCompanyManager";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { downloadCsv } from "@/lib/downloadCsv";
 
 // Exemplo de departamentos permitidos
 const DEPARTMENTS = [
@@ -181,24 +182,17 @@ function EmpresaGestaoContent() {
 
     const headers = ["Nome", "E-mail", "Departamento", "Cargo", "Status", "Progresso (%)", "Cursos Concluídos", "Último Acesso"];
     const rows = members.map((m) => [
-      `"${m.name}"`,
-      `"${m.email}"`,
-      `"${m.department}"`,
-      `"${m.jobTitle || ""}"`,
-      `"${m.status}"`,
-      `"${m.progressPercentage}%"`,
+      m.name,
+      m.email,
+      m.department,
+      m.jobTitle || "",
+      m.status,
+      `${m.progressPercentage}%`,
       m.completedCoursesCount,
-      `"${m.lastAccessAt || "Sem acesso"}"`,
+      m.lastAccessAt || "Sem acesso",
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `relatorio_${selectedCompany.tradeName.toLowerCase()}_colaboradores.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCsv(`relatorio_${selectedCompany.tradeName.toLowerCase()}_colaboradores.csv`, headers, rows);
     toast.success("Relatório CSV exportado com sucesso!");
   };
 

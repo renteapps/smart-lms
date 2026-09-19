@@ -28,12 +28,13 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { composeFullPhone } from "@/lib/phoneUtils";
+import { safeRedirect } from "@/lib/safeRedirect";
 
 function CriarContaContent() {
   const router = useRouter();
   const { platformName } = useAppearance();
   const searchParams = useSearchParams();
-  const next = searchParams.get("redirect") || searchParams.get("next") || "/onboarding";
+  const next = safeRedirect(searchParams.get("redirect") || searchParams.get("next"), "/onboarding");
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
   const [fullName, setFullName] = useState("");
@@ -64,15 +65,16 @@ function CriarContaContent() {
 
       try {
         const supabase = createClient();
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("username")
-          .eq("username", username.trim())
-          .maybeSingle();
+        // RPC em vez de ler profiles: perfis alheios não são mais legíveis e a
+        // função só responde "livre ou não", sem expor dados de ninguém.
+        const { data: available, error } = await supabase.rpc("username_available", {
+          p_username: username.trim(),
+        });
+        const taken = available === false;
 
         if (error) {
           console.error("Erro ao verificar usuário:", error);
-        } else if (data) {
+        } else if (taken) {
           setUsernameError("Este nome de usuário já está em uso.");
         }
       } catch (err) {

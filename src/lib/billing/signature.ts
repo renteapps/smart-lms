@@ -4,14 +4,12 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * Verificação de autenticidade dos webhooks de pagamento.
  *
  * Regra que vale para tudo neste arquivo: **sem segredo configurado, a
- * verificação falha**. Isso é deliberadamente diferente do webhook do QStash
- * (`api/webhooks/qstash/publish-scheduled`), que pula a checagem quando as
- * chaves não existem — lá o pior caso é revalidar o blog à toa, aqui o pior
- * caso é qualquer pessoa na internet conceder acesso pago a si mesma.
+ * verificação falha** — o pior caso aqui é qualquer pessoa na internet
+ * conceder acesso pago a si mesma. (O webhook do QStash segue a mesma regra.)
  */
 
 /** Compara sem vazar, pelo tempo de resposta, quantos bytes bateram. */
-function safeEquals(a: string, b: string): boolean {
+export function safeEquals(a: string, b: string): boolean {
   const bufA = Buffer.from(a, "utf8");
   const bufB = Buffer.from(b, "utf8");
   // `timingSafeEqual` exige o mesmo comprimento; comparar o tamanho antes não

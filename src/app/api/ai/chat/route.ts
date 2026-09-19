@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { parseAgentChatRequest } from "@/lib/agentChatRequest";
 import { deriveConversationTitle, getAgentById } from "@/lib/data/agents";
 import { checkAgentAccess, getAgentUserAccessContext } from "@/lib/data/agentAccess";
+import { agentRuntimeClient } from "@/lib/data/agentRuntime";
 import {
   getOpenRouterResponseText,
   getOpenRouterServerConfig,
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
     const { agentId, message, regenerate, editMessageId } = body;
 
     const { supabase, user } = await requireUser();
-    const agent = await getAgentById(supabase, agentId);
+    const agent = await getAgentById(supabase, agentId, agentRuntimeClient(supabase));
     if (!agent || agent.status === "Em manutenção") {
       return NextResponse.json({ success: false, error: "Agente indisponível." }, { status: 404 });
     }

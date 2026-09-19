@@ -67,6 +67,16 @@ export async function resolveGatewayTarget(
 }
 
 /**
+ * Padrão ILIKE que casa só o e-mail exato (sem diferenciar maiúsculas).
+ *
+ * `_` e `%` são curingas no ILIKE: sem escapar, o comprador `joao_silva@x.com`
+ * também casava `joaoXsilva@x.com` — e o acesso pago ia para a conta errada.
+ */
+export function exactEmailPattern(email: string): string {
+  return email.trim().toLowerCase().replace(/[\\%_]/g, (char) => `\\${char}`);
+}
+
+/**
  * Procura o comprador sem criar conta.
  *
  * Reembolso e cancelamento usam esta versão: se não existe conta, não existe
@@ -77,7 +87,7 @@ export async function findUserByEmail(db: DB, email: string): Promise<string | n
   const { data, error } = await db
     .from("profiles")
     .select("id")
-    .ilike("email", email.trim().toLowerCase())
+    .ilike("email", exactEmailPattern(email))
     .limit(1)
     .maybeSingle();
 
@@ -122,7 +132,7 @@ export async function resolveOrCreateUser(db: DB, buyer: NormalizedBillingEvent[
   const { data: existing, error: lookupError } = await db
     .from("profiles")
     .select("id")
-    .ilike("email", email)
+    .ilike("email", exactEmailPattern(email))
     .limit(1)
     .maybeSingle();
 
@@ -144,7 +154,7 @@ export async function resolveOrCreateUser(db: DB, buyer: NormalizedBillingEvent[
     const { data: retry } = await db
       .from("profiles")
       .select("id")
-      .ilike("email", email)
+      .ilike("email", exactEmailPattern(email))
       .limit(1)
       .maybeSingle();
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isUuid } from "@/lib/data/courses";
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowLeft,
@@ -117,6 +118,8 @@ function describeAudit(log: AuditRow, subjectId: string): { acao: string; detalh
 
 export default async function AdminUserHistoricoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // `id` entra num filtro .or() do PostgREST: só UUID, nunca texto livre.
+  if (!isUuid(id)) notFound();
   const supabase = await createClient();
 
   const [profileResult, auditResult, lessonResult, authInfo] = await Promise.all([
@@ -124,7 +127,8 @@ export default async function AdminUserHistoricoPage({ params }: { params: Promi
     supabase
       .from("audit_logs")
       .select("id, action, target_type, target_id, metadata, ip_address, created_at")
-      .eq("actor_id", id)
+      // Ações do próprio usuário e ações de admins sobre ele (ex.: update_profile).
+      .or(`actor_id.eq.${id},and(target_type.eq.user,target_id.eq.${id})`)
       .order("created_at", { ascending: false })
       .limit(50),
     supabase

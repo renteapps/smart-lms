@@ -84,7 +84,7 @@ export async function getCertificateByHash(
   const { data, error } = await db
     .from('certificates')
     .select(
-      'id, user_id, course_id, issue_date, validation_hash, courses!inner(title, duration, instructor_names, coordinator_name), profiles:user_id(full_name)',
+      'id, user_id, course_id, issue_date, validation_hash, courses!inner(title, duration, instructor_names, coordinator_name)',
     )
     .eq('validation_hash', hash)
     .single();
@@ -94,7 +94,10 @@ export async function getCertificateByHash(
   if (!data) return null;
 
   const course = Array.isArray(data.courses) ? data.courses[0] : data.courses;
-  const profile = Array.isArray(data.profiles) ? data.profiles[0] : data.profiles;
+  // A verificação é pública (visitante sem login): o nome do titular vem de
+  // uma RPC que devolve só o full_name do dono daquele hash, sem abrir profiles.
+  const { data: holderName } = await db.rpc('certificate_holder_name', { p_hash: hash });
+  const profile = { full_name: typeof holderName === 'string' ? holderName : null };
 
   // Calcular duração em horas (arredondado para cima)
   let totalHours = 1; // Padrão

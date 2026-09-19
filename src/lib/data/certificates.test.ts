@@ -5,6 +5,7 @@ import type { DB } from './types';
 describe('certificates data helper', () => {
   it('getCertificateByHash mapeia e retorna userId, studentName, curso e horas', async () => {
     const mockDb = {
+      rpc: vi.fn().mockResolvedValue({ data: 'Maria Silva', error: null }),
       from: vi.fn().mockImplementation((table: string) => {
         if (table === 'certificates') {
           return {
@@ -21,9 +22,6 @@ describe('certificates data helper', () => {
                   title: 'Curso de React Avançado',
                   duration: '10 horas',
                   instructor_names: ['Instrutor Exemplo'],
-                },
-                profiles: {
-                  full_name: 'Maria Silva',
                 },
               },
               error: null,
@@ -51,6 +49,7 @@ describe('certificates data helper', () => {
     expect(result?.id).toBe('cert-1');
     expect(result?.userId).toBe('user-123');
     expect(result?.studentName).toBe('Maria Silva');
+    expect(mockDb.rpc).toHaveBeenCalledWith('certificate_holder_name', { p_hash: 'hash-abc-123' });
     expect(result?.courseTitle).toBe('Curso de React Avançado');
     expect(result?.courseDurationHours).toBe(2);
     expect(result?.validationHash).toBe('hash-abc-123');

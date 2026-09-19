@@ -1,12 +1,12 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/supabase/auth";
 import { getUsersTemplateVariables } from "@/lib/data/userVariables";
 import { interpolateUserText } from "@/lib/userVariables";
 import { sendConfiguredEmail } from "@/lib/resendServer";
 
 export async function getNotificationCampaigns() {
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
   const { data, error } = await supabase
     .from("notification_campaigns")
     .select("*")
@@ -21,7 +21,7 @@ export async function getNotificationCampaigns() {
 }
 
 export async function createNotificationCampaign(campaignData: any) {
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
 
   const { data: userData, error: userError } = await supabase.auth.getUser();
   const userId = userData?.user?.id;
@@ -153,7 +153,7 @@ export async function createNotificationCampaign(campaignData: any) {
 }
 
 export async function deleteNotificationCampaign(id: string) {
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
   const { error } = await supabase
     .from("notification_campaigns")
     .delete()
@@ -166,7 +166,7 @@ export async function deleteNotificationCampaign(id: string) {
 }
 
 export async function getAutomations() {
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
   const { data, error } = await supabase
     .from("automations")
     .select("*")
@@ -180,7 +180,7 @@ export async function getAutomations() {
 }
 
 export async function createAutomation(automationData: any) {
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
   const { data, error } = await supabase
     .from("automations")
     .insert([{
@@ -209,7 +209,7 @@ export async function createAutomation(automationData: any) {
 }
 
 export async function deleteAutomation(id: string) {
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
   const { error } = await supabase.from("automations").delete().eq("id", id);
   if (error) {
     console.error("Error deleting automation:", error);
@@ -218,7 +218,7 @@ export async function deleteAutomation(id: string) {
 }
 
 export async function toggleAutomationStatus(id: string, currentStatus: string) {
-  const supabase = await createClient();
+  const { supabase } = await requireAdmin();
   const newStatus = currentStatus === "active" ? "paused" : "active";
   const { data, error } = await supabase
     .from("automations")

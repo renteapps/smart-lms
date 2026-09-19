@@ -5,6 +5,8 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { checkRateLimit } from "@/lib/rateLimit";
+import { getClientIp } from "@/lib/clientIp";
+import { safeRedirect } from "@/lib/safeRedirect";
 
 export type AuthActionResult = {
   success: boolean;
@@ -21,9 +23,16 @@ async function getOrigin() {
   return `${proto}://${host}`;
 }
 
+/** Rate limit por IP para ações de autenticação que disparam e-mail ou validam código. */
+async function limitByIp(bucket: string, limit: number, windowInSeconds: number, message: string) {
+  const ip = getClientIp(await headers());
+  const { success } = await checkRateLimit(`${bucket}:${ip}`, limit, windowInSeconds);
+  return success ? null : ({ success: false, error: message } satisfies AuthActionResult);
+}
+
 export async function signInWithPasswordAction(formData: FormData): Promise<AuthActionResult> {
   const reqHeaders = await headers();
-  const ip = reqHeaders.get("x-forwarded-for") || "unknown-ip";
+  const ip = getClientIp(reqHeaders);
   const { success: rateLimitSuccess } = await checkRateLimit(`login:${ip}`, 5, 60);
 
   if (!rateLimitSuccess) {
@@ -35,7 +44,7 @@ export async function signInWithPasswordAction(formData: FormData): Promise<Auth
 
   const email = (formData.get("email") as string)?.trim();
   const password = formData.get("password") as string;
-  const next = (formData.get("next") as string) || "/minha-trilha";
+  const next = safeRedirect(formData.get("next"), "/minha-trilha");
 
   if (!email || !password) {
     return {
@@ -71,8 +80,11 @@ export async function signInWithPasswordAction(formData: FormData): Promise<Auth
 }
 
 export async function signInWithOtpAction(formData: FormData): Promise<AuthActionResult> {
+  const limited = await limitByIp("otp", 5, 3600, "Muitos códigos solicitados. Aguarde alguns minutos e tente novamente.");
+  if (limited) return limited;
+
   const email = (formData.get("email") as string)?.trim();
-  const next = (formData.get("next") as string) || "/minha-trilha";
+  const next = safeRedirect(formData.get("next"), "/minha-trilha");
 
   if (!email) {
     return {
@@ -108,7 +120,7 @@ export async function signInWithOtpAction(formData: FormData): Promise<AuthActio
 
 export async function signUpAction(formData: FormData): Promise<AuthActionResult> {
   const reqHeaders = await headers();
-  const ip = reqHeaders.get("x-forwarded-for") || "unknown-ip";
+  const ip = getClientIp(reqHeaders);
   const { success: rateLimitSuccess } = await checkRateLimit(`signup:${ip}`, 3, 3600); // Max 3 signups per hour per IP
 
   if (!rateLimitSuccess) {
@@ -125,7 +137,7 @@ export async function signUpAction(formData: FormData): Promise<AuthActionResult
   const birthDate = (formData.get("birthDate") as string)?.trim();
   const gender = (formData.get("gender") as string)?.trim();
   const role = (formData.get("role") as string)?.trim();
-  const next = (formData.get("next") as string) || "/onboarding";
+  const next = safeRedirect(formData.get("next"), "/onboarding");
 
   if (!email || !password || !fullName || !username) {
     return {
@@ -196,6 +208,9 @@ export async function signUpAction(formData: FormData): Promise<AuthActionResult
 }
 
 export async function resendSignUpEmailAction(data: { email: string; next?: string }): Promise<AuthActionResult> {
+  const limited = await limitByIp("resend-signup", 5, 3600, "Muitos reenvios. Aguarde alguns minutos e tente novamente.");
+  if (limited) return limited;
+
   const email = data.email?.trim();
   const next = data.next || "/onboarding";
 
@@ -239,6 +254,9 @@ export async function resendSignUpEmailAction(data: { email: string; next?: stri
 }
 
 export async function resetPasswordForEmailAction(formData: FormData): Promise<AuthActionResult> {
+  const limited = await limitByIp("reset", 5, 3600, "Muitos pedidos de recuperação. Aguarde alguns minutos e tente novamente.");
+  if (limited) return limited;
+
   const email = (formData.get("email") as string)?.trim();
 
   if (!email) {
@@ -315,10 +333,13 @@ export async function updateUserPasswordAction(formData: FormData): Promise<Auth
 }
 
 export async function verifyOtpAction(formData: FormData): Promise<AuthActionResult> {
+  const limited = await limitByIp("verify-otp", 10, 600, "Muitas tentativas de código. Aguarde alguns minutos e tente novamente.");
+  if (limited) return limited;
+
   const email = (formData.get("email") as string)?.trim();
   const token = (formData.get("token") as string)?.trim();
   const type = (formData.get("type") as EmailOtpType) || "signup";
-  const next = (formData.get("next") as string) || "/minha-trilha";
+  const next = safeRedirect(formData.get("next"), "/minha-trilha");
 
   if (!email || !token) {
     return {

@@ -13,6 +13,7 @@ import {
 } from "@/lib/data/agents";
 import type { AgentConversation, AgentConversationPage } from "@/types/agente";
 import type { ActionResult } from "./progress";
+import { agentRuntimeClient } from "@/lib/data/agentRuntime";
 
 /**
  * Uma rodada de conversa com o agente.
@@ -33,7 +34,7 @@ export async function sendAgentMessage(
   try {
     const { supabase, user } = await requireUser();
 
-    const agent = await getAgentById(supabase, agentId);
+    const agent = await getAgentById(supabase, agentId, agentRuntimeClient(supabase));
     if (!agent) return { success: false, message: "Agente não encontrado." };
 
     const accessContext = await getAgentUserAccessContext(supabase, user.id);
@@ -103,7 +104,7 @@ export async function startConversation(
   try {
     const { supabase, user } = await requireUser();
 
-    const agent = await getAgentById(supabase, agentId);
+    const agent = await getAgentById(supabase, agentId, agentRuntimeClient(supabase));
     if (!agent) return { success: false, message: "Agente não encontrado." };
 
     const accessContext = await getAgentUserAccessContext(supabase, user.id);
@@ -126,41 +127,6 @@ export async function startConversation(
     if (error || !data) return { success: false, message: error?.message ?? "Falha ao abrir a conversa." };
 
     return { success: true, conversationId: data.id };
-  } catch (error) {
-    return { success: false, message: (error as Error).message };
-  }
-}
-
-/** Acrescenta uma mensagem a uma thread existente. */
-export async function appendAgentMessage(
-  conversationId: string,
-  author: "student" | "agent",
-  text: string,
-): Promise<ActionResult> {
-  try {
-    const { supabase, user } = await requireUser();
-
-    const { data: owned } = await supabase
-      .from("agent_conversations")
-      .select("id")
-      .eq("id", conversationId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (!owned) return { success: false, message: "Conversa não encontrada." };
-
-    const { error } = await supabase
-      .from("agent_messages")
-      .insert({ conversation_id: conversationId, author, text });
-
-    if (error) return { success: false, message: error.message };
-
-    await supabase
-      .from("agent_conversations")
-      .update({ updated_at: new Date().toISOString() })
-      .eq("id", conversationId);
-
-    return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };
   }

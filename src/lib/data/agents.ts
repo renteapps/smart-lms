@@ -196,7 +196,9 @@ export async function getAgentCatalog(db: DB): Promise<Agent[]> {
 }
 
 export async function getAgentBySlug(db: DB, slug: string): Promise<Agent | null> {
-  const { data, error } = await db.from("agents").select(AGENT_SELECT).eq("slug", slug).maybeSingle();
+  // Catálogo, não AGENT_SELECT: prompt, contexto e roteiro não são legíveis
+  // pelo papel `authenticated` (grants por coluna) e esta leitura é do aluno.
+  const { data, error } = await db.from("agents").select(AGENT_CATALOG_SELECT).eq("slug", slug).maybeSingle();
   logQueryError("getAgentBySlug", error);
   if (!data) return null;
 
@@ -212,9 +214,18 @@ export async function getAgentBySlug(db: DB, slug: string): Promise<Agent | null
 /**
  * Só para o backend de chat (via `agentId`): nunca exibida, então não vale o
  * join extra de nomes de curso/plano que `getAgentBySlug`/`getAgents` fazem.
+ *
+ * A visibilidade é decidida por `db` (sessão do aluno, RLS: publicado ou
+ * admin). Só depois disso o registro completo — com prompt, contexto e
+ * arquivos, que o aluno não pode ler direto — vem de `runtimeDb`, o client
+ * privilegiado do servidor.
  */
-export async function getAgentById(db: DB, id: string): Promise<Agent | null> {
-  const { data, error } = await db.from("agents").select(AGENT_SELECT).eq("id", id).maybeSingle();
+export async function getAgentById(db: DB, id: string, runtimeDb: DB = db): Promise<Agent | null> {
+  const { data: visible, error: visibilityError } = await db.from("agents").select("id").eq("id", id).maybeSingle();
+  logQueryError("getAgentById:visibility", visibilityError);
+  if (!visible) return null;
+
+  const { data, error } = await runtimeDb.from("agents").select(AGENT_SELECT).eq("id", id).maybeSingle();
   logQueryError("getAgentById", error);
   return data ? mapAgent(data) : null;
 }
