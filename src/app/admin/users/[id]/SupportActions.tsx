@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Mail, KeyRound, MonitorOff, Copy, Check, Link2, CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
-import { Alert, Button, toast } from "@heroui/react";
+import { Alert, Button } from "@heroui/react";
+import { toast } from "@/lib/toast";
 import {
   resendAccessEmail,
   resetUserPassword,

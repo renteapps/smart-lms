@@ -1,5 +1,6 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { useState, useEffect, useRef } from "react";
 import { Table } from "@heroui/react";
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
@@ -251,10 +252,10 @@ export function ResendIntegrationContent() {
         if (typedKey) setHasStoredKey(true);
         toast.success("Configurações do Resend salvas com sucesso!");
       } else {
-        toast.error(data.error || "Erro ao salvar configurações.");
+        toast.danger(data.error || "Erro ao salvar configurações.");
       }
     } catch (_e) {
-      toast.error("Não foi possível salvar no servidor. Tente novamente.");
+      toast.danger("Não foi possível salvar no servidor. Tente novamente.");
     } finally {
       setIsSaving(false);
     }
@@ -262,7 +263,7 @@ export function ResendIntegrationContent() {
 
   const handleValidateKey = async () => {
     if (!apiKeyInput.trim()) {
-      toast.error("Informe a chave de API do Resend antes de validar.");
+      toast.danger("Informe a chave de API do Resend antes de validar.");
       return;
     }
 
@@ -323,7 +324,7 @@ export function ResendIntegrationContent() {
         }));
         toast.success(`Modelo "${updatedTemplate.name}" salvo com sucesso!`);
       } else {
-        toast.error(data.error || "Erro ao salvar modelo de e-mail.");
+        toast.danger(data.error || "Erro ao salvar modelo de e-mail.");
       }
     } catch (_e) {
       const current = templates[selectedTemplateType];
@@ -401,7 +402,7 @@ export function ResendIntegrationContent() {
     if (!file) return;
 
     if (!file.name.endsWith(".html") && !file.name.endsWith(".htm") && !file.type.includes("html")) {
-      toast.error("Por favor, selecione um arquivo HTML válido (.html ou .htm).");
+      toast.danger("Por favor, selecione um arquivo HTML válido (.html ou .htm).");
       return;
     }
 
@@ -414,7 +415,7 @@ export function ResendIntegrationContent() {
       }
     };
     reader.onerror = () => {
-      toast.error("Erro ao ler o arquivo selecionado.");
+      toast.danger("Erro ao ler o arquivo selecionado.");
     };
     reader.readAsText(file);
 
@@ -452,7 +453,7 @@ export function ResendIntegrationContent() {
   const handleSendTestEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!testEmail) {
-      toast.error("Informe o e-mail de destino para o teste.");
+      toast.danger("Informe o e-mail de destino para o teste.");
       return;
     }
 
@@ -499,11 +500,11 @@ export function ResendIntegrationContent() {
           message: data.error || "Falha no envio de teste.",
           timestamp: new Date().toLocaleTimeString("pt-BR"),
         });
-        toast.error(data.error || "Erro no envio de teste.");
+        toast.danger(data.error || "Erro no envio de teste.");
       }
     } catch (e: unknown) {
       const errorMsg = e instanceof Error ? e.message : "Erro desconhecido";
-      toast.error("Erro na requisição de teste: " + errorMsg);
+      toast.danger("Erro na requisição de teste: " + errorMsg);
     } finally {
       setIsSendingTest(false);
     }
@@ -520,7 +521,7 @@ export function ResendIntegrationContent() {
       setLogs([]);
       toast.success("Histórico de envios limpo.");
     } catch (_e) {
-      toast.error("Erro ao limpar logs.");
+      toast.danger("Erro ao limpar logs.");
     } finally {
       setIsClearingLogs(false);
       setIsClearLogsConfirmOpen(false);
@@ -611,7 +612,7 @@ export function ResendIntegrationContent() {
 
       {/* Top Banner Status */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="editorial-card p-4 flex items-center gap-4">
+        <div className="surface-card p-4 flex items-center gap-4">
           <div
             className={`size-11 rounded-xl flex items-center justify-center shrink-0 ${
               !config.enabled
@@ -642,7 +643,7 @@ export function ResendIntegrationContent() {
           </div>
         </div>
 
-        <div className="editorial-card p-4 flex items-center gap-4">
+        <div className="surface-card p-4 flex items-center gap-4">
           <div className="size-11 rounded-xl bg-accent-soft text-accent flex items-center justify-center shrink-0">
             <FileCode className="size-5" />
           </div>
@@ -656,7 +657,7 @@ export function ResendIntegrationContent() {
           </div>
         </div>
 
-        <div className="editorial-card p-4 flex items-center gap-4">
+        <div className="surface-card p-4 flex items-center gap-4">
           <div className="size-11 rounded-xl bg-primary-soft text-accent flex items-center justify-center shrink-0">
             <Send className="size-5" />
           </div>
@@ -752,7 +753,7 @@ export function ResendIntegrationContent() {
       {activeTab === "credentials" && (
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            <div className="editorial-card p-6 space-y-6">
+            <div className="surface-card p-6 space-y-6">
               <div className="flex items-center justify-between border-b border-border/60 pb-4">
                 <div>
                   <h2 className="text-lg font-bold text-foreground">Chave de API (Resend)</h2>
@@ -837,7 +838,7 @@ export function ResendIntegrationContent() {
             </div>
 
             {/* Sender Info */}
-            <div className="editorial-card p-6 space-y-6">
+            <div className="surface-card p-6 space-y-6">
               <div className="border-b border-border/60 pb-4">
                 <h2 className="text-lg font-bold text-foreground">Informações do Remetente</h2>
                 <p className="text-xs text-muted mt-0.5">
@@ -884,18 +885,18 @@ export function ResendIntegrationContent() {
                         className="w-1/2 min-h-11 rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                       />
                       <span className="text-muted font-bold">@</span>
-                      <select
-                        value={selectedDomain}
-                        onChange={(e) => handleFromEmailChange(emailPrefix, e.target.value)}
-                        className="w-1/2 min-h-11 rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground focus:border-accent focus:bg-surface focus:outline-none"
-                      >
+                      <NativeSelect
+ value={selectedDomain}
+ onChange={(e) => handleFromEmailChange(emailPrefix, e.target.value)}
+ className="w-1/2"
+ >
                         <option value="resend.dev">resend.dev (Sandbox)</option>
                         {domains.map((d: any) => (
                           <option key={d.id} value={d.name}>
                             {d.name} {d.status === "verified" ? "✅" : "⚠️"}
                           </option>
                         ))}
-                      </select>
+                      </NativeSelect>
                     </div>
                   ) : (
                     <input
@@ -944,7 +945,7 @@ export function ResendIntegrationContent() {
               </p>
             </div>
 
-            <div className="editorial-card p-5 space-y-3">
+            <div className="surface-card p-5 space-y-3">
               <h3 className="font-bold text-sm text-foreground">Como funciona o Modo Sandbox?</h3>
               <p className="text-xs text-muted leading-relaxed">
                 Se você não informar uma chave de API ou se estiver em ambiente local, o Smart LMS
@@ -961,7 +962,7 @@ export function ResendIntegrationContent() {
         <div className="grid gap-6 lg:grid-cols-12">
           {/* Left Column: Template Selector List */}
           <div className="lg:col-span-4 space-y-4">
-            <div className="editorial-card p-4 space-y-3">
+            <div className="surface-card p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
                   Selecione o Modelo
@@ -1059,7 +1060,7 @@ export function ResendIntegrationContent() {
 
           {/* Right Column: Code / HTML Editor & Preview */}
           <div className="lg:col-span-8 space-y-4">
-            <div className="editorial-card p-6 space-y-6">
+            <div className="surface-card p-6 space-y-6">
               {/* Header with Title & Action Buttons */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
                 <div>
@@ -1352,7 +1353,7 @@ export function ResendIntegrationContent() {
       {activeTab === "categories" && (
         <div className="space-y-6">
           {/* Platform Emails */}
-          <div className="editorial-card p-6 space-y-4">
+          <div className="surface-card p-6 space-y-4">
             <div className="border-b border-border/60 pb-3">
               <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                 ✉️ E-mails Transacionais da Plataforma
@@ -1484,7 +1485,7 @@ export function ResendIntegrationContent() {
           </div>
 
           {/* Notifications & Engagement Emails */}
-          <div className="editorial-card p-6 space-y-4">
+          <div className="surface-card p-6 space-y-4">
             <div className="border-b border-border/60 pb-3">
               <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                 🔔 E-mails de Notificação & Engajamento
@@ -1621,7 +1622,7 @@ export function ResendIntegrationContent() {
         <div className="grid gap-6 lg:grid-cols-12">
           {/* Test Form */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="editorial-card p-6 space-y-4">
+            <div className="surface-card p-6 space-y-4">
               <div className="border-b border-border/60 pb-3">
                 <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                   <Send className="size-4 text-accent" /> Teste de Disparo
@@ -1650,11 +1651,11 @@ export function ResendIntegrationContent() {
                   <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1">
                     Modelo do Teste
                   </label>
-                  <select
-                    value={testTemplate}
-                    onChange={(e) => setTestTemplate(e.target.value as EmailTemplateType)}
-                    className="w-full min-h-10 rounded-lg border border-border bg-background-secondary px-3 text-sm text-foreground focus:border-accent focus:bg-surface focus:outline-none"
-                  >
+                  <NativeSelect
+ value={testTemplate}
+ onChange={(e) => setTestTemplate(e.target.value as EmailTemplateType)}
+ className="w-full"
+ >
                     <option value="welcome">🎉 Boas-vindas (Cadastro)</option>
                     <option value="password_reset">🔒 Recuperação de Senha</option>
                     <option value="course_enrollment">🎓 Matrícula em Curso</option>
@@ -1662,7 +1663,7 @@ export function ResendIntegrationContent() {
                     <option value="subscription">⭐ Assinatura Confirmada</option>
                     <option value="notification">📢 Notificação / Comunicado</option>
                     <option value="inactivity">⏱️ Reengajamento (Ausente)</option>
-                  </select>
+                  </NativeSelect>
                 </div>
 
                 <div>
@@ -1818,7 +1819,7 @@ export function ResendIntegrationContent() {
       {/* TAB 5: DOMÍNIO & DNS */}
       {activeTab === "dns" && (
         <div className="space-y-6">
-          <div className="editorial-card p-6 space-y-6">
+          <div className="surface-card p-6 space-y-6">
             <div className="border-b border-border/60 pb-4">
               <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                 <Globe className="size-4 text-accent" /> Verificação de Domínio Próprio no Resend
@@ -2010,7 +2011,7 @@ export function ResendIntegrationContent() {
 
       {/* TAB 6: HISTÓRICO DE ENVIOS (LOGS) */}
       {activeTab === "logs" && (
-        <div className="editorial-card p-6 space-y-4">
+        <div className="surface-card p-6 space-y-4">
           <div className="flex items-center justify-between border-b border-border/60 pb-3">
             <div>
               <h2 className="text-base font-bold text-foreground">Histórico de Disparos Recentes</h2>

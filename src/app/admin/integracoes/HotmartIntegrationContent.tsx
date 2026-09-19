@@ -1,5 +1,6 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { buttonVariants } from "@heroui/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Ban, CheckCircle2, ChevronDown, ChevronRight, Copy, KeyRound, ListChecks, Pencil, PlayCircle, Plus, RefreshCw, Repeat, Trash2, Webhook } from "lucide-react";
@@ -114,7 +115,7 @@ export function HotmartIntegrationContent() {
     setLoading(true);
     const result = await getHotmartAdminConfig();
     if (result.success && result.data) setData(result.data);
-    else toast.error(result.message ?? "Não foi possível carregar a integração.");
+    else toast.danger(result.message ?? "Não foi possível carregar a integração.");
     setLoading(false);
   }, []);
 
@@ -143,7 +144,7 @@ export function HotmartIntegrationContent() {
       enabled: true, hottok, clientId, clientSecret, basicToken,
     });
     setBusy(false);
-    if (!result.success) return toast.error(result.message ?? "Falha ao salvar.");
+    if (!result.success) return toast.danger(result.message ?? "Falha ao salvar.");
     setHottok(""); setClientId(""); setClientSecret(""); setBasicToken("");
     toast.success("Configuração salva.");
     await reload();
@@ -151,14 +152,14 @@ export function HotmartIntegrationContent() {
 
   async function addMapping() {
     const [targetType, targetId] = target.split(":") as ["plan" | "course", string];
-    if (!productId.trim() || !targetId) return toast.error("Informe o produto e o destino.");
+    if (!productId.trim() || !targetId) return toast.danger("Informe o produto e o destino.");
     setBusy(true);
     const result = await saveHotmartMapping({
       id: mappingId, productId, offerId, targetType, targetId,
       accessDays: accessDays ? Number(accessDays) : null,
     });
     setBusy(false);
-    if (!result.success) return toast.error(result.message ?? "Falha ao mapear.");
+    if (!result.success) return toast.danger(result.message ?? "Falha ao mapear.");
     setMappingId(undefined); setProductId(""); setOfferId(""); setTarget(""); setAccessDays("");
     toast.success("Mapeamento salvo.");
     await reload();
@@ -171,7 +172,7 @@ export function HotmartIntegrationContent() {
     setCatalogLoading(true);
     const result = await listHotmartCatalog();
     setCatalogLoading(false);
-    if (!result.success || !result.data) return toast.error(result.message ?? "Não foi possível listar os produtos.");
+    if (!result.success || !result.data) return toast.danger(result.message ?? "Não foi possível listar os produtos.");
     setCatalogItems(result.data);
   }
 
@@ -186,7 +187,7 @@ export function HotmartIntegrationContent() {
     setOffersLoadingId(product.id);
     const result = await listHotmartOffers(product.id);
     setOffersLoadingId(null);
-    if (!result.success || !result.data) return toast.error(result.message ?? "Não foi possível listar as ofertas.");
+    if (!result.success || !result.data) return toast.danger(result.message ?? "Não foi possível listar as ofertas.");
     setOffersByProduct((prev) => ({ ...prev, [product.id]: result.data! }));
   }
 
@@ -209,7 +210,7 @@ export function HotmartIntegrationContent() {
       pageToken,
     });
     setSubsLoading(false);
-    if (!result.success || !result.data) return toast.error(result.message ?? "Não foi possível listar as assinaturas.");
+    if (!result.success || !result.data) return toast.danger(result.message ?? "Não foi possível listar as assinaturas.");
     setSubsItems(result.data.items);
     setSubsPageInfo(result.data.pageInfo);
   }
@@ -227,21 +228,21 @@ export function HotmartIntegrationContent() {
     try {
       if (type === "cancel") {
         const result = await cancelHotmartSubscriptionAction(subscriberCode, true);
-        if (!result.success) toast.error(result.message ?? "Falha ao cancelar a assinatura.");
+        if (!result.success) toast.danger(result.message ?? "Falha ao cancelar a assinatura.");
         else {
           toast.success("Assinatura cancelada.");
           await loadSubscriptions(subsCurrentToken);
         }
       } else {
         const result = await reactivateHotmartSubscriptionAction(subscriberCode, false);
-        if (!result.success) toast.error(result.message ?? "Falha ao solicitar a reativação.");
+        if (!result.success) toast.danger(result.message ?? "Falha ao solicitar a reativação.");
         else {
           toast.success(result.message ?? "Solicitação enviada.");
           await loadSubscriptions(subsCurrentToken);
         }
       }
     } catch {
-      toast.error("Ocorreu um erro ao processar a assinatura.");
+      toast.danger("Ocorreu um erro ao processar a assinatura.");
     } finally {
       setSubsBusyCode(null);
       setSubActionConfirm(null);
@@ -252,7 +253,7 @@ export function HotmartIntegrationContent() {
     setSubsBusyCode(subscriberCode);
     const result = await syncHotmartSubscriptionAction(subscriberCode);
     setSubsBusyCode(null);
-    if (!result.success) return toast.error(result.message ?? "Falha ao sincronizar.");
+    if (!result.success) return toast.danger(result.message ?? "Falha ao sincronizar.");
     toast.success("Estado sincronizado com a Hotmart.");
     await loadSubscriptions(subsCurrentToken);
   }
@@ -331,7 +332,7 @@ export function HotmartIntegrationContent() {
               className={`${dangerButtonClass}`}
               onClick={async () => {
                 const result = await clearHotmartApiCredentials();
-                if (!result.success) toast.error(result.message || "Erro ao remover credenciais.");
+                if (!result.success) toast.danger(result.message || "Erro ao remover credenciais.");
                 else { toast.success("Credenciais removidas."); await reload(); }
               }}
             >
@@ -405,10 +406,10 @@ export function HotmartIntegrationContent() {
         <div className="grid gap-3 md:grid-cols-5">
           <input className={inputClass} value={productId} onChange={(e) => setProductId(e.target.value)} placeholder="ID do produto *" />
           <input className={inputClass} value={offerId} onChange={(e) => setOfferId(e.target.value)} placeholder="Oferta (opcional)" />
-          <select className={inputClass} value={target} onChange={(e) => setTarget(e.target.value)}>
+          <NativeSelect value={target} onChange={(e) => setTarget(e.target.value)}>
             <option value="">Plano ou curso *</option>
             {targets.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-          </select>
+          </NativeSelect>
           <input className={inputClass} type="number" min="1" value={accessDays} onChange={(e) => setAccessDays(e.target.value)} placeholder="Dias (opcional)" />
           <button className={`${primaryButtonClass}`} disabled={busy} onClick={() => void addMapping()}>
             <Plus className="size-4" /> {mappingId ? "Atualizar" : "Adicionar"}
@@ -446,7 +447,7 @@ export function HotmartIntegrationContent() {
                   className="text-danger"
                   onClick={async () => {
                     const result = await deleteHotmartMapping(mapping.id);
-                    if (!result.success) toast.error(result.message || "Erro ao excluir mapeamento.");
+                    if (!result.success) toast.danger(result.message || "Erro ao excluir mapeamento.");
                     else await reload();
                   }}
                 >
@@ -476,10 +477,10 @@ export function HotmartIntegrationContent() {
           ) : (
             <div className="space-y-3">
               <div className="grid gap-3 md:grid-cols-4">
-                <select className={inputClass} value={subsStatusFilter} onChange={(e) => setSubsStatusFilter(e.target.value)}>
+                <NativeSelect value={subsStatusFilter} onChange={(e) => setSubsStatusFilter(e.target.value)}>
                   <option value="">Todos os status</option>
                   {SUBSCRIPTION_STATUSES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-                </select>
+                </NativeSelect>
                 <input className={inputClass} value={subsEmailFilter} onChange={(e) => setSubsEmailFilter(e.target.value)} placeholder="E-mail do assinante" />
                 <input className={inputClass} value={subsProductFilter} onChange={(e) => setSubsProductFilter(e.target.value)} placeholder="ID do produto" />
                 <button className={`${buttonClass}`} disabled={subsLoading} onClick={() => void loadSubscriptions()}>Buscar</button>

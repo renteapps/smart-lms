@@ -558,7 +558,7 @@ export default function AdminArticlePage() {
                     className={cn(
                       "flex flex-col items-center justify-center gap-1 rounded-xl border p-3 text-xs font-semibold transition-all",
                       formData.publishMode === "draft"
-                        ? "border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-2 ring-amber-500/20"
+                        ? "border-warning bg-warning-soft text-warning-soft-foreground ring-2 ring-warning/20"
                         : "border-border bg-surface-secondary/40 text-muted hover:border-muted",
                     )}
                   >
@@ -640,11 +640,11 @@ export default function AdminArticlePage() {
                       </strong>.
                     </p>
                   ) : formData.publishMode === "draft" ? (
-                    <p className="text-amber-600 dark:text-amber-400">
+                    <p className="text-warning">
                       📝 Salvo como rascunho. Oculto para leitores em /blog.
                     </p>
                   ) : (
-                    <p className="text-emerald-600 dark:text-emerald-400">
+                    <p className="text-success">
                       ✅ Visível imediatamente para todos os visitantes.
                     </p>
                   )}

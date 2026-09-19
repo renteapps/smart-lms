@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, toast } from "@heroui/react";
+import { Button } from "@heroui/react";
+import { toast } from "@/lib/toast";
 import { Save } from "lucide-react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { saveBrandingImages, type BrandingImages as BrandingImagesValue } from "./actions";

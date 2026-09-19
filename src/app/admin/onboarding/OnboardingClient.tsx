@@ -276,7 +276,7 @@ export function OnboardingClient({
     try {
       const res = await saveQuestionnaireDraft(questions);
       if (!res.success || !res.data) {
-        toast.error(res.message || 'Erro ao salvar rascunho.');
+        toast.danger(res.message || 'Erro ao salvar rascunho.');
         return;
       }
       setHasDraft(true);
@@ -294,7 +294,7 @@ export function OnboardingClient({
     try {
       const res = await publishQuestionnaire(questions, publishNotes.trim() || undefined);
       if (!res.success || !res.data) {
-        toast.error(res.message || 'Erro ao publicar.');
+        toast.danger(res.message || 'Erro ao publicar.');
         return;
       }
       const publishedVersion = res.data.version;
@@ -328,7 +328,7 @@ export function OnboardingClient({
       router.refresh();
     } catch (error) {
       console.error('Erro inesperado ao publicar questionário:', error);
-      toast.error('Não foi possível publicar o questionário.', {
+      toast.danger('Não foi possível publicar o questionário.', {
         description: error instanceof Error ? error.message : 'Tente novamente em instantes.',
       });
     } finally {
@@ -345,7 +345,7 @@ export function OnboardingClient({
     try {
       const res = await discardQuestionnaireDraft();
       if (!res.success) {
-        toast.error(res.message || 'Erro ao descartar rascunho.');
+        toast.danger(res.message || 'Erro ao descartar rascunho.');
         return;
       }
       setQuestions(publishedQuestions);
@@ -365,7 +365,7 @@ export function OnboardingClient({
     try {
       const res = await restoreQuestionnaireVersion(version.version);
       if (!res.success || !res.data) {
-        toast.error(res.message || 'Erro ao restaurar versão.');
+        toast.danger(res.message || 'Erro ao restaurar versão.');
         return;
       }
       setQuestions(version.questions);
@@ -436,7 +436,7 @@ export function OnboardingClient({
               Salvar rascunho
             </button>
             <button
-              onClick={() => canPublish ? setIsPublishDialogOpen(true) : toast.error('Revise as pendências antes de publicar.')}
+              onClick={() => canPublish ? setIsPublishDialogOpen(true) : toast.danger('Revise as pendências antes de publicar.')}
               disabled={!canPublish}
               title={!canPublish ? validationErrors.join(' ') : undefined}
               className="flex min-h-10 items-center gap-2 rounded-full bg-accent px-6 text-sm font-bold text-accent-foreground hover:bg-accent-hover disabled:opacity-40 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
@@ -597,17 +597,17 @@ export function OnboardingClient({
             <section>
               <div className="mb-4 flex items-center justify-between"><div><p className="eyebrow">Efetividade</p><h2 className="mt-1 text-2xl font-extrabold text-foreground">Sinais da experiência do aluno</h2></div><Activity className="h-6 w-6 text-accent" /></div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="editorial-card p-5"><CheckCircle2 className="h-5 w-5 text-success" /><p className="mt-4 text-xs font-semibold text-muted">Sessões concluídas</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.completedSessions || 0}<span className="text-base text-muted">/{analytics?.plannedSessions || 0}</span></p><p className="mt-2 text-xs text-muted">{analytics?.completionRate || 0}% do plano atual</p></div>
-                <div className="editorial-card p-5"><Clock3 className="h-5 w-5 text-accent-orange" /><p className="mt-4 text-xs font-semibold text-muted">Carga suportada</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.averageSupportedMinutes || 0}<span className="text-base text-muted"> min</span></p><p className="mt-2 text-xs text-muted">Média de sessões leves ou adequadas</p></div>
-                <div className="editorial-card p-5"><RefreshCw className="h-5 w-5 text-accent" /><p className="mt-4 text-xs font-semibold text-muted">Taxa de replanejamento</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.replanRate || 0}%</p><p className="mt-2 text-xs text-muted">{analytics?.replanCount || 0} ajustes registrados</p></div>
-                <div className="editorial-card p-5"><BarChart3 className="h-5 w-5 text-accent" /><p className="mt-4 text-xs font-semibold text-muted">Onboarding concluído</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.onboardingCompletionRate || 0}%</p><p className="mt-2 text-xs text-muted">{analytics?.onboardingCompletions || 0} de {analytics?.onboardingStarts || 0} inícios</p></div>
+                <div className="surface-card p-5"><CheckCircle2 className="h-5 w-5 text-success" /><p className="mt-4 text-xs font-semibold text-muted">Sessões concluídas</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.completedSessions || 0}<span className="text-base text-muted">/{analytics?.plannedSessions || 0}</span></p><p className="mt-2 text-xs text-muted">{analytics?.completionRate || 0}% do plano atual</p></div>
+                <div className="surface-card p-5"><Clock3 className="h-5 w-5 text-accent-orange" /><p className="mt-4 text-xs font-semibold text-muted">Carga suportada</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.averageSupportedMinutes || 0}<span className="text-base text-muted"> min</span></p><p className="mt-2 text-xs text-muted">Média de sessões leves ou adequadas</p></div>
+                <div className="surface-card p-5"><RefreshCw className="h-5 w-5 text-accent" /><p className="mt-4 text-xs font-semibold text-muted">Taxa de replanejamento</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.replanRate || 0}%</p><p className="mt-2 text-xs text-muted">{analytics?.replanCount || 0} ajustes registrados</p></div>
+                <div className="surface-card p-5"><BarChart3 className="h-5 w-5 text-accent" /><p className="mt-4 text-xs font-semibold text-muted">Onboarding concluído</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.onboardingCompletionRate || 0}%</p><p className="mt-2 text-xs text-muted">{analytics?.onboardingCompletions || 0} de {analytics?.onboardingStarts || 0} inícios</p></div>
               </div>
             </section>
 
             <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-              <div className="editorial-card p-5 sm:p-6"><div className="flex items-center justify-between"><div><p className="eyebrow">Diagnóstico</p><h3 className="mt-1 text-xl font-extrabold text-foreground">Saúde da curadoria</h3></div><span className="rounded-full bg-background-secondary px-3 py-1 text-xs font-bold text-muted">{diagnostics.length} sinais</span></div>{diagnostics.length === 0 ? <div className="mt-6 flex items-center gap-3 rounded-lg border border-positive/20 bg-success/5 p-4 text-sm text-success"><CheckCircle2 size={19} /> Nenhuma inconsistência encontrada na configuração atual.</div> : <div className="mt-5 space-y-3">{diagnostics.map((item) => <article key={item.id} className={`rounded-lg border p-4 ${item.severity === 'error' ? 'border-danger/25 bg-danger/5' : item.severity === 'warning' ? 'border-warning/25 bg-warning/5' : 'border-accent/20 bg-accent/5'}`}><div className="flex items-start gap-3"><TriangleAlert className={`mt-0.5 h-4 w-4 shrink-0 ${item.severity === 'error' ? 'text-danger' : item.severity === 'warning' ? 'text-warning' : 'text-accent'}`} /><div><h4 className="text-sm font-bold text-foreground">{item.title}</h4><p className="mt-1 text-xs leading-5 text-muted">{item.detail}</p></div></div></article>)}</div>}</div>
+              <div className="surface-card p-5 sm:p-6"><div className="flex items-center justify-between"><div><p className="eyebrow">Diagnóstico</p><h3 className="mt-1 text-xl font-extrabold text-foreground">Saúde da curadoria</h3></div><span className="rounded-full bg-background-secondary px-3 py-1 text-xs font-bold text-muted">{diagnostics.length} sinais</span></div>{diagnostics.length === 0 ? <div className="mt-6 flex items-center gap-3 rounded-lg border border-positive/20 bg-success/5 p-4 text-sm text-success"><CheckCircle2 size={19} /> Nenhuma inconsistência encontrada na configuração atual.</div> : <div className="mt-5 space-y-3">{diagnostics.map((item) => <article key={item.id} className={`rounded-lg border p-4 ${item.severity === 'error' ? 'border-danger/25 bg-danger/5' : item.severity === 'warning' ? 'border-warning/25 bg-warning/5' : 'border-accent/20 bg-accent/5'}`}><div className="flex items-start gap-3"><TriangleAlert className={`mt-0.5 h-4 w-4 shrink-0 ${item.severity === 'error' ? 'text-danger' : item.severity === 'warning' ? 'text-warning' : 'text-accent'}`} /><div><h4 className="text-sm font-bold text-foreground">{item.title}</h4><p className="mt-1 text-xs leading-5 text-muted">{item.detail}</p></div></div></article>)}</div>}</div>
 
-              <div className="space-y-6"><div className="editorial-card p-5 sm:p-6"><p className="eyebrow">Abandono por etapa</p><h3 className="mt-1 text-xl font-extrabold text-foreground">Funil do onboarding</h3>{analytics?.stepViews.length ? <div className="mt-5 space-y-3">{analytics.stepViews.map((step) => <div key={step.step}><div className="flex items-center justify-between gap-3 text-xs"><span className="truncate font-semibold text-muted">{step.step}. {step.label}</span><strong className="text-foreground">-{step.dropRate}%</strong></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-background-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${analytics.onboardingStarts ? Math.min(100, (step.views / analytics.onboardingStarts) * 100) : 0}%` }} /></div></div>)}</div> : <p className="mt-5 text-sm text-muted">O funil aparecerá após uma passagem pelo onboarding.</p>}</div><div className="editorial-card p-5 sm:p-6"><p className="eyebrow">Conteúdos ignorados</p><h3 className="mt-1 text-xl font-extrabold text-foreground">Removidos pelos alunos</h3>{analytics?.ignoredContents.length ? <div className="mt-4 space-y-2">{analytics.ignoredContents.slice(0, 5).map((item) => <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg bg-background-secondary px-3 py-2 text-sm"><span className="truncate font-semibold text-muted">{item.title}</span><strong className="text-foreground">{item.count}×</strong></div>)}</div> : <p className="mt-5 text-sm text-muted">Nenhum conteúdo foi removido em toda a base de alunos.</p>}</div></div>
+              <div className="space-y-6"><div className="surface-card p-5 sm:p-6"><p className="eyebrow">Abandono por etapa</p><h3 className="mt-1 text-xl font-extrabold text-foreground">Funil do onboarding</h3>{analytics?.stepViews.length ? <div className="mt-5 space-y-3">{analytics.stepViews.map((step) => <div key={step.step}><div className="flex items-center justify-between gap-3 text-xs"><span className="truncate font-semibold text-muted">{step.step}. {step.label}</span><strong className="text-foreground">-{step.dropRate}%</strong></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-background-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${analytics.onboardingStarts ? Math.min(100, (step.views / analytics.onboardingStarts) * 100) : 0}%` }} /></div></div>)}</div> : <p className="mt-5 text-sm text-muted">O funil aparecerá após uma passagem pelo onboarding.</p>}</div><div className="surface-card p-5 sm:p-6"><p className="eyebrow">Conteúdos ignorados</p><h3 className="mt-1 text-xl font-extrabold text-foreground">Removidos pelos alunos</h3>{analytics?.ignoredContents.length ? <div className="mt-4 space-y-2">{analytics.ignoredContents.slice(0, 5).map((item) => <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg bg-background-secondary px-3 py-2 text-sm"><span className="truncate font-semibold text-muted">{item.title}</span><strong className="text-foreground">{item.count}×</strong></div>)}</div> : <p className="mt-5 text-sm text-muted">Nenhum conteúdo foi removido em toda a base de alunos.</p>}</div></div>
             </section>
           </div>
         )}

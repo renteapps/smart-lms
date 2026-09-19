@@ -1,5 +1,6 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/editorial";
@@ -114,7 +115,7 @@ export default function ResendModelosCatalogPage() {
   const handleQuickTest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!testEmail) {
-      toast.error("Informe o e-mail de destino.");
+      toast.danger("Informe o e-mail de destino.");
       return;
     }
 
@@ -130,11 +131,11 @@ export default function ResendModelosCatalogPage() {
         toast.success(data.message);
         setIsTestModalOpen(false);
       } else {
-        toast.error(data.error || "Erro no envio de teste.");
+        toast.danger(data.error || "Erro no envio de teste.");
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido";
-      toast.error("Erro no teste: " + msg);
+      toast.danger("Erro no teste: " + msg);
     } finally {
       setIsSendingTest(false);
     }
@@ -265,7 +266,7 @@ export default function ResendModelosCatalogPage() {
           return (
             <div
               key={tpl.type}
-              className="editorial-card p-5 flex flex-col justify-between space-y-4 hover:border-accent/50 transition-all hover:shadow-md group"
+              className="surface-card p-5 flex flex-col justify-between space-y-4 hover:border-accent/50 transition-all hover:shadow-md group"
             >
               <div className="space-y-3">
                 {/* Header: Icon & Badges */}
@@ -408,17 +409,17 @@ export default function ResendModelosCatalogPage() {
 
               <div>
                 <label className="block font-bold text-foreground mb-1">Modelo Selecionado</label>
-                <select
-                  value={testTemplate}
-                  onChange={(e) => setTestTemplate(e.target.value as EmailTemplateType)}
-                  className="w-full min-h-10 rounded-xl border border-border bg-background-secondary px-3 text-foreground focus:border-accent focus:bg-surface focus:outline-none font-medium"
-                >
+                <NativeSelect
+ value={testTemplate}
+ onChange={(e) => setTestTemplate(e.target.value as EmailTemplateType)}
+ className="w-full"
+ >
                   {templateList.map((t) => (
                     <option key={t.type} value={t.type}>
                       {t.name}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </div>
 
               <div className="flex gap-2 pt-2">

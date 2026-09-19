@@ -167,7 +167,7 @@ export function AdminPilulasClient({
       const result = await savePilula(data);
 
       if (!result.success || !result.data) {
-        toast.error(result.message || 'Erro ao salvar a pílula.');
+        toast.danger(result.message || 'Erro ao salvar a pílula.');
         return;
       }
 
@@ -217,7 +217,7 @@ export function AdminPilulasClient({
     startTransition(async () => {
       const result = await duplicatePilula(item.id);
       if (!result.success || !result.data) {
-        toast.error(result.message || 'Erro ao duplicar pílula.');
+        toast.danger(result.message || 'Erro ao duplicar pílula.');
         return;
       }
 
@@ -243,7 +243,7 @@ export function AdminPilulasClient({
     startTransition(async () => {
       const result = await togglePilulaStatus(item.id, newStatus);
       if (!result.success) {
-        toast.error(result.message || 'Erro ao alterar status da pílula.');
+        toast.danger(result.message || 'Erro ao alterar status da pílula.');
         return;
       }
 
@@ -258,7 +258,7 @@ export function AdminPilulasClient({
     startTransition(async () => {
       const result = await deletePilula(id);
       if (!result.success) {
-        toast.error(result.message || 'Erro ao excluir a pílula.');
+        toast.danger(result.message || 'Erro ao excluir a pílula.');
         return;
       }
 

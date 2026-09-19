@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import {
+  Alert,
   Button,
   Modal,
   SearchField,
@@ -136,12 +137,12 @@ export function CreateEnrollmentModal({
     if (isSubmitting) return;
 
     if (!selectedCourseId) {
-      toast.error("Selecione um curso para realizar a matrícula.");
+      toast.danger("Selecione um curso para realizar a matrícula.");
       return;
     }
 
     if (expirationType === "custom" && !customDate) {
-      toast.error("Informe a data limite de acesso.");
+      toast.danger("Informe a data limite de acesso.");
       return;
     }
 
@@ -173,13 +174,13 @@ export function CreateEnrollmentModal({
       } else {
         const message = res.message || "Erro ao criar matrícula.";
         setSubmitError(message);
-        toast.error(message);
+        toast.danger(message);
       }
     } catch (error) {
       console.error("Erro ao criar matrícula:", error);
       const message = "Ocorreu um erro inesperado ao salvar a matrícula.";
       setSubmitError(message);
-      toast.error(message);
+      toast.danger(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -266,7 +267,7 @@ export function CreateEnrollmentModal({
 
                           <div className="flex items-center gap-2 shrink-0">
                             {isAlreadyEnrolled && (
-                              <span className="text-2xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/50">
+                              <span className="rounded-full border border-warning/30 bg-warning-soft px-2 py-0.5 text-2xs font-medium text-warning-soft-foreground">
                                 Já matriculado
                               </span>
                             )}
@@ -425,12 +426,12 @@ export function CreateEnrollmentModal({
                 </div>
 
                 {submitError && (
-                  <p
-                    role="alert"
-                    className="rounded-xl border border-danger/30 bg-danger/10 px-3.5 py-3 text-xs font-medium text-danger"
-                  >
-                    {submitError}
-                  </p>
+                  <Alert status="danger">
+                    <Alert.Indicator />
+                    <Alert.Content>
+                      <Alert.Description>{submitError}</Alert.Description>
+                    </Alert.Content>
+                  </Alert>
                 )}
               </Modal.Body>
 
@@ -529,7 +530,7 @@ export function EditEnrollmentModal({
     if (isSubmitting) return;
 
     if (expirationType === "custom" && !customDate) {
-      toast.error("Informe a nova data limite de acesso.");
+      toast.danger("Informe a nova data limite de acesso.");
       return;
     }
 
@@ -550,10 +551,10 @@ export function EditEnrollmentModal({
         router.refresh();
         onClose();
       } else {
-        toast.error(res.message || "Erro ao atualizar matrícula.");
+        toast.danger(res.message || "Erro ao atualizar matrícula.");
       }
     } catch {
-      toast.error("Ocorreu um erro ao salvar as alterações.");
+      toast.danger("Ocorreu um erro ao salvar as alterações.");
     } finally {
       setIsSubmitting(false);
     }
@@ -795,10 +796,10 @@ export function DeleteEnrollmentModal({
         router.refresh();
         onClose();
       } else {
-        toast.error(res.message || "Erro ao revogar matrícula.");
+        toast.danger(res.message || "Erro ao revogar matrícula.");
       }
     } catch {
-      toast.error("Ocorreu um erro ao revogar a matrícula.");
+      toast.danger("Ocorreu um erro ao revogar a matrícula.");
     } finally {
       setIsSubmitting(false);
     }

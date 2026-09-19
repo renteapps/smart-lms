@@ -159,7 +159,7 @@ export function EmailTemplateEditor({
     if (!file) return;
 
     if (!file.name.endsWith(".html") && !file.name.endsWith(".htm") && !file.type.includes("html")) {
-      toast.error("Por favor, selecione um arquivo no formato .html ou .htm");
+      toast.danger("Por favor, selecione um arquivo no formato .html ou .htm");
       return;
     }
 
@@ -174,7 +174,7 @@ export function EmailTemplateEditor({
       }
     };
     reader.onerror = () => {
-      toast.error("Erro ao ler o arquivo HTML.");
+      toast.danger("Erro ao ler o arquivo HTML.");
     };
     reader.readAsText(file);
 
@@ -211,7 +211,7 @@ export function EmailTemplateEditor({
 
       toast.success(`Modelo "${currentTemplate.name}" salvo com sucesso!`);
     } catch {
-      toast.error("Erro ao salvar o modelo de e-mail.");
+      toast.danger("Erro ao salvar o modelo de e-mail.");
     } finally {
       setIsSaving(false);
     }
@@ -239,7 +239,7 @@ export function EmailTemplateEditor({
   // Send Test Email
   const handleSendTest = async () => {
     if (!testEmailRecipient || !testEmailRecipient.includes("@")) {
-      toast.error("Informe um endereço de e-mail válido para o teste.");
+      toast.danger("Informe um endereço de e-mail válido para o teste.");
       return;
     }
 
@@ -265,10 +265,10 @@ export function EmailTemplateEditor({
         });
         setTestModalOpen(false);
       } else {
-        toast.error(res.error || "Erro ao enviar e-mail de teste.");
+        toast.danger(res.error || "Erro ao enviar e-mail de teste.");
       }
     } catch {
-      toast.error("Falha ao comunicar com o serviço de envio.");
+      toast.danger("Falha ao comunicar com o serviço de envio.");
     } finally {
       setIsSendingTest(false);
     }
@@ -520,7 +520,7 @@ export function EmailTemplateEditor({
                 onChange={(e) => setHtmlContent(e.target.value)}
                 placeholder="Cole ou edite o código HTML do e-mail aqui..."
                 spellCheck={false}
-                className="w-full h-full p-4 font-mono text-xs leading-relaxed bg-surface text-foreground resize-none focus:outline-none border-0"
+                className="w-full h-full p-4 font-mono text-xs leading-relaxed bg-surface text-foreground resize-none border-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
               />
             </Card.Content>
           </Card>

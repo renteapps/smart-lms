@@ -1,5 +1,6 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import React, { useState } from "react";
 import { PageHeader } from "@/components/ui/editorial";
 import Link from "next/link";
@@ -172,19 +173,19 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
     e.preventDefault();
 
     if (!tradeName.trim()) {
-      toast.error("Informe o Nome Fantasia da empresa.");
+      toast.danger("Informe o Nome Fantasia da empresa.");
       return;
     }
     if (!name.trim()) {
-      toast.error("Informe a Razão Social da empresa.");
+      toast.danger("Informe a Razão Social da empresa.");
       return;
     }
     if (!cnpj.trim()) {
-      toast.error("Informe o CNPJ da empresa.");
+      toast.danger("Informe o CNPJ da empresa.");
       return;
     }
     if (!managerName.trim() || !managerEmail.trim()) {
-      toast.error("Informe o Nome e E-mail do gestor responsável.");
+      toast.danger("Informe o Nome e E-mail do gestor responsável.");
       return;
     }
 
@@ -213,7 +214,7 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
       });
 
       if (!res.success) {
-        toast.error(res.message || "Erro ao salvar empresa.");
+        toast.danger(res.message || "Erro ao salvar empresa.");
         return;
       }
 
@@ -227,7 +228,7 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
       router.refresh();
     } catch (err) {
       console.error(err);
-      toast.error("Erro inesperado. Tente novamente.");
+      toast.danger("Erro inesperado. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
@@ -505,15 +506,15 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
                   <label className="block text-xs font-bold text-foreground mb-1.5">
                     Modelo do Plano
                   </label>
-                  <select
-                    value={planType}
-                    onChange={(e) => setPlanType(e.target.value as CompanyPlanType)}
-                    className="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-                  >
+                  <NativeSelect
+ value={planType}
+ onChange={(e) => setPlanType(e.target.value as CompanyPlanType)}
+ className="w-full"
+ >
                     <option value="anual">Anual (12 Meses)</option>
                     <option value="mensal">Mensal Recorrente</option>
                     <option value="corporativo_custom">Customizado / Enterprise</option>
-                  </select>
+                  </NativeSelect>
                 </div>
 
                 {/* STATUS */}
@@ -521,16 +522,16 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
                   <label className="block text-xs font-bold text-foreground mb-1.5">
                     Status do Contrato
                   </label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as CompanyStatus)}
-                    className="w-full h-10 rounded-xl border border-border bg-surface px-3 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-                  >
+                  <NativeSelect
+ value={status}
+ onChange={(e) => setStatus(e.target.value as CompanyStatus)}
+ className="w-full"
+ >
                     <option value="ativo">Ativo</option>
                     <option value="trial">Trial / Degustação</option>
                     <option value="suspenso">Suspenso</option>
                     <option value="inativo">Inativo</option>
-                  </select>
+                  </NativeSelect>
                 </div>
               </div>
 

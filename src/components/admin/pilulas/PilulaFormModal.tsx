@@ -148,7 +148,7 @@ export function PilulaFormModal({
 
   const handleGenerateAi = async () => {
     if (!aiTopic.trim()) {
-      toast.error('Informe o tema ou ideia para gerar a pílula.');
+      toast.danger('Informe o tema ou ideia para gerar a pílula.');
       return;
     }
 
@@ -162,7 +162,7 @@ export function PilulaFormModal({
       });
 
       if (!res.success || !res.data) {
-        toast.error(res.error || 'Erro ao gerar conteúdo com IA.');
+        toast.danger(res.error || 'Erro ao gerar conteúdo com IA.');
         return;
       }
 
@@ -181,7 +181,7 @@ export function PilulaFormModal({
       toast.success('Pílula gerada com sucesso pela IA! Revise os campos antes de salvar.');
       setShowAiAssist(false);
     } catch (error: any) {
-      toast.error(error.message || 'Erro inesperado ao gerar com IA.');
+      toast.danger(error.message || 'Erro inesperado ao gerar com IA.');
     } finally {
       setIsGeneratingAi(false);
     }
@@ -191,22 +191,22 @@ export function PilulaFormModal({
     e.preventDefault();
 
     if (!title.trim()) {
-      toast.error('Informe o título da pílula.');
+      toast.danger('Informe o título da pílula.');
       return;
     }
 
     if (!summary.trim()) {
-      toast.error('Informe o resumo/conceito da pílula.');
+      toast.danger('Informe o resumo/conceito da pílula.');
       return;
     }
 
     if (!challenge.trim()) {
-      toast.error('Informe a prática sugerida ou desafio do dia.');
+      toast.danger('Informe a prática sugerida ou desafio do dia.');
       return;
     }
 
     if (status === 'Programada' && !publishDate) {
-      toast.error('Informe a data de publicação para pílulas programadas.');
+      toast.danger('Informe a data de publicação para pílulas programadas.');
       return;
     }
 

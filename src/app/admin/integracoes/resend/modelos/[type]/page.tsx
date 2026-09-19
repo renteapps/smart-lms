@@ -81,7 +81,7 @@ export default function ResendTemplateStudioPage() {
             setEditedPreviewText(current.previewText || "");
             setEditedHtml(current.html);
           } else {
-            toast.error("Modelo de e-mail não encontrado.");
+            toast.danger("Modelo de e-mail não encontrado.");
             router.push("/admin/integracoes/resend/modelos");
           }
         }
@@ -132,7 +132,7 @@ export default function ResendTemplateStudioPage() {
         setTemplate(updated);
         toast.success(`Modelo "${updated.name}" salvo com sucesso!`);
       } else {
-        toast.error(data.error || "Erro ao salvar modelo.");
+        toast.danger(data.error || "Erro ao salvar modelo.");
       }
     } catch {
       const fallback: CustomEmailTemplate = {
@@ -194,7 +194,7 @@ export default function ResendTemplateStudioPage() {
     if (!file) return;
 
     if (!file.name.endsWith(".html") && !file.name.endsWith(".htm") && !file.type.includes("html")) {
-      toast.error("Selecione um arquivo HTML válido (.html ou .htm).");
+      toast.danger("Selecione um arquivo HTML válido (.html ou .htm).");
       return;
     }
 
@@ -207,7 +207,7 @@ export default function ResendTemplateStudioPage() {
       }
     };
     reader.onerror = () => {
-      toast.error("Erro ao ler o arquivo selecionado.");
+      toast.danger("Erro ao ler o arquivo selecionado.");
     };
     reader.readAsText(file);
 
@@ -240,7 +240,7 @@ export default function ResendTemplateStudioPage() {
   const handleSendTest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!testEmail) {
-      toast.error("Informe o e-mail de destino.");
+      toast.danger("Informe o e-mail de destino.");
       return;
     }
 
@@ -256,11 +256,11 @@ export default function ResendTemplateStudioPage() {
         toast.success(data.message);
         setIsTestModalOpen(false);
       } else {
-        toast.error(data.error || "Erro no envio de teste.");
+        toast.danger(data.error || "Erro no envio de teste.");
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido";
-      toast.error("Erro no teste: " + msg);
+      toast.danger("Erro no teste: " + msg);
     } finally {
       setIsSendingTest(false);
     }
@@ -375,7 +375,7 @@ export default function ResendTemplateStudioPage() {
       />
 
       {/* Metadata Configuration Bar */}
-      <div className="editorial-card p-5 space-y-4">
+      <div className="surface-card p-5 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">

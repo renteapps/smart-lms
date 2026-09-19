@@ -1,5 +1,6 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { useState, useTransition } from "react";
 import { Save, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/editorial";
@@ -229,7 +230,7 @@ export default function QuizBuilderForm({
       <form onSubmit={handleSubmit} className="space-y-6">
         
         {/* Basic Info */}
-        <div className="bg-surface border border-border rounded-2xl p-6 shadow-sm space-y-6">
+        <div className="surface-card p-6 space-y-6">
           <div className="space-y-2">
             <label htmlFor="title" className="block text-sm font-medium text-foreground">
               Título do Quiz
@@ -338,23 +339,23 @@ export default function QuizBuilderForm({
           ) : (
             <div className="space-y-4">
               {questions.map((q, index) => (
-                <div key={q.id} className="bg-surface border border-border rounded-2xl p-5 shadow-sm space-y-5">
+                <div key={q.id} className="surface-card p-5 space-y-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-xs font-bold text-accent">
                         {index + 1}
                       </span>
-                      <select
-                        value={q.type}
-                        onChange={(e) => handleTypeChange(q.id, e.target.value as QuestionType)}
-                        className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-accent"
-                      >
+                      <NativeSelect
+ value={q.type}
+ onChange={(e) => handleTypeChange(q.id, e.target.value as QuestionType)}
+ 
+ >
                         {QUESTION_TYPES.map((type) => (
                           <option key={type} value={type}>
                             {QUESTION_TYPE_LABELS[type]}
                           </option>
                         ))}
-                      </select>
+                      </NativeSelect>
                     </div>
                     <button
                       type="button"

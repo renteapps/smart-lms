@@ -1,5 +1,6 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { buttonVariants } from "@heroui/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, ChevronDown, ChevronRight, Copy, KeyRound, Link2, ListChecks, Pencil, Plus, RefreshCw, Trash2, Webhook } from "lucide-react";
@@ -67,7 +68,7 @@ export function EduzzIntegrationContent() {
     setLoading(true);
     const result = await getEduzzAdminConfig();
     if (result.success && result.data) setData(result.data);
-    else toast.error(result.message ?? "Não foi possível carregar a integração.");
+    else toast.danger(result.message ?? "Não foi possível carregar a integração.");
     setLoading(false);
   }, []);
 
@@ -78,7 +79,7 @@ export function EduzzIntegrationContent() {
     });
     const params = new URLSearchParams(window.location.search);
     if (params.get("oauth") === "connected") toast.success("Conta Eduzz conectada.");
-    if (params.get("oauth_error")) toast.error(params.get("oauth_error")!);
+    if (params.get("oauth_error")) toast.danger(params.get("oauth_error")!);
     return () => window.cancelAnimationFrame(frame);
   }, [reload]);
 
@@ -93,7 +94,7 @@ export function EduzzIntegrationContent() {
       enabled: true, webhookSecret, replaceWebhookSecrets, clientId, clientSecret,
     });
     setBusy(false);
-    if (!result.success) return toast.error(result.message ?? "Falha ao salvar.");
+    if (!result.success) return toast.danger(result.message ?? "Falha ao salvar.");
     setWebhookSecret(""); setClientId(""); setClientSecret("");
     toast.success("Configuração salva sem apagar credenciais existentes.");
     await reload();
@@ -101,14 +102,14 @@ export function EduzzIntegrationContent() {
 
   async function addMapping() {
     const [targetType, targetId] = target.split(":") as ["plan" | "course", string];
-    if (!productId.trim() || !targetId) return toast.error("Informe o produto e o destino.");
+    if (!productId.trim() || !targetId) return toast.danger("Informe o produto e o destino.");
     setBusy(true);
     const result = await saveEduzzMapping({
       id: mappingId, productId, offerId, targetType, targetId,
       accessDays: accessDays ? Number(accessDays) : null,
     });
     setBusy(false);
-    if (!result.success) return toast.error(result.message ?? "Falha ao mapear.");
+    if (!result.success) return toast.danger(result.message ?? "Falha ao mapear.");
     setMappingId(undefined); setProductId(""); setOfferId(""); setTarget(""); setAccessDays("");
     toast.success("Mapeamento salvo.");
     await reload();
@@ -118,7 +119,7 @@ export function EduzzIntegrationContent() {
     setCatalogLoading(true);
     const result = await listEduzzCatalog(page);
     setCatalogLoading(false);
-    if (!result.success || !result.data) return toast.error(result.message ?? "Não foi possível listar os produtos.");
+    if (!result.success || !result.data) return toast.danger(result.message ?? "Não foi possível listar os produtos.");
     setCatalogItems(result.data.items);
     setCatalogPage({ page: result.data.page, pages: result.data.pages });
   }
@@ -140,7 +141,7 @@ export function EduzzIntegrationContent() {
     setOffersLoadingId(product.id);
     const result = await listEduzzOffersForProduct(product.id);
     setOffersLoadingId(null);
-    if (!result.success || !result.data) return toast.error(result.message ?? "Não foi possível listar as ofertas.");
+    if (!result.success || !result.data) return toast.danger(result.message ?? "Não foi possível listar as ofertas.");
     setOffersByProduct((prev) => ({ ...prev, [product.id]: result.data! }));
   }
 
@@ -183,7 +184,7 @@ export function EduzzIntegrationContent() {
           <div className="flex gap-2">
             <button className={`${primaryButtonClass}`} disabled={busy || (!webhookSecret && !clientId && !clientSecret)} onClick={() => void saveCredentials()}><CheckCircle2 className="size-4" /> Adicionar chave</button>
             {Boolean(data?.webhookKeyCount) && <button className={`${buttonClass}`} disabled={busy || !webhookSecret} onClick={() => void saveCredentials(true)}>Trocar e aposentar anteriores</button>}
-            <button className={`${buttonClass}`} disabled={busy || !data?.enabled} onClick={async () => { setBusy(true); const result = await saveEduzzConfiguration({ enabled: false }); setBusy(false); if (!result.success) toast.error(result.message || "Erro ao salvar configuração."); else { toast.success("Novos webhooks foram desativados; acessos existentes foram preservados."); await reload(); } }}>Desativar</button>
+            <button className={`${buttonClass}`} disabled={busy || !data?.enabled} onClick={async () => { setBusy(true); const result = await saveEduzzConfiguration({ enabled: false }); setBusy(false); if (!result.success) toast.danger(result.message || "Erro ao salvar configuração."); else { toast.success("Novos webhooks foram desativados; acessos existentes foram preservados."); await reload(); } }}>Desativar</button>
           </div>
         </div>
       </section>
@@ -206,7 +207,7 @@ export function EduzzIntegrationContent() {
         <div className="flex flex-wrap items-center gap-3">
           <button className={`${buttonClass}`} disabled={busy || (!clientId && !clientSecret)} onClick={() => void saveCredentials()}>Salvar credenciais</button>
           <a className={`${primaryButtonClass}`} href="/api/admin/integracoes/eduzz/connect"><Link2 className="size-4" /> {data?.oauthConnected ? "Reconectar Eduzz" : "Conectar Eduzz"}</a>
-          {data?.oauthConnected && <button className={`${dangerButtonClass}`} onClick={async () => { const result = await disconnectEduzzOAuth(); if (!result.success) toast.error(result.message || "Erro ao desconectar OAuth."); else { toast.success("OAuth desconectado."); await reload(); } }}>Desconectar</button>}
+          {data?.oauthConnected && <button className={`${dangerButtonClass}`} onClick={async () => { const result = await disconnectEduzzOAuth(); if (!result.success) toast.danger(result.message || "Erro ao desconectar OAuth."); else { toast.success("OAuth desconectado."); await reload(); } }}>Desconectar</button>}
           <span className="text-sm text-muted">{data?.oauthConnected ? `Conectada${data.accountName ? `: ${data.accountName}` : ""}` : "Não conectada"} · saúde: {data?.status}</span>
         </div>
       </section>
@@ -285,7 +286,7 @@ export function EduzzIntegrationContent() {
         <div className="grid gap-3 md:grid-cols-5">
           <input className={inputClass} value={productId} onChange={(e) => setProductId(e.target.value)} placeholder="ID do produto *" />
           <input className={inputClass} value={offerId} onChange={(e) => setOfferId(e.target.value)} placeholder="Oferta (opcional)" />
-          <select className={inputClass} value={target} onChange={(e) => setTarget(e.target.value)}><option value="">Plano ou curso *</option>{targets.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
+          <NativeSelect value={target} onChange={(e) => setTarget(e.target.value)}><option value="">Plano ou curso *</option>{targets.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</NativeSelect>
           <input className={inputClass} type="number" min="1" value={accessDays} onChange={(e) => setAccessDays(e.target.value)} placeholder="Dias (opcional)" />
           <button className={`${primaryButtonClass}`} disabled={busy} onClick={() => void addMapping()}><Plus className="size-4" /> {mappingId ? "Atualizar" : "Adicionar"}</button>
         </div>
@@ -293,7 +294,7 @@ export function EduzzIntegrationContent() {
           {(data?.mappings ?? []).map((mapping) => {
             const plan = data?.plans.find((item) => item.id === mapping.planId)?.name;
             const course = data?.courses.find((item) => item.id === mapping.courseId)?.title;
-            return <div key={mapping.id} className="flex items-center gap-3 p-3 text-sm"><code className="font-semibold">{mapping.productId}</code><span className="text-muted">{mapping.offerId ? `/ ${mapping.offerId}` : "/ qualquer oferta"}</span><span className="flex-1">→ {plan ? `Plano ${plan}` : `Curso ${course ?? "removido"}`}</span><button aria-label="Editar mapeamento" className="text-accent" onClick={() => { setMappingId(mapping.id); setProductId(mapping.productId); setOfferId(mapping.offerId ?? ""); setTarget(mapping.planId ? `plan:${mapping.planId}` : `course:${mapping.courseId}`); setAccessDays(mapping.accessDays ? String(mapping.accessDays) : ""); }}><Pencil className="size-4" /></button><button aria-label="Excluir mapeamento" className="text-danger" onClick={async () => { const result = await deleteEduzzMapping(mapping.id); if (!result.success) toast.error(result.message || "Erro ao excluir mapeamento."); else await reload(); }}><Trash2 className="size-4" /></button></div>;
+            return <div key={mapping.id} className="flex items-center gap-3 p-3 text-sm"><code className="font-semibold">{mapping.productId}</code><span className="text-muted">{mapping.offerId ? `/ ${mapping.offerId}` : "/ qualquer oferta"}</span><span className="flex-1">→ {plan ? `Plano ${plan}` : `Curso ${course ?? "removido"}`}</span><button aria-label="Editar mapeamento" className="text-accent" onClick={() => { setMappingId(mapping.id); setProductId(mapping.productId); setOfferId(mapping.offerId ?? ""); setTarget(mapping.planId ? `plan:${mapping.planId}` : `course:${mapping.courseId}`); setAccessDays(mapping.accessDays ? String(mapping.accessDays) : ""); }}><Pencil className="size-4" /></button><button aria-label="Excluir mapeamento" className="text-danger" onClick={async () => { const result = await deleteEduzzMapping(mapping.id); if (!result.success) toast.danger(result.message || "Erro ao excluir mapeamento."); else await reload(); }}><Trash2 className="size-4" /></button></div>;
           })}
           {data?.mappings.length === 0 && <p className="p-4 text-sm text-muted">Nenhum produto mapeado.</p>}
         </div>
@@ -302,7 +303,7 @@ export function EduzzIntegrationContent() {
       <section className="rounded-xl border border-border bg-surface p-6 space-y-4">
         <div className="flex items-center justify-between"><div><h2 className="text-lg font-bold">Eventos recentes</h2><p className="text-sm text-muted">Payloads não são enviados ao navegador; apenas estado, avisos e tentativas.</p></div><button className={`${buttonClass}`} onClick={() => void reload()}><RefreshCw className="size-4" /> Atualizar</button></div>
         <div className="divide-y divide-border rounded-lg border border-border">
-          {(data?.events ?? []).map((event) => <div key={event.id} className="grid gap-1 p-3 text-sm md:grid-cols-[1fr_auto_auto] md:items-center"><div><code>{event.eventType}</code><p className="text-xs text-muted">{new Date(event.receivedAt).toLocaleString("pt-BR")} · tentativa {event.attempts}{event.warning ? ` · fallback: ${event.warning}` : ""}</p>{event.error && <p className="text-xs text-danger">{event.error}</p>}</div><span className="rounded-full bg-background-secondary px-2 py-1 text-xs">{event.status}</span>{event.status === "failed" ? <button className={`${buttonClass}`} onClick={async () => { const result = await replayEduzzEvent(event.id); if (!result.success) toast.error(result.message || "Erro ao reprocessar evento."); else { toast.success("Evento reprocessado."); await reload(); } }}><RefreshCw className="size-3" /> Reprocessar</button> : <span />}</div>)}
+          {(data?.events ?? []).map((event) => <div key={event.id} className="grid gap-1 p-3 text-sm md:grid-cols-[1fr_auto_auto] md:items-center"><div><code>{event.eventType}</code><p className="text-xs text-muted">{new Date(event.receivedAt).toLocaleString("pt-BR")} · tentativa {event.attempts}{event.warning ? ` · fallback: ${event.warning}` : ""}</p>{event.error && <p className="text-xs text-danger">{event.error}</p>}</div><span className="rounded-full bg-background-secondary px-2 py-1 text-xs">{event.status}</span>{event.status === "failed" ? <button className={`${buttonClass}`} onClick={async () => { const result = await replayEduzzEvent(event.id); if (!result.success) toast.danger(result.message || "Erro ao reprocessar evento."); else { toast.success("Evento reprocessado."); await reload(); } }}><RefreshCw className="size-3" /> Reprocessar</button> : <span />}</div>)}
           {data?.events.length === 0 && <p className="p-4 text-sm text-muted">Nenhum evento recebido.</p>}
         </div>
       </section>

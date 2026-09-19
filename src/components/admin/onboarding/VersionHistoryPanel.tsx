@@ -28,7 +28,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ versio
 
   if (versions.length === 0) {
     return (
-      <div className="editorial-card p-8 text-center text-sm text-muted">
+      <div className="surface-card p-8 text-center text-sm text-muted">
         <History className="mx-auto mb-3 h-8 w-8 opacity-30" />
         Nenhuma versão publicada ainda. Publique o questionário para começar o histórico.
       </div>
@@ -36,7 +36,7 @@ export const VersionHistoryPanel: React.FC<VersionHistoryPanelProps> = ({ versio
   }
 
   return (
-    <div className="editorial-card p-5 sm:p-6">
+    <div className="surface-card p-5 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <p className="eyebrow">Auditoria</p>

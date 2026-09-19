@@ -1,5 +1,6 @@
 'use client';
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/editorial';
@@ -51,15 +52,15 @@ export function EditProfileTestClient({ initialTest, courses, plans }: { initial
 
   const handleNextStep = () => {
     if (currentStep === 1 && !title.trim()) {
-      toast.error('Por favor, informe o título do teste.');
+      toast.danger('Por favor, informe o título do teste.');
       return;
     }
     if (currentStep === 2 && categories.length === 0) {
-      toast.error('Adicione pelo menos 1 categoria de perfil.');
+      toast.danger('Adicione pelo menos 1 categoria de perfil.');
       return;
     }
     if (currentStep === 3 && questions.length === 0) {
-      toast.error('Adicione pelo menos 1 pergunta ao teste.');
+      toast.danger('Adicione pelo menos 1 pergunta ao teste.');
       return;
     }
     if (currentStep < 4) {
@@ -75,7 +76,7 @@ export function EditProfileTestClient({ initialTest, courses, plans }: { initial
 
   const handleSave = async (saveStatus: ProfileTestStatus) => {
     if (!title.trim()) {
-      toast.error('O teste precisa de um título.');
+      toast.danger('O teste precisa de um título.');
       return;
     }
 
@@ -103,11 +104,11 @@ export function EditProfileTestClient({ initialTest, courses, plans }: { initial
         toast.success('Teste de perfil atualizado com sucesso!', { id: loadingToast });
         router.push('/admin/testes-perfil');
       } else {
-        toast.error('Erro ao atualizar: ' + res.message, { id: loadingToast });
+        toast.danger('Erro ao atualizar: ' + res.message, { id: loadingToast });
         setIsSaving(false);
       }
     } catch (err: any) {
-      toast.error('Erro inesperado: ' + err.message, { id: loadingToast });
+      toast.danger('Erro inesperado: ' + err.message, { id: loadingToast });
       setIsSaving(false);
     }
   };
@@ -159,7 +160,7 @@ export function EditProfileTestClient({ initialTest, courses, plans }: { initial
       />
 
       {/* Step Content Panels */}
-      <div className="bg-surface border border-border/60 rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+      <div className="bg-surface border border-border/60 rounded-2xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
         
         {/* STEP 1: Basic Info */}
         {currentStep === 1 && (
@@ -225,22 +226,22 @@ export function EditProfileTestClient({ initialTest, courses, plans }: { initial
                   <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
                     Regra de Acesso
                   </label>
-                  <select
-                    value={accessType}
-                    onChange={(e) => {
-                      const next = e.target.value as ProfileTestAccessType;
-                      setAccessType(next);
-                      // A lista fora do modo escolhido não é salva: some da tela também.
-                      if (next !== 'course_owners') setRequiredCourseIds(new Set());
-                      if (next !== 'plan_owners') setRequiredPlanIds(new Set());
-                    }}
-                    className="w-full bg-background-secondary border border-border/60 rounded-xl px-4 py-3 text-sm text-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
-                    aria-label="Regra de Acesso"
-                  >
+                  <NativeSelect
+ value={accessType}
+ onChange={(e) => {
+ const next = e.target.value as ProfileTestAccessType;
+ setAccessType(next);
+ // A lista fora do modo escolhido não é salva: some da tela também.
+ if (next !== 'course_owners') setRequiredCourseIds(new Set());
+ if (next !== 'plan_owners') setRequiredPlanIds(new Set());
+ }}
+ className="w-full"
+ aria-label="Regra de Acesso"
+ >
                     {PROFILE_TEST_ACCESS_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>{option.label}</option>
                     ))}
-                  </select>
+                  </NativeSelect>
                   <p className="text-xs text-muted mt-1">
                     {PROFILE_TEST_ACCESS_OPTIONS.find((option) => option.value === accessType)?.hint}
                   </p>
@@ -252,21 +253,21 @@ export function EditProfileTestClient({ initialTest, courses, plans }: { initial
                   <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
                     Cursos Permitidos
                   </label>
-                  <select
-                    multiple
-                    value={Array.from(requiredCourseIds)}
-                    onChange={(e) => {
-                      const selected = Array.from(e.target.selectedOptions, option => option.value);
-                      setRequiredCourseIds(new Set(selected));
-                    }}
-                    className="w-full bg-background-secondary border border-border/60 rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    size={4}
-                    aria-label="Cursos Permitidos"
-                  >
+                  <NativeSelect
+ multiple
+ value={Array.from(requiredCourseIds)}
+ onChange={(e) => {
+ const selected = Array.from(e.target.selectedOptions, option => option.value);
+ setRequiredCourseIds(new Set(selected));
+ }}
+ className="w-full"
+ size={4}
+ aria-label="Cursos Permitidos"
+ >
                     {courses.map(course => (
                       <option key={course.id} value={course.id}>{course.name}</option>
                     ))}
-                  </select>
+                  </NativeSelect>
                   <p className="text-xs text-muted mt-1">Pressione Cmd/Ctrl para selecionar múltiplos.</p>
                 </div>
               )}
@@ -276,21 +277,21 @@ export function EditProfileTestClient({ initialTest, courses, plans }: { initial
                   <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">
                     Planos Permitidos
                   </label>
-                  <select
-                    multiple
-                    value={Array.from(requiredPlanIds)}
-                    onChange={(e) => {
-                      const selected = Array.from(e.target.selectedOptions, option => option.value);
-                      setRequiredPlanIds(new Set(selected));
-                    }}
-                    className="w-full bg-background-secondary border border-border/60 rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    size={4}
-                    aria-label="Planos Permitidos"
-                  >
+                  <NativeSelect
+ multiple
+ value={Array.from(requiredPlanIds)}
+ onChange={(e) => {
+ const selected = Array.from(e.target.selectedOptions, option => option.value);
+ setRequiredPlanIds(new Set(selected));
+ }}
+ className="w-full"
+ size={4}
+ aria-label="Planos Permitidos"
+ >
                     {plans.map(plan => (
                       <option key={plan.id} value={plan.id}>{plan.name}</option>
                     ))}
-                  </select>
+                  </NativeSelect>
                   <p className="text-xs text-muted mt-1">Pressione Cmd/Ctrl para selecionar múltiplos.</p>
                 </div>
               )}
@@ -347,7 +348,7 @@ export function EditProfileTestClient({ initialTest, courses, plans }: { initial
                     onClick={() => setStatus('draft')}
                     className={`flex-1 py-3 rounded-xl border text-sm font-bold transition-all ${
                       status === 'draft'
-                        ? 'border-warning bg-warning/10 text-yellow-950 ring-2 ring-warning/20'
+                        ? 'border-warning bg-warning-soft text-warning-soft-foreground ring-2 ring-warning/20'
                         : 'border-border/60 bg-background-secondary text-muted'
                     }`}
                   >
@@ -358,7 +359,7 @@ export function EditProfileTestClient({ initialTest, courses, plans }: { initial
                     onClick={() => setStatus('published')}
                     className={`flex-1 py-3 rounded-xl border text-sm font-bold transition-all ${
                       status === 'published'
-                        ? 'border-positive bg-success/10 text-success ring-2 ring-positive/20'
+                        ? 'border-success bg-success-soft text-success-soft-foreground ring-2 ring-success/20'
                         : 'border-border/60 bg-background-secondary text-muted'
                     }`}
                   >
@@ -404,7 +405,7 @@ export function EditProfileTestClient({ initialTest, courses, plans }: { initial
                   <p className="text-sm text-muted mt-1">{description}</p>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                  status === 'published' ? 'bg-success/10 text-success' : 'bg-warning/10 text-yellow-950'
+                  status === 'published' ? 'bg-success-soft text-success-soft-foreground' : 'bg-warning-soft text-warning-soft-foreground'
                 }`}>
                   {status === 'published' ? 'Publicado' : 'Rascunho'}
                 </span>

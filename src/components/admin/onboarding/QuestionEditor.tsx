@@ -1,3 +1,4 @@
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import React, { useState } from 'react';
 import { Question, QuestionOption } from '@/types/trilha';
 import { ChevronDown, ChevronUp, GripVertical, Settings2, Plus, Type, Copy, Trash2, TriangleAlert, LockKeyhole, Braces } from 'lucide-react';
@@ -147,54 +148,54 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
 
                 <div>
                   <label className="text-xs font-semibold text-muted mb-1 block">Papel (Role)</label>
-                  <select
-                    value={question.role}
-                    onChange={(e) => onUpdate({ ...question, role: e.target.value as Question['role'] })}
-                    className="bg-background border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-accent"
-                  >
+                  <NativeSelect
+ value={question.role}
+ onChange={(e) => onUpdate({ ...question, role: e.target.value as Question['role'] })}
+ 
+ >
                     <option value="perfil">Perfil</option>
                     <option value="problema">Problema</option>
                     <option value="interesse">Interesse</option>
                     <option value="nivel">Nível</option>
                     <option value="restricao">Restrição</option>
                     <option value="contexto">Contexto para IA</option>
-                  </select>
+                  </NativeSelect>
                 </div>
 
                 <div>
                   <label className="text-xs font-semibold text-muted mb-1 block">Seleção</label>
-                  <select
-                    value={question.type}
-                    onChange={(e) => {
-                      const type = e.target.value as Question['type'];
-                      const becomesOpen = type === 'open';
-                      onUpdate({
-                        ...question,
-                        type,
-                        role: becomesOpen ? 'contexto' : question.role === 'contexto' ? 'perfil' : question.role,
-                        visualType: becomesOpen ? 'list' : question.visualType,
-                        options: becomesOpen ? [] : question.options.length ? question.options : [{ label: 'Nova opção', tags: [], contentMappings: [] }],
-                      });
-                    }}
-                    className="bg-background border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-accent"
-                  >
+                  <NativeSelect
+ value={question.type}
+ onChange={(e) => {
+ const type = e.target.value as Question['type'];
+ const becomesOpen = type === 'open';
+ onUpdate({
+ ...question,
+ type,
+ role: becomesOpen ? 'contexto' : question.role === 'contexto' ? 'perfil' : question.role,
+ visualType: becomesOpen ? 'list' : question.visualType,
+ options: becomesOpen ? [] : question.options.length ? question.options : [{ label: 'Nova opção', tags: [], contentMappings: [] }],
+ });
+ }}
+ 
+ >
                     <option value="single">Única</option>
                     <option value="multiple">Múltipla</option>
                     <option value="open">Resposta aberta</option>
-                  </select>
+                  </NativeSelect>
                 </div>
 
                 {question.type !== 'open' && <div>
                   <label className="text-xs font-semibold text-muted mb-1 block">Visual</label>
-                  <select
-                    value={question.visualType || 'list'}
-                    onChange={(e) => onUpdate({ ...question, visualType: e.target.value as NonNullable<Question['visualType']> })}
-                    className="bg-background border border-border/60 rounded-lg text-sm px-3 py-1.5 outline-none focus:border-accent"
-                  >
+                  <NativeSelect
+ value={question.visualType || 'list'}
+ onChange={(e) => onUpdate({ ...question, visualType: e.target.value as NonNullable<Question['visualType']> })}
+ 
+ >
                     <option value="list">Lista</option>
                     <option value="cards">Cards (Grid)</option>
                     <option value="physics">Bolhas dinâmicas</option>
-                  </select>
+                  </NativeSelect>
                   {question.visualType === 'physics' && (
                     <p className="mt-1.5 max-w-44 text-2xs leading-4 text-muted">Uma opção por bolha, sem níveis secundários.</p>
                   )}

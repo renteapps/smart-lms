@@ -1,5 +1,6 @@
 'use client';
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import React, { useRef, useState } from 'react';
 import { ContentMapping, QuestionOption } from '@/types/trilha';
 import { X, Clock, Plus, GripVertical, FileText, Video, Folder, BookOpen, Link as LinkIcon, Layers3, TriangleAlert, ImagePlus, LoaderCircle } from 'lucide-react';
@@ -268,16 +269,16 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
 
                   <div className="flex flex-wrap items-center justify-end gap-2 border-l border-border/60 pl-3">
                     <Layers3 size={14} className="text-muted" />
-                    <select
-                      aria-label={`Papel pedagógico de ${mapping.title}`}
-                      value={mapping.learningRole}
-                      onChange={(event) => handleUpdateMapping(mapping.id, { learningRole: event.target.value as ContentMapping['learningRole'] })}
-                      className="rounded border border-border/70 bg-background px-2 py-1 text-xs font-semibold outline-none focus:border-accent"
-                    >
+                    <NativeSelect
+ aria-label={`Papel pedagógico de ${mapping.title}`}
+ value={mapping.learningRole}
+ onChange={(event) => handleUpdateMapping(mapping.id, { learningRole: event.target.value as ContentMapping['learningRole'] })}
+ 
+ >
                       <option value="essential">Essencial</option>
                       <option value="deepening">Aprofundamento</option>
                       <option value="extra">Extra</option>
-                    </select>
+                    </NativeSelect>
                     {(mapping.type === 'article' || mapping.type === 'external_link') && (
                       <label className="flex items-center gap-1 text-xs text-muted">
                         <Clock size={13} />

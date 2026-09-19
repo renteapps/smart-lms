@@ -1,7 +1,9 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { Tabs } from "@heroui/react";
 // Removed Context
 import {
   Send,
@@ -54,12 +56,12 @@ function ProfileTestSelector({ targetAudience, value, onChange }: { targetAudien
         <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
           Categoria de Perfil (Resultado Dominante)
         </label>
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="min-h-11 w-full rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground focus:border-accent focus:bg-surface focus:outline-none"
-          required
-        >
+        <NativeSelect
+ value={value}
+ onChange={(e) => onChange(e.target.value)}
+ className="w-full"
+ required
+ >
           <option value="">Selecione o perfil...</option>
           {tests.map(test => (
             <optgroup key={test.id} label={test.title}>
@@ -68,7 +70,7 @@ function ProfileTestSelector({ targetAudience, value, onChange }: { targetAudien
               ))}
             </optgroup>
           ))}
-        </select>
+        </NativeSelect>
       </div>
     );
   }
@@ -78,17 +80,17 @@ function ProfileTestSelector({ targetAudience, value, onChange }: { targetAudien
       <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
         Selecione o Teste de Perfil
       </label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="min-h-11 w-full rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground focus:border-accent focus:bg-surface focus:outline-none"
-        required
-      >
+      <NativeSelect
+ value={value}
+ onChange={(e) => onChange(e.target.value)}
+ className="w-full"
+ required
+ >
         <option value="">Selecione o teste...</option>
         {tests.map(test => (
           <option key={test.id} value={test.id}>{test.title}</option>
         ))}
-      </select>
+      </NativeSelect>
     </div>
   );
 }
@@ -191,18 +193,18 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
     e.preventDefault();
 
     if (!title || !message) {
-      toast.error("Preencha o título e a mensagem.");
+      toast.danger("Preencha o título e a mensagem.");
       return;
     }
 
     const requiresId = ["course", "user", "course_completed", "course_abandoned", "profile_test_category", "profile_test_completed", "profile_test_not_completed"].includes(targetAudience);
     if (requiresId && !targetId) {
-      toast.error("Informe o ID ou Seleção necessária para este público.");
+      toast.danger("Informe o ID ou Seleção necessária para este público.");
       return;
     }
 
     if (channels.length === 0) {
-      toast.error("Selecione pelo menos um canal de envio.");
+      toast.danger("Selecione pelo menos um canal de envio.");
       return;
     }
 
@@ -250,7 +252,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
       setChannels(["platform"]);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erro desconhecido";
-      toast.error("Erro ao enviar: " + msg);
+      toast.danger("Erro ao enviar: " + msg);
     } finally {
       setIsSending(false);
     }
@@ -296,30 +298,12 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
         description="Envie comunicados manuais na plataforma e disparos de e-mail via Resend, ou crie réguas de automação inteligentes."
       />
 
-      <div className="flex border-b border-border mb-6">
-        <button
-          type="button"
-          onClick={() => setActiveTab("manual")}
-          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${
-            activeTab === "manual"
-              ? "border-accent text-accent"
-              : "border-transparent text-muted hover:text-foreground"
-          }`}
-        >
-          Envio Avulso
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("automations")}
-          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${
-            activeTab === "automations"
-              ? "border-accent text-accent"
-              : "border-transparent text-muted hover:text-foreground"
-          }`}
-        >
-          Automações
-        </button>
-      </div>
+      <Tabs.Root selectedKey={activeTab} onSelectionChange={(key) => setActiveTab(key as typeof activeTab)}>
+        <Tabs.List aria-label="Tipo de notificação">
+          <Tabs.Tab id="manual">Envio avulso</Tabs.Tab>
+          <Tabs.Tab id="automations">Automações</Tabs.Tab>
+        </Tabs.List>
+      </Tabs.Root>
 
       {activeTab === "automations" ? (
         <AutomationsTab initialAutomations={initialAutomations} />
@@ -327,7 +311,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
         <div className="grid gap-6 lg:grid-cols-12">
           {/* Left / Main Form Column */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="editorial-card p-6 space-y-5">
+            <div className="surface-card p-6 space-y-5">
               <div className="flex items-center justify-between border-b border-border/60 pb-3">
                 <h2 className="text-lg font-extrabold text-foreground">Nova Notificação & Disparo</h2>
                 <span className="text-2xs font-bold text-muted uppercase tracking-wider">
@@ -377,11 +361,11 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                     <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                       Público Alvo
                     </label>
-                    <select
-                      value={targetAudience}
-                      onChange={(e) => setTargetAudience(e.target.value as typeof targetAudience)}
-                      className="min-h-11 w-full rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground focus:border-accent focus:bg-surface focus:outline-none"
-                    >
+                    <NativeSelect
+ value={targetAudience}
+ onChange={(e) => setTargetAudience(e.target.value as typeof targetAudience)}
+ className="w-full"
+ >
                       <optgroup label="Geral">
                         <option value="all">Todos os alunos</option>
                         <option value="user">Usuário específico (E-mail / ID)</option>
@@ -401,7 +385,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                         <option value="profile_test_completed">Concluíram um teste específico</option>
                         <option value="profile_test_not_completed">Não concluíram um teste específico</option>
                       </optgroup>
-                    </select>
+                    </NativeSelect>
                   </div>
 
                   {["course", "user", "course_completed", "course_abandoned"].includes(targetAudience) && (
@@ -510,11 +494,11 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                           Customizar layout no Studio <ExternalLink className="size-3" />
                         </Link>
                       </div>
-                      <select
-                        value={emailTemplate}
-                        onChange={(e) => setEmailTemplate(e.target.value as EmailTemplateType)}
-                        className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs text-foreground focus:border-accent focus:outline-none font-medium"
-                      >
+                      <NativeSelect
+ value={emailTemplate}
+ onChange={(e) => setEmailTemplate(e.target.value as EmailTemplateType)}
+ className="w-full"
+ >
                         <option value="notification">📢 Comunicado & Notificação Geral (Recomendado)</option>
                         <option value="welcome">🚀 Boas-vindas à Plataforma</option>
                         <option value="course_enrollment">🎓 Matrícula em Curso</option>
@@ -522,7 +506,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                         <option value="subscription">⭐ Assinatura Confirmada</option>
                         <option value="certificate">🏆 Certificado de Conclusão</option>
                         <option value="password_reset">🔒 Redefinição de Senha</option>
-                      </select>
+                      </NativeSelect>
                     </div>
 
                     {/* Email Subject & Preheader */}
@@ -683,7 +667,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
 
           {/* Right Column: History */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="editorial-card flex flex-col p-6 h-full">
+            <div className="surface-card flex flex-col p-6 h-full">
               <div className="flex items-center justify-between border-b border-border/60 pb-3 mb-4">
                 <h2 className="text-base font-extrabold text-foreground">Histórico de Disparos</h2>
                 <span className="text-xs text-muted font-bold">
@@ -764,7 +748,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                             setCampaigns((prev) => prev.filter((c) => c.id !== notification.id));
                             toast.success("Campanha excluída com sucesso");
                           } catch (err: any) {
-                            toast.error("Erro ao excluir: " + err.message);
+                            toast.danger("Erro ao excluir: " + err.message);
                           }
                         }}
                         aria-label={`Excluir ${notification.title}`}

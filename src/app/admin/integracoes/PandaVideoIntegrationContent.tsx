@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button, Card, Input, TextField, Label } from "@heroui/react";
+import { Button, Card, Input, Skeleton, TextField, Label } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
 import { toast } from "@/lib/toast";
 import { Check, Plug } from "lucide-react";
@@ -32,7 +32,7 @@ export function PandaVideoIntegrationContent() {
 
   const handleConnect = async () => {
     if (!apiKey) {
-      toast.error("Preencha a API Key do PandaVideo.");
+      toast.danger("Preencha a API Key do PandaVideo.");
       return;
     }
 
@@ -49,7 +49,7 @@ export function PandaVideoIntegrationContent() {
       setIsConnected(true);
       toast.success("Autenticação com o PandaVideo concluída com sucesso!");
     } else {
-      toast.error(result.message ?? "Não foi possível salvar a integração.");
+      toast.danger(result.message ?? "Não foi possível salvar a integração.");
     }
   };
 
@@ -59,7 +59,7 @@ export function PandaVideoIntegrationContent() {
       setIsConnected(false);
       toast.success("Desconectado do PandaVideo.");
     } else {
-      toast.error(result.message ?? "Não foi possível desconectar.");
+      toast.danger(result.message ?? "Não foi possível desconectar.");
     }
   };
 
@@ -86,7 +86,7 @@ export function PandaVideoIntegrationContent() {
           </div>
 
           {isLoading ? (
-            <div className="h-32 animate-pulse rounded-lg bg-surface-secondary" />
+            <Skeleton className="h-32 rounded-lg" />
           ) : isConnected ? (
             <div className="rounded-lg border border-success/20 bg-success-soft p-6 flex flex-col items-center justify-center text-center space-y-3">
               <div className="size-12 rounded-full bg-success/20 flex items-center justify-center">

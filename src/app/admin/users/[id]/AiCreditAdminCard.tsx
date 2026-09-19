@@ -29,7 +29,7 @@ export function AiCreditAdminCard({ userId, userName, initialBalance }: AiCredit
       const result = await addAiCreditsToUser(userId, amount);
 
       if (!result.success) {
-        toast.error(result.message || "Erro ao adicionar créditos.");
+        toast.danger(result.message || "Erro ao adicionar créditos.");
         return;
       }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { useState, useEffect, useRef } from "react";
 import { PageHeader } from "@/components/ui/editorial";
 import { useRouter } from "next/navigation";
@@ -23,7 +24,8 @@ import {
   Settings2,
   DollarSign,
 } from "lucide-react";
-import { Button, toast } from "@heroui/react";
+import { Button } from "@heroui/react";
+import { toast } from "@/lib/toast";
 import {
   DYNAMIC_VARIABLES,
   DEFAULT_SAMPLE_CONTACT,
@@ -726,18 +728,18 @@ export function CourseSalesForm({ course }: { course: Course }) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-xs font-bold uppercase text-muted mb-1.5">Plataforma</label>
-                      <select
-                        value={intConfig.plataforma}
-                        onChange={(e) => handleIntegrationChange(index, "plataforma", e.target.value as PlataformaCheckout)}
-                        className="w-full bg-background-secondary border border-border rounded-xl px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:border-accent transition-all"
-                      >
+                      <NativeSelect
+ value={intConfig.plataforma}
+ onChange={(e) => handleIntegrationChange(index, "plataforma", e.target.value as PlataformaCheckout)}
+ className="w-full"
+ >
                         <option value="eduzz">Eduzz</option>
                         <option value="hotmart">Hotmart</option>
                         <option value="kiwify">Kiwify</option>
                         <option value="stripe">Stripe</option>
                         <option value="custom">Personalizado (Outro)</option>
                         <option value="nenhuma">Nenhuma (Venda Interna)</option>
-                      </select>
+                      </NativeSelect>
                     </div>
 
                     <div>

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useTransition } from "react";
-import { Button, Input, Label, Modal, TextArea, TextField, toast } from "@heroui/react";
+import { Button, Input, Label, Modal, TextArea, TextField } from "@heroui/react";
+import { toast } from "@/lib/toast";
 import { User, Briefcase, Sparkles, Save } from "lucide-react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { createArticleAuthor, updateArticleAuthor } from "@/app/actions/admin/authors";

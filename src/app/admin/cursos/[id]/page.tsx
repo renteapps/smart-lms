@@ -78,7 +78,7 @@ export default async function AdminCursoDashboard({ params }: { params: Promise<
       </div>
 
       {/* Banner de resumo do curso com capa */}
-      <div className="flex flex-col gap-6 rounded-2xl border border-border bg-surface p-5 sm:flex-row sm:items-center sm:p-6 shadow-sm">
+      <div className="flex flex-col gap-6 surface-card p-5 sm:flex-row sm:items-center sm:p-6">
         {course.coverUrl ? (
           <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-xl bg-background-secondary sm:w-56">
             <img src={course.coverUrl} alt={course.title} className="size-full object-cover" />

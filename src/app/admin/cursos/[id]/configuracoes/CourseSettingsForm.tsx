@@ -5,7 +5,8 @@ import { useState } from "react";
 import { PageHeader } from "@/components/ui/editorial";
 import { useRouter } from "next/navigation";
 import { Save, Shield, Award, MessageSquare, Clock, GalleryHorizontalEnd } from "lucide-react";
-import { Button, Card, Description, Input, Label, TextField, toast } from "@heroui/react";
+import { Button, Card, Description, Input, Label, TextField } from "@heroui/react";
+import { toast } from "@/lib/toast";
 import { saveCourse } from "@/app/actions/admin/catalog";
 import type { Course } from "@/types/course";
 

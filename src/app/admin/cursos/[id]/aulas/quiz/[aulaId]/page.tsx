@@ -6,13 +6,14 @@ import { requireAdmin } from "@/lib/supabase/auth";
 import { getCourse } from "@/lib/data/courses";
 import { getOpenRouterServerConfig, getOpenRouterUnavailableReason } from "@/lib/openrouterService";
 import { lessonSourceKinds } from "@/lib/quiz/aiQuestions";
+import { Skeleton } from "@heroui/react/skeleton";
 import type { Quiz } from "@/types/quiz";
 
 // Simple skeleton for loading
 function QuizBuilderSkeleton() {
   return (
     <div className="max-w-4xl mx-auto pb-12">
-      <div className="h-64 animate-pulse rounded-2xl border border-border bg-surface" />
+      <Skeleton className="h-64 rounded-2xl" />
     </div>
   );
 }

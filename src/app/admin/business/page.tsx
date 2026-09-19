@@ -80,7 +80,7 @@ export default function AdminBusinessPage() {
         setCompanyToDelete(null);
         loadCompanies();
       } else {
-        toast.error(res.message || "Erro ao remover empresa.");
+        toast.danger(res.message || "Erro ao remover empresa.");
       }
     } finally {
       setIsDeleting(false);

@@ -102,7 +102,7 @@ type Rule = { term: string; desc: React.ReactNode };
 
 function RuleList({ items }: { items: Rule[] }) {
   return (
-    <dl className="editorial-card divide-y divide-border/40 overflow-hidden">
+    <dl className="surface-card divide-y divide-border/40 overflow-hidden">
       {items.map((rule) => (
         <div key={rule.term} className="grid gap-1.5 p-4 sm:grid-cols-[minmax(0,17rem)_minmax(0,1fr)] sm:gap-5 sm:p-5">
           <dt className="text-sm font-bold leading-6 text-foreground">{rule.term}</dt>
@@ -132,7 +132,7 @@ function Note({ tone = "accent", title, children }: { tone?: keyof typeof noteTo
 /** Passo do fluxo na abertura da página — a versão curta do que as seções detalham. */
 function FlowStep({ step, title, description }: { step: number; title: string; description: string }) {
   return (
-    <li className="editorial-card p-4">
+    <li className="surface-card p-4">
       <span className="grid size-7 place-items-center rounded-lg bg-accent/10 text-xs font-bold text-accent">{step}</span>
       <p className="mt-3 text-sm font-bold text-foreground">{title}</p>
       <p className="mt-1 text-xs leading-5 text-muted">{description}</p>
@@ -505,7 +505,7 @@ export default function AdminOnboardingRulesPage() {
             step={8}
             lead="Antes de virar calendário, tudo que foi coletado é ordenado em uma fila única. Estes quatro critérios, nesta ordem, definem quem vem primeiro."
           >
-            <ol className="editorial-card divide-y divide-border/40 overflow-hidden">
+            <ol className="surface-card divide-y divide-border/40 overflow-hidden">
               {[
                 { title: "Papel pedagógico", detail: "Essencial, depois Aprofundamento, depois Extra. Nenhum critério abaixo inverte isso." },
                 { title: "Pontuação", detail: "Maior primeiro, contando os acertos das respostas mais o reforço da afinidade." },
@@ -695,7 +695,7 @@ export default function AdminOnboardingRulesPage() {
             step={13}
             lead="A tela separa o que impede a publicação do que só merece a sua atenção. As pendências aparecem no topo da aba de perguntas; os diagnósticos, em “Saúde & Resultados”."
           >
-            <div className="editorial-card p-5">
+            <div className="surface-card p-5">
               <div className="flex items-center gap-2">
                 <ShieldCheck size={18} className="text-danger" aria-hidden="true" />
                 <h3 className="text-sm font-bold text-foreground">Travam a publicação</h3>
@@ -710,7 +710,7 @@ export default function AdminOnboardingRulesPage() {
               </ul>
             </div>
 
-            <div className="editorial-card divide-y divide-border/40 overflow-hidden">
+            <div className="surface-card divide-y divide-border/40 overflow-hidden">
               {DIAGNOSTICS.map((item) => {
                 const severity = severityStyles[item.severity];
                 return (
@@ -737,7 +737,7 @@ export default function AdminOnboardingRulesPage() {
             step={14}
             lead="Os números que o motor usa, reunidos. Eles são lidos diretamente do código — se algum mudar, esta tabela muda junto."
           >
-            <div className="editorial-card divide-y divide-border/40 overflow-hidden">
+            <div className="surface-card divide-y divide-border/40 overflow-hidden">
               {CONSTANTS.map((entry) => (
                 <div key={entry.label} className="grid gap-1 p-4 sm:grid-cols-[minmax(0,14rem)_7rem_minmax(0,1fr)] sm:items-baseline sm:gap-5 sm:p-5">
                   <p className="text-sm font-bold text-foreground">{entry.label}</p>

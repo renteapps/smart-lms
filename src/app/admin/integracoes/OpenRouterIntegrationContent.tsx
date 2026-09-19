@@ -1,5 +1,6 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { useState, useEffect } from "react";
 import { Button, Table } from "@heroui/react";
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
@@ -226,13 +227,13 @@ export function OpenRouterIntegrationContent() {
           status: "invalid_key",
         });
         setConfig(updated);
-        toast.error("Falha ao validar chave OpenRouter", {
+        toast.danger("Falha ao validar chave OpenRouter", {
           description: data.message || "Verifique se a chave está correta no painel do OpenRouter.",
         });
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Erro de conexão";
-      toast.error("Erro na validação", { description: msg });
+      toast.danger("Erro na validação", { description: msg });
     } finally {
       setIsValidatingKey(false);
     }
@@ -286,7 +287,7 @@ export function OpenRouterIntegrationContent() {
         toast.success(`Catálogo atualizado! ${data.models.length} modelos disponíveis.`);
       }
     } catch (e) {
-      toast.error("Não foi possível carregar modelos remotos.");
+      toast.danger("Não foi possível carregar modelos remotos.");
     } finally {
       setIsLoadingModels(false);
     }
@@ -313,7 +314,7 @@ export function OpenRouterIntegrationContent() {
 
   const handleRunSandbox = async () => {
     if (!sandboxUserPrompt.trim()) {
-      toast.error("Digite uma mensagem de teste.");
+      toast.danger("Digite uma mensagem de teste.");
       return;
     }
 
@@ -357,13 +358,13 @@ export function OpenRouterIntegrationContent() {
           error: data.error || "Falha ao gerar resposta.",
         });
         refreshLogs();
-        toast.error("Erro na geração do OpenRouter", {
+        toast.danger("Erro na geração do OpenRouter", {
           description: data.error,
         });
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido";
-      toast.error("Erro de comunicação", { description: msg });
+      toast.danger("Erro de comunicação", { description: msg });
     } finally {
       setIsRunningSandbox(false);
     }
@@ -426,7 +427,7 @@ export function OpenRouterIntegrationContent() {
 
       {/* Metrics Banner */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-border bg-surface p-4.5 shadow-sm">
+        <div className="surface-card p-4.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted">Status da Integração</span>
             <span
@@ -455,7 +456,7 @@ export function OpenRouterIntegrationContent() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-surface p-4.5 shadow-sm">
+        <div className="surface-card p-4.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted">Modelo Padrão</span>
             <Cpu className="size-4 text-accent" />
@@ -470,7 +471,7 @@ export function OpenRouterIntegrationContent() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-surface p-4.5 shadow-sm">
+        <div className="surface-card p-4.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted">Saldo / Limite</span>
             <Activity className="size-4 text-warning" />
@@ -494,7 +495,7 @@ export function OpenRouterIntegrationContent() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-surface p-4.5 shadow-sm">
+        <div className="surface-card p-4.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted">Requisições Registradas</span>
             <Flame className="size-4 text-accent" />
@@ -544,7 +545,7 @@ export function OpenRouterIntegrationContent() {
       {/* ========================================================================= */}
       {activeTab === "credentials" && (
         <div className="space-y-6">
-          <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+          <div className="surface-card p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border">
               <div>
                 <h3 className="text-base font-bold text-foreground flex items-center gap-2">
@@ -662,7 +663,7 @@ export function OpenRouterIntegrationContent() {
           </div>
 
           {/* Configuration Parameters */}
-          <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+          <div className="surface-card p-6">
             <h3 className="text-base font-bold text-foreground flex items-center gap-2 pb-4 border-b border-border">
               <Settings2 className="size-5 text-accent" />
               Parâmetros Globais de IA
@@ -674,11 +675,11 @@ export function OpenRouterIntegrationContent() {
                 <label className="block text-xs font-semibold text-foreground mb-1.5">
                   Modelo Padrão da Plataforma
                 </label>
-                <select
-                  value={config.defaultModel}
-                  onChange={(e) => setConfig({ ...config, defaultModel: e.target.value })}
-                  className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-                >
+                <NativeSelect
+ value={config.defaultModel}
+ onChange={(e) => setConfig({ ...config, defaultModel: e.target.value })}
+ className="w-full"
+ >
                   <optgroup label="Recomendados & Populares">
                     {CURATED_OPENROUTER_MODELS.map((m) => (
                       <option key={m.id} value={m.id}>
@@ -686,7 +687,7 @@ export function OpenRouterIntegrationContent() {
                       </option>
                     ))}
                   </optgroup>
-                </select>
+                </NativeSelect>
                 <p className="mt-1.5 text-2xs text-muted">
                   Utilizado caso um Agente de IA específico não tenha modelo customizado definido.
                 </p>
@@ -820,7 +821,7 @@ export function OpenRouterIntegrationContent() {
       {activeTab === "catalog" && (
         <div className="space-y-6">
           {/* Filter and Search Bar */}
-          <div className="rounded-2xl border border-border bg-surface p-4 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="surface-card p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted" />
               <input
@@ -984,7 +985,7 @@ export function OpenRouterIntegrationContent() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Controls & Inputs (Left / 7 cols) */}
             <div className="lg:col-span-7 space-y-4">
-              <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm space-y-4">
+              <div className="surface-card p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                     <Sliders className="size-4 text-accent" />
@@ -998,17 +999,17 @@ export function OpenRouterIntegrationContent() {
                     <label className="block text-2xs font-semibold text-muted mb-1">
                       Modelo
                     </label>
-                    <select
-                      value={sandboxModel}
-                      onChange={(e) => setSandboxModel(e.target.value)}
-                      className="w-full rounded-xl border border-border bg-background p-2 text-xs text-foreground focus:border-accent focus:outline-none"
-                    >
+                    <NativeSelect
+ value={sandboxModel}
+ onChange={(e) => setSandboxModel(e.target.value)}
+ className="w-full"
+ >
                       {models.map((m) => (
                         <option key={m.id} value={m.id}>
                           {m.name} ({m.provider})
                         </option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   </div>
 
                   <div>
@@ -1120,7 +1121,7 @@ export function OpenRouterIntegrationContent() {
 
             {/* Output Display (Right / 5 cols) */}
             <div className="lg:col-span-5 flex flex-col">
-              <div className="flex-1 rounded-2xl border border-border bg-surface p-5 shadow-sm flex flex-col justify-between">
+              <div className="flex-1 surface-card p-5 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between pb-3 border-b border-border">
                     <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
@@ -1200,7 +1201,7 @@ export function OpenRouterIntegrationContent() {
       {/* ========================================================================= */}
       {activeTab === "logs" && (
         <div className="space-y-6">
-          <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+          <div className="surface-card p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
               <div>
                 <h3 className="text-base font-bold text-foreground flex items-center gap-2">
@@ -1344,7 +1345,7 @@ export function OpenRouterIntegrationContent() {
       {/* ========================================================================= */}
       {activeTab === "guide" && (
         <div className="space-y-6">
-          <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm space-y-6">
+          <div className="surface-card p-6 space-y-6">
             <div>
               <h3 className="text-base font-bold text-foreground flex items-center gap-2">
                 <BookOpen className="size-5 text-accent" />

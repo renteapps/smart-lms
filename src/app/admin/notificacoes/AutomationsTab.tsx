@@ -1,5 +1,6 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -64,17 +65,17 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
     e.preventDefault();
 
     if (!name || !title || !message) {
-      toast.error("Preencha o nome da automação, título e mensagem.");
+      toast.danger("Preencha o nome da automação, título e mensagem.");
       return;
     }
 
     if (["course_enrolled", "course_abandoned", "course_completed"].includes(triggerType) && !courseId) {
-      toast.error("Informe o ID do curso para este gatilho.");
+      toast.danger("Informe o ID do curso para este gatilho.");
       return;
     }
 
     if (channels.length === 0) {
-      toast.error("Selecione pelo menos um canal de envio.");
+      toast.danger("Selecione pelo menos um canal de envio.");
       return;
     }
 
@@ -120,7 +121,7 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
       setEmailBody("");
       setChannels(["platform"]);
     } catch (err: any) {
-      toast.error("Erro ao criar automação: " + err.message);
+      toast.danger("Erro ao criar automação: " + err.message);
     }
   };
 
@@ -134,7 +135,7 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
 
   if (isCreating) {
     return (
-      <div className="editorial-card p-6 max-w-3xl mx-auto space-y-6">
+      <div className="surface-card p-6 max-w-3xl mx-auto space-y-6">
         <div className="flex justify-between items-center border-b border-border/60 pb-4">
           <div>
             <h2 className="text-xl font-extrabold text-foreground">Criar Nova Automação de Growth</h2>
@@ -177,24 +178,24 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
                 <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
                   Gatilho Base
                 </label>
-                <select
-                  value={triggerType}
-                  onChange={(e) => {
-                    const newType = e.target.value as typeof triggerType;
-                    setTriggerType(newType);
-                    if (newType === "inactive") setEmailTemplate("inactivity");
-                    else if (newType === "account_created") setEmailTemplate("welcome");
-                    else if (newType === "course_enrolled") setEmailTemplate("course_enrollment");
-                    else if (newType === "course_completed") setEmailTemplate("certificate");
-                  }}
-                  className="min-h-11 w-full rounded-xl border border-border bg-surface px-4 text-sm text-foreground focus:border-accent focus:outline-none"
-                >
+                <NativeSelect
+ value={triggerType}
+ onChange={(e) => {
+ const newType = e.target.value as typeof triggerType;
+ setTriggerType(newType);
+ if (newType === "inactive") setEmailTemplate("inactivity");
+ else if (newType === "account_created") setEmailTemplate("welcome");
+ else if (newType === "course_enrolled") setEmailTemplate("course_enrollment");
+ else if (newType === "course_completed") setEmailTemplate("certificate");
+ }}
+ className="w-full"
+ >
                   <option value="account_created">Criação de Conta (Onboarding)</option>
                   <option value="inactive">Ausência (Inatividade)</option>
                   <option value="course_enrolled">Matrícula no Curso</option>
                   <option value="course_abandoned">Abandono de Curso</option>
                   <option value="course_completed">Conclusão de Curso</option>
-                </select>
+                </NativeSelect>
               </div>
 
               <div>
@@ -344,18 +345,18 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
                     Abrir Studio de Modelos <ExternalLink className="size-3" />
                   </Link>
                 </div>
-                <select
-                  value={emailTemplate}
-                  onChange={(e) => setEmailTemplate(e.target.value as EmailTemplateType)}
-                  className="w-full min-h-10 rounded-xl border border-border bg-surface px-3 text-xs text-foreground focus:border-accent focus:outline-none font-medium"
-                >
+                <NativeSelect
+ value={emailTemplate}
+ onChange={(e) => setEmailTemplate(e.target.value as EmailTemplateType)}
+ className="w-full"
+ >
                   <option value="notification">📢 Notificação Geral / Comunicado</option>
                   <option value="welcome">🚀 Boas-vindas à Plataforma</option>
                   <option value="inactivity">⏱️ Reengajamento por Inatividade</option>
                   <option value="course_enrollment">🎓 Matrícula em Curso</option>
                   <option value="certificate">🏆 Certificado de Conclusão</option>
                   <option value="subscription">⭐ Assinatura Confirmada</option>
-                </select>
+                </NativeSelect>
               </div>
 
               {/* Subject & Preheader */}
@@ -597,7 +598,7 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
                       setAutomations(prev => prev.map(a => a.id === updated.id ? updated : a));
                       toast.success(updated.status === "active" ? "Automação ativada" : "Automação pausada");
                     } catch (err: any) {
-                      toast.error("Erro ao alterar status: " + err.message);
+                      toast.danger("Erro ao alterar status: " + err.message);
                     }
                   }}
                   className="grid size-7 place-items-center rounded-lg text-muted hover:bg-surface hover:text-foreground transition-colors"
@@ -613,7 +614,7 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
                       setAutomations(prev => prev.filter(a => a.id !== automation.id));
                       toast.success("Automação excluída com sucesso");
                     } catch (err: any) {
-                      toast.error("Erro ao excluir: " + err.message);
+                      toast.danger("Erro ao excluir: " + err.message);
                     }
                   }}
                   className="grid size-7 place-items-center rounded-lg text-muted hover:bg-danger/10 hover:text-danger transition-colors"

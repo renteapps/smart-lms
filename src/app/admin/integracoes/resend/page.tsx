@@ -1,5 +1,6 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/editorial";
@@ -109,10 +110,10 @@ export default function ResendOverviewPage() {
         if (apiKeyInput.trim()) setHasStoredKey(true);
         toast.success("Configurações do Resend salvas com sucesso!");
       } else {
-        toast.error(data.error || "Erro ao salvar configurações.");
+        toast.danger(data.error || "Erro ao salvar configurações.");
       }
     } catch {
-      toast.error("Não foi possível salvar no servidor. Tente novamente.");
+      toast.danger("Não foi possível salvar no servidor. Tente novamente.");
     } finally {
       setIsSaving(false);
     }
@@ -120,7 +121,7 @@ export default function ResendOverviewPage() {
 
   const handleValidateKey = async () => {
     if (!apiKeyInput.trim()) {
-      toast.error("Informe a chave de API do Resend antes de validar.");
+      toast.danger("Informe a chave de API do Resend antes de validar.");
       return;
     }
 
@@ -148,7 +149,7 @@ export default function ResendOverviewPage() {
   const handleQuickTest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!testEmail) {
-      toast.error("Informe o e-mail de destino.");
+      toast.danger("Informe o e-mail de destino.");
       return;
     }
 
@@ -173,11 +174,11 @@ export default function ResendOverviewPage() {
         setTotalLogsCount((prev) => prev + 1);
       } else {
         setTestResult({ success: false, message: data.error || "Falha no envio." });
-        toast.error(data.error || "Erro no envio.");
+        toast.danger(data.error || "Erro no envio.");
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Erro desconhecido";
-      toast.error("Erro no teste: " + msg);
+      toast.danger("Erro no teste: " + msg);
     } finally {
       setIsSendingTest(false);
     }
@@ -233,7 +234,7 @@ export default function ResendOverviewPage() {
       {/* Top Status Hero */}
       <div className="grid gap-4 sm:grid-cols-3">
         {/* Connection Status Card */}
-        <div className="editorial-card p-5 flex items-center gap-4">
+        <div className="surface-card p-5 flex items-center gap-4">
           <div
             className={`size-12 rounded-2xl flex items-center justify-center shrink-0 ${
               !config.enabled
@@ -268,7 +269,7 @@ export default function ResendOverviewPage() {
         </div>
 
         {/* Sender Overview Card */}
-        <div className="editorial-card p-5 flex items-center gap-4">
+        <div className="surface-card p-5 flex items-center gap-4">
           <div className="size-12 rounded-2xl bg-accent-soft text-accent flex items-center justify-center shrink-0">
             <ShieldCheck className="size-6" />
           </div>
@@ -284,7 +285,7 @@ export default function ResendOverviewPage() {
         {/* Templates Callout Card */}
         <Link
           href="/admin/integracoes/resend/modelos"
-          className="editorial-card p-5 flex items-center justify-between gap-4 group hover:border-accent/50 transition-all cursor-pointer"
+          className="surface-card p-5 flex items-center justify-between gap-4 group hover:border-accent/50 transition-all cursor-pointer"
         >
           <div className="flex items-center gap-4">
             <div className="size-12 rounded-2xl bg-primary-soft text-accent flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -309,7 +310,7 @@ export default function ResendOverviewPage() {
         {/* Left Column: API & Sender Settings */}
         <div className="lg:col-span-7 space-y-6">
           {/* Card 1: API Key */}
-          <div className="editorial-card p-6 space-y-6">
+          <div className="surface-card p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-border/60 pb-4">
               <div>
                 <h2 className="text-base font-bold text-foreground flex items-center gap-2">
@@ -403,7 +404,7 @@ export default function ResendOverviewPage() {
           </div>
 
           {/* Card 2: Sender Information */}
-          <div className="editorial-card p-6 space-y-6">
+          <div className="surface-card p-6 space-y-6">
             <div className="border-b border-border/60 pb-4">
               <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                 <Mail className="size-4 text-accent" /> Identidade do Remetente
@@ -481,7 +482,7 @@ export default function ResendOverviewPage() {
         {/* Right Column: Active Triggers & DNS Guide */}
         <div className="lg:col-span-5 space-y-6">
           {/* Card 3: Trigger Rules Switchboard */}
-          <div className="editorial-card p-6 space-y-4">
+          <div className="surface-card p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <div>
                 <h2 className="text-base font-bold text-foreground flex items-center gap-2">
@@ -646,7 +647,7 @@ export default function ResendOverviewPage() {
           </div>
 
           {/* Card 4: DNS Verification Guide */}
-          <div className="editorial-card p-6 space-y-4">
+          <div className="surface-card p-6 space-y-4">
             <div className="border-b border-border/60 pb-3">
               <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                 <Globe className="size-4 text-accent" /> Registros DNS Recomendados
@@ -749,11 +750,11 @@ export default function ResendOverviewPage() {
 
               <div>
                 <label className="block font-bold text-foreground mb-1">Modelo de E-mail</label>
-                <select
-                  value={testTemplate}
-                  onChange={(e) => setTestTemplate(e.target.value as EmailTemplateType)}
-                  className="w-full min-h-10 rounded-xl border border-border bg-background-secondary px-3 text-foreground focus:border-accent focus:bg-surface focus:outline-none"
-                >
+                <NativeSelect
+ value={testTemplate}
+ onChange={(e) => setTestTemplate(e.target.value as EmailTemplateType)}
+ className="w-full"
+ >
                   <option value="welcome">🎉 Boas-vindas (Cadastro)</option>
                   <option value="password_reset">🔒 Recuperação de Senha</option>
                   <option value="course_enrollment">🎓 Matrícula em Curso</option>
@@ -761,7 +762,7 @@ export default function ResendOverviewPage() {
                   <option value="subscription">⭐ Assinatura Confirmada</option>
                   <option value="notification">📢 Notificação Geral</option>
                   <option value="inactivity">⏱️ Reengajamento</option>
-                </select>
+                </NativeSelect>
               </div>
 
               {testResult && (

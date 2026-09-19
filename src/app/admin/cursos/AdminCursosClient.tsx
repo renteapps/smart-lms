@@ -273,7 +273,7 @@ export function AdminCursosClient({ initialCourses }: { initialCourses: AdminCou
     startTransition(async () => {
       const result = await toggleCourseFeatured(courseId, newValue);
       if (!result.success) {
-        toast.error("Erro ao atualizar destaque do curso");
+        toast.danger("Erro ao atualizar destaque do curso");
         setCourses(initialCourses);
       }
     });
@@ -300,7 +300,7 @@ export function AdminCursosClient({ initialCourses }: { initialCourses: AdminCou
           const updates = updatedItems.map((item) => ({ id: item.id, orderIndex: item.orderIndex }));
           const result = await updateCoursesOrderBulk(updates);
           if (!result.success) {
-            toast.error("Falha ao salvar a nova ordem");
+            toast.danger("Falha ao salvar a nova ordem");
             setCourses(initialCourses);
           }
         });

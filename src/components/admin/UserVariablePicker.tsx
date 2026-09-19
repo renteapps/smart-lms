@@ -42,7 +42,7 @@ export function UserVariablePicker({ onSelect, compact = false }: UserVariablePi
       await navigator.clipboard.writeText(tag);
       toast.success(`${tag} copiada.`);
     } catch {
-      toast.error('Não foi possível copiar a variável.');
+      toast.danger('Não foi possível copiar a variável.');
     }
   };
 

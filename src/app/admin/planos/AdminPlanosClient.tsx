@@ -22,7 +22,7 @@ import {
   Table,
   toast,
 } from "@heroui/react";
-import { PageHeader } from "@/components/ui/editorial";
+import { AdminEmptyState, PageHeader } from "@/components/ui/editorial";
 import { cn } from "@/lib/utils";
 import type { Plan } from "@/lib/data/plans";
 import { deletePlan } from "@/app/actions/admin/platform";
@@ -176,34 +176,33 @@ export function AdminPlanosClient({ initialPlans }: { initialPlans: Plan[] }) {
 
         <Card.Content className="px-0 pb-0 pt-0">
           {isGlobalEmpty ? (
-            <div className="flex flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-              <div className="flex size-14 items-center justify-center rounded-2xl bg-accent-soft text-accent-soft-foreground">
-                <CreditCard className="size-7" />
-              </div>
-              <div className="max-w-md space-y-1">
-                <h3 className="text-base font-bold text-foreground">Nenhum plano cadastrado</h3>
-                <p className="text-sm text-muted">
-                  Comece criando seu primeiro plano de assinatura para liberar acesso a cursos, tutores de IA e conteúdos da sua plataforma.
-                </p>
-              </div>
-              <Link href="/admin/planos/novo" className={cn(buttonVariants({ variant: "primary" }), "mt-2 gap-2")}>
-                <Plus className="size-4" /> Criar Primeiro Plano
-              </Link>
-            </div>
+            <AdminEmptyState
+              icon={CreditCard}
+              title="Nenhum plano cadastrado"
+              description="Comece criando seu primeiro plano de assinatura para liberar acesso a cursos, tutores de IA e conteúdos da sua plataforma."
+              action={
+                <Link href="/admin/planos/novo" className={cn(buttonVariants({ variant: "primary" }), "gap-2")}>
+                  <Plus className="size-4" aria-hidden="true" /> Criar primeiro plano
+                </Link>
+              }
+            />
           ) : filteredPlans.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-              <p className="text-sm font-semibold text-foreground">Nenhum plano corresponde aos filtros aplicados.</p>
-              <Button
-                variant="outline"
-                size="sm"
-                onPress={() => {
-                  setSearch("");
-                  setFilter("all");
-                }}
-              >
-                Limpar Filtros
-              </Button>
-            </div>
+            <AdminEmptyState
+              icon={CreditCard}
+              title="Nenhum plano corresponde aos filtros"
+              action={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onPress={() => {
+                    setSearch("");
+                    setFilter("all");
+                  }}
+                >
+                  Limpar filtros
+                </Button>
+              }
+            />
           ) : (
             <>
               {/* Tabela Desktop */}

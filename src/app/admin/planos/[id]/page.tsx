@@ -837,8 +837,9 @@ export default function EditPlanPage() {
                       {feat}
                       <button
                         type="button"
+                        aria-label="Remover recurso"
                         onClick={() => removeCustomFeature(index)}
-                        className="ml-1 text-muted hover:text-danger focus:outline-none"
+                        className="ml-1 rounded text-muted hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                       >
                         <X className="size-3" />
                       </button>

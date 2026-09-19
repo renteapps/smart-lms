@@ -80,7 +80,7 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({ categories, onCh
         {categories.map((cat, index) => (
           <div
             key={cat.id}
-            className="bg-surface border border-border/60 rounded-3xl p-1 shadow-sm hover:shadow-md transition-all relative group grid grid-cols-1 lg:grid-cols-2 gap-0 overflow-hidden"
+            className="bg-surface border border-border/60 rounded-2xl p-1 shadow-sm hover:shadow-md transition-all relative group grid grid-cols-1 lg:grid-cols-2 gap-0 overflow-hidden"
             style={{ borderLeft: `6px solid ${cat.color}` }}
           >
             

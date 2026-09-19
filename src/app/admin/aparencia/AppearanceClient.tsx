@@ -8,7 +8,7 @@ import { BrandingImages } from "./BrandingImages";
 import { saveAppearance } from "./actions";
 import type { BrandingImages as BrandingImagesType } from "./actions";
 import { BrandMark } from "@/components/BrandMark";
-import { toast } from "@heroui/react";
+import { toast } from "@/lib/toast";
 
 type AppearanceClientProps = {
   initial: {

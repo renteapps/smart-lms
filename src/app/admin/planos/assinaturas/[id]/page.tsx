@@ -39,7 +39,7 @@ export default function AssinaturaDetalhePage() {
         if (data) {
           setSub({ ...data, history: [] }); // History not mapped yet
         } else {
-          toast.error("Assinatura não encontrada.");
+          toast.danger("Assinatura não encontrada.");
           router.push("/admin/planos/assinaturas");
         }
       } catch (e) {
@@ -77,7 +77,7 @@ export default function AssinaturaDetalhePage() {
 
     if (confirmAction === "cancel_hotmart") {
       if (!sub.gatewaySubscriptionId) {
-        toast.error("Assinatura sem identificador da Hotmart.");
+        toast.danger("Assinatura sem identificador da Hotmart.");
         setConfirmAction(null);
         return;
       }
@@ -85,20 +85,20 @@ export default function AssinaturaDetalhePage() {
       try {
         const result = await cancelHotmartSubscriptionAction(sub.gatewaySubscriptionId, true);
         if (!result.success) {
-          toast.error(result.message ?? "Falha ao cancelar a assinatura.");
+          toast.danger(result.message ?? "Falha ao cancelar a assinatura.");
         } else {
           toast.success("Assinatura cancelada na Hotmart.");
           await reloadSubscription();
         }
       } catch {
-        toast.error("Erro ao cancelar assinatura na Hotmart.");
+        toast.danger("Erro ao cancelar assinatura na Hotmart.");
       } finally {
         setIsProcessing(false);
         setConfirmAction(null);
       }
     } else if (confirmAction === "reactivate_hotmart") {
       if (!sub.gatewaySubscriptionId) {
-        toast.error("Assinatura sem identificador da Hotmart.");
+        toast.danger("Assinatura sem identificador da Hotmart.");
         setConfirmAction(null);
         return;
       }
@@ -106,13 +106,13 @@ export default function AssinaturaDetalhePage() {
       try {
         const result = await reactivateHotmartSubscriptionAction(sub.gatewaySubscriptionId, false);
         if (!result.success) {
-          toast.error(result.message ?? "Falha ao solicitar a reativação.");
+          toast.danger(result.message ?? "Falha ao solicitar a reativação.");
         } else {
           toast.success(result.message ?? "Solicitação de reativação enviada.");
           await reloadSubscription();
         }
       } catch {
-        toast.error("Erro ao solicitar reativação na Hotmart.");
+        toast.danger("Erro ao solicitar reativação na Hotmart.");
       } finally {
         setIsProcessing(false);
         setConfirmAction(null);
@@ -122,13 +122,13 @@ export default function AssinaturaDetalhePage() {
       try {
         const result = await cancelManualSubscription({ subscriptionId: sub.id, userId: sub.userId ?? "" });
         if (!result.success) {
-          toast.error(result.message ?? "Falha ao cancelar a assinatura.");
+          toast.danger(result.message ?? "Falha ao cancelar a assinatura.");
         } else {
           toast.success("Assinatura manual cancelada.");
           await reloadSubscription();
         }
       } catch {
-        toast.error("Erro ao cancelar assinatura manual.");
+        toast.danger("Erro ao cancelar assinatura manual.");
       } finally {
         setIsProcessing(false);
         setConfirmAction(null);

@@ -104,20 +104,20 @@ export function SubscriptionCard({ userId, userName, initialSubscription, plans 
 
   function handleSubmit() {
     if (!planId) {
-      toast.error("Selecione um plano.");
+      toast.danger("Selecione um plano.");
       return;
     }
     if (!reason.trim()) {
-      toast.error("Informe o motivo da atribuição manual.");
+      toast.danger("Informe o motivo da atribuição manual.");
       return;
     }
     if (expirationType === "custom" && !customDate) {
-      toast.error("Informe a data de vencimento.");
+      toast.danger("Informe a data de vencimento.");
       return;
     }
     const amountNum = wasPaid ? Number(amountPaid.toString().replace(",", ".")) : 0;
     if (wasPaid && (Number.isNaN(amountNum) || amountNum < 0)) {
-      toast.error("Informe um valor pago válido.");
+      toast.danger("Informe um valor pago válido.");
       return;
     }
 
@@ -134,7 +134,7 @@ export function SubscriptionCard({ userId, userName, initialSubscription, plans 
       });
 
       if (!result.success || !result.data) {
-        toast.error(result.message || "Erro ao atribuir plano.");
+        toast.danger(result.message || "Erro ao atribuir plano.");
         return;
       }
 

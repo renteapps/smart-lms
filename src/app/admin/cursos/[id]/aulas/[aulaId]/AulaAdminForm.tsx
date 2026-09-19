@@ -1,8 +1,10 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { SwitchRow } from "@/components/ui/SwitchRow";
 import { ArrowLeft, Film, Link2, Loader2, RefreshCw, Save, Tv, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/ui/editorial";
+import { Skeleton } from "@heroui/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -12,7 +14,7 @@ import { saveLesson } from "@/app/actions/admin/catalog";
 import { getPandaVideoTranscription } from "@/app/actions/admin/pandavideo";
 import { generateLessonMetadataFromTranscription } from "@/app/actions/admin/ai-generation";
 import { AIGenerationModal } from "@/components/admin/AIGenerationModal";
-import { toast } from "@heroui/react";
+import { toast } from "@/lib/toast";
 import { PandaVideoSelector } from "@/components/admin/integracoes/PandaVideoSelector";
 import PandaVideoPlayer from "@/components/classroom/PandaVideoPlayer";
 import TagInputField from "@/components/admin/TagInputField";
@@ -28,9 +30,7 @@ import type { PersonalizedLessonAdminData } from "@/types/personalizedLesson";
 const LessonBlockEditor = dynamic(() => import("@/components/admin/editor/LessonBlockEditor"), {
   ssr: false,
   loading: () => (
-    <div className="h-48 animate-pulse rounded-lg border border-border bg-surface p-4 text-xs text-muted">
-      Carregando editor de blocos...
-    </div>
+    <Skeleton className="h-48 rounded-lg" aria-busy="true" aria-label="Carregando editor de blocos" />
   ),
 });
 
@@ -208,20 +208,20 @@ export default function AulaAdminForm({
           <h1 className="mt-3 font-display text-3xl font-bold">Comece pelo essencial</h1>
           <p className="mt-2 text-muted">Vamos criar o rascunho e abrir o construtor guiado para configurar a personalização.</p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border border-border bg-surface p-5 shadow-sm sm:p-6">
+        <form onSubmit={handleSubmit} className="space-y-5 surface-card p-5 sm:p-6">
           <label className="block space-y-1.5 text-sm font-semibold">Tipo de aula
-            <select name="type" value={formData.type} onChange={handleChange} className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:border-accent">
+            <NativeSelect name="type" value={formData.type} onChange={handleChange} className="w-full">
               <option value="video">Vídeo</option><option value="text">Texto / Artigo</option><option value="quiz">Questionário (Quiz)</option><option value="personalized_ai">Aula personalizada (IA)</option>
-            </select>
+            </NativeSelect>
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block space-y-1.5 text-sm font-semibold">Título da aula
               <input name="title" required value={formData.title || ""} onChange={handleChange} className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:border-accent" placeholder="Ex.: Liderança em conversas difíceis" />
             </label>
             <label className="block space-y-1.5 text-sm font-semibold">Módulo
-              <select name="moduleId" value={formData.moduleId || moduleId || ""} onChange={handleChange} className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:border-accent">
+              <NativeSelect name="moduleId" value={formData.moduleId || moduleId || ""} onChange={handleChange} className="w-full">
                 <option value="">Selecione</option>{modules.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
-              </select>
+              </NativeSelect>
             </label>
           </div>
           <label className="block space-y-1.5 text-sm font-semibold">O que o aluno deverá aprender ou conseguir fazer?
@@ -292,7 +292,7 @@ export default function AulaAdminForm({
         className="mb-8"
       />
 
-      <form onSubmit={handleSubmit} className="space-y-6 bg-surface border border-border rounded-2xl p-6 shadow-sm">
+      <form onSubmit={handleSubmit} className="space-y-6 surface-card p-6">
         {/* Título */}
         <div className="space-y-2">
           <label htmlFor="title" className="block text-sm font-medium text-foreground">
@@ -316,18 +316,18 @@ export default function AulaAdminForm({
             <label htmlFor="type" className="block text-sm font-medium text-foreground">
               Tipo de Aula
             </label>
-            <select
-              id="type"
-              name="type"
-              value={formData.type || "video"}
-              onChange={handleChange}
-              className="w-full bg-surface border border-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-accent transition-colors"
-            >
+            <NativeSelect
+ id="type"
+ name="type"
+ value={formData.type || "video"}
+ onChange={handleChange}
+ className="w-full"
+ >
               <option value="video">Vídeo</option>
               <option value="text">Texto / Artigo</option>
               <option value="quiz">Questionário (Quiz)</option>
               <option value="personalized_ai">Aula personalizada (IA)</option>
-            </select>
+            </NativeSelect>
           </div>
 
           <div className="space-y-2">
@@ -575,17 +575,17 @@ export default function AulaAdminForm({
               <label htmlFor="level" className="block text-sm font-medium text-foreground">
                 Nível
               </label>
-              <select
-                id="level"
-                name="level"
-                value={formData.level || "iniciante"}
-                onChange={handleChange}
-                className="w-full bg-surface border border-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-accent transition-colors"
-              >
+              <NativeSelect
+ id="level"
+ name="level"
+ value={formData.level || "iniciante"}
+ onChange={handleChange}
+ className="w-full"
+ >
                 <option value="iniciante">Iniciante</option>
                 <option value="intermediario">Intermediário</option>
                 <option value="avancado">Avançado</option>
-              </select>
+              </NativeSelect>
             </div>
 
             <div className="space-y-2">

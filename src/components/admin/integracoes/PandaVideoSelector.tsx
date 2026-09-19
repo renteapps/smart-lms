@@ -1,6 +1,6 @@
 "use client";
 
-import { Modal } from "@heroui/react";
+import { Modal, Skeleton } from "@heroui/react";
 import {
   CalendarDays,
   Check,
@@ -241,7 +241,7 @@ export function PandaVideoSelector({ value, currentVideoUrl, onChange }: PandaVi
   return (
     <div className="mt-4 space-y-3">
       {value && isHydratingSelection && !displayedVideo ? (
-        <div className="h-24 animate-pulse rounded-xl border border-border bg-background" />
+        <Skeleton className="h-24 rounded-xl" />
       ) : displayedVideo ? (
         <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
           <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
@@ -400,11 +400,11 @@ export function PandaVideoSelector({ value, currentVideoUrl, onChange }: PandaVi
                     <div className="space-y-5">
                       {!debouncedSearch && (
                         <div className="grid grid-cols-1 gap-2">
-                          {Array.from({ length: 3 }).map((_, index) => <div key={index} className="h-16 animate-pulse rounded-xl bg-background" />)}
+                          {Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-16 rounded-xl" />)}
                         </div>
                       )}
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-56 animate-pulse rounded-xl bg-background" />)}
+                        {Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-56 rounded-xl" />)}
                       </div>
                     </div>
                   ) : (

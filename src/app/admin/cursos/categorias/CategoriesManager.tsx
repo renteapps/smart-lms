@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button, Card, Input, Label, TextField, Table } from "@heroui/react";
+import { Button, Card, Input, Label, TextField, Table, Tabs } from "@heroui/react";
 import { toast } from "@/lib/toast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Edit2, Plus, Save, Trash2 } from "lucide-react";
@@ -113,20 +113,18 @@ export function CategoriesManager({
     <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
       {/* List and Tabs */}
       <div className="md:col-span-2 space-y-6">
-        <div className="flex space-x-4 border-b border-border pb-2">
-          <button 
-            className={`pb-2 text-sm font-semibold transition-colors ${activeTab === "categories" ? "border-b-2 border-accent text-accent" : "text-muted hover:text-foreground"}`}
-            onClick={() => { setActiveTab("categories"); resetForm(); }}
-          >
-            Categorias ({initialCategories.length})
-          </button>
-          <button 
-            className={`pb-2 text-sm font-semibold transition-colors ${activeTab === "tags" ? "border-b-2 border-accent text-accent" : "text-muted hover:text-foreground"}`}
-            onClick={() => { setActiveTab("tags"); resetForm(); }}
-          >
-            Tags ({initialTags.length})
-          </button>
-        </div>
+        <Tabs.Root
+          selectedKey={activeTab}
+          onSelectionChange={(key) => {
+            setActiveTab(key as typeof activeTab);
+            resetForm();
+          }}
+        >
+          <Tabs.List aria-label="Categorias e tags">
+            <Tabs.Tab id="categories">Categorias ({initialCategories.length})</Tabs.Tab>
+            <Tabs.Tab id="tags">Tags ({initialTags.length})</Tabs.Tab>
+          </Tabs.List>
+        </Tabs.Root>
 
         <Card>
           <Card.Content className="p-0">

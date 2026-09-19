@@ -1,4 +1,6 @@
-import { PageHeader } from "@/components/ui/editorial";
+import { AlertCircle } from "lucide-react";
+import { Card } from "@heroui/react/card";
+import { AdminEmptyState, PageHeader } from "@/components/ui/editorial";
 import { notFound, redirect } from "next/navigation";
 import GalleryLessonList from "@/components/admin/GalleryLessonList";
 import { requireAdmin } from "@/lib/supabase/auth";
@@ -51,9 +53,13 @@ export default async function AulasGaleriaAdminPage({ params }: { params: Promis
           lessonRatings={lessonRatings}
         />
       ) : (
-        <div className="rounded-2xl border border-dashed border-border bg-background-secondary p-10 text-center text-sm text-muted">
-          Não foi possível localizar a coleção de aulas deste curso. Contate o suporte.
-        </div>
+        <Card>
+          <AdminEmptyState
+            icon={AlertCircle}
+            title="Coleção de aulas não encontrada"
+            description="Não foi possível localizar a coleção de aulas deste curso. Contate o suporte."
+          />
+        </Card>
       )}
     </div>
   );

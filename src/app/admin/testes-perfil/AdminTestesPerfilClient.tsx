@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { PageHeader } from '@/components/ui/editorial';
+import { AdminEmptyState, PageHeader } from '@/components/ui/editorial';
 import { ProfileTest } from '@/types/profileTest';
 import { TestCard } from '@/components/admin/profile-tests/TestCard';
 import { TestPreview } from '@/components/admin/profile-tests/TestPreview';
 import { PlusCircle, Sparkles, SlidersHorizontal } from 'lucide-react';
-import { Button, EmptyState, Label, SearchField, buttonVariants } from '@heroui/react';
+import { Button, Card, Label, SearchField, buttonVariants } from '@heroui/react';
 import { toast } from "@/lib/toast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { cn } from '@/lib/utils';
@@ -44,7 +44,7 @@ export function AdminTestesPerfilClient({ initialTests }: AdminTestesPerfilClien
         toast.success('Teste de perfil excluído com sucesso.');
         setTestToDelete(null);
       } else {
-        toast.error('Erro ao excluir: ' + res.message);
+        toast.danger('Erro ao excluir: ' + res.message);
       }
     } finally {
       setIsDeleting(false);
@@ -62,7 +62,7 @@ export function AdminTestesPerfilClient({ initialTests }: AdminTestesPerfilClien
       // Let's just reload the page for simplicity since the list comes from server props
       window.location.reload();
     } else {
-      toast.error('Erro ao duplicar: ' + res.message, { id: loadingToast });
+      toast.danger('Erro ao duplicar: ' + res.message, { id: loadingToast });
     }
   };
 
@@ -125,19 +125,19 @@ export function AdminTestesPerfilClient({ initialTests }: AdminTestesPerfilClien
 
       {/* Grid of Test Cards */}
       {filteredTests.length === 0 ? (
-        <EmptyState className="mx-auto my-12 flex max-w-xl flex-col items-center gap-2 rounded-3xl border border-border/40 bg-surface p-12 text-center shadow-elev-1">
-          <span className="mx-auto grid size-11 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground">
-            <Sparkles className="size-5" aria-hidden="true" />
-          </span>
-          <h3 className="text-xl font-bold text-foreground">Nenhum teste encontrado</h3>
-          <p className="text-sm text-muted">
-            Não encontramos nenhum teste com o termo ou filtro selecionado. Tente buscar outro nome ou crie um novo teste.
-          </p>
-          <Link href="/admin/testes-perfil/novo" className={cn(buttonVariants({ variant: "primary" }), "mt-2 gap-2")}>
-            <Sparkles className="size-4" aria-hidden="true" />
-            Criar primeiro teste
-          </Link>
-        </EmptyState>
+        <Card>
+          <AdminEmptyState
+            icon={Sparkles}
+            title="Nenhum teste encontrado"
+            description="Não encontramos nenhum teste com o termo ou filtro selecionado. Tente buscar outro nome ou crie um novo teste."
+            action={
+              <Link href="/admin/testes-perfil/novo" className={cn(buttonVariants({ variant: "primary" }), "gap-2")}>
+                <PlusCircle className="size-4" aria-hidden="true" />
+                Criar primeiro teste
+              </Link>
+            }
+          />
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTests.map((test) => (

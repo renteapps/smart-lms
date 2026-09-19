@@ -1,5 +1,6 @@
 "use client";
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -8,7 +9,7 @@ import {
   ChevronRight, Database, Eye, FileText, History, Loader2, LockKeyhole,
   Plus, Save, Search, Sparkles, Trash2, Upload, UserRound,
 } from "lucide-react";
-import { toast } from "@heroui/react";
+import { toast } from "@/lib/toast";
 import {
   deletePersonalizedLessonDocument,
   discardPersonalizedLessonDraft,
@@ -249,7 +250,7 @@ export default function PersonalizedLessonEditor({
 
   const handleDiscard = () => startSaving(async () => {
     const result = await discardPersonalizedLessonDraft({ lessonId, courseId });
-    if (!result.success) { toast.danger(result.message); return; }
+    if (!result.success) { toast.danger(result.message ?? "Não foi possível concluir a ação."); return; }
     toast.success("Alterações do rascunho descartadas."); setIsDirty(false); window.location.reload();
   });
 
@@ -309,7 +310,7 @@ export default function PersonalizedLessonEditor({
 
   const removeDocument = async (document: PersonalizedLessonDocument) => {
     const result = await deletePersonalizedLessonDocument({ lessonId, documentId: document.id, courseId });
-    if (!result.success) { toast.danger(result.message); return; }
+    if (!result.success) { toast.danger(result.message ?? "Não foi possível concluir a ação."); return; }
     setDocuments((current) => current.flatMap((item) => item.id !== document.id ? [item] : item.inPublished ? [{ ...item, inDraft: false }] : [])); touch();
   };
 
@@ -338,7 +339,7 @@ export default function PersonalizedLessonEditor({
                 </label>
                 <label className="space-y-1.5 text-sm font-semibold">
                   Módulo
-                  <select id="personalized-moduleId" value={basic.moduleId} onChange={(event) => patchBasic({ moduleId: event.target.value })} aria-invalid={fieldError?.field === "moduleId"} className={INPUT_CLASS}>{modules.map((module) => <option key={module.id} value={module.id}>{module.title}</option>)}</select>
+                  <NativeSelect id="personalized-moduleId" value={basic.moduleId} onChange={(event) => patchBasic({ moduleId: event.target.value })} aria-invalid={fieldError?.field === "moduleId"} className={INPUT_CLASS}>{modules.map((module) => <option key={module.id} value={module.id}>{module.title}</option>)}</NativeSelect>
                   <FieldError show={fieldError?.field === "moduleId"} message={fieldError?.message} />
                 </label>
               </div>
@@ -348,7 +349,7 @@ export default function PersonalizedLessonEditor({
                 <FieldError show={fieldError?.field === "objective"} message={fieldError?.message} />
               </label>
               <div className="grid gap-4 sm:grid-cols-[1fr_10rem]"><label className="space-y-1.5 text-sm font-semibold">Descrição curta<textarea rows={2} maxLength={200} value={basic.shortDescription} onChange={(event) => patchBasic({ shortDescription: event.target.value })} className={INPUT_CLASS} placeholder="Uma frase para apresentar a aula" /></label><label className="space-y-1.5 text-sm font-semibold">Duração<input type="number" min={1} value={basic.durationInMinutes} onChange={(event) => patchBasic({ durationInMinutes: Number(event.target.value) })} className={INPUT_CLASS} /></label></div>
-              <details className="rounded-xl border border-border bg-background p-4"><summary className="cursor-pointer text-sm font-bold">Opções adicionais de organização e recomendação</summary><div className="mt-5 space-y-5">{courseLayout === "gallery" && <ImageUpload label="Capa vertical da aula" value={basic.coverUrl} onChange={(url) => patchBasic({ coverUrl: url ?? "" })} folder="lessons" aspect="portrait" />}<div className="grid gap-4 sm:grid-cols-2"><label className="space-y-1.5 text-sm font-semibold">Nível<select value={basic.level} onChange={(event) => patchBasic({ level: event.target.value as PersonalizedLessonBasicDraft["level"] })} className={INPUT_CLASS}><option value="iniciante">Iniciante</option><option value="intermediario">Intermediário</option><option value="avancado">Avançado</option></select></label><label className="space-y-1.5 text-sm font-semibold">Público-alvo<input value={basic.audience} onChange={(event) => patchBasic({ audience: event.target.value })} className={INPUT_CLASS} placeholder="Ex.: novos gestores" /></label></div><label className="flex items-start gap-3 rounded-xl border border-border bg-surface p-4 text-sm"><input type="checkbox" checked={basic.isEligibleForTrail} onChange={(event) => patchBasic({ isEligibleForTrail: event.target.checked })} className="mt-1" /><span><span className="block font-semibold">Considerar no ClassRank</span><span className="mt-0.5 block text-xs text-muted">Esta aula pode influenciar trilhas e recomendações inteligentes.</span></span></label><TagInputField label="Tópicos abordados" values={basic.topics} onChange={(topics) => patchBasic({ topics })} placeholder="Ex.: feedback, escuta ativa" /><TagInputField label="Problemas que a aula resolve" values={basic.solves} onChange={(solves) => patchBasic({ solves })} placeholder="Ex.: evitar conflitos" /><LessonPrerequisitePicker modules={modules} currentLessonId={lessonId} value={basic.prerequisites} onChange={(prerequisites) => patchBasic({ prerequisites })} /></div></details>
+              <details className="rounded-xl border border-border bg-background p-4"><summary className="cursor-pointer text-sm font-bold">Opções adicionais de organização e recomendação</summary><div className="mt-5 space-y-5">{courseLayout === "gallery" && <ImageUpload label="Capa vertical da aula" value={basic.coverUrl} onChange={(url) => patchBasic({ coverUrl: url ?? "" })} folder="lessons" aspect="portrait" />}<div className="grid gap-4 sm:grid-cols-2"><label className="space-y-1.5 text-sm font-semibold">Nível<NativeSelect value={basic.level} onChange={(event) => patchBasic({ level: event.target.value as PersonalizedLessonBasicDraft["level"] })} className={INPUT_CLASS}><option value="iniciante">Iniciante</option><option value="intermediario">Intermediário</option><option value="avancado">Avançado</option></NativeSelect></label><label className="space-y-1.5 text-sm font-semibold">Público-alvo<input value={basic.audience} onChange={(event) => patchBasic({ audience: event.target.value })} className={INPUT_CLASS} placeholder="Ex.: novos gestores" /></label></div><label className="flex items-start gap-3 rounded-xl border border-border bg-surface p-4 text-sm"><input type="checkbox" checked={basic.isEligibleForTrail} onChange={(event) => patchBasic({ isEligibleForTrail: event.target.checked })} className="mt-1" /><span><span className="block font-semibold">Considerar no ClassRank</span><span className="mt-0.5 block text-xs text-muted">Esta aula pode influenciar trilhas e recomendações inteligentes.</span></span></label><TagInputField label="Tópicos abordados" values={basic.topics} onChange={(topics) => patchBasic({ topics })} placeholder="Ex.: feedback, escuta ativa" /><TagInputField label="Problemas que a aula resolve" values={basic.solves} onChange={(solves) => patchBasic({ solves })} placeholder="Ex.: evitar conflitos" /><LessonPrerequisitePicker modules={modules} currentLessonId={lessonId} value={basic.prerequisites} onChange={(prerequisites) => patchBasic({ prerequisites })} /></div></details>
               <SaveSectionButton busy={isSaving} onClick={() => handleSave("basic")} />
             </div>
           </SectionCard>
@@ -460,15 +461,15 @@ export default function PersonalizedLessonEditor({
 
                   <label className="block space-y-1.5 text-sm font-semibold">
                     Tom da aula
-                    <select
-                      value={guided.tone}
-                      onChange={(event) => patchGuided({ tone: event.target.value as PersonalizedGuidedConfig["tone"] })}
-                      className={INPUT_CLASS}
-                    >
+                    <NativeSelect
+ value={guided.tone}
+ onChange={(event) => patchGuided({ tone: event.target.value as PersonalizedGuidedConfig["tone"] })}
+ className={INPUT_CLASS}
+ >
                       {Object.entries(GUIDED_TONE_LABELS).map(([value, label]) => (
                         <option key={value} value={value}>{label}</option>
                       ))}
-                    </select>
+                    </NativeSelect>
                   </label>
 
                   <fieldset>
@@ -528,18 +529,18 @@ export default function PersonalizedLessonEditor({
                 <div className="mt-4 space-y-4">
                   <label className="block space-y-1.5 text-sm font-semibold">
                     Modelo de IA
-                    <select
-                      id="personalized-model"
-                      value={model}
-                      onChange={(event) => { setModel(event.target.value); touch(); }}
-                      aria-invalid={fieldError?.field === "model"}
-                      className={INPUT_CLASS}
-                    >
+                    <NativeSelect
+ id="personalized-model"
+ value={model}
+ onChange={(event) => { setModel(event.target.value); touch(); }}
+ aria-invalid={fieldError?.field === "model"}
+ className={INPUT_CLASS}
+ >
                       <option value="">Selecione um modelo</option>
                       {initialData.models.map((item) => (
                         <option key={item.id} value={item.id}>{item.name}</option>
                       ))}
-                    </select>
+                    </NativeSelect>
                     <FieldError show={fieldError?.field === "model"} message={fieldError?.message} />
                   </label>
                   {authoringMode === "guided" && (
@@ -588,20 +589,20 @@ export default function PersonalizedLessonEditor({
                         className={INPUT_CLASS}
                         placeholder="Buscar pelo título..."
                       />
-                      <select
-                        value={sourceKind}
-                        onChange={(event) => {
-                          const nextKind = event.target.value as typeof sourceKind;
-                          setSourceKind(nextKind);
-                          searchSources(0, nextKind);
-                        }}
-                        className={INPUT_CLASS}
-                      >
+                      <NativeSelect
+ value={sourceKind}
+ onChange={(event) => {
+ const nextKind = event.target.value as typeof sourceKind;
+ setSourceKind(nextKind);
+ searchSources(0, nextKind);
+ }}
+ className={INPUT_CLASS}
+ >
                         <option value="all">Todos (aulas, módulos e artigos)</option>
                         <option value="module">Módulos deste curso</option>
                         <option value="lesson">Aulas deste curso</option>
                         <option value="article">Artigos da plataforma</option>
-                      </select>
+                      </NativeSelect>
                       <button
                         type="button"
                         onClick={() => searchSources(0)}
@@ -646,9 +647,9 @@ export default function PersonalizedLessonEditor({
                                 <span className="font-semibold text-sm text-foreground truncate">{option.title}</span>
                                 <span className={cn(
                                   "rounded-md px-1.5 py-0.5 text-3xs font-bold uppercase tracking-wider shrink-0",
-                                  option.kind === "module" ? "bg-blue-500/10 text-blue-500" :
-                                  option.kind === "lesson" ? "bg-emerald-500/10 text-emerald-500" :
-                                  "bg-purple-500/10 text-purple-500"
+                                  option.kind === "module" ? "bg-accent-soft text-accent-soft-foreground" :
+                                  option.kind === "lesson" ? "bg-success-soft text-success-soft-foreground" :
+                                  "bg-warning-soft text-warning-soft-foreground"
                                 )}>
                                   {SOURCE_LABELS[option.kind]}
                                 </span>
@@ -695,9 +696,9 @@ export default function PersonalizedLessonEditor({
         </main>
 
         <aside className="space-y-4 lg:sticky lg:top-6">
-          <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm"><div className="flex items-center gap-3"><AssistantAvatar config={initialData.assistant} className="size-11 rounded-xl" /><div><p className="font-bold">{initialData.assistant.displayName}</p><p className="text-xs text-muted">Vai escrever esta aula</p></div></div><Link href="/admin/chat" className="mt-3 inline-block text-xs font-bold text-accent">Alterar identidade do assistente</Link></div>
-          <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm"><h2 className="font-bold">Pronto para publicar?</h2><div className="mt-3 space-y-2">{SECTION_IDS.map((id) => <button key={id} type="button" onClick={() => setActiveSection(id)} className="flex w-full items-center gap-2 text-left text-sm"><span className={cn("grid size-5 place-items-center rounded-full", sectionComplete[id] ? "bg-success text-white" : "bg-border text-muted")}>{sectionComplete[id] ? <Check className="size-3" /> : SECTION_IDS.indexOf(id) + 1}</span><span className={sectionComplete[id] ? "text-foreground" : "text-muted"}>{SECTION_META[id].title}</span></button>)}</div>{errors.publish && <p role="alert" className="mt-3 flex gap-2 rounded-lg bg-danger-soft p-3 text-xs text-danger"><AlertCircle className="size-4 shrink-0" />{errors.publish}</p>}</div>
-          <details className="rounded-2xl border border-border bg-surface p-5 shadow-sm"><summary className="flex cursor-pointer list-none items-center gap-2 font-bold"><Eye className="size-4 text-accent" /> Prévia do aluno</summary><div className="mt-4 rounded-xl border border-border bg-background p-4"><p className="text-xs font-bold uppercase tracking-wide text-accent">Aula personalizada</p><h3 className="mt-1 font-bold">{basic.title || "Título da aula"}</h3><p className="mt-2 text-xs text-muted">Antes de gerar, o aluno verá:</p><div className="mt-3 space-y-2">{questions.length ? questions.map((question) => <div key={question.id} className="rounded-lg bg-surface p-2.5 text-xs"><span className="font-semibold">{question.label || "Pergunta ainda sem enunciado"}</span>{question.required && <span className="ml-1 text-danger">*</span>}</div>) : <p className="text-xs text-muted">Nenhuma pergunta adicional.</p>}</div><div className="mt-3 rounded-lg bg-accent px-3 py-2 text-center text-xs font-bold text-on-primary">Gerar aula personalizada</div></div></details>
+          <div className="surface-card p-5"><div className="flex items-center gap-3"><AssistantAvatar config={initialData.assistant} className="size-11 rounded-xl" /><div><p className="font-bold">{initialData.assistant.displayName}</p><p className="text-xs text-muted">Vai escrever esta aula</p></div></div><Link href="/admin/chat" className="mt-3 inline-block text-xs font-bold text-accent">Alterar identidade do assistente</Link></div>
+          <div className="surface-card p-5"><h2 className="font-bold">Pronto para publicar?</h2><div className="mt-3 space-y-2">{SECTION_IDS.map((id) => <button key={id} type="button" onClick={() => setActiveSection(id)} className="flex w-full items-center gap-2 text-left text-sm"><span className={cn("grid size-5 place-items-center rounded-full", sectionComplete[id] ? "bg-success text-white" : "bg-border text-muted")}>{sectionComplete[id] ? <Check className="size-3" /> : SECTION_IDS.indexOf(id) + 1}</span><span className={sectionComplete[id] ? "text-foreground" : "text-muted"}>{SECTION_META[id].title}</span></button>)}</div>{errors.publish && <p role="alert" className="mt-3 flex gap-2 rounded-lg bg-danger-soft p-3 text-xs text-danger"><AlertCircle className="size-4 shrink-0" />{errors.publish}</p>}</div>
+          <details className="surface-card p-5"><summary className="flex cursor-pointer list-none items-center gap-2 font-bold"><Eye className="size-4 text-accent" /> Prévia do aluno</summary><div className="mt-4 rounded-xl border border-border bg-background p-4"><p className="text-xs font-bold uppercase tracking-wide text-accent">Aula personalizada</p><h3 className="mt-1 font-bold">{basic.title || "Título da aula"}</h3><p className="mt-2 text-xs text-muted">Antes de gerar, o aluno verá:</p><div className="mt-3 space-y-2">{questions.length ? questions.map((question) => <div key={question.id} className="rounded-lg bg-surface p-2.5 text-xs"><span className="font-semibold">{question.label || "Pergunta ainda sem enunciado"}</span>{question.required && <span className="ml-1 text-danger">*</span>}</div>) : <p className="text-xs text-muted">Nenhuma pergunta adicional.</p>}</div><div className="mt-3 rounded-lg bg-accent px-3 py-2 text-center text-xs font-bold text-on-primary">Gerar aula personalizada</div></div></details>
           <div className="hidden space-y-2 lg:block"><button type="button" disabled={isPublishing || isUploading || !readyToPublish} onClick={handlePublish} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-on-primary disabled:opacity-40">{isPublishing ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}{isPublished ? "Republicar alterações" : "Publicar aula"}</button>{hasPendingDraft && initialData.config && <button type="button" disabled={isSaving} onClick={handleDiscard} className="w-full rounded-xl px-4 py-2 text-sm font-semibold text-muted hover:bg-background">Descartar alterações</button>}</div>
         </aside>
       </div>
@@ -716,7 +717,7 @@ function QuestionCard({ question, index, count, keyLocked, authoringMode, bindin
   updateQuestion: (id: string, patch: Partial<PersonalizedLessonQuestion>) => void;
   moveQuestion: (index: number, direction: -1 | 1) => void; remove: () => void; insertVariable: (key: string) => void;
 }) {
-  return <article className="rounded-xl border border-border bg-background p-4"><div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem]"><label className="space-y-1 text-xs font-bold text-muted">Pergunta<input value={question.label} onChange={(event) => { const label = event.target.value; const used = questions.filter((item) => item.id !== question.id).map((item) => item.key).concat(bindings.map((item) => item.key)); updateQuestion(question.id, { label, ...(!keyLocked ? { key: createQuestionKey(label, used) } : {}) }); }} className={INPUT_CLASS} placeholder="Ex.: Qual desafio você precisa resolver?" /></label><label className="space-y-1 text-xs font-bold text-muted">Tipo<select value={question.type} onChange={(event) => updateQuestion(question.id, { type: event.target.value as PersonalizedLessonQuestion["type"] })} className={INPUT_CLASS}><option value="short_text">Resposta curta</option><option value="long_text">Resposta longa</option><option value="single">Escolha única</option><option value="multiple">Múltipla escolha</option></select></label></div>{(question.type === "single" || question.type === "multiple") && <label className="mt-3 block space-y-1 text-xs font-bold text-muted">Opções, uma por linha<textarea rows={3} value={question.options.join("\n")} onChange={(event) => updateQuestion(question.id, { options: event.target.value.split("\n").map((item) => item.trim()).filter(Boolean) })} className={INPUT_CLASS} /></label>}<div className="mt-3 flex flex-wrap items-center gap-2"><label className="mr-auto flex items-center gap-2 text-sm"><input type="checkbox" checked={question.required} onChange={(event) => updateQuestion(question.id, { required: event.target.checked })} /> Resposta obrigatória</label><details className="relative"><summary className="cursor-pointer list-none rounded-lg px-2 py-1 text-xs font-bold text-muted">Opções avançadas</summary><div className="absolute bottom-8 right-0 z-10 w-64 rounded-xl border border-border bg-surface p-3 shadow-elev-3"><label className="text-xs font-bold text-muted">Chave técnica<input disabled={keyLocked} value={question.key} onChange={(event) => updateQuestion(question.id, { key: event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_") })} className={cn(INPUT_CLASS, "mt-1")} /></label>{keyLocked && <p className="mt-1 text-xs text-muted"><LockKeyhole className="mr-1 inline size-3" /> Bloqueada após a publicação.</p>}{authoringMode === "advanced" && <button type="button" onClick={() => insertVariable(question.key)} className="mt-2 text-xs font-bold text-accent">Inserir no prompt</button>}</div></details><button type="button" aria-label="Mover pergunta para cima" disabled={index === 0} onClick={() => moveQuestion(index, -1)} className="rounded-lg p-2 disabled:opacity-30"><ArrowUp className="size-4" /></button><button type="button" aria-label="Mover pergunta para baixo" disabled={index === count - 1} onClick={() => moveQuestion(index, 1)} className="rounded-lg p-2 disabled:opacity-30"><ArrowDown className="size-4" /></button><button type="button" aria-label="Excluir pergunta" onClick={remove} className="rounded-lg p-2 text-danger"><Trash2 className="size-4" /></button></div></article>;
+  return <article className="rounded-xl border border-border bg-background p-4"><div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem]"><label className="space-y-1 text-xs font-bold text-muted">Pergunta<input value={question.label} onChange={(event) => { const label = event.target.value; const used = questions.filter((item) => item.id !== question.id).map((item) => item.key).concat(bindings.map((item) => item.key)); updateQuestion(question.id, { label, ...(!keyLocked ? { key: createQuestionKey(label, used) } : {}) }); }} className={INPUT_CLASS} placeholder="Ex.: Qual desafio você precisa resolver?" /></label><label className="space-y-1 text-xs font-bold text-muted">Tipo<NativeSelect value={question.type} onChange={(event) => updateQuestion(question.id, { type: event.target.value as PersonalizedLessonQuestion["type"] })} className={INPUT_CLASS}><option value="short_text">Resposta curta</option><option value="long_text">Resposta longa</option><option value="single">Escolha única</option><option value="multiple">Múltipla escolha</option></NativeSelect></label></div>{(question.type === "single" || question.type === "multiple") && <label className="mt-3 block space-y-1 text-xs font-bold text-muted">Opções, uma por linha<textarea rows={3} value={question.options.join("\n")} onChange={(event) => updateQuestion(question.id, { options: event.target.value.split("\n").map((item) => item.trim()).filter(Boolean) })} className={INPUT_CLASS} /></label>}<div className="mt-3 flex flex-wrap items-center gap-2"><label className="mr-auto flex items-center gap-2 text-sm"><input type="checkbox" checked={question.required} onChange={(event) => updateQuestion(question.id, { required: event.target.checked })} /> Resposta obrigatória</label><details className="relative"><summary className="cursor-pointer list-none rounded-lg px-2 py-1 text-xs font-bold text-muted">Opções avançadas</summary><div className="absolute bottom-8 right-0 z-10 w-64 rounded-xl border border-border bg-surface p-3 shadow-elev-3"><label className="text-xs font-bold text-muted">Chave técnica<input disabled={keyLocked} value={question.key} onChange={(event) => updateQuestion(question.id, { key: event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_") })} className={cn(INPUT_CLASS, "mt-1")} /></label>{keyLocked && <p className="mt-1 text-xs text-muted"><LockKeyhole className="mr-1 inline size-3" /> Bloqueada após a publicação.</p>}{authoringMode === "advanced" && <button type="button" onClick={() => insertVariable(question.key)} className="mt-2 text-xs font-bold text-accent">Inserir no prompt</button>}</div></details><button type="button" aria-label="Mover pergunta para cima" disabled={index === 0} onClick={() => moveQuestion(index, -1)} className="rounded-lg p-2 disabled:opacity-30"><ArrowUp className="size-4" /></button><button type="button" aria-label="Mover pergunta para baixo" disabled={index === count - 1} onClick={() => moveQuestion(index, 1)} className="rounded-lg p-2 disabled:opacity-30"><ArrowDown className="size-4" /></button><button type="button" aria-label="Excluir pergunta" onClick={remove} className="rounded-lg p-2 text-danger"><Trash2 className="size-4" /></button></div></article>;
 }
 
 function DocumentsEditor({ documents, draftDocuments, isUploading, uploadFiles, removeDocument }: {

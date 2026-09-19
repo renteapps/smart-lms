@@ -164,7 +164,7 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
                 )}
                 
                 <div className="px-6 pb-12 pt-6 sm:px-12 flex-1 flex flex-col z-20 relative -mt-12 sm:-mt-20">
-                  <div className="bg-surface border border-border/50 shadow-xl rounded-3xl p-6 sm:p-8 flex-1 flex flex-col justify-center items-center text-center space-y-6">
+                  <div className="bg-surface border border-border/50 shadow-xl rounded-2xl p-6 sm:p-8 flex-1 flex flex-col justify-center items-center text-center space-y-6">
                     <div className="w-16 h-16 bg-accent/10 text-accent rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-sm mb-2">
                       🎯
                     </div>
@@ -332,7 +332,7 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
                   >
                     {/* PERCENTAGE DIAGNOSTIC SECTION */}
                     {isPercentageResult && categoryPercentages && (
-                      <div className="bg-background-secondary border border-border/50 rounded-3xl p-6 sm:p-8 space-y-5">
+                      <div className="bg-background-secondary border border-border/50 rounded-2xl p-6 sm:p-8 space-y-5">
                         <h4 className="font-bold text-sm text-foreground uppercase tracking-wide flex items-center gap-2 justify-center mb-6">
                           <BarChart3 className="w-5 h-5 text-accent" />
                           Seu Diagnóstico Completo
@@ -364,7 +364,7 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
                     )}
 
                     {/* ALWAYS SHOW THE DOMINANT CATEGORY DETAILS */}
-                    <div className="bg-background-secondary border border-border/50 rounded-3xl p-6 sm:p-8 text-left space-y-4 relative overflow-hidden">
+                    <div className="bg-background-secondary border border-border/50 rounded-2xl p-6 sm:p-8 text-left space-y-4 relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-2 h-full" style={{ backgroundColor: resultCategory.color }} />
                       <h4 className="font-bold text-sm text-muted uppercase tracking-wide flex items-center gap-2">
                         <Award className="w-5 h-5" style={{ color: resultCategory.color }} />
