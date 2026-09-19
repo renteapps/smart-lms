@@ -29,6 +29,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAppearance } from "@/contexts/AppearanceContext";
 import { composeFullPhone } from "@/lib/phoneUtils";
 import { safeRedirect } from "@/lib/safeRedirect";
+import { passwordPolicyError } from "@/lib/auth/passwordPolicy";
 
 function CriarContaContent() {
   const router = useRouter();
@@ -125,8 +126,9 @@ function CriarContaContent() {
       return;
     }
 
-    if (password.length < 6) {
-      setErrorMessage("A senha deve conter no mínimo 6 caracteres.");
+    const passwordError = passwordPolicyError(password);
+    if (passwordError) {
+      setErrorMessage(passwordError);
       return;
     }
 

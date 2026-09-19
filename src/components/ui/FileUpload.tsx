@@ -5,6 +5,7 @@ import { FileUp, Trash2, File, Link2 } from "lucide-react";
 import { toast } from "@heroui/react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { LESSON_MATERIALS_BUCKET, lessonMaterialPath } from "@/lib/lessonMaterials";
 
 export type UploadedFile = {
   id?: string;
@@ -71,13 +72,13 @@ export function FileUpload({
         const storagePath = `${crypto.randomUUID()}-${safeName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("lesson-materials")
+          .from(LESSON_MATERIALS_BUCKET)
           .upload(storagePath, file, { contentType: file.type || undefined, upsert: false });
         
         if (uploadError) throw new Error(`Erro ao enviar "${file.name}": ${uploadError.message}`);
 
         const { data: publicUrlData } = supabase.storage
-          .from("lesson-materials")
+          .from(LESSON_MATERIALS_BUCKET)
           .getPublicUrl(storagePath);
 
         newUploads.push({
@@ -99,17 +100,31 @@ export function FileUpload({
     }
   };
 
+  // O bucket é privado: a URL gravada não abre sozinha, então o admin recebe
+  // uma URL assinada na hora (a policy de storage libera admin).
+  const openFile = async (url: string) => {
+    const path = lessonMaterialPath(url);
+    if (!path) {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    const { data, error } = await createClient().storage.from(LESSON_MATERIALS_BUCKET).createSignedUrl(path, 60);
+    if (error || !data?.signedUrl) {
+      toast.danger("Não foi possível abrir o arquivo.");
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
   const handleRemove = (indexToRemove: number) => {
     const fileToRemove = value[indexToRemove];
     const newValue = value.filter((_, idx) => idx !== indexToRemove);
     onChange(newValue);
     
     // Melhor esforço para remover do storage
-    if (fileToRemove.url.includes("lesson-materials/")) {
-      const pathMatch = fileToRemove.url.match(/lesson-materials\/(.*)/);
-      if (pathMatch && pathMatch[1]) {
-        createClient().storage.from("lesson-materials").remove([pathMatch[1]]).catch(console.warn);
-      }
+    const storagePath = lessonMaterialPath(fileToRemove.url);
+    if (storagePath) {
+      createClient().storage.from(LESSON_MATERIALS_BUCKET).remove([storagePath]).catch(console.warn);
     }
   };
 
@@ -137,9 +152,13 @@ export function FileUpload({
                   <span className="text-sm font-medium text-foreground truncate" title={file.name}>
                     {file.name}
                   </span>
-                  <a href={file.url} target="_blank" rel="noreferrer" className="text-xs text-accent hover:underline flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => void openFile(file.url)}
+                    className="text-xs text-accent hover:underline flex items-center gap-1 self-start"
+                  >
                     <Link2 className="size-3" /> Ver link
-                  </a>
+                  </button>
                 </div>
               </div>
               <button

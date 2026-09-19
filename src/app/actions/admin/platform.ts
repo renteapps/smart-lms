@@ -2,6 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin, requireUser } from "@/lib/supabase/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getSupabaseServiceRoleKey } from "@/lib/supabase/env";
+import type { DB } from "@/lib/data/types";
+import { grantOrgEnrollments, orgAllowedCourseIds, revokeOrgEnrollments } from "@/lib/data/orgCourseAccess";
 import { toDbRole } from "@/lib/data/business";
 import type { Company, MemberRole } from "@/types/business";
 import type { Plan } from "@/lib/data/plans";
@@ -101,6 +105,16 @@ async function requireOrgManager(companyId: string) {
     if (!isAdmin) throw new Error("Acesso restrito aos gestores da empresa.");
   }
   return session;
+}
+
+/**
+ * Matrícula exige service role: a RLS de `enrollments` só deixa admin da
+ * plataforma escrever, e é assim que deve ser — o gestor passa antes pelas
+ * checagens de organização e de contrato feitas aqui no servidor.
+ */
+function privilegedClient(): DB {
+  if (!getSupabaseServiceRoleKey()) throw new Error("Serviço de matrícula indisponível neste ambiente.");
+  return createAdminClient() as unknown as DB;
 }
 
 async function organizationOf(
@@ -285,7 +299,7 @@ export async function updateMember(
   updates: { role?: MemberRole; department?: string; jobTitle?: string; status?: string; notes?: string },
 ): Promise<ActionResult> {
   try {
-    const { supabase } = await requireManagerOf("organization_members", memberId);
+    const { supabase, companyId } = await requireManagerOf("organization_members", memberId);
 
     const row: Record<string, unknown> = {};
     if (updates.role) row.role = toDbRole(updates.role);
@@ -294,8 +308,18 @@ export async function updateMember(
     if (updates.status !== undefined) row.status = updates.status;
     if (updates.notes !== undefined) row.notes = updates.notes;
 
-    const { error } = await supabase.from("organization_members").update(row).eq("id", memberId);
+    const { data: updated, error } = await supabase
+      .from("organization_members")
+      .update(row)
+      .eq("id", memberId)
+      .select("user_id")
+      .maybeSingle();
     if (error) return { success: false, message: error.message };
+
+    // Colaborador desativado perde os cursos que a empresa deu.
+    if (updates.status === "disabled" && updated?.user_id) {
+      await revokeOrgEnrollments(privilegedClient(), companyId, updated.user_id);
+    }
 
     revalidatePath("/empresa/gestao");
     return { success: true };
@@ -306,14 +330,68 @@ export async function updateMember(
 
 export async function removeMember(memberId: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireManagerOf("organization_members", memberId);
+    const { supabase, companyId } = await requireManagerOf("organization_members", memberId);
+
+    const { data: member } = await supabase
+      .from("organization_members")
+      .select("user_id")
+      .eq("id", memberId)
+      .maybeSingle();
+
     const { error } = await supabase.from("organization_members").delete().eq("id", memberId);
     if (error) return { success: false, message: error.message };
+
+    // Quem sai da empresa perde os cursos que a empresa deu (e só esses).
+    if (member?.user_id) await revokeOrgEnrollments(privilegedClient(), companyId, member.user_id);
 
     revalidatePath("/empresa/gestao");
     return { success: true };
   } catch (error) {
     return { success: false, message: (error as Error).message };
+  }
+}
+
+/**
+ * Troca o conjunto de cursos de um membro: grava a atribuição, matricula nos
+ * novos e revoga os que saíram. Os cursos precisam estar no contrato da org.
+ */
+async function applyMemberCourses(
+  supabase: SessionClient,
+  admin: DB,
+  companyId: string,
+  member: { id: string; user_id: string | null },
+  courseIds: string[],
+) {
+  const { data: previousRows } = await supabase
+    .from("organization_member_courses")
+    .select("course_id")
+    .eq("member_id", member.id);
+  const previous = (previousRows ?? []).map((row) => row.course_id as string);
+
+  const { error: deleteError } = await supabase.from("organization_member_courses").delete().eq("member_id", member.id);
+  if (deleteError) throw new Error(deleteError.message);
+
+  if (courseIds.length > 0) {
+    const { error } = await supabase
+      .from("organization_member_courses")
+      .insert(courseIds.map((courseId) => ({ member_id: member.id, course_id: courseId })));
+    if (error) throw new Error(error.message);
+  }
+
+  if (!member.user_id) return;
+  await grantOrgEnrollments(admin, companyId, member.user_id, courseIds);
+  await revokeOrgEnrollments(
+    admin,
+    companyId,
+    member.user_id,
+    previous.filter((courseId) => !courseIds.includes(courseId)),
+  );
+}
+
+async function assertCoursesInContract(admin: DB, companyId: string, courseIds: string[]) {
+  const allowed = await orgAllowedCourseIds(admin, companyId, courseIds);
+  if (courseIds.some((courseId) => !allowed.has(courseId))) {
+    throw new Error("Alguns cursos não fazem parte do contrato ativo da empresa.");
   }
 }
 
@@ -323,33 +401,19 @@ export async function assignCoursesToMember(
   courseIds: string[],
 ): Promise<ActionResult> {
   try {
-    const { supabase } = await requireManagerOf("organization_members", memberId);
+    const { supabase, companyId } = await requireManagerOf("organization_members", memberId);
+    const uniqueCourseIds = [...new Set(courseIds)];
+    const admin = privilegedClient();
+    await assertCoursesInContract(admin, companyId, uniqueCourseIds);
 
-    await supabase.from("organization_member_courses").delete().eq("member_id", memberId);
+    const { data: member } = await supabase
+      .from("organization_members")
+      .select("id, user_id")
+      .eq("id", memberId)
+      .maybeSingle();
+    if (!member) return { success: false, message: "Membro não encontrado." };
 
-    if (courseIds.length > 0) {
-      const { error } = await supabase.from("organization_member_courses").insert(
-        courseIds.map((courseId) => ({ member_id: memberId, course_id: courseId })),
-      );
-      if (error) return { success: false, message: error.message };
-
-      const { data: member } = await supabase
-        .from("organization_members")
-        .select("user_id")
-        .eq("id", memberId)
-        .maybeSingle();
-
-      if (member?.user_id) {
-        await supabase.from("enrollments").upsert(
-          courseIds.map((courseId) => ({
-            user_id: member.user_id,
-            course_id: courseId,
-            status: "active",
-          })),
-          { onConflict: "user_id,course_id" },
-        );
-      }
-    }
+    await applyMemberCourses(supabase, admin, companyId, member, uniqueCourseIds);
 
     revalidatePath("/empresa/gestao");
     return { success: true };
@@ -366,6 +430,9 @@ export async function assignCoursesToDepartment(
 ): Promise<ActionResult & { affectedMembersCount?: number }> {
   try {
     const { supabase } = await requireOrgManager(companyId);
+    const uniqueCourseIds = [...new Set(courseIds)];
+    const admin = privilegedClient();
+    await assertCoursesInContract(admin, companyId, uniqueCourseIds);
 
     const { data: members, error: membersError } = await supabase
       .from("organization_members")
@@ -377,31 +444,8 @@ export async function assignCoursesToDepartment(
     if (membersError) return { success: false, message: membersError.message };
     if (!members || members.length === 0) return { success: true, affectedMembersCount: 0 };
 
-    const memberIds = members.map((m) => m.id);
-
-    await supabase.from("organization_member_courses").delete().in("member_id", memberIds);
-
-    if (courseIds.length > 0) {
-      const rows = [];
-      for (const mId of memberIds) {
-        for (const cId of courseIds) {
-          rows.push({ member_id: mId, course_id: cId });
-        }
-      }
-      
-      const { error } = await supabase.from("organization_member_courses").insert(rows);
-      if (error) return { success: false, message: error.message };
-
-      const userIds = members.map((m) => m.user_id).filter(Boolean);
-      if (userIds.length > 0) {
-        const enrollments = [];
-        for (const uId of userIds) {
-          for (const cId of courseIds) {
-            enrollments.push({ user_id: uId, course_id: cId, status: "active" });
-          }
-        }
-        await supabase.from("enrollments").upsert(enrollments, { onConflict: "user_id,course_id" });
-      }
+    for (const member of members) {
+      await applyMemberCourses(supabase, admin, companyId, member, uniqueCourseIds);
     }
 
     revalidatePath("/empresa/gestao");

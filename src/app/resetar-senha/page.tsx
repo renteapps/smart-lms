@@ -20,6 +20,7 @@ import { PasswordInput } from "@/components/auth/PasswordInput";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { passwordPolicyError } from "@/lib/auth/passwordPolicy";
 
 function ResetarSenhaContent() {
   const router = useRouter();
@@ -114,8 +115,9 @@ function ResetarSenhaContent() {
       return;
     }
 
-    if (password.length < 6) {
-      setErrorMessage("A senha precisa ter pelo menos 6 caracteres.");
+    const passwordError = passwordPolicyError(password);
+    if (passwordError) {
+      setErrorMessage(passwordError);
       return;
     }
 

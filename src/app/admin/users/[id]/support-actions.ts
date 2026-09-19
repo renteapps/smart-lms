@@ -217,15 +217,26 @@ export async function resetUserPassword(
 export async function forceUserLogoff(userId: string): Promise<SupportActionResult> {
   if (!(await checkAdmin())) return { success: false, message: "Acesso negado." };
 
-  const admin = createAdminClient();
-  const { error } = await admin.auth.admin.signOut(userId);
+  // `auth.admin.signOut` espera o JWT da sessão, não o id do usuário — antes
+  // esta action nunca deslogava ninguém. A RPC apaga as sessões (e, em
+  // cascata, os refresh tokens); como o app valida com getUser(), que exige a
+  // sessão viva no Auth, o usuário cai na próxima requisição.
+  const { data: revoked, error } = await createAdminClient().rpc("admin_revoke_user_sessions", {
+    p_user_id: userId,
+  });
 
   if (error) {
     console.error("Error forcing logoff", error);
     return { success: false, message: "Erro ao forçar logoff." };
   }
 
-  return { success: true, message: "Logoff forçado com sucesso! Todas as sessões foram encerradas." };
+  const count = typeof revoked === "number" ? revoked : 0;
+  return {
+    success: true,
+    message: count > 0
+      ? `Logoff forçado com sucesso! ${count} sessão(ões) encerrada(s).`
+      : "O usuário não tinha sessões ativas.",
+  };
 }
 
 const ALLOWED_STATUSES = new Set(["active", "inactive", "archived"]);
