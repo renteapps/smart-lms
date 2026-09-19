@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@heroui/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Ban, CheckCircle2, ChevronDown, ChevronRight, Copy, KeyRound, ListChecks, Pencil, PlayCircle, Plus, RefreshCw, Repeat, Trash2, Webhook } from "lucide-react";
 import { toast } from "@/lib/toast";
@@ -49,8 +50,10 @@ function canReactivateSubscription(status: string): boolean {
   return status === "INACTIVE" || status.startsWith("CANCELLED_BY_");
 }
 
-const inputClass = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent";
-const buttonClass = "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50";
+const inputClass = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/30";
+const buttonClass = buttonVariants({ variant: "outline" });
+const primaryButtonClass = buttonVariants({ variant: "primary" });
+const dangerButtonClass = buttonVariants({ variant: "danger-soft" });
 
 /** Mesmo indicativo de "salvo" da tela da Eduzz — ver o comentário lá para o porquê. */
 function SavedBadge({ label }: { label: string }) {
@@ -280,7 +283,7 @@ export function HotmartIntegrationContent() {
           <p className="mb-2 text-xs font-semibold text-muted">URL pública do webhook</p>
           <div className="flex gap-2">
             <code className="min-w-0 flex-1 overflow-x-auto text-xs">{webhookUrl}</code>
-            <button className={buttonClass} onClick={copyWebhookUrl}><Copy className="size-4" /></button>
+            <button type="button" aria-label="Copiar URL do webhook" className={buttonClass} onClick={copyWebhookUrl}><Copy className="size-4" /></button>
           </div>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
@@ -288,7 +291,7 @@ export function HotmartIntegrationContent() {
             <input className={inputClass} type="password" value={hottok} onChange={(e) => setHottok(e.target.value)} placeholder="Hottok ou chave HMAC da conta" />
             {Boolean(data?.webhookKeyCount) && <SavedBadge label={`${data!.webhookKeyCount} chave(s) salva(s) no servidor`} />}
           </div>
-          <button className={`${buttonClass} bg-accent text-accent-foreground`} disabled={busy || !hottok} onClick={() => void saveCredentials()}>
+          <button className={`${primaryButtonClass}`} disabled={busy || !hottok} onClick={() => void saveCredentials()}>
             <CheckCircle2 className="size-4" /> Adicionar chave
           </button>
         </div>
@@ -320,12 +323,12 @@ export function HotmartIntegrationContent() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button className={`${buttonClass} bg-accent text-accent-foreground`} disabled={busy || (!clientId && !clientSecret && !basicToken)} onClick={() => void saveCredentials()}>
+          <button className={`${primaryButtonClass}`} disabled={busy || (!clientId && !clientSecret && !basicToken)} onClick={() => void saveCredentials()}>
             {data?.apiConnected ? "Atualizar credenciais" : "Conectar com a Hotmart"}
           </button>
           {data?.apiConnected && (
             <button
-              className={`${buttonClass} border border-danger/40 text-danger`}
+              className={`${dangerButtonClass}`}
               onClick={async () => {
                 const result = await clearHotmartApiCredentials();
                 if (!result.success) toast.error(result.message || "Erro ao remover credenciais.");
@@ -364,11 +367,11 @@ export function HotmartIntegrationContent() {
                       </button>
                       <div className="leading-tight">
                         <code className="font-semibold" title="ID numérico (o mesmo do painel da Hotmart)">{product.numericId ?? "—"}</code>
-                        <code className="block text-[11px] text-muted" title="ucode — valor gravado no mapeamento">{product.id}</code>
+                        <code className="block text-2xs text-muted" title="ucode — valor gravado no mapeamento">{product.id}</code>
                       </div>
                       <span className="flex-1">{product.name}</span>
                       {product.status && <span className="rounded-full bg-background-secondary px-2 py-1 text-xs">{product.status}</span>}
-                      <button className={`${buttonClass} border border-border`} onClick={() => applyProduct(product)}>Usar produto</button>
+                      <button className={`${buttonClass}`} onClick={() => applyProduct(product)}>Usar produto</button>
                     </div>
                     {expandedProductId === product.id && (
                       <div className="space-y-2 border-t border-border bg-background-secondary p-3">
@@ -381,7 +384,7 @@ export function HotmartIntegrationContent() {
                             <code className="font-semibold">{offer.code}</code>
                             <span className="flex-1">{offer.name || offer.code}{offer.isMainOffer ? " · principal" : ""}</span>
                             {offer.priceValue != null && <span className="text-muted">{offer.currencyCode ?? "BRL"} {offer.priceValue.toFixed(2)}</span>}
-                            <button className={`${buttonClass} border border-border`} onClick={() => applyProduct(product, offer)}>Usar oferta</button>
+                            <button className={`${buttonClass}`} onClick={() => applyProduct(product, offer)}>Usar oferta</button>
                           </div>
                         ))}
                       </div>
@@ -407,7 +410,7 @@ export function HotmartIntegrationContent() {
             {targets.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
           <input className={inputClass} type="number" min="1" value={accessDays} onChange={(e) => setAccessDays(e.target.value)} placeholder="Dias (opcional)" />
-          <button className={`${buttonClass} bg-accent text-accent-foreground`} disabled={busy} onClick={() => void addMapping()}>
+          <button className={`${primaryButtonClass}`} disabled={busy} onClick={() => void addMapping()}>
             <Plus className="size-4" /> {mappingId ? "Atualizar" : "Adicionar"}
           </button>
         </div>
@@ -479,7 +482,7 @@ export function HotmartIntegrationContent() {
                 </select>
                 <input className={inputClass} value={subsEmailFilter} onChange={(e) => setSubsEmailFilter(e.target.value)} placeholder="E-mail do assinante" />
                 <input className={inputClass} value={subsProductFilter} onChange={(e) => setSubsProductFilter(e.target.value)} placeholder="ID do produto" />
-                <button className={`${buttonClass} border border-border`} disabled={subsLoading} onClick={() => void loadSubscriptions()}>Buscar</button>
+                <button className={`${buttonClass}`} disabled={subsLoading} onClick={() => void loadSubscriptions()}>Buscar</button>
               </div>
 
               {subsLoading && <p className="p-4 text-center text-sm text-muted">Carregando assinaturas…</p>}
@@ -502,16 +505,16 @@ export function HotmartIntegrationContent() {
                         {subscriptionStatusLabel(item.status)}
                       </span>
                       <div className="flex items-center justify-end gap-2">
-                        <button aria-label="Sincronizar com a Hotmart" className={`${buttonClass} border border-border`} disabled={busy} onClick={() => void handleSyncSubscription(item.subscriberCode)}>
+                        <button aria-label="Sincronizar com a Hotmart" className={`${buttonClass}`} disabled={busy} onClick={() => void handleSyncSubscription(item.subscriberCode)}>
                           <RefreshCw className="size-4" />
                         </button>
                         {item.status === "ACTIVE" && (
-                          <button aria-label="Cancelar assinatura" className={`${buttonClass} border border-danger/40 text-danger`} disabled={busy || subsBusyCode === item.subscriberCode} onClick={() => setSubActionConfirm({ type: "cancel", subscriberCode: item.subscriberCode })}>
+                          <button aria-label="Cancelar assinatura" className={`${dangerButtonClass}`} disabled={busy || subsBusyCode === item.subscriberCode} onClick={() => setSubActionConfirm({ type: "cancel", subscriberCode: item.subscriberCode })}>
                             <Ban className="size-4" /> Cancelar
                           </button>
                         )}
                         {canReactivateSubscription(item.status) && (
-                          <button aria-label="Reativar assinatura" className={`${buttonClass} border border-border`} disabled={busy || subsBusyCode === item.subscriberCode} onClick={() => setSubActionConfirm({ type: "reactivate", subscriberCode: item.subscriberCode })}>
+                          <button aria-label="Reativar assinatura" className={`${buttonClass}`} disabled={busy || subsBusyCode === item.subscriberCode} onClick={() => setSubActionConfirm({ type: "reactivate", subscriberCode: item.subscriberCode })}>
                             <PlayCircle className="size-4" /> Reativar
                           </button>
                         )}
@@ -523,9 +526,9 @@ export function HotmartIntegrationContent() {
 
               {(subsPageInfo?.nextPageToken || subsPageInfo?.prevPageToken) && (
                 <div className="flex items-center justify-center gap-3 text-sm text-muted">
-                  <button className={`${buttonClass} border border-border`} disabled={subsLoading || !subsPageInfo?.prevPageToken} onClick={() => void loadSubscriptions(subsPageInfo?.prevPageToken ?? undefined)}>Anterior</button>
+                  <button className={`${buttonClass}`} disabled={subsLoading || !subsPageInfo?.prevPageToken} onClick={() => void loadSubscriptions(subsPageInfo?.prevPageToken ?? undefined)}>Anterior</button>
                   {subsPageInfo?.totalResults != null && <span>{subsPageInfo.totalResults} assinatura(s)</span>}
-                  <button className={`${buttonClass} border border-border`} disabled={subsLoading || !subsPageInfo?.nextPageToken} onClick={() => void loadSubscriptions(subsPageInfo?.nextPageToken ?? undefined)}>Próxima</button>
+                  <button className={`${buttonClass}`} disabled={subsLoading || !subsPageInfo?.nextPageToken} onClick={() => void loadSubscriptions(subsPageInfo?.nextPageToken ?? undefined)}>Próxima</button>
                 </div>
               )}
             </div>
@@ -539,7 +542,7 @@ export function HotmartIntegrationContent() {
             <h2 className="text-lg font-bold">Eventos recentes</h2>
             <p className="text-sm text-muted">Payloads não são enviados ao navegador; apenas estado e erro.</p>
           </div>
-          <button className={`${buttonClass} border border-border`} onClick={() => void reload()}><RefreshCw className="size-4" /> Atualizar</button>
+          <button className={`${buttonClass}`} onClick={() => void reload()}><RefreshCw className="size-4" /> Atualizar</button>
         </div>
         <div className="divide-y divide-border rounded-lg border border-border">
           {(data?.events ?? []).map((event) => (

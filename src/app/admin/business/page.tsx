@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import {
   Button,
   Card,
-  EmptyState,
-  Label,
+  ListBox,
+  ListBoxItem,
   ProgressBar,
-  SearchField,
+  Select,
   Spinner,
   Table,
   buttonVariants,
@@ -24,7 +24,8 @@ import {
   ExternalLink,
   TrendingUp,
 } from "lucide-react";
-import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
+import { AdminEmptyState, PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
+import { FilterBar } from "@/components/admin/FilterBar";
 import { Company } from "@/types/business";
 import { deleteCompany } from "@/app/actions/admin/platform";
 import { getCompanies } from "@/lib/data/business";
@@ -157,37 +158,46 @@ export default function AdminBusinessPage() {
         />
       </section>
 
-      {/* TABELA DE EMPRESAS */}
+      {/* TABELA DE EmpresaS */}
       <Card>
-        <Card.Header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-4">
-          <SearchField
-            value={search}
-            onChange={setSearch}
-            className="w-full sm:max-w-md"
-            aria-label="Buscar empresa"
+        <FilterBar
+          search={search}
+          onSearchChange={setSearch}
+          searchLabel="Buscar empresa"
+          searchPlaceholder="Buscar por nome, CNPJ, domínio ou gestor..."
+          hasActiveFilters={search !== "" || statusFilter !== "todos"}
+          onClear={() => {
+            setSearch("");
+            setStatusFilter("todos");
+          }}
+        >
+          <Select
+            aria-label="Filtrar por status"
+            selectedKey={statusFilter}
+            onSelectionChange={(key) => setStatusFilter(String(key))}
+            className="w-full sm:w-52"
           >
-            <Label className="sr-only">Buscar empresa</Label>
-            <SearchField.Group>
-              <SearchField.SearchIcon />
-              <SearchField.Input placeholder="Buscar por nome, CNPJ, domínio ou gestor..." />
-              <SearchField.ClearButton />
-            </SearchField.Group>
-          </SearchField>
-
-          <div className="flex items-center gap-3">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <option value="todos">Todos os Status</option>
-              <option value="ativo">Ativas</option>
-              <option value="trial">Trial / Degustação</option>
-              <option value="inativo">Inativas</option>
-              <option value="suspenso">Suspensas</option>
-            </select>
-          </div>
-        </Card.Header>
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover>
+              <ListBox>
+                {[
+                  { id: "todos", label: "Todos os status" },
+                  { id: "ativo", label: "Ativas" },
+                  { id: "trial", label: "Trial / degustação" },
+                  { id: "inativo", label: "Inativas" },
+                  { id: "suspenso", label: "Suspensas" },
+                ].map((option) => (
+                  <ListBoxItem key={option.id} id={option.id}>
+                    {option.label}
+                  </ListBoxItem>
+                ))}
+              </ListBox>
+            </Select.Popover>
+          </Select>
+        </FilterBar>
 
         <Card.Content className="px-0 pb-0 pt-0">
           {isLoading ? (
@@ -195,23 +205,20 @@ export default function AdminBusinessPage() {
               <Spinner size="md" color="accent" />
             </div>
           ) : filtered.length === 0 ? (
-            <EmptyState className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-              <div className="grid size-12 place-items-center rounded-2xl bg-surface-secondary text-muted">
-                <Building2 className="size-6" />
-              </div>
-              <p className="font-semibold text-foreground">Nenhuma empresa encontrada</p>
-              <p className="text-xs text-muted max-w-sm">
-                {search || statusFilter !== "todos"
+            <AdminEmptyState
+              icon={Building2}
+              title="Nenhuma empresa encontrada"
+              description={
+                search || statusFilter !== "todos"
                   ? "Tente ajustar os critérios de busca."
-                  : "Cadastre a primeira empresa corporativa para começar."}
-              </p>
-              <Link
-                href="/admin/business/new"
-                className={cn(buttonVariants({ variant: "primary", size: "sm" }), "gap-1 font-semibold")}
-              >
-                <Plus className="size-4 mr-1" /> Cadastrar Empresa
-              </Link>
-            </EmptyState>
+                  : "Cadastre a primeira empresa corporativa para começar."
+              }
+              action={
+                <Link href="/admin/business/new" className={cn(buttonVariants({ variant: "primary", size: "sm" }), "gap-2")}>
+                  <Plus className="size-4" aria-hidden="true" /> Cadastrar empresa
+                </Link>
+              }
+            />
           ) : (
             <>
               {/* DESKTOP TABLE */}
@@ -220,19 +227,19 @@ export default function AdminBusinessPage() {
                   <Table.ScrollContainer>
                     <Table.Content aria-label="Tabela de empresas corporativas">
                       <Table.Header>
-                        <Table.Column isRowHeader>EMPRESA</Table.Column>
-                        <Table.Column>GESTOR RESPONSÁVEL</Table.Column>
-                        <Table.Column>VAGAS / OCUPAÇÃO</Table.Column>
-                        <Table.Column>PLANO / VALOR</Table.Column>
-                        <Table.Column>STATUS</Table.Column>
-                        <Table.Column>AÇÕES</Table.Column>
+                        <Table.Column isRowHeader>Empresa</Table.Column>
+                        <Table.Column>Gestor responsável</Table.Column>
+                        <Table.Column>Vagas / ocupação</Table.Column>
+                        <Table.Column>Plano / valor</Table.Column>
+                        <Table.Column>Status</Table.Column>
+                        <Table.Column>Ações</Table.Column>
                       </Table.Header>
                       <Table.Body>
                         {filtered.map((company) => {
                           const percent = Math.round((company.seatsUsed / company.seatsTotal) * 100);
                           return (
                             <Table.Row key={company.id}>
-                              {/* EMPRESA */}
+                              {/* Empresa */}
                               <Table.Cell>
                                 <div className="flex items-center gap-3">
                                   <div className="relative size-10 shrink-0 overflow-hidden rounded-xl border border-border bg-surface-secondary">
@@ -257,7 +264,7 @@ export default function AdminBusinessPage() {
                                       {company.name} · <span className="font-mono">{company.cnpj}</span>
                                     </span>
                                     {company.domain && (
-                                      <span className="text-[10px] text-accent font-mono block">
+                                      <span className="text-3xs text-accent font-mono block">
                                         @{company.domain}
                                       </span>
                                     )}
@@ -270,7 +277,7 @@ export default function AdminBusinessPage() {
                                 <span className="block text-xs font-semibold text-foreground">
                                   {company.managerName}
                                 </span>
-                                <span className="block text-[11px] text-muted truncate">
+                                <span className="block text-2xs text-muted truncate">
                                   {company.managerEmail}
                                 </span>
                               </Table.Cell>
@@ -282,7 +289,7 @@ export default function AdminBusinessPage() {
                                     <span>
                                       {company.seatsUsed} / {company.seatsTotal}
                                     </span>
-                                    <span className="text-[11px] text-muted">{percent}%</span>
+                                    <span className="text-2xs text-muted">{percent}%</span>
                                   </div>
                                   <ProgressBar
                                     value={percent}
@@ -309,20 +316,12 @@ export default function AdminBusinessPage() {
 
                               {/* STATUS */}
                               <Table.Cell>
-                                <StatusBadge
-                                  tone={
-                                    company.status === "ativo"
-                                      ? "positive"
-                                      : company.status === "trial"
-                                      ? "primary"
-                                      : "neutral"
-                                  }
-                                >
-                                  {company.status}
+                                <StatusBadge status={company.status}>
+                                  <span className="capitalize">{company.status}</span>
                                 </StatusBadge>
                               </Table.Cell>
 
-                              {/* AÇÕES */}
+                              {/* Ações */}
                               <Table.Cell>
                                 <div className="flex items-center gap-1">
                                   <Link
@@ -377,8 +376,8 @@ export default function AdminBusinessPage() {
                         <h3 className="font-bold text-sm text-foreground">{company.tradeName}</h3>
                         <p className="text-xs text-muted font-mono">{company.cnpj}</p>
                       </div>
-                      <StatusBadge tone={company.status === "ativo" ? "positive" : "neutral"}>
-                        {company.status}
+                      <StatusBadge status={company.status}>
+                        <span className="capitalize">{company.status}</span>
                       </StatusBadge>
                     </div>
 

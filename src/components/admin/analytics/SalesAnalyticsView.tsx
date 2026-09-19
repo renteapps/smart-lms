@@ -276,7 +276,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
               {tab.count !== undefined && (
                 <span
                   className={cn(
-                    "px-1.5 py-0.5 rounded-md text-[11px] font-bold",
+                    "px-1.5 py-0.5 rounded-md text-2xs font-bold",
                     isSelected ? "bg-accent text-accent-foreground" : "bg-background-secondary text-muted",
                   )}
                 >
@@ -441,7 +441,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <span className="font-semibold text-foreground">{pm.name}</span>
-                          <span className="text-[11px] text-muted">({pm.speed})</span>
+                          <span className="text-2xs text-muted">({pm.speed})</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <strong className="text-foreground">{pm.share}%</strong>
@@ -455,7 +455,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                         value={pm.share}
                         color={pm.name === "PIX" ? "success" : pm.name === "Cartão de Crédito" ? "accent" : "warning"}
                       />
-                      <div className="flex items-center justify-between text-[11px] text-muted">
+                      <div className="flex items-center justify-between text-2xs text-muted">
                         <span>{pm.count} transações</span>
                         <span className="text-success font-semibold">Aprovação: {pm.approvalRate}</span>
                       </div>
@@ -611,7 +611,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                         <Mail className="size-4 text-accent" />
                         <div>
                           <p className="font-semibold text-foreground">E-mail 1 • Lembrete Gentil</p>
-                          <p className="text-[11px] text-muted">Disparado 30 min após abandono</p>
+                          <p className="text-2xs text-muted">Disparado 30 min após abandono</p>
                         </div>
                       </div>
                       <Chip size="sm" variant="soft" color="success">Ativo</Chip>
@@ -622,7 +622,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                         <Mail className="size-4 text-warning" />
                         <div>
                           <p className="font-semibold text-foreground">E-mail 2 • Oferta com Cupom</p>
-                          <p className="text-[11px] text-muted">Disparado 24h após abandono</p>
+                          <p className="text-2xs text-muted">Disparado 24h após abandono</p>
                         </div>
                       </div>
                       <Chip size="sm" variant="soft" color="success">Ativo</Chip>
@@ -747,19 +747,19 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                                 <Table.Cell onClick={() => setSelectedTransaction(tx)}>
                                   <div>
                                     <span className="font-mono text-xs font-bold text-foreground">{tx.id}</span>
-                                    <p className="text-[11px] text-muted">{tx.date}</p>
+                                    <p className="text-2xs text-muted">{tx.date}</p>
                                   </div>
                                 </Table.Cell>
                                 <Table.Cell onClick={() => setSelectedTransaction(tx)}>
                                   <div>
                                     <p className="font-semibold text-foreground text-xs sm:text-sm">{tx.customer}</p>
-                                    <p className="text-[11px] text-muted">{tx.email}</p>
+                                    <p className="text-2xs text-muted">{tx.email}</p>
                                   </div>
                                 </Table.Cell>
                                 <Table.Cell onClick={() => setSelectedTransaction(tx)}>
                                   <div>
                                     <p className="text-xs font-medium text-foreground">{tx.product}</p>
-                                    <p className="text-[10px] text-muted">{tx.productType}</p>
+                                    <p className="text-3xs text-muted">{tx.productType}</p>
                                   </div>
                                 </Table.Cell>
                                 <Table.Cell onClick={() => setSelectedTransaction(tx)} className="font-display font-bold text-foreground text-xs sm:text-sm">
@@ -771,11 +771,11 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                                 <Table.Cell onClick={() => setSelectedTransaction(tx)}>
                                   <div className="text-xs">
                                     <span className="font-medium text-foreground">{tx.method}</span>
-                                    <p className="text-[10px] text-muted">{tx.installments}</p>
+                                    <p className="text-3xs text-muted">{tx.installments}</p>
                                   </div>
                                 </Table.Cell>
                                 <Table.Cell onClick={() => setSelectedTransaction(tx)}>
-                                  <Chip size="sm" variant="soft" color="default" className="text-[11px]">
+                                  <Chip size="sm" variant="soft" color="default" className="text-2xs">
                                     {tx.gateway}
                                   </Chip>
                                 </Table.Cell>
@@ -828,7 +828,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="font-mono text-xs font-bold text-foreground">{tx.id}</span>
-                              <Chip size="sm" variant="soft" color="default" className="text-[10px]">
+                              <Chip size="sm" variant="soft" color="default" className="text-3xs">
                                 {tx.gateway}
                               </Chip>
                             </div>
@@ -881,7 +881,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">{prod.type}</span>
+                        <span className="text-2xs font-semibold text-muted uppercase tracking-wider">{prod.type}</span>
                         <h4 className="font-display font-bold text-foreground text-base mt-0.5">{prod.name}</h4>
                       </div>
                       <Chip size="sm" variant="soft" color="success">
@@ -903,15 +903,15 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
 
                     <div className="grid grid-cols-3 gap-2 pt-2 border-t border-separator text-xs">
                       <div>
-                        <span className="text-muted block text-[11px]">Faturamento</span>
+                        <span className="text-muted block text-2xs">Faturamento</span>
                         <strong className="text-foreground font-display font-bold text-sm">{prod.total}</strong>
                       </div>
                       <div>
-                        <span className="text-muted block text-[11px]">Unidades</span>
+                        <span className="text-muted block text-2xs">Unidades</span>
                         <strong className="text-foreground font-semibold text-sm">{prod.units} un.</strong>
                       </div>
                       <div>
-                        <span className="text-muted block text-[11px]">Reembolso</span>
+                        <span className="text-muted block text-2xs">Reembolso</span>
                         <strong className="text-muted font-semibold text-sm">{prod.refundRate}</strong>
                       </div>
                     </div>
@@ -960,17 +960,17 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
 
                     <div className="grid grid-cols-3 gap-2 pt-2 border-t border-separator text-xs">
                       <div>
-                        <span className="text-muted block text-[11px]">Volume Total</span>
+                        <span className="text-muted block text-2xs">Volume Total</span>
                         <strong className="text-foreground font-display font-bold">
                           {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(gw.revenue)}
                         </strong>
                       </div>
                       <div>
-                        <span className="text-muted block text-[11px]">Taxa Média</span>
+                        <span className="text-muted block text-2xs">Taxa Média</span>
                         <strong className="text-foreground font-semibold">{gw.avgFee ?? "—"}</strong>
                       </div>
                       <div>
-                        <span className="text-muted block text-[11px]">Webhook Latency</span>
+                        <span className="text-muted block text-2xs">Webhook Latency</span>
                         <strong className="text-success font-semibold">{gw.webhookLatency ?? "—"}</strong>
                       </div>
                     </div>
@@ -1057,13 +1057,13 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                   {/* Summary Box */}
                   <div className="rounded-xl border border-border bg-background-secondary p-4 grid gap-4 sm:grid-cols-2">
                     <div>
-                      <span className="text-[11px] font-semibold text-muted uppercase">Produto Adquirido</span>
+                      <span className="text-2xs font-semibold text-muted uppercase">Produto Adquirido</span>
                       <p className="font-bold text-foreground text-sm mt-0.5">{selectedTransaction.product}</p>
                       <p className="text-xs text-muted">{selectedTransaction.productType}</p>
                     </div>
 
                     <div className="text-left sm:text-right">
-                      <span className="text-[11px] font-semibold text-muted uppercase">Data & Hora</span>
+                      <span className="text-2xs font-semibold text-muted uppercase">Data & Hora</span>
                       <p className="font-bold text-foreground text-sm mt-0.5">{selectedTransaction.date}</p>
                       <p className="text-xs text-muted font-mono">{selectedTransaction.externalId}</p>
                     </div>
@@ -1074,15 +1074,15 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                     <h4 className="text-xs font-semibold text-muted uppercase tracking-wider">Dados do Comprador</h4>
                     <div className="grid grid-cols-3 gap-2 rounded-xl border border-border p-3 text-xs">
                       <div>
-                        <span className="text-muted block text-[11px]">Nome do Aluno</span>
+                        <span className="text-muted block text-2xs">Nome do Aluno</span>
                         <strong className="text-foreground">{selectedTransaction.customer}</strong>
                       </div>
                       <div>
-                        <span className="text-muted block text-[11px]">E-mail</span>
+                        <span className="text-muted block text-2xs">E-mail</span>
                         <strong className="text-foreground">{selectedTransaction.email}</strong>
                       </div>
                       <div>
-                        <span className="text-muted block text-[11px]">Documento</span>
+                        <span className="text-muted block text-2xs">Documento</span>
                         <strong className="text-foreground font-mono">{selectedTransaction.document}</strong>
                       </div>
                     </div>
@@ -1110,7 +1110,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                           {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(selectedTransaction.netAmount)}
                         </strong>
                       </div>
-                      <div className="flex items-center justify-between text-[11px] text-muted pt-1">
+                      <div className="flex items-center justify-between text-2xs text-muted pt-1">
                         <span>Forma de Pagamento: {selectedTransaction.method}</span>
                         <span>Condição: {selectedTransaction.installments}</span>
                       </div>
@@ -1126,7 +1126,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                           <CheckCircle2 className="size-4 text-success shrink-0 mt-0.5" />
                           <div className="flex-1 flex items-center justify-between">
                             <span className="text-foreground font-medium">{event.title}</span>
-                            <span className="text-muted font-mono text-[11px]">{event.time}</span>
+                            <span className="text-muted font-mono text-2xs">{event.time}</span>
                           </div>
                         </div>
                       ))}
@@ -1190,7 +1190,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                       <FileSpreadsheet className="size-5 text-accent" />
                       <div>
                         <p className="font-semibold text-foreground text-sm">Arquivo CSV (Planilhas)</p>
-                        <p className="text-muted text-[11px]">Compatível com Excel, Google Planilhas e bancos de dados</p>
+                        <p className="text-muted text-2xs">Compatível com Excel, Google Planilhas e bancos de dados</p>
                       </div>
                     </div>
                     <Download className="size-4 text-muted" />
@@ -1205,7 +1205,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                       <FileText className="size-5 text-accent" />
                       <div>
                         <p className="font-semibold text-foreground text-sm">Relatório Executivo em PDF</p>
-                        <p className="text-muted text-[11px]">Gráficos, macro indicadores e resumo para diretoria</p>
+                        <p className="text-muted text-2xs">Gráficos, macro indicadores e resumo para diretoria</p>
                       </div>
                     </div>
                     <Download className="size-4 text-muted" />

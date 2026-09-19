@@ -251,7 +251,7 @@ export function AgentsAnalyticsView({ basePath = "/admin/analises", data }: Agen
                                     </span>
                                     <div>
                                       <p className="font-semibold text-foreground">{agent.name}</p>
-                                      <p className="text-[11px] text-muted line-clamp-1">{agent.role}</p>
+                                      <p className="text-2xs text-muted line-clamp-1">{agent.role}</p>
                                     </div>
                                   </div>
                                 </Table.Cell>
@@ -339,7 +339,7 @@ export function AgentsAnalyticsView({ basePath = "/admin/analises", data }: Agen
                     value={topic.percentage}
                     color="accent"
                   />
-                  <p className="text-[11px] text-muted">{topic.count} interações registradas no período</p>
+                  <p className="text-2xs text-muted">{topic.count} interações registradas no período</p>
                 </div>
               ))}
             </Card.Content>
@@ -353,7 +353,7 @@ export function AgentsAnalyticsView({ basePath = "/admin/analises", data }: Agen
               <Card key={fb.id} className="flex flex-col justify-between">
                 <Card.Header className="pb-2">
                   <div className="flex items-center justify-between w-full">
-                    <Chip size="sm" variant="soft" color="accent" className="text-[10px]">
+                    <Chip size="sm" variant="soft" color="accent" className="text-3xs">
                       {fb.agent}
                     </Chip>
                     <div className="flex items-center gap-0.5 text-warning">
@@ -366,7 +366,7 @@ export function AgentsAnalyticsView({ basePath = "/admin/analises", data }: Agen
                 <Card.Content className="pt-0">
                   <p className="text-xs text-foreground leading-relaxed italic">&ldquo;{fb.comment}&rdquo;</p>
                 </Card.Content>
-                <Card.Footer className="border-t border-separator pt-2 text-[11px] text-muted flex items-center justify-between">
+                <Card.Footer className="border-t border-separator pt-2 text-2xs text-muted flex items-center justify-between">
                   <span className="font-semibold text-foreground">{fb.student}</span>
                   <span>{fb.time}</span>
                 </Card.Footer>

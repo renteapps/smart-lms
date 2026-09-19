@@ -563,13 +563,13 @@ export default function ModuleList({ courseId, initialCourse, lessonRatings }: M
                 ) : (
                   <div className="relative flex aspect-video w-28 shrink-0 flex-col items-center justify-center rounded-lg border border-border bg-background-secondary text-muted sm:w-36">
                     <ImageIcon className="size-5 opacity-40" aria-hidden="true" />
-                    <span className="text-[10px] font-medium">Sem capa</span>
+                    <span className="text-3xs font-medium">Sem capa</span>
                   </div>
                 )}
 
                 <button type="button" onClick={() => toggleModule(module.id)} className="group min-w-0 flex-1 text-left">
                   <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-accent-soft-foreground">
+                    <span className="rounded-full bg-accent-soft px-2 py-0.5 text-3xs font-extrabold uppercase tracking-wider text-accent-soft-foreground">
                       Módulo {module.order}
                     </span>
                     {expandedModules[module.id] ? (
@@ -665,7 +665,7 @@ export default function ModuleList({ courseId, initialCourse, lessonRatings }: M
                               <div className="flex items-center gap-2">
                                 <p className="text-sm font-bold text-foreground">{lesson.title}</p>
                                 {isProfileTest && (
-                                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-extrabold uppercase text-accent-soft-foreground">
+                                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-3xs font-extrabold uppercase text-accent-soft-foreground">
                                     Teste de Perfil
                                   </span>
                                 )}

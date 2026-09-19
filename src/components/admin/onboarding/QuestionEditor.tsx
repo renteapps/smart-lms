@@ -142,7 +142,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                       className="w-full bg-transparent text-sm font-medium outline-none text-foreground"
                     />
                   </div>
-                  <p className="mt-1.5 text-[11px] leading-4 text-muted">Use <code>{'{{nome}}'}</code> para mostrar o primeiro nome do aluno.</p>
+                  <p className="mt-1.5 text-2xs leading-4 text-muted">Use <code>{'{{nome}}'}</code> para mostrar o primeiro nome do aluno.</p>
                 </div>
 
                 <div>
@@ -196,7 +196,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                     <option value="physics">Bolhas dinâmicas</option>
                   </select>
                   {question.visualType === 'physics' && (
-                    <p className="mt-1.5 max-w-44 text-[11px] leading-4 text-muted">Uma opção por bolha, sem níveis secundários.</p>
+                    <p className="mt-1.5 max-w-44 text-2xs leading-4 text-muted">Uma opção por bolha, sem níveis secundários.</p>
                   )}
                 </div>}
               </div>
@@ -213,7 +213,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                     </p>
                   </div>
                   {lockedVariableKey && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-1 text-[11px] font-bold text-muted">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-2.5 py-1 text-2xs font-bold text-muted">
                       <LockKeyhole size={12} /> Publicada e protegida
                     </span>
                   )}
@@ -258,7 +258,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
                   </p>
                 )}
                 {availableVariableKeys.length > 0 && (
-                  <p className="mt-3 text-[11px] leading-5 text-muted">
+                  <p className="mt-3 text-2xs leading-5 text-muted">
                     Nesta pergunta você já pode usar: {availableVariableKeys.map((key) => `{{${normalizeVariableKey(key)}}}`).join(', ')}. Também estão disponíveis {'{{first_name}}'} e {'{{nome}}'}.
                   </p>
                 )}

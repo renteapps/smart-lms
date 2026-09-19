@@ -44,7 +44,7 @@ export const ScoreDistributionBar: React.FC<ScoreDistributionBarProps> = ({ cate
           return (
             <span
               key={cat.id}
-              className="inline-flex items-center gap-1 font-medium px-2 py-0.5 rounded-full text-[11px]"
+              className="inline-flex items-center gap-1 font-medium px-2 py-0.5 rounded-full text-2xs"
               style={{
                 backgroundColor: `${cat.color}15`,
                 color: cat.color,

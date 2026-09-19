@@ -645,7 +645,7 @@ export default function PersonalizedLessonEditor({
                               <div className="flex items-center gap-2">
                                 <span className="font-semibold text-sm text-foreground truncate">{option.title}</span>
                                 <span className={cn(
-                                  "rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shrink-0",
+                                  "rounded-md px-1.5 py-0.5 text-3xs font-bold uppercase tracking-wider shrink-0",
                                   option.kind === "module" ? "bg-blue-500/10 text-blue-500" :
                                   option.kind === "lesson" ? "bg-emerald-500/10 text-emerald-500" :
                                   "bg-purple-500/10 text-purple-500"
@@ -813,7 +813,7 @@ function VariableInserter({
           ) : (
             groups.map((group) => (
               <div key={group.label}>
-                <p className="px-1 text-[11px] font-bold uppercase tracking-wider text-muted mb-1">{group.label}</p>
+                <p className="px-1 text-2xs font-bold uppercase tracking-wider text-muted mb-1">{group.label}</p>
                 <div className="space-y-1">
                   {group.items.map((item) => (
                     <button
@@ -828,7 +828,7 @@ function VariableInserter({
                       className="w-full flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-surface-hover hover:text-accent"
                     >
                       <span className="font-semibold text-foreground truncate">{item.label}</span>
-                      <code className="text-[10px] text-muted shrink-0 font-mono bg-background px-1.5 py-0.5 rounded">
+                      <code className="text-3xs text-muted shrink-0 font-mono bg-background px-1.5 py-0.5 rounded">
                         {"{{" + item.key + "}}"}
                       </code>
                     </button>

@@ -147,7 +147,7 @@ export default function AddEditModuleModal({
                                   <Check className="size-3" aria-hidden="true" />
                                 </span>
                               )}
-                              <span className="mt-auto truncate text-[10px] font-semibold text-white">
+                              <span className="mt-auto truncate text-3xs font-semibold text-white">
                                 {preset.name}
                               </span>
                             </span>

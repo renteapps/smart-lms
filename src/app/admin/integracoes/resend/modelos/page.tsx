@@ -275,15 +275,15 @@ export default function ResendModelosCatalogPage() {
                   </div>
 
                   <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-background-secondary text-muted uppercase tracking-wider">
+                    <span className="px-2 py-0.5 rounded-full text-3xs font-bold bg-background-secondary text-muted uppercase tracking-wider">
                       {tpl.category === "platform" ? "Plataforma" : "Notificação"}
                     </span>
                     {tpl.isCustomized ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent-soft text-accent">
+                      <span className="px-2 py-0.5 rounded-full text-3xs font-bold bg-accent-soft text-accent">
                         Customizado
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-background-secondary text-muted">
+                      <span className="px-2 py-0.5 rounded-full text-3xs font-medium bg-background-secondary text-muted">
                         Padrão
                       </span>
                     )}
@@ -302,31 +302,31 @@ export default function ResendModelosCatalogPage() {
 
                 {/* Subject Preview */}
                 <div className="p-2.5 rounded-xl border border-border/60 bg-background-secondary text-xs space-y-1">
-                  <span className="text-[10px] font-bold text-muted uppercase font-sans">
+                  <span className="text-3xs font-bold text-muted uppercase font-sans">
                     Assunto Padrão:
                   </span>
-                  <p className="font-mono text-[11px] text-foreground truncate" title={tpl.subject}>
+                  <p className="font-mono text-2xs text-foreground truncate" title={tpl.subject}>
                     {tpl.subject}
                   </p>
                 </div>
 
                 {/* Variables Preview Chips */}
                 <div className="space-y-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted flex items-center gap-1">
+                  <span className="text-3xs font-bold uppercase tracking-wider text-muted flex items-center gap-1">
                     <Tag className="size-3" /> Tags Dinâmicas
                   </span>
                   <div className="flex flex-wrap gap-1">
                     {tpl.variables.slice(0, 4).map((v) => (
                       <span
                         key={v.tag}
-                        className="px-1.5 py-0.5 rounded bg-surface border border-border/70 text-[10px] font-mono text-muted"
+                        className="px-1.5 py-0.5 rounded bg-surface border border-border/70 text-3xs font-mono text-muted"
                         title={`${v.label}: ${v.description}`}
                       >
                         {v.tag}
                       </span>
                     ))}
                     {tpl.variables.length > 4 && (
-                      <span className="px-1.5 py-0.5 rounded bg-background-secondary text-[10px] font-mono text-muted">
+                      <span className="px-1.5 py-0.5 rounded bg-background-secondary text-3xs font-mono text-muted">
                         +{tpl.variables.length - 4}
                       </span>
                     )}

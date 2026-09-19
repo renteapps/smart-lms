@@ -179,7 +179,7 @@ export function SubscriptionsAnalyticsView({ basePath = "/admin/analises", data 
                       value={plan.share}
                       color="accent"
                     />
-                    <div className="flex items-center justify-between text-muted text-[11px]">
+                    <div className="flex items-center justify-between text-muted text-2xs">
                       <span>{plan.subscribers} membros</span>
                       <span>{plan.mrrShare}</span>
                     </div>

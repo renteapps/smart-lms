@@ -362,7 +362,7 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
               </p>
               <p
                 className={cn(
-                  "mt-1 text-[11px] font-medium",
+                  "mt-1 text-2xs font-medium",
                   kpis.monthGrowthPct === null
                     ? "text-muted"
                     : kpis.monthGrowthPct >= 0
@@ -388,7 +388,7 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
               <p className="mt-2 font-display text-3xl font-bold text-foreground" data-numeric>
                 {kpis.resolvedPct === null ? "—" : `${kpis.resolvedPct}%`}
               </p>
-              <p className="mt-1 text-[11px] text-muted">
+              <p className="mt-1 text-2xs text-muted">
                 {kpis.resolvedPct === null ? "Nenhuma sessão classificada ainda" : "Marcadas como resolvida"}
               </p>
             </div>
@@ -405,7 +405,7 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
               <p className="mt-2 font-display text-3xl font-bold text-foreground" data-numeric>
                 {kpis.avgRating === null ? "—" : `${kpis.avgRating.toFixed(1)} / 5.0`}
               </p>
-              <p className="mt-1 text-[11px] text-muted">
+              <p className="mt-1 text-2xs text-muted">
                 {kpis.ratedCount > 0 ? `${kpis.ratedCount} avaliações no período` : "Nenhuma avaliação ainda"}
               </p>
             </div>
@@ -422,7 +422,7 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
               <p className="mt-2 font-display text-3xl font-bold text-foreground" data-numeric>
                 {kpis.avgMinutes === null ? "—" : `${kpis.avgMinutes.toFixed(1)} min`}
               </p>
-              <p className="mt-1 text-[11px] text-muted">
+              <p className="mt-1 text-2xs text-muted">
                 {kpis.avgMessages === null ? "Sem sessões registradas" : `~${kpis.avgMessages.toFixed(1)} mensagens por sessão`}
               </p>
             </div>
@@ -575,24 +575,24 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
                           <p className="text-xs font-bold text-foreground group-hover:text-accent transition-colors">
                             {conv.studentName || "Aluno"}
                           </p>
-                          <p className="text-[11px] text-muted truncate max-w-[180px]">
+                          <p className="text-2xs text-muted truncate max-w-[180px]">
                             {conv.studentEmail || "aluno@email.com"}
                           </p>
                         </div>
                       </div>
 
-                      <Chip color={statusCfg.chipColor} variant="soft" size="sm" className="text-[10px]">
+                      <Chip color={statusCfg.chipColor} variant="soft" size="sm" className="text-3xs">
                         {statusCfg.label}
                       </Chip>
                     </div>
 
                     <h4 className="mt-2.5 text-xs font-bold text-foreground line-clamp-1">{conv.title}</h4>
 
-                    <p className="mt-1 text-[11px] leading-relaxed text-muted line-clamp-2">
+                    <p className="mt-1 text-2xs leading-relaxed text-muted line-clamp-2">
                       {conv.messages[conv.messages.length - 1]?.text || "Sem mensagens"}
                     </p>
 
-                    <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2.5 text-[11px] text-muted">
+                    <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2.5 text-2xs text-muted">
                       <div className="flex items-center gap-1.5">
                         <Clock className="size-3" />
                         <span>
@@ -668,7 +668,7 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
                             color={STATUS_CONFIG[selectedConversation.status].chipColor}
                             variant="soft"
                             size="sm"
-                            className="text-[10px]"
+                            className="text-3xs"
                           >
                             {STATUS_CONFIG[selectedConversation.status].label}
                           </Chip>
@@ -743,7 +743,7 @@ export default function AgentHistoryPage({ params }: { params: Promise<{ id: str
                                 : "bg-background-secondary border border-border text-foreground rounded-bl-sm",
                             )}
                           >
-                            <div className="text-[10px] font-bold opacity-75 mb-1 uppercase tracking-wider flex items-center justify-between gap-4">
+                            <div className="text-3xs font-bold opacity-75 mb-1 uppercase tracking-wider flex items-center justify-between gap-4">
                               <span>{isStudent ? selectedConversation.studentName : agent?.name || "Agente"}</span>
                             </div>
                             <p className="whitespace-pre-line">{msg.text}</p>

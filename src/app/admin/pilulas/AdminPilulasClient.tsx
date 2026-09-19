@@ -453,13 +453,13 @@ export function AdminPilulasClient({
                                         </span>
                                       )}
                                       {item.daysAfterSignup !== null && item.daysAfterSignup !== undefined && (
-                                        <span className="inline-flex items-center gap-1 rounded bg-surface-secondary px-1.5 py-0.5 text-[11px] font-medium text-muted">
+                                        <span className="inline-flex items-center gap-1 rounded bg-surface-secondary px-1.5 py-0.5 text-2xs font-medium text-muted">
                                           <Clock className="size-3" aria-hidden="true" />
                                           +{item.daysAfterSignup}d cadastro
                                         </span>
                                       )}
                                       {item.targetTags && item.targetTags.length > 0 && (
-                                        <span className="inline-flex items-center gap-1 rounded bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent-soft-foreground">
+                                        <span className="inline-flex items-center gap-1 rounded bg-accent-soft px-1.5 py-0.5 text-2xs font-medium text-accent-soft-foreground">
                                           #{item.targetTags.slice(0, 2).join(', #')}{item.targetTags.length > 2 ? '…' : ''}
                                         </span>
                                       )}
@@ -607,12 +607,12 @@ export function AdminPilulasClient({
                               {item.category}
                             </Chip>
                             {item.daysAfterSignup !== null && item.daysAfterSignup !== undefined && (
-                              <span className="inline-flex items-center gap-1 rounded bg-surface-secondary px-1.5 py-0.5 text-[11px] font-medium text-muted">
+                              <span className="inline-flex items-center gap-1 rounded bg-surface-secondary px-1.5 py-0.5 text-2xs font-medium text-muted">
                                 +{item.daysAfterSignup}d cadastro
                               </span>
                             )}
                             {item.targetTags && item.targetTags.length > 0 && (
-                              <span className="inline-flex items-center gap-1 rounded bg-accent-soft px-1.5 py-0.5 text-[11px] font-medium text-accent-soft-foreground">
+                              <span className="inline-flex items-center gap-1 rounded bg-accent-soft px-1.5 py-0.5 text-2xs font-medium text-accent-soft-foreground">
                                 #{item.targetTags.slice(0, 2).join(', #')}
                               </span>
                             )}

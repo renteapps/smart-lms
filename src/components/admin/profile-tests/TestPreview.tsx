@@ -126,7 +126,7 @@ export const TestPreview: React.FC<TestPreviewProps> = ({ test, onClose }) => {
         {/* Top Header */}
         <div className="bg-surface/80 backdrop-blur-md border-b border-border/40 p-4 sm:p-6 flex items-center justify-between z-10 shrink-0">
           <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-accent bg-accent/10 px-2.5 py-0.5 rounded-full mb-1 inline-block">
+            <span className="text-3xs font-extrabold uppercase tracking-wider text-accent bg-accent/10 px-2.5 py-0.5 rounded-full mb-1 inline-block">
               Simulador do Aluno
             </span>
             <h2 className="font-display font-black text-lg text-foreground leading-tight truncate max-w-[200px] sm:max-w-md">

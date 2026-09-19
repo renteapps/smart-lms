@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, Save, Shield, KeyRound, Bell } from "lucide-react";
+import { PageHeader } from "@/components/ui/editorial";
+import { Save, Shield, KeyRound, Bell } from "lucide-react";
 import { Button, Card, Checkbox, Label, ListBox, ListBoxItem, Select } from "@heroui/react";
 import { toast } from "@/lib/toast";
 import { updateUserConfig, resetUserPassword, forceUserLogoff } from "../support-actions";
@@ -71,29 +71,20 @@ export function ConfigForm({ userId, email, initialStatus, initialRole }: Config
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-16">
-      <header className="sticky top-[92px] z-10 -mx-1 flex flex-col gap-4 rounded-xl border border-border bg-surface/95 p-4 shadow-elev-2 backdrop-blur-xl md:flex-row md:items-center md:justify-between">
-        <div>
-          <Link href={`/admin/users/${userId}`} className="inline-flex items-center gap-2 text-muted hover:text-accent transition-colors text-sm font-medium mb-4">
-            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-            Voltar para o Perfil
-          </Link>
-          <h1 className="text-3xl font-display font-black text-foreground">Configurações de Conta</h1>
-          <p className="text-muted mt-1">Gerencie acessos, segurança e preferências de comunicação.</p>
-        </div>
-        <div className="flex gap-3 w-full md:w-auto">
-          <Link
-            href={`/admin/users/${userId}`}
-            className="flex-1 md:flex-none text-center bg-background-secondary hover:bg-surface-hover text-foreground px-6 py-3 rounded-lg font-semibold border border-border transition-all"
-          >
-            Cancelar
-          </Link>
-          <Button variant="primary" className="flex-1 gap-2 md:flex-none" isDisabled={loading} onPress={handleSave}>
+    <div className="max-w-5xl mx-auto space-y-7 pb-16">
+      <PageHeader
+        sticky
+        back={{ href: `/admin/users/${userId}`, label: "Voltar para o perfil" }}
+        eyebrow="Pessoas"
+        title="Configurações de conta"
+        description="Gerencie acessos, segurança e preferências de comunicação."
+        actions={
+          <Button variant="primary" className="gap-2" isDisabled={loading} onPress={handleSave}>
             <Save className="size-4" aria-hidden="true" />
             {loading ? "Salvando..." : "Salvar"}
           </Button>
-        </div>
-      </header>
+        }
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">

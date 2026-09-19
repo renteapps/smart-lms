@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PageHeader } from "@/components/ui/editorial";
+import { Button, Table } from "@heroui/react";
+import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 import { toast } from "@/lib/toast";
 import {
   Sparkles,
@@ -447,7 +448,7 @@ export function OpenRouterIntegrationContent() {
                 : "Modo Demonstração"}
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-muted">
+          <p className="mt-1 text-2xs text-muted">
             {config.status === "connected"
               ? "Pronto para atender chamadas reais de IA"
               : "Respostas simuladas ativas"}
@@ -464,7 +465,7 @@ export function OpenRouterIntegrationContent() {
               {config.defaultModel.split("/").pop() || "Gemini 2.0 Flash"}
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-muted truncate font-mono">
+          <p className="mt-1 text-2xs text-muted truncate font-mono">
             {config.defaultModel}
           </p>
         </div>
@@ -488,7 +489,7 @@ export function OpenRouterIntegrationContent() {
               </span>
             )}
           </div>
-          <p className="mt-1 text-[11px] text-muted">
+          <p className="mt-1 text-2xs text-muted">
             {config.keyInfo?.isFreeTier ? "Nível Gratuito OpenRouter" : "Crédito Pré-pago"}
           </p>
         </div>
@@ -502,7 +503,7 @@ export function OpenRouterIntegrationContent() {
             <span className="text-lg font-bold text-foreground">{logs.length}</span>
             <span className="text-xs text-muted">chamadas</span>
           </div>
-          <p className="mt-1 text-[11px] text-muted">
+          <p className="mt-1 text-2xs text-muted">
             Últimos registros de telemetria
           </p>
         </div>
@@ -621,7 +622,7 @@ export function OpenRouterIntegrationContent() {
                     )}
                   </button>
                 </div>
-                <p className="mt-2 text-[11px] text-muted flex items-center gap-1.5">
+                <p className="mt-2 text-2xs text-muted flex items-center gap-1.5">
                   <Info className="size-3.5 shrink-0" />
                   Gere sua chave gratuitamente no painel em{" "}
                   <a
@@ -686,7 +687,7 @@ export function OpenRouterIntegrationContent() {
                     ))}
                   </optgroup>
                 </select>
-                <p className="mt-1.5 text-[11px] text-muted">
+                <p className="mt-1.5 text-2xs text-muted">
                   Utilizado caso um Agente de IA específico não tenha modelo customizado definido.
                 </p>
               </div>
@@ -701,7 +702,7 @@ export function OpenRouterIntegrationContent() {
                     <span className="text-xs font-semibold text-foreground block">
                       Habilitar chamadas do OpenRouter
                     </span>
-                    <span className="text-[11px] text-muted block">
+                    <span className="text-2xs text-muted block">
                       Quando ativo, os Agentes conversam usando os modelos de IA reais.
                     </span>
                   </div>
@@ -720,7 +721,7 @@ export function OpenRouterIntegrationContent() {
                   <label className="text-xs font-semibold text-foreground">
                     Temperatura Padrão: {config.temperature}
                   </label>
-                  <span className="text-[10px] text-muted">
+                  <span className="text-3xs text-muted">
                     {config.temperature < 0.4
                       ? "Preciso & Objetivo"
                       : config.temperature > 0.8
@@ -737,7 +738,7 @@ export function OpenRouterIntegrationContent() {
                   onChange={(e) => setConfig({ ...config, temperature: parseFloat(e.target.value) })}
                   className="w-full accent-accent"
                 />
-                <div className="flex justify-between text-[10px] text-muted mt-1">
+                <div className="flex justify-between text-3xs text-muted mt-1">
                   <span>0.0 (Focado)</span>
                   <span>0.7 (Padrão)</span>
                   <span>1.5 (Criativo)</span>
@@ -758,7 +759,7 @@ export function OpenRouterIntegrationContent() {
                   onChange={(e) => setConfig({ ...config, maxTokens: parseInt(e.target.value) || 1500 })}
                   className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                 />
-                <p className="mt-1.5 text-[11px] text-muted">
+                <p className="mt-1.5 text-2xs text-muted">
                   Aproximadamente 1.500 tokens equivalem a ~1.100 palavras em português.
                 </p>
               </div>
@@ -775,7 +776,7 @@ export function OpenRouterIntegrationContent() {
                   placeholder="https://meusmartlms.com"
                   className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                 />
-                <p className="mt-1.5 text-[11px] text-muted">
+                <p className="mt-1.5 text-2xs text-muted">
                   Recomendado pelo OpenRouter para identificação nas métricas de ranking de apps.
                 </p>
               </div>
@@ -792,7 +793,7 @@ export function OpenRouterIntegrationContent() {
                   placeholder="Smart LMS"
                   className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs text-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                 />
-                <p className="mt-1.5 text-[11px] text-muted">
+                <p className="mt-1.5 text-2xs text-muted">
                   Nome exibido nos relatórios de telemetria do seu console OpenRouter.
                 </p>
               </div>
@@ -875,7 +876,7 @@ export function OpenRouterIntegrationContent() {
                   <div>
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted">
+                        <span className="text-3xs font-bold uppercase tracking-wider text-muted">
                           {model.provider}
                         </span>
                         <h4 className="text-base font-bold text-foreground mt-0.5">
@@ -885,7 +886,7 @@ export function OpenRouterIntegrationContent() {
 
                       {model.badge && (
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          className={`text-3xs font-bold px-2 py-0.5 rounded-full ${
                             model.badgeTone === "success"
                               ? "bg-success-soft text-success-soft-foreground"
                               : model.badgeTone === "accent"
@@ -905,16 +906,16 @@ export function OpenRouterIntegrationContent() {
                     </p>
 
                     {model.recommendedFor && (
-                      <div className="mt-3 rounded-lg bg-background-secondary p-2.5 text-[11px] text-muted">
+                      <div className="mt-3 rounded-lg bg-background-secondary p-2.5 text-2xs text-muted">
                         <strong className="text-foreground">Ideal para:</strong> {model.recommendedFor}
                       </div>
                     )}
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-border/80 space-y-3">
-                    <div className="grid grid-cols-3 gap-2 text-[11px] text-muted">
+                    <div className="grid grid-cols-3 gap-2 text-2xs text-muted">
                       <div>
-                        <span className="block text-[10px] text-muted/70">Contexto</span>
+                        <span className="block text-3xs text-muted/70">Contexto</span>
                         <span className="font-semibold text-foreground">
                           {model.contextLength >= 1000000
                             ? `${(model.contextLength / 1000000).toFixed(0)}M tokens`
@@ -922,16 +923,16 @@ export function OpenRouterIntegrationContent() {
                         </span>
                       </div>
                       <div>
-                        <span className="block text-[10px] text-muted/70">Velocidade</span>
+                        <span className="block text-3xs text-muted/70">Velocidade</span>
                         <span className="font-semibold text-foreground">{model.speed}</span>
                       </div>
                       <div>
-                        <span className="block text-[10px] text-muted/70">Raciocínio</span>
+                        <span className="block text-3xs text-muted/70">Raciocínio</span>
                         <span className="font-semibold text-foreground">{model.reasoning}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-muted font-mono bg-background px-2.5 py-1.5 rounded-md">
+                    <div className="flex items-center justify-between text-2xs text-muted font-mono bg-background px-2.5 py-1.5 rounded-md">
                       <span>In: ${model.pricing.promptPerMillion.toFixed(2)}/1M</span>
                       <span>Out: ${model.pricing.completionPerMillion.toFixed(2)}/1M</span>
                     </div>
@@ -989,12 +990,12 @@ export function OpenRouterIntegrationContent() {
                     <Sliders className="size-4 text-accent" />
                     Parâmetros do Teste
                   </h3>
-                  <span className="text-[11px] text-muted font-mono">{sandboxModel}</span>
+                  <span className="text-2xs text-muted font-mono">{sandboxModel}</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-muted mb-1">
+                    <label className="block text-2xs font-semibold text-muted mb-1">
                       Modelo
                     </label>
                     <select
@@ -1011,7 +1012,7 @@ export function OpenRouterIntegrationContent() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-muted mb-1">
+                    <label className="block text-2xs font-semibold text-muted mb-1">
                       Temperatura: {sandboxTemperature}
                     </label>
                     <input
@@ -1026,7 +1027,7 @@ export function OpenRouterIntegrationContent() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-muted mb-1">
+                    <label className="block text-2xs font-semibold text-muted mb-1">
                       Max Tokens
                     </label>
                     <input
@@ -1044,14 +1045,14 @@ export function OpenRouterIntegrationContent() {
                     <label className="text-xs font-semibold text-foreground">
                       Instruções do Sistema (System Prompt)
                     </label>
-                    <div className="flex items-center gap-1 text-[11px] text-muted">
+                    <div className="flex items-center gap-1 text-2xs text-muted">
                       <span>Presets:</span>
                       {SYSTEM_PROMPT_PRESETS.map((p) => (
                         <button
                           key={p.name}
                           type="button"
                           onClick={() => setSandboxSystemPrompt(p.prompt)}
-                          className="hover:text-accent underline text-[10px] ml-1"
+                          className="hover:text-accent underline text-3xs ml-1"
                         >
                           {p.name.split(" ")[0]}
                         </button>
@@ -1073,14 +1074,14 @@ export function OpenRouterIntegrationContent() {
                     <label className="text-xs font-semibold text-foreground">
                       Mensagem do Aluno (User Message)
                     </label>
-                    <div className="flex items-center gap-1 text-[11px] text-muted">
+                    <div className="flex items-center gap-1 text-2xs text-muted">
                       <span>Exemplos:</span>
                       {USER_MESSAGE_PRESETS.map((msg, i) => (
                         <button
                           key={i}
                           type="button"
                           onClick={() => setSandboxUserPrompt(msg)}
-                          className="hover:text-accent underline text-[10px] ml-1"
+                          className="hover:text-accent underline text-3xs ml-1"
                         >
                           Exemplo {i + 1}
                         </button>
@@ -1128,7 +1129,7 @@ export function OpenRouterIntegrationContent() {
                     </h3>
 
                     {sandboxResult && (
-                      <span className="text-[11px] font-mono text-muted">
+                      <span className="text-2xs font-mono text-muted">
                         ⏱️ {sandboxResult.latencyMs}ms
                       </span>
                     )}
@@ -1151,7 +1152,7 @@ export function OpenRouterIntegrationContent() {
                     ) : sandboxResult?.text ? (
                       <div className="space-y-4">
                         {sandboxResult.simulated && (
-                          <div className="rounded-lg bg-warning-soft px-3 py-1.5 text-[11px] text-warning-soft-foreground flex items-center gap-1.5">
+                          <div className="rounded-lg bg-warning-soft px-3 py-1.5 text-2xs text-warning-soft-foreground flex items-center gap-1.5">
                             <Info className="size-3.5" />
                             Modo Demonstração (Adicione sua chave OpenRouter para respostas reais).
                           </div>
@@ -1173,7 +1174,7 @@ export function OpenRouterIntegrationContent() {
                 </div>
 
                 {sandboxResult?.usage && (
-                  <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-[11px] text-muted font-mono">
+                  <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-2xs text-muted font-mono">
                     <span>Prompt: {sandboxResult.usage.promptTokens} tok</span>
                     <span>Compl: {sandboxResult.usage.completionTokens} tok</span>
                     <span className="font-bold text-foreground">
@@ -1232,59 +1233,47 @@ export function OpenRouterIntegrationContent() {
                 </p>
               </div>
             ) : (
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-border text-muted uppercase text-[10px] tracking-wider">
-                      <th className="pb-3 font-semibold">Data / Hora</th>
-                      <th className="pb-3 font-semibold">Modelo</th>
-                      <th className="pb-3 font-semibold">Origem</th>
-                      <th className="pb-3 font-semibold">Tokens (In / Out / Tot)</th>
-                      <th className="pb-3 font-semibold">Latência</th>
-                      <th className="pb-3 font-semibold">Status</th>
-                      <th className="pb-3 font-semibold text-right">Prévia</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {logs.map((log) => (
-                      <tr key={log.id} className="hover:bg-surface-hover/50 transition">
-                        <td className="py-3 text-muted font-mono">
-                          {new Date(log.timestamp).toLocaleTimeString("pt-BR")}
-                        </td>
-                        <td className="py-3 font-semibold text-foreground">
-                          {log.model.split("/").pop()}
-                        </td>
-                        <td className="py-3 text-muted capitalize">{log.source}</td>
-                        <td className="py-3 font-mono text-muted">
-                          {log.promptTokens} / {log.completionTokens} /{" "}
-                          <strong className="text-foreground">{log.totalTokens}</strong>
-                        </td>
-                        <td className="py-3 font-mono text-muted">{log.latencyMs}ms</td>
-                        <td className="py-3">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              log.status === "success"
-                                ? "bg-success-soft text-success-soft-foreground"
-                                : "bg-danger-soft text-danger-soft-foreground"
-                            }`}
-                          >
-                            {log.status === "success" ? "OK" : "Erro"}
-                          </span>
-                        </td>
-                        <td className="py-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedLog(log)}
-                            className="text-accent hover:underline text-xs font-semibold"
-                          >
-                            Ver detalhes
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table.Root className="mt-4">
+                <Table.ScrollContainer>
+                  <Table.Content aria-label="Requisições recentes ao OpenRouter">
+                    <Table.Header>
+                      <Table.Column isRowHeader>Data e hora</Table.Column>
+                      <Table.Column>Modelo</Table.Column>
+                      <Table.Column>Origem</Table.Column>
+                      <Table.Column>Tokens (entrada / saída / total)</Table.Column>
+                      <Table.Column>Latência</Table.Column>
+                      <Table.Column>Status</Table.Column>
+                      <Table.Column className="text-right">Prévia</Table.Column>
+                    </Table.Header>
+                    <Table.Body>
+                      {logs.map((log) => (
+                        <Table.Row key={log.id} id={log.id}>
+                          <Table.Cell className="font-mono text-muted">
+                            {new Date(log.timestamp).toLocaleTimeString("pt-BR")}
+                          </Table.Cell>
+                          <Table.Cell className="font-semibold text-foreground">{log.model.split("/").pop()}</Table.Cell>
+                          <Table.Cell className="capitalize text-muted">{log.source}</Table.Cell>
+                          <Table.Cell className="font-mono text-muted">
+                            {log.promptTokens} / {log.completionTokens} /{" "}
+                            <strong className="text-foreground">{log.totalTokens}</strong>
+                          </Table.Cell>
+                          <Table.Cell className="font-mono text-muted">{log.latencyMs}ms</Table.Cell>
+                          <Table.Cell>
+                            <StatusBadge tone={log.status === "success" ? "positive" : "negative"}>
+                              {log.status === "success" ? "OK" : "Erro"}
+                            </StatusBadge>
+                          </Table.Cell>
+                          <Table.Cell className="text-right">
+                            <Button size="sm" variant="ghost" onPress={() => setSelectedLog(log)}>
+                              Ver detalhes
+                            </Button>
+                          </Table.Cell>
+                        </Table.Row>
+                      ))}
+                    </Table.Body>
+                  </Table.Content>
+                </Table.ScrollContainer>
+              </Table.Root>
             )}
           </div>
 
@@ -1304,19 +1293,19 @@ export function OpenRouterIntegrationContent() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-background-secondary p-3.5 rounded-xl">
                   <div>
-                    <span className="text-muted block text-[10px]">Modelo:</span>
+                    <span className="text-muted block text-3xs">Modelo:</span>
                     <span className="font-semibold text-foreground">{selectedLog.model}</span>
                   </div>
                   <div>
-                    <span className="text-muted block text-[10px]">Tokens Totais:</span>
+                    <span className="text-muted block text-3xs">Tokens Totais:</span>
                     <span className="font-semibold text-foreground font-mono">{selectedLog.totalTokens}</span>
                   </div>
                   <div>
-                    <span className="text-muted block text-[10px]">Latência:</span>
+                    <span className="text-muted block text-3xs">Latência:</span>
                     <span className="font-semibold text-foreground font-mono">{selectedLog.latencyMs}ms</span>
                   </div>
                   <div>
-                    <span className="text-muted block text-[10px]">Status:</span>
+                    <span className="text-muted block text-3xs">Status:</span>
                     <span className="font-semibold text-foreground capitalize">{selectedLog.status}</span>
                   </div>
                 </div>

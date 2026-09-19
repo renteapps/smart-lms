@@ -256,7 +256,7 @@ export function PandaVideoSelector({ value, currentVideoUrl, onChange }: PandaVi
             </div>
             <div className="min-w-0 flex-1">
               <div className="mb-1 flex items-center gap-2">
-                <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-success">
+                <span className="rounded-full bg-success/10 px-2 py-0.5 text-3xs font-bold uppercase tracking-wide text-success">
                   Selecionado
                 </span>
                 {displayedVideo.length > 0 && (
@@ -425,7 +425,7 @@ export function PandaVideoSelector({ value, currentVideoUrl, onChange }: PandaVi
                                 </span>
                                 <span className="min-w-0 flex-1">
                                   <span className="block break-words text-sm font-semibold leading-snug text-foreground">{folder.name}</span>
-                                  <span className="mt-0.5 block text-[11px] text-muted">{folder.videosCount} vídeo(s)</span>
+                                  <span className="mt-0.5 block text-2xs text-muted">{folder.videosCount} vídeo(s)</span>
                                 </span>
                                 <ChevronRight className="size-4 shrink-0 text-muted group-hover:text-accent" />
                               </button>
@@ -439,7 +439,7 @@ export function PandaVideoSelector({ value, currentVideoUrl, onChange }: PandaVi
                           <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
                             {debouncedSearch ? "Resultados" : currentFolder ? `Vídeos em ${currentFolder.name}` : "Vídeos na raiz"}
                           </h3>
-                          <span className="text-[11px] text-muted">{videos.length} carregado(s)</span>
+                          <span className="text-2xs text-muted">{videos.length} carregado(s)</span>
                         </div>
 
                         {videos.length === 0 ? (
@@ -476,7 +476,7 @@ export function PandaVideoSelector({ value, currentVideoUrl, onChange }: PandaVi
                                     {!video.thumbnail && (
                                       <span className="grid size-full place-items-center text-muted"><Film className="size-8" /></span>
                                     )}
-                                    <span className="absolute bottom-2 right-2 rounded-md bg-black/75 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white">
+                                    <span className="absolute bottom-2 right-2 rounded-md bg-black/75 px-1.5 py-0.5 text-2xs font-semibold tabular-nums text-white">
                                       {formatPandaVideoDuration(video.length)}
                                     </span>
                                     {active && (
@@ -487,10 +487,10 @@ export function PandaVideoSelector({ value, currentVideoUrl, onChange }: PandaVi
                                   </span>
                                   <span className="block p-3">
                                     <span className="line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-foreground" title={video.title}>{video.title}</span>
-                                    <span className="mt-2 flex items-center gap-1.5 truncate text-[11px] text-muted">
+                                    <span className="mt-2 flex items-center gap-1.5 truncate text-2xs text-muted">
                                       <Folder className="size-3 shrink-0" /> {folderLabel(video, folderNames)}
                                     </span>
-                                    <span className="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted">
+                                    <span className="mt-1.5 flex items-center gap-1.5 text-2xs text-muted">
                                       <CalendarDays className="size-3" /> {formatCreatedAt(video.createdAt)}
                                     </span>
                                   </span>

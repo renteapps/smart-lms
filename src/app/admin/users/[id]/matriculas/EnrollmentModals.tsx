@@ -266,7 +266,7 @@ export function CreateEnrollmentModal({
 
                           <div className="flex items-center gap-2 shrink-0">
                             {isAlreadyEnrolled && (
-                              <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/50">
+                              <span className="text-2xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/50">
                                 Já matriculado
                               </span>
                             )}
@@ -304,7 +304,7 @@ export function CreateEnrollmentModal({
                         <InfinityIcon className="size-4 text-accent" />
                         Indeterminado
                       </span>
-                      <span className="text-[11px] text-muted mt-0.5">Acesso vitalício</span>
+                      <span className="text-2xs text-muted mt-0.5">Acesso vitalício</span>
                     </button>
 
                     {/* 30 dias */}
@@ -321,7 +321,7 @@ export function CreateEnrollmentModal({
                         <Clock className="size-3.5 text-accent" />
                         30 dias
                       </span>
-                      <span className="text-[11px] text-muted mt-0.5">1 mês de acesso</span>
+                      <span className="text-2xs text-muted mt-0.5">1 mês de acesso</span>
                     </button>
 
                     {/* 90 dias */}
@@ -338,7 +338,7 @@ export function CreateEnrollmentModal({
                         <Clock className="size-3.5 text-accent" />
                         90 dias
                       </span>
-                      <span className="text-[11px] text-muted mt-0.5">3 meses de acesso</span>
+                      <span className="text-2xs text-muted mt-0.5">3 meses de acesso</span>
                     </button>
 
                     {/* 180 dias */}
@@ -355,7 +355,7 @@ export function CreateEnrollmentModal({
                         <Clock className="size-3.5 text-accent" />
                         180 dias
                       </span>
-                      <span className="text-[11px] text-muted mt-0.5">6 meses de acesso</span>
+                      <span className="text-2xs text-muted mt-0.5">6 meses de acesso</span>
                     </button>
 
                     {/* 365 dias */}
@@ -372,7 +372,7 @@ export function CreateEnrollmentModal({
                         <Clock className="size-3.5 text-accent" />
                         365 dias
                       </span>
-                      <span className="text-[11px] text-muted mt-0.5">1 ano de acesso</span>
+                      <span className="text-2xs text-muted mt-0.5">1 ano de acesso</span>
                     </button>
 
                     {/* Personalizado */}
@@ -389,7 +389,7 @@ export function CreateEnrollmentModal({
                         <Calendar className="size-3.5 text-accent" />
                         Personalizado
                       </span>
-                      <span className="text-[11px] text-muted mt-0.5">Escolher data limite</span>
+                      <span className="text-2xs text-muted mt-0.5">Escolher data limite</span>
                     </button>
                   </div>
 
@@ -611,7 +611,7 @@ export function EditEnrollmentModal({
                         <InfinityIcon className="size-4 text-accent" />
                         Indeterminado
                       </span>
-                      <span className="text-[11px] text-muted mt-0.5">Tornar vitalício</span>
+                      <span className="text-2xs text-muted mt-0.5">Tornar vitalício</span>
                     </button>
 
                     <button
@@ -627,7 +627,7 @@ export function EditEnrollmentModal({
                         <Clock className="size-3.5 text-accent" />
                         +30 dias
                       </span>
-                      <span className="text-[11px] text-muted mt-0.5">A partir de hoje</span>
+                      <span className="text-2xs text-muted mt-0.5">A partir de hoje</span>
                     </button>
 
                     <button
@@ -643,7 +643,7 @@ export function EditEnrollmentModal({
                         <Clock className="size-3.5 text-accent" />
                         +90 dias
                       </span>
-                      <span className="text-[11px] text-muted mt-0.5">A partir de hoje</span>
+                      <span className="text-2xs text-muted mt-0.5">A partir de hoje</span>
                     </button>
 
                     <button
@@ -659,7 +659,7 @@ export function EditEnrollmentModal({
                         <Clock className="size-3.5 text-accent" />
                         +180 dias
                       </span>
-                      <span className="text-[11px] text-muted mt-0.5">A partir de hoje</span>
+                      <span className="text-2xs text-muted mt-0.5">A partir de hoje</span>
                     </button>
 
                     <button
@@ -675,7 +675,7 @@ export function EditEnrollmentModal({
                         <Clock className="size-3.5 text-accent" />
                         +365 dias
                       </span>
-                      <span className="text-[11px] text-muted mt-0.5">A partir de hoje</span>
+                      <span className="text-2xs text-muted mt-0.5">A partir de hoje</span>
                     </button>
 
                     <button
@@ -691,7 +691,7 @@ export function EditEnrollmentModal({
                         <Calendar className="size-3.5 text-accent" />
                         Data específica
                       </span>
-                      <span className="text-[11px] text-muted mt-0.5">Definir dia exato</span>
+                      <span className="text-2xs text-muted mt-0.5">Definir dia exato</span>
                     </button>
                   </div>
 

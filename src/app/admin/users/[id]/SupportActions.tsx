@@ -181,7 +181,7 @@ export function SupportActions({
 
             {status.link && (
               <div className="mt-3">
-                <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold text-foreground">
+                <div className="mb-1.5 flex items-center gap-2 text-2xs font-semibold text-foreground">
                   <Link2 className="size-3.5" aria-hidden="true" />
                   <span>{LINK_LABELS[status.link.kind]} · uso único · expira em ~1h</span>
                 </div>
@@ -190,7 +190,7 @@ export function SupportActions({
                     readOnly
                     value={status.link.url}
                     onFocus={(e) => e.currentTarget.select()}
-                    className="min-w-0 flex-1 rounded-lg border border-hairline bg-surface px-2.5 py-1.5 font-mono text-[11px] text-foreground outline-none focus:ring-2 focus:ring-accent/40"
+                    className="min-w-0 flex-1 rounded-lg border border-hairline bg-surface px-2.5 py-1.5 font-mono text-2xs text-foreground outline-none focus:ring-2 focus:ring-accent/40"
                   />
                   <Button variant="secondary" size="sm" className="shrink-0 gap-1.5" onPress={copyLink}>
                     {copied ? <Check className="size-3.5" aria-hidden="true" /> : <Copy className="size-3.5" aria-hidden="true" />}

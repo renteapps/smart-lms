@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+import { PageHeader } from "@/components/ui/editorial";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
-  Building2,
   Check,
   CheckCircle2,
   Image as ImageIcon,
@@ -235,51 +234,19 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 pb-16">
-      {/* CABEÇALHO DA PÁGINA */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-separator pb-6">
-        <div>
-          <Link
-            href="/admin/business"
-            className="mb-3 inline-flex items-center gap-2 text-xs font-semibold text-muted transition-colors hover:text-accent"
-          >
-            <ArrowLeft className="size-3.5" aria-hidden="true" />
-            Voltar para Empresas & B2B
-          </Link>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-accent-soft text-accent-soft-foreground">
-              <Building2 className="size-5" />
-            </span>
-            {isEditing ? `Editar Empresa: ${tradeName || "Corporativo"}` : "Nova Empresa Corporativa"}
-          </h1>
-          <p className="mt-1 text-sm text-muted max-w-2xl">
-            Configure todos os dados cadastrais, ponto de contato RH, limites de licenças,
-            departamentos e cursos liberados para a organização parceira.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Link
-            href="/admin/business"
-            className="rounded-xl border border-border bg-surface px-4 py-2.5 text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-secondary transition-colors"
-          >
-            Cancelar
-          </Link>
-          <Button
-            type="submit"
-            variant="primary"
-            className="gap-2 shadow-sm font-semibold"
-            isDisabled={isSubmitting}
-          >
-            <Save className="size-4" />
-            {isSubmitting
-              ? "Salvando..."
-              : isEditing
-              ? "Salvar Alterações"
-              : "Cadastrar Empresa"}
+    <form onSubmit={handleSubmit} className="space-y-7 pb-16">
+      <PageHeader
+        back={{ href: "/admin/business", label: "Voltar para empresas" }}
+        eyebrow="Vendas & Corporativo"
+        title={isEditing ? `Editar empresa: ${tradeName || "Corporativo"}` : "Nova empresa corporativa"}
+        description="Configure todos os dados cadastrais, ponto de contato RH, limites de licenças, departamentos e cursos liberados para a organização parceira."
+        actions={
+          <Button type="submit" variant="primary" className="gap-2" isDisabled={isSubmitting}>
+            <Save className="size-4" aria-hidden="true" />
+            {isSubmitting ? "Salvando..." : isEditing ? "Salvar alterações" : "Cadastrar empresa"}
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* GRID PRINCIPAL: 2 COLUNAS (FORMULÁRIO CONTÍNUO + PREVIEW LATERAL) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -313,7 +280,7 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
                     required
                     className="w-full h-10 rounded-xl border border-border bg-surface px-3 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-accent"
                   />
-                  <span className="text-[11px] text-muted mt-1 block">
+                  <span className="text-2xs text-muted mt-1 block">
                     Nome visível nos relatórios e para os colaboradores.
                   </span>
                 </div>
@@ -363,7 +330,7 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
                       className="w-full h-10 rounded-xl border border-border bg-surface pl-8 pr-3 text-sm font-mono text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-accent"
                     />
                   </div>
-                  <span className="text-[11px] text-muted mt-1 block">
+                  <span className="text-2xs text-muted mt-1 block">
                     Ex: techcorp.io (sem @ ou https).
                   </span>
                 </div>
@@ -383,7 +350,7 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
                       <ShieldCheck className="size-4 text-accent" />
                       Auto-admissão de colaboradores pelo domínio corporativo
                     </span>
-                    <p className="text-[11px] text-muted mt-0.5 leading-relaxed">
+                    <p className="text-2xs text-muted mt-0.5 leading-relaxed">
                       Quando ativado, qualquer colaborador que criar uma conta ou fizer login com o e-mail{" "}
                       <span className="font-mono text-accent font-semibold">
                         @{domain || "dominio.com"}
@@ -454,7 +421,7 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
                       className="w-full h-10 rounded-xl border border-border bg-surface pl-9 pr-3 text-sm text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-accent"
                     />
                   </div>
-                  <span className="text-[11px] text-accent font-medium mt-1 block">
+                  <span className="text-2xs text-accent font-medium mt-1 block">
                     Utilizado para login em /empresa/gestao
                   </span>
                 </div>
@@ -500,7 +467,7 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
                     <label className="text-xs font-bold text-foreground">
                       Total de Vagas/Licenças <span className="text-danger">*</span>
                     </label>
-                    <span className="text-[11px] text-muted">Capacidade máxima</span>
+                    <span className="text-2xs text-muted">Capacidade máxima</span>
                   </div>
                   <input
                     type="number"
@@ -514,14 +481,14 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
 
                   {/* PRESETS RÁPIDOS */}
                   <div className="flex items-center gap-1.5 mt-2">
-                    <span className="text-[10px] text-muted font-medium mr-1">Presets:</span>
+                    <span className="text-3xs text-muted font-medium mr-1">Presets:</span>
                     {[10, 25, 50, 100, 250].map((count) => (
                       <button
                         key={count}
                         type="button"
                         onClick={() => setSeatsTotal(count)}
                         className={cn(
-                          "rounded-md border px-2 py-0.5 text-[11px] font-semibold transition-colors",
+                          "rounded-md border px-2 py-0.5 text-2xs font-semibold transition-colors",
                           seatsTotal === count
                             ? "border-accent bg-accent text-accent-foreground"
                             : "border-border bg-surface text-muted hover:text-foreground"
@@ -586,7 +553,7 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
                       className="w-full h-10 rounded-xl border border-border bg-surface pl-9 pr-3 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                     />
                   </div>
-                  <span className="text-[11px] text-muted mt-1 block">
+                  <span className="text-2xs text-muted mt-1 block">
                     Aprox. R$ {pricePerSeat} / vaga / mês
                   </span>
                 </div>
@@ -753,7 +720,7 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
                       {/* DETALHES */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-accent">
+                          <span className="text-3xs font-bold uppercase tracking-wider text-accent">
                             {course.category}
                           </span>
                           <span
@@ -770,7 +737,7 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
                         <h4 className="text-xs font-bold text-foreground truncate mt-0.5">
                           {course.title}
                         </h4>
-                        <p className="text-[11px] text-muted line-clamp-1 mt-0.5">
+                        <p className="text-2xs text-muted line-clamp-1 mt-0.5">
                           {course.duration} · {course.lessonCount} aulas
                         </p>
                       </div>
@@ -817,7 +784,7 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
                     {cnpj || "00.000.000/0001-00"}
                   </p>
                   {domain && (
-                    <span className="text-[10px] text-accent font-mono block">
+                    <span className="text-3xs text-accent font-mono block">
                       @{domain}
                     </span>
                   )}
@@ -838,7 +805,7 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
               {/* MÉTRICAS CHAVE */}
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-xl border border-border bg-surface-secondary/30 p-3">
-                  <span className="text-muted block text-[11px]">Vagas Totais</span>
+                  <span className="text-muted block text-2xs">Vagas Totais</span>
                   <strong className="text-sm font-bold text-foreground flex items-center gap-1.5 mt-0.5">
                     <Users className="size-4 text-accent" />
                     {seatsTotal} licenças
@@ -846,7 +813,7 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
                 </div>
 
                 <div className="rounded-xl border border-border bg-surface-secondary/30 p-3">
-                  <span className="text-muted block text-[11px]">Cursos Liberados</span>
+                  <span className="text-muted block text-2xs">Cursos Liberados</span>
                   <strong className="text-sm font-bold text-foreground flex items-center gap-1.5 mt-0.5">
                     <CheckCircle2 className="size-4 text-success" />
                     {selectedCourses.length} de {availableCourses.length}
@@ -856,7 +823,7 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
                 <div className="rounded-xl border border-border bg-surface-secondary/30 p-3 col-span-2">
                   <div className="flex justify-between items-center">
                     <div>
-                      <span className="text-muted block text-[11px]">Faturamento Recorrente</span>
+                      <span className="text-muted block text-2xs">Faturamento Recorrente</span>
                       <strong className="text-base font-bold text-foreground block mt-0.5">
                         {new Intl.NumberFormat("pt-BR", {
                           style: "currency",
@@ -866,7 +833,7 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
                       </strong>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] text-muted uppercase tracking-wider block">Plano</span>
+                      <span className="text-3xs text-muted uppercase tracking-wider block">Plano</span>
                       <span className="text-xs font-semibold capitalize text-foreground">
                         {planType.replace("_", " ")}
                       </span>
@@ -877,13 +844,13 @@ export function CompanyForm({ initialCompany, mode = "create", availableCourses 
 
               {/* GESTOR RESPONSÁVEL */}
               <div className="rounded-xl border border-border/80 bg-surface-secondary/20 p-3 text-xs space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">
+                <span className="text-3xs font-bold uppercase tracking-wider text-muted block">
                   Gestor Responsável
                 </span>
                 <p className="font-semibold text-foreground">
                   {managerName || "Não informado"}
                 </p>
-                <p className="text-muted text-[11px] truncate">
+                <p className="text-muted text-2xs truncate">
                   {managerEmail || "gestor@empresa.com"}
                 </p>
               </div>

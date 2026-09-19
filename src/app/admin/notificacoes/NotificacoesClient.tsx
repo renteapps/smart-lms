@@ -330,7 +330,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
             <div className="editorial-card p-6 space-y-5">
               <div className="flex items-center justify-between border-b border-border/60 pb-3">
                 <h2 className="text-lg font-extrabold text-foreground">Nova Notificação & Disparo</h2>
-                <span className="text-[11px] font-bold text-muted uppercase tracking-wider">
+                <span className="text-2xs font-bold text-muted uppercase tracking-wider">
                   Envio Manual
                 </span>
               </div>
@@ -483,7 +483,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                           <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
                             Campos Personalizados do E-mail (Resend)
                           </h3>
-                          <p className="text-[11px] text-muted">
+                          <p className="text-2xs text-muted">
                             Personalize o modelo, assunto, pré-texto e botão com link.
                           </p>
                         </div>
@@ -505,7 +505,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                         <Link
                           href={`/admin/integracoes/resend/modelos/${emailTemplate}`}
                           target="_blank"
-                          className="text-[11px] text-accent hover:underline font-semibold flex items-center gap-1"
+                          className="text-2xs text-accent hover:underline font-semibold flex items-center gap-1"
                         >
                           Customizar layout no Studio <ExternalLink className="size-3" />
                         </Link>
@@ -630,7 +630,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
 
                     {/* Variable Chips Toolbar */}
                     <div className="pt-2 border-t border-accent/15 space-y-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted flex items-center gap-1">
+                      <span className="text-3xs font-bold uppercase tracking-wider text-muted flex items-center gap-1">
                         <Tag className="size-3" /> Inserir Tag Dinâmica (Clique para Copiar / Inserir)
                       </span>
                       <div className="flex flex-wrap gap-1">
@@ -646,10 +646,10 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                             key={v.tag}
                             type="button"
                             onClick={() => handleInsertTag(v.tag)}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-border bg-surface hover:border-accent text-[11px] font-mono text-foreground transition-all"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-border bg-surface hover:border-accent text-2xs font-mono text-foreground transition-all"
                           >
                             <span className="text-accent font-bold">{v.tag}</span>
-                            <span className="text-[10px] text-muted font-sans">{v.label}</span>
+                            <span className="text-3xs text-muted font-sans">{v.label}</span>
                             {copiedTag === v.tag ? (
                               <Check className="size-2.5 text-success" />
                             ) : (
@@ -725,7 +725,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                         </div>
                       )}
 
-                      <div className="flex gap-2 text-[10px] pt-1">
+                      <div className="flex gap-2 text-3xs pt-1">
                         <StatusBadge tone="primary">
                           {notification.target_audience === "all" && "Todos"}
                           {notification.target_audience === "course" && "Curso"}
@@ -740,7 +740,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                       </div>
 
                       {notification.views !== undefined && (
-                        <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-border/50 text-[11px] text-muted">
+                        <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-border/50 text-2xs text-muted">
                           <div className="flex items-center gap-1" title="Visualizações">
                             <Eye className="size-3" />
                             <span>{notification.views}</span>
@@ -792,7 +792,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-foreground">Prévia do E-mail Renderizado</h3>
-                  <p className="text-[11px] text-muted">
+                  <p className="text-2xs text-muted">
                     Assunto: <span className="font-mono text-foreground font-semibold">{generatedPreviewSubject}</span>
                   </p>
                 </div>
@@ -836,7 +836,7 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
                   previewDevice === "mobile" ? "max-w-[360px]" : "max-w-[580px]"
                 }`}
               >
-                <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 flex items-center justify-between text-2xs text-slate-500 font-mono">
                   <span>Smart LMS &lt;onboarding@resend.dev&gt;</span>
                   <span>mariana@exemplo.com</span>
                 </div>

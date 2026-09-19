@@ -232,12 +232,12 @@ export function AdminPlanosClient({ initialPlans }: { initialPlans: Plan[] }) {
                                     {plan.name}
                                   </Link>
                                   {plan.isHighlighted && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold text-accent-soft-foreground">
+                                    <span className="inline-flex items-center gap-1 rounded bg-accent-soft px-1.5 py-0.5 text-3xs font-semibold text-accent-soft-foreground">
                                       <Sparkles className="size-3" /> Destaque
                                     </span>
                                   )}
                                   {plan.isB2B && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-default-100 px-1.5 py-0.5 text-[10px] font-semibold text-default-700">
+                                    <span className="inline-flex items-center gap-1 rounded bg-default-100 px-1.5 py-0.5 text-3xs font-semibold text-default-700">
                                       <Building2 className="size-3" /> B2B {plan.seats ? `(${plan.seats} vagas)` : ""}
                                     </span>
                                   )}
@@ -280,7 +280,7 @@ export function AdminPlanosClient({ initialPlans }: { initialPlans: Plan[] }) {
                                   <span className="inline-flex items-center gap-1 rounded-md bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary-soft-foreground w-fit">
                                     <Plug className="size-3" /> {plan.gateway || "Eduzz"}
                                   </span>
-                                  <p className="text-[11px] font-mono text-muted">ID: {plan.gatewayProductId}</p>
+                                  <p className="text-2xs font-mono text-muted">ID: {plan.gatewayProductId}</p>
                                 </div>
                               ) : (
                                 <span className="text-xs text-muted">Manual / Não vinculada</span>
@@ -327,12 +327,12 @@ export function AdminPlanosClient({ initialPlans }: { initialPlans: Plan[] }) {
                         </Link>
                         <div className="flex flex-wrap gap-1.5">
                           {plan.isHighlighted && (
-                            <span className="inline-flex items-center gap-1 rounded bg-accent-soft px-1.5 py-0.5 text-[10px] font-semibold text-accent-soft-foreground">
+                            <span className="inline-flex items-center gap-1 rounded bg-accent-soft px-1.5 py-0.5 text-3xs font-semibold text-accent-soft-foreground">
                               <Sparkles className="size-3" /> Destaque
                             </span>
                           )}
                           {plan.isB2B && (
-                            <span className="inline-flex items-center gap-1 rounded bg-default-100 px-1.5 py-0.5 text-[10px] font-semibold text-default-700">
+                            <span className="inline-flex items-center gap-1 rounded bg-default-100 px-1.5 py-0.5 text-3xs font-semibold text-default-700">
                               <Building2 className="size-3" /> B2B
                             </span>
                           )}

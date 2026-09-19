@@ -8,13 +8,13 @@ import {
   Clock3,
   Coins,
   FileText,
-  Search,
   Sparkles,
   X,
 } from "lucide-react";
+import { Button, Label, ListBox, ListBoxItem, SearchField, Select, Table, buttonVariants } from "@heroui/react";
 import { AgentMarkdown } from "@/components/agentes/AgentMarkdown";
 import BlockViewer from "@/components/classroom/BlockViewer";
-import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
+import { AdminEmptyState, PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
 import { formatAiCredits } from "@/lib/aiCredits";
 import { requireAdmin } from "@/lib/supabase/auth";
 import type { LessonContentBlock } from "@/types/course";
@@ -244,28 +244,50 @@ export default async function PersonalizedLessonHistoryPage({ searchParams }: { 
       <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
         <div className="border-b border-border p-4 sm:p-5">
           <Form action="/admin/aulas-personalizadas" className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_minmax(14rem,0.8fr)_12rem_auto]">
-            <label className="relative block">
-              <span className="sr-only">Buscar aluno</span>
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
-              <input name="q" defaultValue={q} placeholder="Aluno, e-mail ou ID" className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-3 text-sm outline-none focus:border-accent" />
-            </label>
-            <label>
-              <span className="sr-only">Filtrar por aula</span>
-              <select name="lesson" defaultValue={lessonFilter} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-accent">
-                <option value="">Todas as aulas</option>
-                {lessonOptions.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title} · {lesson.courseTitle}</option>)}
-              </select>
-            </label>
-            <label>
-              <span className="sr-only">Filtrar por status</span>
-              <select name="status" defaultValue={statusFilter} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-accent">
-                <option value="">Todos os status</option>
-                <option value="ready">Concluídas</option>
-                <option value="generating">Em andamento</option>
-                <option value="failed">Com falha</option>
-              </select>
-            </label>
-            <button type="submit" className="h-11 rounded-xl bg-accent px-5 text-sm font-semibold text-on-primary hover:brightness-95">Filtrar</button>
+            <SearchField name="q" defaultValue={q} aria-label="Buscar aluno">
+              <Label className="sr-only">Buscar aluno</Label>
+              <SearchField.Group>
+                <SearchField.SearchIcon />
+                <SearchField.Input placeholder="Aluno, e-mail ou ID" />
+                <SearchField.ClearButton />
+              </SearchField.Group>
+            </SearchField>
+
+            <Select name="lesson" aria-label="Filtrar por aula" defaultSelectedKey={lessonFilter || "all"}>
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBoxItem id="all">Todas as aulas</ListBoxItem>
+                  {lessonOptions.map((lesson) => (
+                    <ListBoxItem key={lesson.id} id={lesson.id}>
+                      {lesson.title} · {lesson.courseTitle}
+                    </ListBoxItem>
+                  ))}
+                </ListBox>
+              </Select.Popover>
+            </Select>
+
+            <Select name="status" aria-label="Filtrar por status" defaultSelectedKey={statusFilter || "all"}>
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBoxItem id="all">Todos os status</ListBoxItem>
+                  <ListBoxItem id="ready">Concluídas</ListBoxItem>
+                  <ListBoxItem id="generating">Em andamento</ListBoxItem>
+                  <ListBoxItem id="failed">Com falha</ListBoxItem>
+                </ListBox>
+              </Select.Popover>
+            </Select>
+
+            <Button type="submit" variant="primary">
+              Filtrar
+            </Button>
           </Form>
           {(q || lessonFilter || statusFilter) && (
             <div className="mt-3 flex items-center justify-between gap-3 text-xs text-muted">
@@ -276,40 +298,84 @@ export default async function PersonalizedLessonHistoryPage({ searchParams }: { 
         </div>
 
         {rows.length === 0 ? (
-          <div className="grid min-h-72 place-items-center px-6 text-center">
-            <div>
-              <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-background"><BookOpen className="size-5 text-muted" /></span>
-              <p className="mt-4 font-semibold text-foreground">Nenhuma geração encontrada</p>
-              <p className="mt-1 text-sm text-muted">Quando um aluno gerar uma aula personalizada, a versão aparecerá aqui.</p>
-            </div>
-          </div>
+          <AdminEmptyState
+            icon={BookOpen}
+            title="Nenhuma geração encontrada"
+            description="Quando um aluno gerar uma aula personalizada, a versão aparecerá aqui."
+            action={
+              q || lessonFilter || statusFilter ? (
+                <Link href="/admin/aulas-personalizadas" className={buttonVariants({ variant: "secondary", size: "sm" })}>
+                  Limpar filtros
+                </Link>
+              ) : undefined
+            }
+          />
         ) : (
           <>
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-border bg-background-secondary text-xs uppercase tracking-wide text-muted">
-                  <tr><th className="px-5 py-3">Aluno</th><th className="px-5 py-3">Aula</th><th className="px-5 py-3">Versão</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Créditos</th><th className="px-5 py-3">Data</th><th className="px-5 py-3"><span className="sr-only">Ações</span></th></tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {rows.map((row) => {
-                    const status = statusDetails[row.status];
-                    return (
-                      <tr key={row.id} className="hover:bg-background-secondary/60">
-                        <td className="px-5 py-4"><Link href={`/admin/users/${row.userId}`} className="flex items-center gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent-soft text-xs font-bold text-accent-soft-foreground">{initials(row.studentName)}</span><span><span className="block font-semibold text-foreground">{row.studentName}</span><span className="block text-xs text-muted">{row.studentEmail || row.userId}</span></span></Link></td>
-                        <td className="px-5 py-4"><span className="block font-medium text-foreground">{row.lessonTitle}</span><span className="block text-xs text-muted">{row.courseTitle}</span></td>
-                        <td className="px-5 py-4"><span className="font-semibold text-foreground">v{row.version}</span><span className="block text-xs text-muted">revisão {row.revision}</span></td>
-                        <td className="px-5 py-4"><StatusBadge tone={status.tone}>{status.label}</StatusBadge></td>
-                        <td className="px-5 py-4 font-medium text-foreground">{formatAiCredits(row.credits)}</td>
-                        <td className="whitespace-nowrap px-5 py-4 text-muted">{formatDate(row.finishedAt ?? row.createdAt)}</td>
-                        <td className="px-5 py-4 text-right"><Link href={`${historyHref(currentQuery, { generation: row.id })}#conteudo-gerado`} className="font-semibold text-accent hover:underline">Ver conteúdo</Link></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="hidden md:block">
+              <Table.Root>
+                <Table.ScrollContainer>
+                  <Table.Content aria-label="Histórico de aulas personalizadas geradas">
+                    <Table.Header>
+                      <Table.Column isRowHeader>Aluno</Table.Column>
+                      <Table.Column>Aula</Table.Column>
+                      <Table.Column>Versão</Table.Column>
+                      <Table.Column>Status</Table.Column>
+                      <Table.Column>Créditos</Table.Column>
+                      <Table.Column>Data</Table.Column>
+                      <Table.Column>
+                        <span className="sr-only">Ações</span>
+                      </Table.Column>
+                    </Table.Header>
+                    <Table.Body>
+                      {rows.map((row) => {
+                        const status = statusDetails[row.status];
+                        return (
+                          <Table.Row key={row.id} id={row.id}>
+                            <Table.Cell>
+                              <Link href={`/admin/users/${row.userId}`} className="flex items-center gap-3">
+                                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent-soft text-xs font-bold text-accent-soft-foreground">
+                                  {initials(row.studentName)}
+                                </span>
+                                <span>
+                                  <span className="block font-semibold text-foreground">{row.studentName}</span>
+                                  <span className="block text-xs text-muted">{row.studentEmail || row.userId}</span>
+                                </span>
+                              </Link>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <span className="block font-medium text-foreground">{row.lessonTitle}</span>
+                              <span className="block text-xs text-muted">{row.courseTitle}</span>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <span className="font-semibold text-foreground">v{row.version}</span>
+                              <span className="block text-xs text-muted">revisão {row.revision}</span>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
+                            </Table.Cell>
+                            <Table.Cell className="font-medium text-foreground">{formatAiCredits(row.credits)}</Table.Cell>
+                            <Table.Cell className="whitespace-nowrap text-muted">
+                              {formatDate(row.finishedAt ?? row.createdAt)}
+                            </Table.Cell>
+                            <Table.Cell className="text-right">
+                              <Link
+                                href={`${historyHref(currentQuery, { generation: row.id })}#conteudo-gerado`}
+                                className="font-semibold text-accent hover:underline"
+                              >
+                                Ver conteúdo
+                              </Link>
+                            </Table.Cell>
+                          </Table.Row>
+                        );
+                      })}
+                    </Table.Body>
+                  </Table.Content>
+                </Table.ScrollContainer>
+              </Table.Root>
             </div>
 
-            <ul className="divide-y divide-border md:hidden">
+            <ul className="divide-y divide-separator md:hidden">
               {rows.map((row) => {
                 const status = statusDetails[row.status];
                 return (

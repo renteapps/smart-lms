@@ -228,7 +228,7 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
                                   <div className="min-w-0">
                                     <span className="line-clamp-2">{article.title}</span>
                                     {article.featured && (
-                                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-accent">
+                                      <span className="inline-flex items-center gap-1 text-2xs font-bold text-accent">
                                         <Sparkles className="size-3" /> Destaque
                                       </span>
                                     )}

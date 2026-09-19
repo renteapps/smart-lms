@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Banknote, CalendarRange, CircleDollarSign, Coins, Gauge, Landmark, ShieldCheck, Sparkles, Users } from "lucide-react";
-import { Button, Card, ProgressBar, Tabs, toast } from "@heroui/react";
+import { Button, Card, ProgressBar, Table, Tabs, toast } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
 import { formatAiCostBrl, formatAiCredits } from "@/lib/aiCredits";
 import { calculateAiPrice, calculateTokenCostUsd } from "@/lib/aiPricing";
@@ -96,7 +96,7 @@ function Field({ label, value, onChange, step = "1", min = "0", help }: {
     <label className="block space-y-1.5">
       <span className="text-xs font-semibold text-muted">{label}</span>
       <input className={inputClass} type="number" min={min} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} />
-      {help && <span className="block text-[11px] leading-4 text-muted">{help}</span>}
+      {help && <span className="block text-2xs leading-4 text-muted">{help}</span>}
     </label>
   );
 }
@@ -314,17 +314,17 @@ export function CreditsAdminClient({ initialSettings, initialPolicies, initialMo
               <Card.Description>Reserva máxima por usuário usando 100% da franquia até o fim do período contratado.</Card.Description>
             </Card.Header>
             <Card.Content className="overflow-x-auto p-0">
-              <table className="min-w-[900px] w-full text-left text-xs">
-                <thead className="border-b border-border bg-background-secondary text-muted"><tr>{["Plano", "Janelas mensais", "Créditos prometidos", "Valor nominal", "Caixa recomendado", "% do preço"].map((heading) => <th key={heading} className="px-4 py-3 font-semibold">{heading}</th>)}</tr></thead>
-                <tbody>{forecast.planStress.map((plan) => <tr key={plan.planId} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3"><p className="font-semibold">{plan.planName}</p><p className="text-muted">{frequencyLabel(plan.frequency)} · preço {money(plan.planPriceBrl)}</p>{plan.usesRollingYearAssumption && <p className="mt-1 text-warning">Estimativa móvel de 12 meses</p>}</td>
-                  <td className="px-4 py-3"><p className="font-bold">{integer(plan.entitlementWindows)}</p><p className="text-muted">renovações de franquia</p></td>
-                  <td className="px-4 py-3 font-semibold">{formatAiCredits(plan.futureCredits)}</td>
-                  <td className="px-4 py-3">{money(plan.nominalCommitmentBrl)}</td>
-                  <td className="px-4 py-3 font-bold text-foreground">{money(plan.recommendedCashBrl)}</td>
-                  <td className="px-4 py-3">{plan.reserveToPricePercent == null ? "—" : `${plan.reserveToPricePercent.toFixed(1)}%`}</td>
-                </tr>)}</tbody>
-              </table>
+              <Table.Root><Table.ScrollContainer><Table.Content aria-label="Simulação de nova assinatura por plano">
+                <Table.Header>{["Plano", "Janelas mensais", "Créditos prometidos", "Valor nominal", "Caixa recomendado", "% do preço"].map((heading, index) => <Table.Column key={heading} isRowHeader={index === 0}>{heading}</Table.Column>)}</Table.Header>
+                <Table.Body>{forecast.planStress.map((plan) => <Table.Row key={plan.planId} id={plan.planId}>
+                  <Table.Cell><p className="font-semibold">{plan.planName}</p><p className="text-muted">{frequencyLabel(plan.frequency)} · preço {money(plan.planPriceBrl)}</p>{plan.usesRollingYearAssumption && <p className="mt-1 text-warning">Estimativa móvel de 12 meses</p>}</Table.Cell>
+                  <Table.Cell><p className="font-bold">{integer(plan.entitlementWindows)}</p><p className="text-muted">renovações de franquia</p></Table.Cell>
+                  <Table.Cell className="font-semibold">{formatAiCredits(plan.futureCredits)}</Table.Cell>
+                  <Table.Cell>{money(plan.nominalCommitmentBrl)}</Table.Cell>
+                  <Table.Cell className="font-bold text-foreground">{money(plan.recommendedCashBrl)}</Table.Cell>
+                  <Table.Cell>{plan.reserveToPricePercent == null ? "—" : `${plan.reserveToPricePercent.toFixed(1)}%`}</Table.Cell>
+                </Table.Row>)}</Table.Body>
+              </Table.Content></Table.ScrollContainer></Table.Root>
               {forecast.planStress.length === 0 && <p className="p-8 text-center text-sm text-muted">Nenhum plano ativo para simular.</p>}
             </Card.Content>
           </Card>
@@ -335,18 +335,18 @@ export function CreditsAdminClient({ initialSettings, initialPolicies, initialMo
               <Card.Description>Aplica a precedência real: plano individual antes do empresarial e maior franquia em caso de empate.</Card.Description>
             </Card.Header>
             <Card.Content className="overflow-x-auto p-0">
-              <table className="min-w-[1050px] w-full text-left text-xs">
-                <thead className="border-b border-border bg-background-secondary text-muted"><tr>{["Plano / contrato", "Escopo", "Beneficiários", "Franquias futuras", "Créditos restantes", "Fim do período", "Caixa recomendado"].map((heading) => <th key={heading} className="px-4 py-3 font-semibold">{heading}</th>)}</tr></thead>
-                <tbody>{forecast.rows.map((row) => <tr key={row.subscriptionId} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3"><p className="font-semibold">{row.planName}</p><p className="text-muted">{frequencyLabel(row.frequency)} · contrato {row.subscriptionId.slice(0, 8)}</p></td>
-                  <td className="px-4 py-3">{row.scope === "individual" ? "Individual" : "Organização"}</td>
-                  <td className="px-4 py-3">{integer(row.beneficiaries)}</td>
-                  <td className="px-4 py-3">{integer(row.entitlementWindows)}</td>
-                  <td className="px-4 py-3 font-semibold">{formatAiCredits(row.futureCredits)}</td>
-                  <td className="px-4 py-3"><p>{row.periodEnd ? new Date(row.periodEnd).toLocaleDateString("pt-BR") : "Sem data registrada"}</p>{row.isEstimatedPeriod && <p className="text-warning">período estimado</p>}</td>
-                  <td className="px-4 py-3 font-bold">{money(row.recommendedCashBrl)}</td>
-                </tr>)}</tbody>
-              </table>
+              <Table.Root><Table.ScrollContainer><Table.Content aria-label="Compromissos de créditos já contratados">
+                <Table.Header>{["Plano / contrato", "Escopo", "Beneficiários", "Franquias futuras", "Créditos restantes", "Fim do período", "Caixa recomendado"].map((heading, index) => <Table.Column key={heading} isRowHeader={index === 0}>{heading}</Table.Column>)}</Table.Header>
+                <Table.Body>{forecast.rows.map((row) => <Table.Row key={row.subscriptionId} id={row.subscriptionId}>
+                  <Table.Cell><p className="font-semibold">{row.planName}</p><p className="text-muted">{frequencyLabel(row.frequency)} · contrato {row.subscriptionId.slice(0, 8)}</p></Table.Cell>
+                  <Table.Cell>{row.scope === "individual" ? "Individual" : "Organização"}</Table.Cell>
+                  <Table.Cell>{integer(row.beneficiaries)}</Table.Cell>
+                  <Table.Cell>{integer(row.entitlementWindows)}</Table.Cell>
+                  <Table.Cell className="font-semibold">{formatAiCredits(row.futureCredits)}</Table.Cell>
+                  <Table.Cell><p>{row.periodEnd ? new Date(row.periodEnd).toLocaleDateString("pt-BR") : "Sem data registrada"}</p>{row.isEstimatedPeriod && <p className="text-warning">período estimado</p>}</Table.Cell>
+                  <Table.Cell className="font-bold">{money(row.recommendedCashBrl)}</Table.Cell>
+                </Table.Row>)}</Table.Body>
+              </Table.Content></Table.ScrollContainer></Table.Root>
               {forecast.rows.length === 0 && <div className="p-8 text-center"><CalendarRange className="mx-auto size-8 text-muted" /><p className="mt-3 font-semibold text-foreground">Ainda não há assinaturas ativas</p><p className="mt-1 text-sm text-muted">A tabela acima mostra quanto reservar quando a primeira venda entrar.</p></div>}
             </Card.Content>
           </Card>
@@ -372,7 +372,7 @@ export function CreditsAdminClient({ initialSettings, initialPolicies, initialMo
 
           <Card><Card.Header><Card.Title>Preços por modelo</Card.Title><Card.Description>Modelos sem preço conhecido ou desativados ficam bloqueados.</Card.Description></Card.Header><Card.Content className="gap-3">
             {models.map((model, index) => <div key={model.model} className="grid gap-3 rounded-xl border border-border p-4 lg:grid-cols-[minmax(180px,1.4fr)_1fr_1fr_auto] lg:items-end">
-              <div><p className="font-semibold">{model.display_name}</p><p className="text-xs text-muted">{model.model}</p>{activeRate > 0 && (() => { const base = { exchangeRate: activeRate, exchangeBufferPercent: settings.exchangeBufferPercent, marginPercent: settings.targetMarginPercent, creditValueBrl: settings.creditValueBrl }; const inputSample = calculateAiPrice({ ...base, providerCostUsd: calculateTokenCostUsd(1000, 0, number(model.prompt_usd_per_million), 0) }); const outputSample = calculateAiPrice({ ...base, providerCostUsd: calculateTokenCostUsd(0, 1000, 0, number(model.completion_usd_per_million)) }); return <p className="mt-1 text-[11px] font-semibold text-accent">Por 1k tokens: entrada {formatAiCredits(inputSample.credits)} créditos · saída {formatAiCredits(outputSample.credits)} créditos</p>; })()}</div>
+              <div><p className="font-semibold">{model.display_name}</p><p className="text-xs text-muted">{model.model}</p>{activeRate > 0 && (() => { const base = { exchangeRate: activeRate, exchangeBufferPercent: settings.exchangeBufferPercent, marginPercent: settings.targetMarginPercent, creditValueBrl: settings.creditValueBrl }; const inputSample = calculateAiPrice({ ...base, providerCostUsd: calculateTokenCostUsd(1000, 0, number(model.prompt_usd_per_million), 0) }); const outputSample = calculateAiPrice({ ...base, providerCostUsd: calculateTokenCostUsd(0, 1000, 0, number(model.completion_usd_per_million)) }); return <p className="mt-1 text-2xs font-semibold text-accent">Por 1k tokens: entrada {formatAiCredits(inputSample.credits)} créditos · saída {formatAiCredits(outputSample.credits)} créditos</p>; })()}</div>
               <Field label="Entrada / 1M tokens (USD)" value={model.prompt_usd_per_million} step="0.0001" onChange={(value) => setModels((current) => current.map((item, i) => i === index ? { ...item, prompt_usd_per_million: value } : item))} />
               <Field label="Saída / 1M tokens (USD)" value={model.completion_usd_per_million} step="0.0001" onChange={(value) => setModels((current) => current.map((item, i) => i === index ? { ...item, completion_usd_per_million: value } : item))} />
               <div className="flex items-center gap-3"><SwitchControl checked={model.enabled} onChange={(enabled) => setModels((current) => current.map((item, i) => i === index ? { ...item, enabled } : item))} label="Liberado" /><Button size="sm" variant="outline" isDisabled={isPending} onPress={() => run(() => saveModelPricing({ model: model.model, promptUsdPerMillion: number(model.prompt_usd_per_million), completionUsdPerMillion: number(model.completion_usd_per_million), enabled: model.enabled }))}>Salvar</Button></div>
@@ -409,8 +409,8 @@ export function CreditsAdminClient({ initialSettings, initialPolicies, initialMo
 
         <Tabs.Panel id="usage" className="space-y-4 pt-5">
           <div className="flex flex-wrap gap-3"><select className={inputClass + " max-w-56"} value={featureFilter} onChange={(event) => { setFeatureFilter(event.target.value); setPage(1); }}><option value="all">Todas as funções</option>{policies.map((policy) => <option key={policy.feature} value={policy.feature}>{policy.display_name}</option>)}</select><select className={inputClass + " max-w-48"} value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}><option value="all">Todos os status</option><option value="settled">Liquidado</option><option value="reserved">Reservado</option><option value="refunded">Estornado</option><option value="failed">Falhou</option></select><select aria-label="Agrupar consumo por" className={inputClass + " max-w-48"} value={groupBy} onChange={(event) => setGroupBy(event.target.value as typeof groupBy)}><option value="feature">Agrupar por função</option><option value="user">Agrupar por usuário</option><option value="model">Agrupar por modelo</option></select></div>
-          <Card><Card.Header><Card.Title>Resumo agrupado</Card.Title><Card.Description>Maiores consumidores por {groupBy === "feature" ? "função" : groupBy === "user" ? "usuário" : "modelo"}.</Card.Description></Card.Header><Card.Content className="overflow-x-auto p-0"><table className="min-w-[650px] w-full text-left text-xs"><thead className="border-b border-border bg-background-secondary text-muted"><tr><th className="px-4 py-3">Grupo</th><th className="px-4 py-3">Chamadas</th><th className="px-4 py-3">Tokens</th><th className="px-4 py-3">Custo real</th><th className="px-4 py-3">Créditos</th></tr></thead><tbody>{groupedUsage.map((group) => <tr key={group.label} className="border-b border-border last:border-0"><td className="px-4 py-3 font-semibold">{group.label}</td><td className="px-4 py-3">{integer(group.calls)}</td><td className="px-4 py-3">{integer(group.tokens)}</td><td className="px-4 py-3">{formatAiCostBrl(group.cost)}</td><td className="px-4 py-3">{formatAiCredits(group.credits)}</td></tr>)}</tbody></table></Card.Content></Card>
-          <Card><Card.Content className="overflow-x-auto p-0"><table className="min-w-[1050px] w-full text-left text-xs"><thead className="border-b border-border bg-background-secondary text-muted"><tr>{["Data", "Usuário", "Função / modelo", "Status", "Tokens", "Custo", "Créditos", "Margem", "Auditoria"].map((heading) => <th key={heading} className="px-4 py-3 font-semibold">{heading}</th>)}</tr></thead><tbody>{shownEvents.map((event) => { const profile = event.user_id ? profileMap.get(event.user_id) : null; const revenue = number(event.nominal_revenue_brl); const eventMargin = revenue > 0 ? ((revenue - number(event.provider_cost_brl)) / revenue) * 100 : 0; return <tr key={event.id} className="border-b border-border last:border-0"><td className="px-4 py-3 whitespace-nowrap">{new Date(event.created_at).toLocaleString("pt-BR")}</td><td className="px-4 py-3"><p className="font-semibold">{profile?.full_name || "Sistema"}</p><p className="text-muted">{profile?.email || event.user_id?.slice(0, 8) || "—"}</p></td><td className="px-4 py-3"><p className="font-semibold">{event.feature}</p><p className="text-muted">{event.model}</p></td><td className="px-4 py-3">{event.status}{event.pricing_source === "estimated" ? " · estimado" : ""}</td><td className="px-4 py-3">{integer(number(event.prompt_tokens) + number(event.completion_tokens))}</td><td className="px-4 py-3">{formatAiCostBrl(number(event.provider_cost_brl))}</td><td className="px-4 py-3 font-bold">{formatAiCredits(number(event.credits_charged))}</td><td className="px-4 py-3">{eventMargin.toFixed(1)}%</td><td className="px-4 py-3"><p title={event.id}>{event.id.slice(0, 8)}</p><p className="text-muted" title={event.generation_id || ""}>{event.generation_id?.slice(0, 12) || event.error_code || "—"}</p></td></tr>; })}</tbody></table>{shownEvents.length === 0 && <p className="p-8 text-center text-sm text-muted">Nenhum evento no período e filtros escolhidos.</p>}</Card.Content></Card>
+          <Card><Card.Header><Card.Title>Resumo agrupado</Card.Title><Card.Description>Maiores consumidores por {groupBy === "feature" ? "função" : groupBy === "user" ? "usuário" : "modelo"}.</Card.Description></Card.Header><Card.Content className="overflow-x-auto p-0"><Table.Root><Table.ScrollContainer><Table.Content aria-label="Resumo de consumo agrupado"><Table.Header><Table.Column isRowHeader>Grupo</Table.Column><Table.Column>Chamadas</Table.Column><Table.Column>Tokens</Table.Column><Table.Column>Custo real</Table.Column><Table.Column>Créditos</Table.Column></Table.Header><Table.Body>{groupedUsage.map((group) => <Table.Row key={group.label} id={group.label}><Table.Cell className="font-semibold">{group.label}</Table.Cell><Table.Cell>{integer(group.calls)}</Table.Cell><Table.Cell>{integer(group.tokens)}</Table.Cell><Table.Cell>{formatAiCostBrl(group.cost)}</Table.Cell><Table.Cell>{formatAiCredits(group.credits)}</Table.Cell></Table.Row>)}</Table.Body></Table.Content></Table.ScrollContainer></Table.Root></Card.Content></Card>
+          <Card><Card.Content className="overflow-x-auto p-0"><Table.Root><Table.ScrollContainer><Table.Content aria-label="Eventos de consumo de créditos"><Table.Header>{["Data", "Usuário", "Função / modelo", "Status", "Tokens", "Custo", "Créditos", "Margem", "Auditoria"].map((heading, index) => <Table.Column key={heading} isRowHeader={index === 0}>{heading}</Table.Column>)}</Table.Header><Table.Body>{shownEvents.map((event) => { const profile = event.user_id ? profileMap.get(event.user_id) : null; const revenue = number(event.nominal_revenue_brl); const eventMargin = revenue > 0 ? ((revenue - number(event.provider_cost_brl)) / revenue) * 100 : 0; return <Table.Row key={event.id} id={event.id}><Table.Cell className="whitespace-nowrap">{new Date(event.created_at).toLocaleString("pt-BR")}</Table.Cell><Table.Cell><p className="font-semibold">{profile?.full_name || "Sistema"}</p><p className="text-muted">{profile?.email || event.user_id?.slice(0, 8) || "—"}</p></Table.Cell><Table.Cell><p className="font-semibold">{event.feature}</p><p className="text-muted">{event.model}</p></Table.Cell><Table.Cell>{event.status}{event.pricing_source === "estimated" ? " · estimado" : ""}</Table.Cell><Table.Cell>{integer(number(event.prompt_tokens) + number(event.completion_tokens))}</Table.Cell><Table.Cell>{formatAiCostBrl(number(event.provider_cost_brl))}</Table.Cell><Table.Cell className="font-bold">{formatAiCredits(number(event.credits_charged))}</Table.Cell><Table.Cell>{eventMargin.toFixed(1)}%</Table.Cell><Table.Cell><p title={event.id}>{event.id.slice(0, 8)}</p><p className="text-muted" title={event.generation_id || ""}>{event.generation_id?.slice(0, 12) || event.error_code || "—"}</p></Table.Cell></Table.Row>; })}</Table.Body></Table.Content></Table.ScrollContainer></Table.Root>{shownEvents.length === 0 && <p className="p-8 text-center text-sm text-muted">Nenhum evento no período e filtros escolhidos.</p>}</Card.Content></Card>
           <div className="flex items-center justify-between text-xs text-muted"><span>{filtered.length} eventos</span><div className="flex items-center gap-2"><Button size="sm" variant="outline" isDisabled={page <= 1} onPress={() => setPage((current) => current - 1)}>Anterior</Button><span>{page} de {pageCount}</span><Button size="sm" variant="outline" isDisabled={page >= pageCount} onPress={() => setPage((current) => current + 1)}>Próxima</Button></div></div>
         </Tabs.Panel>
       </Tabs.Root>

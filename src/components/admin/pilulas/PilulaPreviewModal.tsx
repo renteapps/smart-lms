@@ -146,7 +146,7 @@ export function PilulaPreviewModal({ pilula, onClose }: PilulaPreviewModalProps)
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold text-foreground">Áudio / Podpill da Prática</p>
-                      <p className="text-[11px] text-muted">{pilula.estimatedMinutes} min de escuta guiada</p>
+                      <p className="text-2xs text-muted">{pilula.estimatedMinutes} min de escuta guiada</p>
                     </div>
                   </div>
 

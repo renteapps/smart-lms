@@ -247,7 +247,7 @@ export function AnalyticsHubView({
                             {card.title}
                           </Card.Title>
                           {card.badgeText && (
-                            <Chip size="sm" variant="soft" color="accent" className="text-[11px] font-semibold">
+                            <Chip size="sm" variant="soft" color="accent" className="text-2xs font-semibold">
                               {card.badgeText}
                             </Chip>
                           )}
@@ -265,12 +265,12 @@ export function AnalyticsHubView({
                   <div className="grid grid-cols-3 gap-2 rounded-xl bg-background-secondary p-3 border border-border/50">
                     {card.metrics.map((metric, idx) => (
                       <div key={idx} className="space-y-1">
-                        <p className="text-[11px] font-medium text-muted truncate">{metric.label}</p>
+                        <p className="text-2xs font-medium text-muted truncate">{metric.label}</p>
                         <p className="font-display text-base font-bold text-foreground sm:text-lg">
                           {metric.value}
                         </p>
                         {metric.trend && (
-                          <span className="inline-flex items-center text-[10px] font-bold text-success">
+                          <span className="inline-flex items-center text-3xs font-bold text-success">
                             {metric.trend.value}
                           </span>
                         )}
@@ -293,7 +293,7 @@ export function AnalyticsHubView({
                   <div className="flex w-full items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Sparkline data={card.sparkline} height={24} width={70} />
-                      <span className="text-[11px] font-medium text-muted">Tendência</span>
+                      <span className="text-2xs font-medium text-muted">Tendência</span>
                     </div>
 
                     <Link

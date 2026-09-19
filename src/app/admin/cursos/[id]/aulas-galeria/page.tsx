@@ -1,5 +1,4 @@
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { PageHeader } from "@/components/ui/editorial";
 import { notFound, redirect } from "next/navigation";
 import GalleryLessonList from "@/components/admin/GalleryLessonList";
 import { requireAdmin } from "@/lib/supabase/auth";
@@ -30,21 +29,19 @@ export default async function AulasGaleriaAdminPage({ params }: { params: Promis
 
   return (
     <div className="max-w-4xl mx-auto pb-12">
-      <div className="mb-8">
-        <Link
-          href={`/admin/cursos/${resolvedParams.id}`}
-          className="inline-flex items-center gap-2 text-muted hover:text-accent transition-colors text-sm font-medium mb-4"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Voltar para o Curso
-        </Link>
-        <h1 className="text-3xl font-display font-bold">Gerenciar Aulas</h1>
-        <p className="text-muted mt-2">
-          Curso galeria: uma coleção de aulas avulsas, sem módulos. A ordem daqui define a galeria em{" "}
-          <strong className="mx-1 text-foreground">{course.title}</strong>
-          e as 8 primeiras aparecem em destaque no carrossel do topo, quando ativado.
-        </p>
-      </div>
+      <PageHeader
+        back={{ href: `/admin/cursos/${resolvedParams.id}`, label: "Voltar para o curso" }}
+        eyebrow="Cursos"
+        title="Gerenciar aulas"
+        description={
+          <>
+            Curso galeria: uma coleção de aulas avulsas, sem módulos. A ordem daqui define a galeria em{" "}
+            <strong className="text-foreground">{course.title}</strong> e as 8 primeiras aparecem em destaque no
+            carrossel do topo, quando ativado.
+          </>
+        }
+        className="mb-8"
+      />
 
       {galleryModule ? (
         <GalleryLessonList

@@ -462,7 +462,7 @@ export function PilulaFormModal({
                       />
                       {availableTags.length > 0 && (
                         <div className="mt-2 space-y-1">
-                          <span className="text-[11px] font-medium text-muted">Sugestões do Questionário:</span>
+                          <span className="text-2xs font-medium text-muted">Sugestões do Questionário:</span>
                           <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
                             {availableTags
                               .filter((tag) => !targetTags.includes(tag))
@@ -472,7 +472,7 @@ export function PilulaFormModal({
                                   key={tag}
                                   type="button"
                                   onClick={() => setTargetTags([...targetTags, tag])}
-                                  className="rounded-md bg-surface px-2 py-0.5 text-[11px] text-muted hover:bg-accent-soft hover:text-accent-soft-foreground border border-border transition-colors"
+                                  className="rounded-md bg-surface px-2 py-0.5 text-2xs text-muted hover:bg-accent-soft hover:text-accent-soft-foreground border border-border transition-colors"
                                 >
                                   +{tag}
                                 </button>

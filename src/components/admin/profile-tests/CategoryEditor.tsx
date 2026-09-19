@@ -113,7 +113,7 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({ categories, onCh
                 </div>
 
                 <div className="flex-1">
-                  <label className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-1">Nome do Perfil</label>
+                  <label className="text-3xs font-bold text-muted uppercase tracking-wider block mb-1">Nome do Perfil</label>
                   <input
                     type="text"
                     value={cat.name}
@@ -126,7 +126,7 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({ categories, onCh
 
               {/* Color Palette Selector */}
               <div>
-                <label className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-2">
+                <label className="text-3xs font-bold text-muted uppercase tracking-wider block mb-2">
                   Cor Representativa
                 </label>
                 <div className="flex items-center gap-2 flex-wrap bg-background-secondary p-2 rounded-xl border border-border/50 w-fit">
@@ -154,7 +154,7 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({ categories, onCh
 
               {/* Description / Outcome Text */}
               <div>
-                <label className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-2">
+                <label className="text-3xs font-bold text-muted uppercase tracking-wider block mb-2">
                   Descrição do Resultado
                 </label>
                 <textarea
@@ -186,7 +186,7 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({ categories, onCh
                     </div>
 
                     <div>
-                      <span className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-1">
+                      <span className="text-3xs font-bold text-muted uppercase tracking-wider block mb-1">
                         Seu Perfil Dominante é:
                       </span>
                       <h3 className="text-2xl font-display font-black leading-tight transition-colors" style={{ color: cat.color }}>

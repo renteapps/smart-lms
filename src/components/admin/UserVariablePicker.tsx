@@ -58,13 +58,13 @@ export function UserVariablePicker({ onSelect, compact = false }: UserVariablePi
             type="button"
             title={item.questionText}
             onClick={() => choose(item.key)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-surface px-2.5 py-1 font-mono text-[11px] font-bold text-foreground hover:border-accent hover:text-accent"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-surface px-2.5 py-1 font-mono text-2xs font-bold text-foreground hover:border-accent hover:text-accent"
           >
             {`{{${item.key}}}`} {!onSelect && <Copy size={11} />}
           </button>
         ))}
       </div>
-      {!compact && <p className="mt-2 text-[11px] text-muted">Use <code>{'{{variavel|texto alternativo}}'}</code> para definir um fallback.</p>}
+      {!compact && <p className="mt-2 text-2xs text-muted">Use <code>{'{{variavel|texto alternativo}}'}</code> para definir um fallback.</p>}
     </div>
   );
 }

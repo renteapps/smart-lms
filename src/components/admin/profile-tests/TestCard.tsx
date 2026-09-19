@@ -65,7 +65,7 @@ export const TestCard: React.FC<TestCardProps> = ({ test, onPreview, onDelete, o
             {test.categories.map((cat) => (
               <span
                 key={cat.id}
-                className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full"
+                className="inline-flex items-center gap-1 text-2xs font-bold px-2 py-0.5 rounded-full"
                 style={{
                   backgroundColor: `${cat.color}15`,
                   color: cat.color,
@@ -105,7 +105,7 @@ export const TestCard: React.FC<TestCardProps> = ({ test, onPreview, onDelete, o
         {/* Access Type Row */}
         <div className="flex items-center justify-between pt-3 border-t border-border/40">
           <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-muted uppercase tracking-wider mb-0.5">Acesso</span>
+            <span className="text-3xs font-bold text-muted uppercase tracking-wider mb-0.5">Acesso</span>
             <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
               {test.accessType === 'public' && <><Globe className="w-3.5 h-3.5 text-success" /> Livre (sem conta)</>}
               {(!test.accessType || test.accessType === 'logged_in') && <><Lock className="w-3.5 h-3.5 text-accent" /> Apenas Logados</>}

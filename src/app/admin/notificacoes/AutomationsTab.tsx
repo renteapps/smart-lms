@@ -325,7 +325,7 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
                     <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
                       Modelo & Campos de E-mail da Automação
                     </h3>
-                    <p className="text-[11px] text-muted">
+                    <p className="text-2xs text-muted">
                       Personalize como o e-mail automatizado será montado pelo Resend.
                     </p>
                   </div>
@@ -339,7 +339,7 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
                   <Link
                     href={`/admin/integracoes/resend/modelos/${emailTemplate}`}
                     target="_blank"
-                    className="text-[11px] text-accent hover:underline font-semibold flex items-center gap-1"
+                    className="text-2xs text-accent hover:underline font-semibold flex items-center gap-1"
                   >
                     Abrir Studio de Modelos <ExternalLink className="size-3" />
                   </Link>
@@ -447,7 +447,7 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
 
               {/* Tags Helper */}
               <div className="pt-2 border-t border-accent/15 space-y-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted flex items-center gap-1">
+                <span className="text-3xs font-bold uppercase tracking-wider text-muted flex items-center gap-1">
                   <Tag className="size-3" /> Variáveis Dinâmicas Disponíveis
                 </span>
                 <div className="flex flex-wrap gap-1">
@@ -456,7 +456,7 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
                       key={tag}
                       type="button"
                       onClick={() => handleCopyTag(tag)}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-border bg-surface hover:border-accent text-[11px] font-mono text-foreground transition-all"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-border bg-surface hover:border-accent text-2xs font-mono text-foreground transition-all"
                     >
                       <span className="text-accent font-bold">{tag}</span>
                       {copiedTag === tag ? (
@@ -532,7 +532,7 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
               <div className="flex justify-between items-start">
                 <div>
                   <h4 className="font-bold text-foreground text-sm">{automation.name}</h4>
-                  <div className="inline-flex items-center gap-1 text-[11px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-md mt-1">
+                  <div className="inline-flex items-center gap-1 text-2xs font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-md mt-1">
                     <Activity className="size-3" />
                     {triggerLabels[automation.trigger_type as keyof typeof triggerLabels]} {automation.trigger_days} dias
                     {automation.trigger_course_id && ` (${automation.trigger_course_id})`}
@@ -569,22 +569,22 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-2 pt-2 border-t border-border/50 text-[11px] text-muted">
+              <div className="grid grid-cols-4 gap-2 pt-2 border-t border-border/50 text-2xs text-muted">
                 <div className="flex flex-col items-center gap-0.5 text-center">
                   <span className="font-bold text-foreground">{automation.triggered_count || 0}</span>
-                  <span className="text-[10px]">Envios</span>
+                  <span className="text-3xs">Envios</span>
                 </div>
                 <div className="flex flex-col items-center gap-0.5 text-center">
                   <span className="font-bold text-foreground">{automation.views || 0}</span>
-                  <span className="text-[10px]">Views</span>
+                  <span className="text-3xs">Views</span>
                 </div>
                 <div className="flex flex-col items-center gap-0.5 text-center">
                   <span className="font-bold text-foreground">{automation.opens || 0}</span>
-                  <span className="text-[10px]">Abertas</span>
+                  <span className="text-3xs">Abertas</span>
                 </div>
                 <div className="flex flex-col items-center gap-0.5 text-center">
                   <span className="font-bold text-foreground">{automation.clicks || 0}</span>
-                  <span className="text-[10px]">Cliques</span>
+                  <span className="text-3xs">Cliques</span>
                 </div>
               </div>
 

@@ -256,7 +256,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
                           <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
                             
                             <div className="flex-1 space-y-3">
-                              <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+                              <span className="text-3xs font-bold text-muted uppercase tracking-wider block">
                                 Se o aluno escolher esta opção, ele ganha pontos em:
                               </span>
                               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
@@ -307,7 +307,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
 
                             {/* Score Preview Bar (Mini) */}
                             <div className="w-full sm:w-1/3 min-w-[150px] border-t sm:border-t-0 sm:border-l border-border/40 pt-3 sm:pt-0 sm:pl-6 flex flex-col justify-center">
-                              <span className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-2">
+                              <span className="text-3xs font-bold text-muted uppercase tracking-wider block mb-2">
                                 Distribuição
                               </span>
                               <ScoreDistributionBar categories={categories} categoryScores={opt.categoryScores} />

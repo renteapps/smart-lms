@@ -245,7 +245,7 @@ export default function GalleryLessonList({
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-bold text-foreground">{lesson.title}</p>
                       {index < 8 && (
-                        <span className="shrink-0 rounded-md bg-accent/10 px-1.5 py-0.5 text-[10px] font-bold text-accent uppercase tracking-wider">
+                        <span className="shrink-0 rounded-md bg-accent/10 px-1.5 py-0.5 text-3xs font-bold text-accent uppercase tracking-wider">
                           Carrossel
                         </span>
                       )}

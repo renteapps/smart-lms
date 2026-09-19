@@ -388,7 +388,7 @@ export default function ResendTemplateStudioPage() {
               placeholder="Ex: Boas-vindas ao {{nome_plataforma}}!"
               className="w-full min-h-10 rounded-xl border border-border bg-background-secondary px-3.5 text-xs font-mono text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
             />
-            <p className="text-[10px] text-muted mt-1">
+            <p className="text-3xs text-muted mt-1">
               Suporta variáveis dinâmicas como <code>{"{{nome}}"}</code> ou <code>{"{{nome_curso}}"}</code>.
             </p>
           </div>
@@ -404,7 +404,7 @@ export default function ResendTemplateStudioPage() {
               placeholder="Resumo exibido ao lado do assunto..."
               className="w-full min-h-10 rounded-xl border border-border bg-background-secondary px-3.5 text-xs font-mono text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
             />
-            <p className="text-[10px] text-muted mt-1">
+            <p className="text-3xs text-muted mt-1">
               Texto complementar que aparece antes de abrir o e-mail no Gmail / Apple Mail.
             </p>
           </div>
@@ -416,7 +416,7 @@ export default function ResendTemplateStudioPage() {
             <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
               <Tag className="size-3.5 text-accent" /> Campos Personalizados Disponíveis
             </p>
-            <span className="text-[10px] text-muted">
+            <span className="text-3xs text-muted">
               Clique em uma tag para copiar ou inserir no código
             </span>
           </div>
@@ -431,7 +431,7 @@ export default function ResendTemplateStudioPage() {
                 title={`${v.label} - ${v.description} (Ex: ${v.example})`}
               >
                 <span className="text-accent font-bold">{v.tag}</span>
-                <span className="text-[10px] text-muted group-hover:text-foreground font-sans">
+                <span className="text-3xs text-muted group-hover:text-foreground font-sans">
                   {v.label}
                 </span>
                 {copiedField === v.tag ? (
@@ -528,7 +528,7 @@ export default function ResendTemplateStudioPage() {
         {/* Code Editor Pane */}
         {(editorMode === "code" || editorMode === "split") && (
           <div className={editorMode === "split" ? "md:col-span-6 space-y-2" : "col-span-12 space-y-2"}>
-            <div className="flex items-center justify-between text-[11px] text-muted font-mono px-1">
+            <div className="flex items-center justify-between text-2xs text-muted font-mono px-1">
               <span>Editor de Código HTML</span>
               <span>{editedHtml.length} caracteres</span>
             </div>
@@ -550,7 +550,7 @@ export default function ResendTemplateStudioPage() {
         {/* Live Preview Pane */}
         {(editorMode === "preview" || editorMode === "split") && (
           <div className={editorMode === "split" ? "md:col-span-6 space-y-2" : "col-span-12 space-y-2"}>
-            <div className="flex items-center justify-between text-[11px] text-muted font-mono px-1">
+            <div className="flex items-center justify-between text-2xs text-muted font-mono px-1">
               <span>Pré-visualização em Tempo Real</span>
               <span className="truncate max-w-[200px]" title={previewSubject}>
                 Assunto: {previewSubject}
@@ -570,11 +570,11 @@ export default function ResendTemplateStudioPage() {
                     <span className="size-2.5 rounded-full bg-amber-400" />
                     <span className="size-2.5 rounded-full bg-emerald-400" />
                   </div>
-                  <span className="font-semibold ml-2 text-[11px]">
+                  <span className="font-semibold ml-2 text-2xs">
                     Smart LMS &lt;onboarding@resend.dev&gt;
                   </span>
                 </div>
-                <span className="text-slate-400 text-[10px]">Para: carlos@exemplo.com</span>
+                <span className="text-slate-400 text-3xs">Para: carlos@exemplo.com</span>
               </div>
 
               {/* Iframe Box */}
@@ -621,7 +621,7 @@ export default function ResendTemplateStudioPage() {
                   required
                   className="w-full min-h-10 rounded-xl border border-border bg-background-secondary px-3 text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                 />
-                <p className="text-[10px] text-muted mt-1">
+                <p className="text-3xs text-muted mt-1">
                   O e-mail será disparado com o HTML customizado e tags dinâmicas preenchidas.
                 </p>
               </div>

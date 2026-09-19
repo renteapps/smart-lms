@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
+import { PageHeader } from "@/components/ui/editorial";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   Save,
   CheckCircle2,
   ShoppingBag,
@@ -24,7 +23,7 @@ import {
   Settings2,
   DollarSign,
 } from "lucide-react";
-import { toast } from "@heroui/react";
+import { Button, toast } from "@heroui/react";
 import {
   DYNAMIC_VARIABLES,
   DEFAULT_SAMPLE_CONTACT,
@@ -284,45 +283,28 @@ export function CourseSalesForm({ course }: { course: Course }) {
         </div>
       </div>
 
-      {/* Header Fixo */}
-      <header className="sticky top-[76px] z-20 -mx-3 flex flex-col gap-4 rounded-xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur-xl md:flex-row md:items-center md:justify-between">
-        <div>
-          <Link
-            href={`/admin/cursos/${course.id}`}
-            className="inline-flex items-center gap-2 text-muted hover:text-accent transition-colors text-sm font-medium mb-1"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Voltar para o Curso
-          </Link>
-          <h1 className="text-2xl md:text-3xl font-display font-black text-foreground flex items-center gap-2.5">
-            <ShoppingBag className="size-7 text-accent" />
-            Vendas e Links Dinâmicos
-          </h1>
-          <p className="text-muted text-xs md:text-sm mt-0.5">
-            Gerencie o checkout, links com tags dinâmicas e ofertas do curso <strong className="text-foreground">{course.title}</strong>.
-          </p>
-        </div>
-        <div className="flex gap-3 w-full md:w-auto items-center">
-          <Link
-            href={`/admin/cursos/${course.id}`}
-            className="flex-1 md:flex-none text-center bg-background-secondary hover:bg-surface-hover text-foreground px-5 py-2.5 rounded-lg font-semibold border border-border transition-all text-sm"
-          >
-            Cancelar
-          </Link>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex-1 md:flex-none bg-accent hover:bg-accent-hover disabled:opacity-70 disabled:cursor-not-allowed text-primary-foreground px-6 py-2.5 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-sm transition-all text-sm hover:shadow-md cursor-pointer"
-          >
-            {isSaving ? (
-              <div className="size-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-            ) : (
-              <Save className="size-4" />
+      <PageHeader
+        sticky
+        back={{ href: `/admin/cursos/${course.id}`, label: "Voltar para o curso" }}
+        eyebrow="Cursos"
+        title="Vendas e links dinâmicos"
+        description={
+          <>
+            Gerencie o checkout, links com tags dinâmicas e ofertas do curso{" "}
+            <strong className="text-foreground">{course.title}</strong>.
+          </>
+        }
+        actions={
+          <Button variant="primary" className="gap-2" isPending={isSaving} onPress={handleSave}>
+            {({ isPending }) => (
+              <>
+                {!isPending && <Save className="size-4" aria-hidden="true" />}
+                {isPending ? "Salvando..." : "Salvar alterações"}
+              </>
             )}
-            {isSaving ? "Salvando..." : "Salvar Alterações"}
-          </button>
-        </div>
-      </header>
+          </Button>
+        }
+      />
 
       {/* Tabs de Navegação da Seção */}
       <div className="flex border-b border-border gap-2 overflow-x-auto pb-px">
@@ -464,7 +446,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
                   <Sparkles className="size-3.5 text-accent" />
                   Tags Dinâmicas (Clique para inserir na URL)
                 </h3>
-                <span className="text-[11px] text-muted">Inserção automática na posição do cursor</span>
+                <span className="text-2xs text-muted">Inserção automática na posição do cursor</span>
               </div>
 
               <div className="space-y-3">
@@ -474,7 +456,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
 
                   return (
                     <div key={cat.key} className="space-y-1.5">
-                      <div className="text-[11px] font-semibold text-muted">{cat.label}</div>
+                      <div className="text-2xs font-semibold text-muted">{cat.label}</div>
                       <div className="flex flex-wrap gap-2">
                         {vars.map((v) => (
                           <button
@@ -485,7 +467,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
                             className="group inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium bg-background hover:bg-accent-soft/20 hover:border-accent hover:text-accent transition-all active:scale-95 shadow-2xs cursor-pointer"
                           >
                             <span className="font-mono text-accent group-hover:underline">{v.tag}</span>
-                            <span className="text-[10px] text-muted group-hover:text-foreground">({v.label})</span>
+                            <span className="text-3xs text-muted group-hover:text-foreground">({v.label})</span>
                           </button>
                         ))}
                       </div>
@@ -526,7 +508,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
                 <div>
                   <h3 className="text-base font-bold text-foreground flex items-center gap-2">
                     Simulador & Prévia do Link Gerado
-                    <span className="bg-success-soft text-success text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    <span className="bg-success-soft text-success text-3xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                       Ao Vivo
                     </span>
                   </h3>
@@ -551,7 +533,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
             {/* Inputs do Contato Simulado */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-background-secondary/50 p-4 rounded-xl border border-border">
               <div>
-                <label className="block text-[11px] font-bold text-muted uppercase mb-1">
+                <label className="block text-2xs font-bold text-muted uppercase mb-1">
                   Nome Simulado
                 </label>
                 <input
@@ -565,7 +547,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-muted uppercase mb-1">
+                <label className="block text-2xs font-bold text-muted uppercase mb-1">
                   E-mail Simulado
                 </label>
                 <input
@@ -579,7 +561,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-muted uppercase mb-1">
+                <label className="block text-2xs font-bold text-muted uppercase mb-1">
                   Telefone Simulado
                 </label>
                 <input
@@ -593,7 +575,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-muted uppercase mb-1">
+                <label className="block text-2xs font-bold text-muted uppercase mb-1">
                   CPF / Doc Simulado
                 </label>
                 <input
@@ -611,7 +593,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-foreground">Resultado da URL Final:</span>
-                <span className="text-[11px] text-muted">
+                <span className="text-2xs text-muted">
                   Caracteres especiais codificados com segurança (URL Encoded)
                 </span>
               </div>
@@ -767,7 +749,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
                         className="w-full bg-background-secondary border border-border rounded-xl px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:border-accent transition-all"
                         placeholder="Ex: 1234567"
                       />
-                      <p className="text-[11px] text-muted mt-1">Identificador na plataforma de pagamento / webhook.</p>
+                      <p className="text-2xs text-muted mt-1">Identificador na plataforma de pagamento / webhook.</p>
                     </div>
                   </div>
 
@@ -816,7 +798,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
                           });
                           handleIntegrationChange(index, "customCheckoutUrl", generated);
                         }}
-                        className="text-[11px] font-semibold text-accent hover:underline flex items-center gap-1 cursor-pointer"
+                        className="text-2xs font-semibold text-accent hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         <Wand2 className="size-3" />
                         Gerar Formato {intConfig.plataforma.toUpperCase()}
@@ -833,14 +815,14 @@ export function CourseSalesForm({ course }: { course: Course }) {
 
                     {/* Chips rápidos */}
                     <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                      <span className="text-[10px] text-muted">Inserir tag:</span>
+                      <span className="text-3xs text-muted">Inserir tag:</span>
                       {["{{contact.name}}", "{{contact.email}}", "{{contact.phone}}", "{{contact.document}}"].map(
                         (tag) => (
                           <button
                             key={tag}
                             type="button"
                             onClick={() => insertVariableIntoIntegration(index, tag)}
-                            className="px-2 py-0.5 rounded text-[10px] font-mono font-medium border border-border bg-background hover:border-accent hover:text-accent transition-colors cursor-pointer"
+                            className="px-2 py-0.5 rounded text-3xs font-mono font-medium border border-border bg-background hover:border-accent hover:text-accent transition-colors cursor-pointer"
                           >
                             {tag}
                           </button>
@@ -850,7 +832,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
 
                     {/* Preview da oferta */}
                     {intConfig.customCheckoutUrl && (
-                      <div className="mt-2 p-2.5 rounded-lg bg-background border border-border/70 text-[11px] font-mono flex items-center justify-between gap-2">
+                      <div className="mt-2 p-2.5 rounded-lg bg-background border border-border/70 text-2xs font-mono flex items-center justify-between gap-2">
                         <span className="truncate text-accent">{intResolvedUrl}</span>
                         <button
                           type="button"
@@ -893,7 +875,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
               <div className="p-5 rounded-xl border border-border bg-background-secondary/60 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-sm text-foreground">Eduzz (Sun Checkout)</h3>
-                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-accent-soft text-accent">
+                  <span className="text-3xs uppercase font-bold px-2 py-0.5 rounded bg-accent-soft text-accent">
                     Suporta Autofill
                   </span>
                 </div>
@@ -905,7 +887,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
                   <li><strong className="text-foreground">cupom:</strong> Cupom de desconto</li>
                 </ul>
                 <div className="pt-2">
-                  <div className="text-[11px] font-mono p-2 bg-background rounded border border-border text-muted break-all">
+                  <div className="text-2xs font-mono p-2 bg-background rounded border border-border text-muted break-all">
                     https://sun.eduzz.com/123456?email={"{{contact.email}}"}&name={"{{contact.name}}"}&cel={"{{contact.phone}}"}
                   </div>
                 </div>
@@ -915,7 +897,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
               <div className="p-5 rounded-xl border border-border bg-background-secondary/60 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-sm text-foreground">Hotmart Pay</h3>
-                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-accent-soft text-accent">
+                  <span className="text-3xs uppercase font-bold px-2 py-0.5 rounded bg-accent-soft text-accent">
                     Suporta Autofill
                   </span>
                 </div>
@@ -927,7 +909,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
                   <li><strong className="text-foreground">off:</strong> Código da oferta</li>
                 </ul>
                 <div className="pt-2">
-                  <div className="text-[11px] font-mono p-2 bg-background rounded border border-border text-muted break-all">
+                  <div className="text-2xs font-mono p-2 bg-background rounded border border-border text-muted break-all">
                     https://pay.hotmart.com/XYZ?email={"{{contact.email}}"}&name={"{{contact.name}}"}&phone_checkout={"{{contact.phone}}"}
                   </div>
                 </div>
@@ -937,7 +919,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
               <div className="p-5 rounded-xl border border-border bg-background-secondary/60 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-sm text-foreground">Kiwify</h3>
-                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-accent-soft text-accent">
+                  <span className="text-3xs uppercase font-bold px-2 py-0.5 rounded bg-accent-soft text-accent">
                     Suporta Autofill
                   </span>
                 </div>
@@ -948,7 +930,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
                   <li><strong className="text-foreground">document:</strong> CPF/CNPJ (<code className="text-accent">{"{{contact.document}}"}</code>)</li>
                 </ul>
                 <div className="pt-2">
-                  <div className="text-[11px] font-mono p-2 bg-background rounded border border-border text-muted break-all">
+                  <div className="text-2xs font-mono p-2 bg-background rounded border border-border text-muted break-all">
                     https://checkout.kiwify.com.br/abc?email={"{{contact.email}}"}&name={"{{contact.name}}"}&phone={"{{contact.phone}}"}
                   </div>
                 </div>
@@ -958,7 +940,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
               <div className="p-5 rounded-xl border border-border bg-background-secondary/60 space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-sm text-foreground">Stripe / Custom Checkout</h3>
-                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-accent-soft text-accent">
+                  <span className="text-3xs uppercase font-bold px-2 py-0.5 rounded bg-accent-soft text-accent">
                     Customizável
                   </span>
                 </div>
@@ -969,7 +951,7 @@ export function CourseSalesForm({ course }: { course: Course }) {
                   <li><strong className="text-foreground">course_id:</strong> ID do curso (<code className="text-accent">{"{{course.id}}"}</code>)</li>
                 </ul>
                 <div className="pt-2">
-                  <div className="text-[11px] font-mono p-2 bg-background rounded border border-border text-muted break-all">
+                  <div className="text-2xs font-mono p-2 bg-background rounded border border-border text-muted break-all">
                     https://buy.stripe.com/abc?prefilled_email={"{{contact.email}}"}
                   </div>
                 </div>

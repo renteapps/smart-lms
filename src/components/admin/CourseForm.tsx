@@ -1,11 +1,10 @@
 "use client";
 
-import Link from "next/link";
+import { PageHeader } from "@/components/ui/editorial";
 import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
-  ArrowLeft,
   FileText,
   Image as ImageIcon,
   Images,
@@ -187,38 +186,24 @@ export function CourseForm({
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="mx-auto max-w-5xl space-y-8 pb-16">
-        <header className="sticky top-[92px] z-10 -mx-1 flex flex-col gap-4 rounded-xl border border-border bg-surface/95 p-4 shadow-elev-2 backdrop-blur-xl md:flex-row md:items-center md:justify-between">
-          <div>
-            <Link
-              href={backHref}
-              className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-accent"
-            >
-              <ArrowLeft className="size-4" aria-hidden="true" />
-              {isEditing ? "Voltar para o curso" : "Voltar para cursos"}
-            </Link>
-            <h1 className="font-display text-2xl font-extrabold text-foreground sm:text-3xl">
-              {isEditing ? "Editar curso" : "Novo curso"}
-            </h1>
-            <p className="mt-1 text-sm text-muted">
-              {isEditing
-                ? "Atualize as informações, capa e configurações do curso."
-                : "Preencha as informações básicas para criar um novo curso."}
-            </p>
-          </div>
-          <div className="flex w-full gap-3 md:w-auto">
-            <Link
-              href={backHref}
-              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-border bg-background-secondary px-6 text-sm font-semibold text-foreground transition-colors hover:bg-surface-hover md:flex-none"
-            >
-              Cancelar
-            </Link>
-            <Button type="submit" variant="primary" isDisabled={isPending} className="flex-1 gap-2 md:flex-none">
+      <form onSubmit={handleSubmit} className="mx-auto max-w-5xl space-y-7 pb-16">
+        <PageHeader
+          sticky
+          back={{ href: backHref, label: isEditing ? "Voltar para o curso" : "Voltar para cursos" }}
+          eyebrow="Cursos"
+          title={isEditing ? "Editar curso" : "Novo curso"}
+          description={
+            isEditing
+              ? "Atualize as informações, capa e configurações do curso."
+              : "Preencha as informações básicas para criar um novo curso."
+          }
+          actions={
+            <Button type="submit" variant="primary" isDisabled={isPending} className="gap-2">
               <Save className="size-4" aria-hidden="true" />
               {isPending ? "Salvando..." : "Salvar"}
             </Button>
-          </div>
-        </header>
+          }
+        />
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Formulário principal */}

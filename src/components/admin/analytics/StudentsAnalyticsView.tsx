@@ -279,7 +279,7 @@ export function StudentsAnalyticsView({ basePath = "/admin/analises", data }: St
                   <div>
                     <p className="font-display text-xl font-bold text-foreground">{badge.count}</p>
                     <p className="text-xs font-semibold text-muted">{badge.title}</p>
-                    <p className="mt-1 text-[11px] font-bold text-success">{badge.share} da base total</p>
+                    <p className="mt-1 text-2xs font-bold text-success">{badge.share} da base total</p>
                   </div>
                 </Card.Content>
               </Card>

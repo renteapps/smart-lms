@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { PageHeader } from '@/components/ui/editorial';
 import { ProfileTest } from '@/types/profileTest';
 import { TestCard } from '@/components/admin/profile-tests/TestCard';
 import { TestPreview } from '@/components/admin/profile-tests/TestPreview';
-import { PlusCircle, Sparkles, SlidersHorizontal, ClipboardCheck } from 'lucide-react';
+import { PlusCircle, Sparkles, SlidersHorizontal } from 'lucide-react';
 import { Button, EmptyState, Label, SearchField, buttonVariants } from '@heroui/react';
 import { toast } from "@/lib/toast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -66,27 +67,18 @@ export function AdminTestesPerfilClient({ initialTests }: AdminTestesPerfilClien
   };
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out space-y-8">
-      {/* Header Row */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border/40 pb-6">
-        <div>
-          <div className="flex items-center gap-2 text-accent font-bold text-sm mb-1">
-            <ClipboardCheck className="w-5 h-5" />
-            <span>ScoreApp Assessment Builder</span>
-          </div>
-          <h1 className="text-3xl font-display font-black text-foreground">
-            Testes de Perfil & Diagnósticos
-          </h1>
-          <p className="text-muted text-sm mt-1">
-            Crie testes comportamentais e mapeamentos de soft skills com pontuação por categorias de resultado.
-          </p>
-        </div>
-
-        <Link href="/admin/testes-perfil/novo" className={cn(buttonVariants({ variant: "primary" }), "gap-2 shrink-0")}>
-          <PlusCircle className="size-4" aria-hidden="true" />
-          <span>Criar novo teste</span>
-        </Link>
-      </div>
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out space-y-7">
+      <PageHeader
+        eyebrow="Aprendizagem"
+        title="Testes de Perfil & Diagnósticos"
+        description="Crie testes comportamentais e mapeamentos de soft skills com pontuação por categorias de resultado."
+        actions={
+          <Link href="/admin/testes-perfil/novo" className={cn(buttonVariants({ variant: "primary" }), "gap-2")}>
+            <PlusCircle className="size-4" aria-hidden="true" />
+            Criar novo teste
+          </Link>
+        }
+      />
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-border/40 bg-surface p-4 shadow-elev-2 sm:flex-row sm:p-6">

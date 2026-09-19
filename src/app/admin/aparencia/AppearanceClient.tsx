@@ -204,7 +204,7 @@ export function AppearanceClient({ initial, branding }: AppearanceClientProps) {
                   <span>
                     <span className="font-medium text-foreground">{platformName || "Smart LMS"}</span>
                     <br />
-                    <span className="text-[10px]">https://plataforma.com.br</span>
+                    <span className="text-3xs">https://plataforma.com.br</span>
                   </span>
                 </div>
                 <h4 className="truncate pt-1 text-lg font-medium text-[#1a0dab] hover:underline dark:text-[#8ab4f8]">
@@ -228,7 +228,7 @@ export function AppearanceClient({ initial, branding }: AppearanceClientProps) {
                   )}
                 </div>
                 <div className="bg-surface p-3">
-                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted">plataforma.com.br</p>
+                  <p className="mb-1 text-3xs font-semibold uppercase tracking-widest text-muted">plataforma.com.br</p>
                   <h4 className="truncate text-sm font-semibold leading-tight text-foreground">{platformName || "Smart LMS"} - Plataforma EAD</h4>
                   <p className="mt-1 line-clamp-1 text-xs text-muted">{slogan || "A melhor plataforma de ensino a distância."}</p>
                 </div>

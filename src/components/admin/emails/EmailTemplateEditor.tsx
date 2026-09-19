@@ -396,7 +396,7 @@ export function EmailTemplateEditor({
                 size="sm"
                 variant="soft"
                 color={isCustomized ? "accent" : "default"}
-                className="text-[10px] font-bold"
+                className="text-3xs font-bold"
               >
                 {isCustomized ? "Personalizado" : "Layout Padrão"}
               </Chip>
@@ -509,7 +509,7 @@ export function EmailTemplateEditor({
                 <Code className="size-4 text-accent" />
                 <span>Editor de Código HTML</span>
               </div>
-              <span className="text-[11px] text-muted font-mono">
+              <span className="text-2xs text-muted font-mono">
                 {htmlContent.length.toLocaleString()} caracteres
               </span>
             </Card.Header>
@@ -532,7 +532,7 @@ export function EmailTemplateEditor({
                 <Eye className="size-4 text-accent" />
                 <span>Prévia em Tempo Real (Com Dados Simulados)</span>
               </div>
-              <span className="text-[11px] text-muted">
+              <span className="text-2xs text-muted">
                 {activeViewMode === "desktop" ? "580px (Largura padrão)" : "375px (Mobile)"}
               </span>
             </Card.Header>

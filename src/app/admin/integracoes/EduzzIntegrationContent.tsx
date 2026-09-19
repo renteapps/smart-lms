@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@heroui/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, ChevronDown, ChevronRight, Copy, KeyRound, Link2, ListChecks, Pencil, Plus, RefreshCw, Trash2, Webhook } from "lucide-react";
 import { toast } from "@/lib/toast";
@@ -17,8 +18,10 @@ import { listEduzzCatalog, listEduzzOffersForProduct } from "@/app/actions/admin
 import type { EduzzOfferSummary, EduzzProductSummary } from "@/lib/billing/eduzzProducts";
 import { PageHeader } from "@/components/ui/editorial";
 
-const inputClass = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent";
-const buttonClass = "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50";
+const inputClass = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/30";
+const buttonClass = buttonVariants({ variant: "outline" });
+const primaryButtonClass = buttonVariants({ variant: "primary" });
+const dangerButtonClass = buttonVariants({ variant: "danger-soft" });
 
 /**
  * Confirmação visual de que um segredo já está gravado no servidor.
@@ -170,7 +173,7 @@ export function EduzzIntegrationContent() {
         </div>
         <div className="rounded-lg bg-background-secondary p-3">
           <p className="mb-2 text-xs font-semibold text-muted">URL pública do webhook</p>
-          <div className="flex gap-2"><code className="min-w-0 flex-1 overflow-x-auto text-xs">{webhookUrl}</code><button className={buttonClass} onClick={() => { void navigator.clipboard.writeText(webhookUrl); toast.success("URL copiada."); }}><Copy className="size-4" /></button></div>
+          <div className="flex gap-2"><code className="min-w-0 flex-1 overflow-x-auto text-xs">{webhookUrl}</code><button type="button" aria-label="Copiar URL do webhook" className={buttonClass} onClick={() => { void navigator.clipboard.writeText(webhookUrl); toast.success("URL copiada."); }}><Copy className="size-4" /></button></div>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-1">
@@ -178,9 +181,9 @@ export function EduzzIntegrationContent() {
             {Boolean(data?.webhookKeyCount) && <SavedBadge label={`${data!.webhookKeyCount} chave(s) salva(s) no servidor`} />}
           </div>
           <div className="flex gap-2">
-            <button className={`${buttonClass} bg-accent text-accent-foreground`} disabled={busy || (!webhookSecret && !clientId && !clientSecret)} onClick={() => void saveCredentials()}><CheckCircle2 className="size-4" /> Adicionar chave</button>
-            {Boolean(data?.webhookKeyCount) && <button className={`${buttonClass} border border-border`} disabled={busy || !webhookSecret} onClick={() => void saveCredentials(true)}>Trocar e aposentar anteriores</button>}
-            <button className={`${buttonClass} border border-border`} disabled={busy || !data?.enabled} onClick={async () => { setBusy(true); const result = await saveEduzzConfiguration({ enabled: false }); setBusy(false); if (!result.success) toast.error(result.message || "Erro ao salvar configuração."); else { toast.success("Novos webhooks foram desativados; acessos existentes foram preservados."); await reload(); } }}>Desativar</button>
+            <button className={`${primaryButtonClass}`} disabled={busy || (!webhookSecret && !clientId && !clientSecret)} onClick={() => void saveCredentials()}><CheckCircle2 className="size-4" /> Adicionar chave</button>
+            {Boolean(data?.webhookKeyCount) && <button className={`${buttonClass}`} disabled={busy || !webhookSecret} onClick={() => void saveCredentials(true)}>Trocar e aposentar anteriores</button>}
+            <button className={`${buttonClass}`} disabled={busy || !data?.enabled} onClick={async () => { setBusy(true); const result = await saveEduzzConfiguration({ enabled: false }); setBusy(false); if (!result.success) toast.error(result.message || "Erro ao salvar configuração."); else { toast.success("Novos webhooks foram desativados; acessos existentes foram preservados."); await reload(); } }}>Desativar</button>
           </div>
         </div>
       </section>
@@ -201,9 +204,9 @@ export function EduzzIntegrationContent() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button className={`${buttonClass} border border-border`} disabled={busy || (!clientId && !clientSecret)} onClick={() => void saveCredentials()}>Salvar credenciais</button>
-          <a className={`${buttonClass} bg-accent text-accent-foreground`} href="/api/admin/integracoes/eduzz/connect"><Link2 className="size-4" /> {data?.oauthConnected ? "Reconectar Eduzz" : "Conectar Eduzz"}</a>
-          {data?.oauthConnected && <button className={`${buttonClass} border border-danger/40 text-danger`} onClick={async () => { const result = await disconnectEduzzOAuth(); if (!result.success) toast.error(result.message || "Erro ao desconectar OAuth."); else { toast.success("OAuth desconectado."); await reload(); } }}>Desconectar</button>}
+          <button className={`${buttonClass}`} disabled={busy || (!clientId && !clientSecret)} onClick={() => void saveCredentials()}>Salvar credenciais</button>
+          <a className={`${primaryButtonClass}`} href="/api/admin/integracoes/eduzz/connect"><Link2 className="size-4" /> {data?.oauthConnected ? "Reconectar Eduzz" : "Conectar Eduzz"}</a>
+          {data?.oauthConnected && <button className={`${dangerButtonClass}`} onClick={async () => { const result = await disconnectEduzzOAuth(); if (!result.success) toast.error(result.message || "Erro ao desconectar OAuth."); else { toast.success("OAuth desconectado."); await reload(); } }}>Desconectar</button>}
           <span className="text-sm text-muted">{data?.oauthConnected ? `Conectada${data.accountName ? `: ${data.accountName}` : ""}` : "Não conectada"} · saúde: {data?.status}</span>
         </div>
       </section>
@@ -241,7 +244,7 @@ export function EduzzIntegrationContent() {
                       {product.priceValue != null && (
                         <span className="text-xs text-muted">{product.currency ?? "BRL"} {product.priceValue.toFixed(2)}</span>
                       )}
-                      <button className={`${buttonClass} border border-border`} onClick={() => applyProduct(product)}>Usar produto</button>
+                      <button className={`${buttonClass}`} onClick={() => applyProduct(product)}>Usar produto</button>
                     </div>
                     {expandedProductId === product.id && (
                       <div className="space-y-2 border-t border-border bg-background-secondary p-3">
@@ -254,7 +257,7 @@ export function EduzzIntegrationContent() {
                             <code className="font-semibold">{offer.id}</code>
                             <span className="flex-1">{offer.name}{offer.isDefault ? " · padrão" : ""}</span>
                             {offer.priceValue != null && <span className="text-muted">{offer.currency ?? "BRL"} {offer.priceValue.toFixed(2)}</span>}
-                            <button className={`${buttonClass} border border-border`} onClick={() => applyProduct(product, offer)}>Usar oferta</button>
+                            <button className={`${buttonClass}`} onClick={() => applyProduct(product, offer)}>Usar oferta</button>
                           </div>
                         ))}
                       </div>
@@ -264,9 +267,9 @@ export function EduzzIntegrationContent() {
               </div>
               {catalogPage.pages > 1 && (
                 <div className="flex items-center justify-center gap-3 text-sm text-muted">
-                  <button className={`${buttonClass} border border-border`} disabled={catalogLoading || catalogPage.page <= 1} onClick={() => void loadCatalog(catalogPage.page - 1)}>Anterior</button>
+                  <button className={`${buttonClass}`} disabled={catalogLoading || catalogPage.page <= 1} onClick={() => void loadCatalog(catalogPage.page - 1)}>Anterior</button>
                   <span>Página {catalogPage.page} de {catalogPage.pages}</span>
-                  <button className={`${buttonClass} border border-border`} disabled={catalogLoading || catalogPage.page >= catalogPage.pages} onClick={() => void loadCatalog(catalogPage.page + 1)}>Próxima</button>
+                  <button className={`${buttonClass}`} disabled={catalogLoading || catalogPage.page >= catalogPage.pages} onClick={() => void loadCatalog(catalogPage.page + 1)}>Próxima</button>
                 </div>
               )}
             </div>
@@ -284,7 +287,7 @@ export function EduzzIntegrationContent() {
           <input className={inputClass} value={offerId} onChange={(e) => setOfferId(e.target.value)} placeholder="Oferta (opcional)" />
           <select className={inputClass} value={target} onChange={(e) => setTarget(e.target.value)}><option value="">Plano ou curso *</option>{targets.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>
           <input className={inputClass} type="number" min="1" value={accessDays} onChange={(e) => setAccessDays(e.target.value)} placeholder="Dias (opcional)" />
-          <button className={`${buttonClass} bg-accent text-accent-foreground`} disabled={busy} onClick={() => void addMapping()}><Plus className="size-4" /> {mappingId ? "Atualizar" : "Adicionar"}</button>
+          <button className={`${primaryButtonClass}`} disabled={busy} onClick={() => void addMapping()}><Plus className="size-4" /> {mappingId ? "Atualizar" : "Adicionar"}</button>
         </div>
         <div className="divide-y divide-border rounded-lg border border-border">
           {(data?.mappings ?? []).map((mapping) => {
@@ -297,9 +300,9 @@ export function EduzzIntegrationContent() {
       </section>
 
       <section className="rounded-xl border border-border bg-surface p-6 space-y-4">
-        <div className="flex items-center justify-between"><div><h2 className="text-lg font-bold">Eventos recentes</h2><p className="text-sm text-muted">Payloads não são enviados ao navegador; apenas estado, avisos e tentativas.</p></div><button className={`${buttonClass} border border-border`} onClick={() => void reload()}><RefreshCw className="size-4" /> Atualizar</button></div>
+        <div className="flex items-center justify-between"><div><h2 className="text-lg font-bold">Eventos recentes</h2><p className="text-sm text-muted">Payloads não são enviados ao navegador; apenas estado, avisos e tentativas.</p></div><button className={`${buttonClass}`} onClick={() => void reload()}><RefreshCw className="size-4" /> Atualizar</button></div>
         <div className="divide-y divide-border rounded-lg border border-border">
-          {(data?.events ?? []).map((event) => <div key={event.id} className="grid gap-1 p-3 text-sm md:grid-cols-[1fr_auto_auto] md:items-center"><div><code>{event.eventType}</code><p className="text-xs text-muted">{new Date(event.receivedAt).toLocaleString("pt-BR")} · tentativa {event.attempts}{event.warning ? ` · fallback: ${event.warning}` : ""}</p>{event.error && <p className="text-xs text-danger">{event.error}</p>}</div><span className="rounded-full bg-background-secondary px-2 py-1 text-xs">{event.status}</span>{event.status === "failed" ? <button className={`${buttonClass} border border-border`} onClick={async () => { const result = await replayEduzzEvent(event.id); if (!result.success) toast.error(result.message || "Erro ao reprocessar evento."); else { toast.success("Evento reprocessado."); await reload(); } }}><RefreshCw className="size-3" /> Reprocessar</button> : <span />}</div>)}
+          {(data?.events ?? []).map((event) => <div key={event.id} className="grid gap-1 p-3 text-sm md:grid-cols-[1fr_auto_auto] md:items-center"><div><code>{event.eventType}</code><p className="text-xs text-muted">{new Date(event.receivedAt).toLocaleString("pt-BR")} · tentativa {event.attempts}{event.warning ? ` · fallback: ${event.warning}` : ""}</p>{event.error && <p className="text-xs text-danger">{event.error}</p>}</div><span className="rounded-full bg-background-secondary px-2 py-1 text-xs">{event.status}</span>{event.status === "failed" ? <button className={`${buttonClass}`} onClick={async () => { const result = await replayEduzzEvent(event.id); if (!result.success) toast.error(result.message || "Erro ao reprocessar evento."); else { toast.success("Evento reprocessado."); await reload(); } }}><RefreshCw className="size-3" /> Reprocessar</button> : <span />}</div>)}
           {data?.events.length === 0 && <p className="p-4 text-sm text-muted">Nenhum evento recebido.</p>}
         </div>
       </section>

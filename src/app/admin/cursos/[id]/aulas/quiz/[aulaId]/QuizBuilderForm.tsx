@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ArrowLeft, Save, Plus, Trash2 } from "lucide-react";
+import { Save, Plus, Trash2 } from "lucide-react";
+import { PageHeader } from "@/components/ui/editorial";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@heroui/react";
@@ -217,21 +218,13 @@ export default function QuizBuilderForm({
         />
       )}
 
-      <div className="mb-8">
-        <Link
-          href={`/admin/cursos/${courseId}/modulos`}
-          className="inline-flex items-center gap-2 text-muted hover:text-accent transition-colors text-sm font-medium mb-4"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Voltar para Módulos
-        </Link>
-        <h1 className="text-3xl font-display font-bold">
-          {isNew ? "Criar Novo Quiz" : "Editar Quiz"}
-        </h1>
-        <p className="text-muted mt-2">
-          Construa questionários interativos para avaliação e autoavaliação dos alunos.
-        </p>
-      </div>
+      <PageHeader
+        back={{ href: `/admin/cursos/${courseId}/modulos`, label: "Voltar para módulos" }}
+        eyebrow="Cursos"
+        title={isNew ? "Criar novo quiz" : "Editar quiz"}
+        description="Construa questionários interativos para avaliação e autoavaliação dos alunos."
+        className="mb-8"
+      />
 
       <form onSubmit={handleSubmit} className="space-y-6">
         

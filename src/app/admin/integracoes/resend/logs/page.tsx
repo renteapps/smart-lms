@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { PageHeader } from "@/components/ui/editorial";
+import { Button, Card, Label, SearchField, Table, Tabs } from "@heroui/react";
+import { AdminEmptyState, PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
 import { toast } from "@/lib/toast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
+  AlertTriangle,
   FileText,
+  FlaskConical,
+  Send,
   Trash2,
-  ArrowLeft,
-  Search,
   X,
   Mail,
   Copy,
@@ -100,193 +101,108 @@ export default function ResendLogsPage() {
   const totalFailed = logs.filter((l) => l.status === "failed").length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       <PageHeader
-        eyebrow="Resend • Auditoria"
-        title="Histórico & Logs de Envios"
+        back={{ href: "/admin/integracoes/resend", label: "Voltar para Resend" }}
+        eyebrow="Resend · Auditoria"
+        title="Histórico e logs de envios"
         description="Acompanhe em tempo real todos os e-mails transacionais e comunicados disparados via Resend."
         actions={
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <Link
-              href="/admin/integracoes/resend"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-background-secondary transition-colors"
-            >
-              <ArrowLeft className="size-3.5" /> Voltar para Resend
-            </Link>
-
-            {logs.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setIsClearConfirmOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-2 text-xs font-semibold text-muted hover:text-danger hover:border-danger/30 transition-colors"
-              >
-                <Trash2 className="size-3.5" /> Limpar Histórico
-              </button>
-            )}
-          </div>
+          logs.length > 0 ? (
+            <Button variant="outline" className="gap-2" onPress={() => setIsClearConfirmOpen(true)}>
+              <Trash2 className="size-4" aria-hidden="true" />
+              Limpar histórico
+            </Button>
+          ) : undefined
         }
       />
 
-      {/* Top Stats Summary */}
-      <div className="grid gap-4 sm:grid-cols-4">
-        <div className="editorial-card p-4">
-          <p className="text-xs font-medium text-muted">Total Registrado</p>
-          <p className="font-display text-2xl font-bold text-foreground mt-1">{logs.length}</p>
-          <p className="text-[11px] text-muted mt-0.5">Disparos no sistema</p>
-        </div>
-
-        <div className="editorial-card p-4">
-          <p className="text-xs font-medium text-muted">Enviados Reais (Live)</p>
-          <p className="font-display text-2xl font-bold text-success mt-1">{totalSent}</p>
-          <p className="text-[11px] text-muted mt-0.5">Via API Resend</p>
-        </div>
-
-        <div className="editorial-card p-4">
-          <p className="text-xs font-medium text-muted">Modo Sandbox</p>
-          <p className="font-display text-2xl font-bold text-warning mt-1">{totalSimulated}</p>
-          <p className="text-[11px] text-muted mt-0.5">Ambiente de teste</p>
-        </div>
-
-        <div className="editorial-card p-4">
-          <p className="text-xs font-medium text-muted">Falhas / Erros</p>
-          <p className="font-display text-2xl font-bold text-danger mt-1">{totalFailed}</p>
-          <p className="text-[11px] text-muted mt-0.5">Rejeições ou timeout</p>
-        </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Total registrado" value={String(logs.length)} helper="Disparos no sistema" icon={Mail} />
+        <StatCard label="Enviados reais (live)" value={String(totalSent)} helper="Via API Resend" icon={Send} tone="sage" />
+        <StatCard label="Modo sandbox" value={String(totalSimulated)} helper="Ambiente de teste" icon={FlaskConical} tone="terracotta" />
+        <StatCard label="Falhas e erros" value={String(totalFailed)} helper="Rejeições ou timeout" icon={AlertTriangle} tone="neutral" />
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
-        {/* Status Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          <button
-            type="button"
-            onClick={() => setStatusFilter("all")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              statusFilter === "all"
-                ? "bg-accent text-primary-foreground shadow-sm"
-                : "bg-surface border border-border text-muted hover:text-foreground"
-            }`}
-          >
-            Todos ({logs.length})
-          </button>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <Tabs.Root selectedKey={statusFilter} onSelectionChange={(key) => setStatusFilter(String(key) as typeof statusFilter)}>
+          <Tabs.List aria-label="Filtrar por status de envio" className="overflow-x-auto">
+            <Tabs.Tab id="all">Todos ({logs.length})</Tabs.Tab>
+            <Tabs.Tab id="sent">Enviados ({totalSent})</Tabs.Tab>
+            <Tabs.Tab id="simulated">Simulados ({totalSimulated})</Tabs.Tab>
+            <Tabs.Tab id="failed">Falhas ({totalFailed})</Tabs.Tab>
+          </Tabs.List>
+        </Tabs.Root>
 
-          <button
-            type="button"
-            onClick={() => setStatusFilter("sent")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              statusFilter === "sent"
-                ? "bg-success text-success-foreground shadow-sm"
-                : "bg-surface border border-border text-muted hover:text-foreground"
-            }`}
-          >
-            Enviados ({totalSent})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setStatusFilter("simulated")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              statusFilter === "simulated"
-                ? "bg-warning text-warning-foreground shadow-sm"
-                : "bg-surface border border-border text-muted hover:text-foreground"
-            }`}
-          >
-            Simulados ({totalSimulated})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setStatusFilter("failed")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              statusFilter === "failed"
-                ? "bg-danger text-danger-foreground shadow-sm"
-                : "bg-surface border border-border text-muted hover:text-foreground"
-            }`}
-          >
-            Falhas ({totalFailed})
-          </button>
-        </div>
-
-        {/* Search */}
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por e-mail, assunto ou ID..."
-            className="w-full min-h-9 rounded-xl border border-border bg-background-secondary pl-9 pr-3 text-xs text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
-          />
-        </div>
+        <SearchField
+          value={searchQuery}
+          onChange={setSearchQuery}
+          aria-label="Buscar nos logs"
+          className="w-full sm:w-80"
+        >
+          <Label className="sr-only">Buscar nos logs</Label>
+          <SearchField.Group>
+            <SearchField.SearchIcon />
+            <SearchField.Input placeholder="Buscar por e-mail, assunto ou ID..." />
+            <SearchField.ClearButton />
+          </SearchField.Group>
+        </SearchField>
       </div>
 
       {/* Table of Logs */}
-      <div className="editorial-card p-6 space-y-4">
+      <Card>
+        <Card.Content className="p-0">
         {filteredLogs.length === 0 ? (
-          <div className="py-16 text-center text-muted space-y-2">
-            <Mail className="size-10 mx-auto opacity-30 text-muted" />
-            <p className="font-semibold text-sm text-foreground">Nenhum registro encontrado</p>
-            <p className="text-xs max-w-sm mx-auto">
-              Os e-mails disparados pela plataforma, automações e testes aparecerão aqui em tempo real.
-            </p>
-          </div>
+          <AdminEmptyState
+            icon={Mail}
+            title="Nenhum registro encontrado"
+            description="Os e-mails disparados pela plataforma, automações e testes aparecerão aqui em tempo real."
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-border text-muted font-bold uppercase tracking-wider">
-                  <th className="py-3 px-3">Status</th>
-                  <th className="py-3 px-3">Destinatário</th>
-                  <th className="py-3 px-3">Assunto</th>
-                  <th className="py-3 px-3">Modelo</th>
-                  <th className="py-3 px-3">ID Resend</th>
-                  <th className="py-3 px-3 text-right">Data & Hora</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60">
-                {filteredLogs.map((log) => (
-                  <tr
-                    key={log.id}
-                    onClick={() => setSelectedLog(log)}
-                    className="hover:bg-background-secondary transition-colors cursor-pointer group"
-                  >
-                    <td className="py-3 px-3">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          log.status === "sent"
-                            ? "bg-success-soft text-success"
-                            : log.status === "simulated"
-                            ? "bg-warning-soft text-warning"
-                            : "bg-danger-soft text-danger"
-                        }`}
-                      >
-                        {log.status === "sent" && "Enviado"}
-                        {log.status === "simulated" && "Simulado"}
-                        {log.status === "failed" && "Falhou"}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 font-medium text-foreground group-hover:text-accent transition-colors">
-                      {log.to}
-                    </td>
-                    <td className="py-3 px-3 text-foreground truncate max-w-[240px]" title={log.subject}>
-                      {log.subject}
-                    </td>
-                    <td className="py-3 px-3 font-mono text-[10px] uppercase text-muted">
-                      {log.template}
-                    </td>
-                    <td className="py-3 px-3 font-mono text-[10px] text-muted truncate max-w-[140px]">
-                      {log.resendId || "—"}
-                    </td>
-                    <td className="py-3 px-3 text-right text-muted font-mono text-[11px]">
-                      {new Date(log.createdAt).toLocaleString("pt-BR")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table.Root>
+            <Table.ScrollContainer>
+              <Table.Content aria-label="Histórico de e-mails enviados" onRowAction={(key) => {
+                const log = filteredLogs.find((item) => item.id === key);
+                if (log) setSelectedLog(log);
+              }}>
+                <Table.Header>
+                  <Table.Column isRowHeader>Status</Table.Column>
+                  <Table.Column>Destinatário</Table.Column>
+                  <Table.Column>Assunto</Table.Column>
+                  <Table.Column>Modelo</Table.Column>
+                  <Table.Column>ID Resend</Table.Column>
+                  <Table.Column className="text-right">Data e hora</Table.Column>
+                </Table.Header>
+                <Table.Body>
+                  {filteredLogs.map((log) => (
+                    <Table.Row key={log.id} id={log.id} className="cursor-pointer">
+                      <Table.Cell>
+                        <StatusBadge tone={log.status === "sent" ? "positive" : log.status === "simulated" ? "warning" : "negative"}>
+                          {log.status === "sent" ? "Enviado" : log.status === "simulated" ? "Simulado" : "Falhou"}
+                        </StatusBadge>
+                      </Table.Cell>
+                      <Table.Cell className="font-medium text-foreground">{log.to}</Table.Cell>
+                      <Table.Cell className="max-w-[240px] text-foreground">
+                        <span className="block truncate" title={log.subject}>
+                          {log.subject}
+                        </span>
+                      </Table.Cell>
+                      <Table.Cell className="font-mono text-2xs uppercase text-muted">{log.template}</Table.Cell>
+                      <Table.Cell className="max-w-[140px] truncate font-mono text-2xs text-muted">
+                        {log.resendId || "—"}
+                      </Table.Cell>
+                      <Table.Cell className="text-right font-mono text-2xs text-muted">
+                        {new Date(log.createdAt).toLocaleString("pt-BR")}
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table.Content>
+            </Table.ScrollContainer>
+          </Table.Root>
         )}
-      </div>
+        </Card.Content>
+      </Card>
 
       {/* Log Detail Modal */}
       {selectedLog && (
@@ -313,7 +229,7 @@ export default function ResendLogsPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-muted font-medium">Status da Entrega:</span>
                   <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-3xs font-bold ${
                       selectedLog.status === "sent"
                         ? "bg-success-soft text-success"
                         : selectedLog.status === "simulated"
@@ -357,7 +273,7 @@ export default function ResendLogsPage() {
                     <button
                       type="button"
                       onClick={() => copyToClipboard(selectedLog.resendId!, "resend_id")}
-                      className="text-[10px] text-accent hover:underline font-semibold flex items-center gap-1"
+                      className="text-3xs text-accent hover:underline font-semibold flex items-center gap-1"
                     >
                       {copiedField === "resend_id" ? <Check className="size-3" /> : <Copy className="size-3" />} Copiar ID
                     </button>

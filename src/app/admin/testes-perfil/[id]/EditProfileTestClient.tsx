@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { PageHeader } from '@/components/ui/editorial';
+import { Button } from '@heroui/react';
 import { ProfileTest, ProfileCategory, ProfileQuestion, ProfileTestStatus, ProfileTestAccessType } from '@/types/profileTest';
 import { PROFILE_TEST_ACCESS_OPTIONS } from '@/lib/profileTestAccess';
 import { StepWizard, WizardStep } from '@/components/admin/profile-tests/StepWizard';
@@ -129,44 +130,26 @@ export function EditProfileTestClient({ initialTest, courses, plans }: { initial
   };
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out max-w-5xl mx-auto space-y-8 pb-16">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out max-w-5xl mx-auto space-y-7 pb-16">
       
-      {/* Top Header */}
-      <div className="flex items-center justify-between border-b border-border/40 pb-4">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/admin/testes-perfil"
-            className="p-2 rounded-xl border border-border/60 hover:bg-background-secondary text-muted hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-display font-black text-foreground">Editar Teste de Perfil</h1>
-            <p className="text-xs text-muted">ID: {testId}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setIsPreviewOpen(true)}
-            className="px-4 py-2.5 rounded-xl border border-border/60 font-semibold text-xs text-foreground hover:bg-background-secondary transition-all flex items-center gap-2"
-          >
-            <Eye className="w-4 h-4 text-accent" />
-            Preview
-          </button>
-
-          <button
-            type="button"
-            disabled={isSaving}
-            onClick={() => handleSave(status)}
-            className="bg-accent text-accent-foreground px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-accent-hover transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            Salvar Alterações
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        back={{ href: "/admin/testes-perfil", label: "Voltar para testes" }}
+        eyebrow="Testes de Perfil"
+        title="Editar teste de perfil"
+        description={`ID: ${testId}`}
+        actions={
+          <>
+            <Button variant="outline" onPress={() => setIsPreviewOpen(true)}>
+              <Eye className="size-4" aria-hidden="true" />
+              Preview
+            </Button>
+            <Button variant="primary" isDisabled={isSaving} onPress={() => handleSave(status)}>
+              <Save className="size-4" aria-hidden="true" />
+              Salvar alterações
+            </Button>
+          </>
+        }
+      />
 
       {/* Step Navigation Wizard Header */}
       <StepWizard

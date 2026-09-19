@@ -52,7 +52,7 @@ export const AvailabilityQuestionCard: React.FC<AvailabilityQuestionCardProps> =
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h4 className="font-bold text-foreground">Rotina de estudo</h4>
-            <span className="flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-[11px] font-semibold text-muted">
+            <span className="flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-2xs font-semibold text-muted">
               <Lock size={11} /> sempre a última pergunta
             </span>
           </div>

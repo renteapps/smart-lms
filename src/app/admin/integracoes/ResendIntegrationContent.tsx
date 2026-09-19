@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { PageHeader } from "@/components/ui/editorial";
+import { Table } from "@heroui/react";
+import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 import { toast } from "@/lib/toast";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
@@ -651,7 +652,7 @@ export function ResendIntegrationContent() {
               {Object.values(templates).filter((t) => t.isCustomized).length} de{" "}
               {Object.values(templates).length || 7}
             </p>
-            <p className="text-[11px] text-muted">HTML & tags editáveis</p>
+            <p className="text-2xs text-muted">HTML & tags editáveis</p>
           </div>
         </div>
 
@@ -662,7 +663,7 @@ export function ResendIntegrationContent() {
           <div>
             <p className="text-xs font-medium text-muted">Total de Envios</p>
             <p className="font-display text-xl font-bold text-foreground">{logs.length}</p>
-            <p className="text-[11px] text-muted">
+            <p className="text-2xs text-muted">
               {logs.filter((l) => l.status === "sent").length} reais •{" "}
               {logs.filter((l) => l.status === "simulated").length} simulados
             </p>
@@ -740,7 +741,7 @@ export function ResendIntegrationContent() {
         >
           <FileText className="size-4" /> Histórico de Envios
           {logs.length > 0 && (
-            <span className="text-[10px] bg-background-secondary text-foreground px-1.5 py-0.5 rounded-full font-mono">
+            <span className="text-3xs bg-background-secondary text-foreground px-1.5 py-0.5 rounded-full font-mono">
               {logs.length}
             </span>
           )}
@@ -794,7 +795,7 @@ export function ResendIntegrationContent() {
                       </button>
                     </div>
                   </div>
-                  <p className="text-[11px] text-muted mt-1.5 flex items-center gap-1">
+                  <p className="text-2xs text-muted mt-1.5 flex items-center gap-1">
                     <span>Não possui uma chave?</span>
                     <a
                       href="https://resend.com/api-keys"
@@ -856,7 +857,7 @@ export function ResendIntegrationContent() {
                     placeholder="Ex: Smart LMS ou Academia Digital"
                     className="w-full min-h-11 rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                   />
-                  <p className="text-[11px] text-muted mt-1">
+                  <p className="text-2xs text-muted mt-1">
                     Nome exibido na caixa de entrada do aluno.
                   </p>
                 </div>
@@ -867,7 +868,7 @@ export function ResendIntegrationContent() {
                       E-mail do Remetente (From)
                     </label>
                     {isLoadingDomains && (
-                      <span className="text-[10px] text-accent flex items-center gap-1">
+                      <span className="text-3xs text-accent flex items-center gap-1">
                         <RefreshCw className="size-3 animate-spin" /> Carregando domínios...
                       </span>
                     )}
@@ -905,7 +906,7 @@ export function ResendIntegrationContent() {
                       className="w-full min-h-11 rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                     />
                   )}
-                  <p className="text-[11px] text-muted mt-1">
+                  <p className="text-2xs text-muted mt-1">
                     Para testes rápidos sem domínio próprio, use <code>onboarding@resend.dev</code>.
                   </p>
                 </div>
@@ -922,7 +923,7 @@ export function ResendIntegrationContent() {
                     placeholder="Ex: suporte@seudominio.com"
                     className="w-full min-h-11 rounded-xl border border-border bg-background-secondary px-4 text-sm text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                   />
-                  <p className="text-[11px] text-muted mt-1">
+                  <p className="text-2xs text-muted mt-1">
                     Se o aluno responder à mensagem, o e-mail será entregue nesta caixa.
                   </p>
                 </div>
@@ -965,7 +966,7 @@ export function ResendIntegrationContent() {
                 <h3 className="text-xs font-bold uppercase tracking-wider text-muted">
                   Selecione o Modelo
                 </h3>
-                <span className="text-[11px] font-semibold text-muted">
+                <span className="text-2xs font-semibold text-muted">
                   {filteredTemplateList.length} disponíveis
                 </span>
               </div>
@@ -1036,7 +1037,7 @@ export function ResendIntegrationContent() {
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-muted mt-1 line-clamp-2 leading-relaxed">
+                      <p className="text-2xs text-muted mt-1 line-clamp-2 leading-relaxed">
                         {tpl.description}
                       </p>
                     </button>
@@ -1065,11 +1066,11 @@ export function ResendIntegrationContent() {
                   <div className="flex items-center gap-2">
                     <h2 className="text-base font-bold text-foreground">{currentTemplate.name}</h2>
                     {currentTemplate.isCustomized ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-accent-soft text-accent">
+                      <span className="px-2 py-0.5 rounded-full text-3xs font-bold bg-accent-soft text-accent">
                         HTML Customizado
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-background-secondary text-muted">
+                      <span className="px-2 py-0.5 rounded-full text-3xs font-medium bg-background-secondary text-muted">
                         HTML Padrão do Sistema
                       </span>
                     )}
@@ -1137,7 +1138,7 @@ export function ResendIntegrationContent() {
                     placeholder="Ex: Boas-vindas ao {{nome_plataforma}}!"
                     className="w-full min-h-10 rounded-lg border border-border bg-background-secondary px-3 text-xs font-mono text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                   />
-                  <p className="text-[10px] text-muted mt-1">
+                  <p className="text-3xs text-muted mt-1">
                     Suporta variáveis dinâmicas como <code>{"{{nome}}"}</code> ou <code>{"{{nome_curso}}"}</code>.
                   </p>
                 </div>
@@ -1153,7 +1154,7 @@ export function ResendIntegrationContent() {
                     placeholder="Texto curto exibido na caixa de entrada..."
                     className="w-full min-h-10 rounded-lg border border-border bg-background-secondary px-3 text-xs font-mono text-foreground placeholder:text-muted focus:border-accent focus:bg-surface focus:outline-none"
                   />
-                  <p className="text-[10px] text-muted mt-1">
+                  <p className="text-3xs text-muted mt-1">
                     Snippet exibido ao lado do assunto no Gmail / Outlook.
                   </p>
                 </div>
@@ -1165,7 +1166,7 @@ export function ResendIntegrationContent() {
                   <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
                     <Tag className="size-3.5 text-accent" /> Campos Personalizados Disponíveis
                   </p>
-                  <span className="text-[10px] text-muted">
+                  <span className="text-3xs text-muted">
                     Clique em uma tag para copiar ou inserir
                   </span>
                 </div>
@@ -1180,7 +1181,7 @@ export function ResendIntegrationContent() {
                       title={`${v.label} - ${v.description} (Ex: ${v.example})`}
                     >
                       <span className="text-accent font-bold">{v.tag}</span>
-                      <span className="text-[10px] text-muted group-hover:text-foreground font-sans">
+                      <span className="text-3xs text-muted group-hover:text-foreground font-sans">
                         {v.label}
                       </span>
                       {copiedField === v.tag ? (
@@ -1280,7 +1281,7 @@ export function ResendIntegrationContent() {
                       editorMode === "split" ? "md:col-span-6 space-y-2" : "col-span-12 space-y-2"
                     }
                   >
-                    <div className="flex items-center justify-between text-[11px] text-muted font-mono">
+                    <div className="flex items-center justify-between text-2xs text-muted font-mono">
                       <span>HTML do E-mail</span>
                       <span>{editedHtml.length} caracteres</span>
                     </div>
@@ -1305,7 +1306,7 @@ export function ResendIntegrationContent() {
                       editorMode === "split" ? "md:col-span-6 space-y-2" : "col-span-12 space-y-2"
                     }
                   >
-                    <div className="flex items-center justify-between text-[11px] text-muted font-mono">
+                    <div className="flex items-center justify-between text-2xs text-muted font-mono">
                       <span>Pré-visualização em Tempo Real</span>
                       <span className="truncate max-w-[200px]">Assunto: {previewSubject}</span>
                     </div>
@@ -1316,7 +1317,7 @@ export function ResendIntegrationContent() {
                       }`}
                     >
                       {/* Fake Client Header */}
-                      <div className="bg-slate-100 border-b border-slate-200 px-3 py-2 flex items-center justify-between text-[11px] text-slate-600">
+                      <div className="bg-slate-100 border-b border-slate-200 px-3 py-2 flex items-center justify-between text-2xs text-slate-600">
                         <div className="flex items-center gap-1.5">
                           <span className="size-2 rounded-full bg-red-400" />
                           <span className="size-2 rounded-full bg-amber-400" />
@@ -1325,7 +1326,7 @@ export function ResendIntegrationContent() {
                             {config.fromName || "Smart LMS"}
                           </span>
                         </div>
-                        <span className="text-slate-400 text-[10px] truncate max-w-[120px]">
+                        <span className="text-slate-400 text-3xs truncate max-w-[120px]">
                           Para: carlos@exemplo.com
                         </span>
                       </div>
@@ -1735,14 +1736,14 @@ export function ResendIntegrationContent() {
                     )}
                     <span>{testResult.success ? "Envio Realizado" : "Erro no Envio"}</span>
                     {testResult.timestamp && (
-                      <span className="text-[10px] font-mono opacity-70 ml-auto">
+                      <span className="text-3xs font-mono opacity-70 ml-auto">
                         {testResult.timestamp}
                       </span>
                     )}
                   </div>
                   <p className="leading-relaxed">{testResult.message}</p>
                   {testResult.id && (
-                    <p className="font-mono text-[10px] opacity-80 pt-1">ID: {testResult.id}</p>
+                    <p className="font-mono text-3xs opacity-80 pt-1">ID: {testResult.id}</p>
                   )}
                 </div>
               )}
@@ -1782,7 +1783,7 @@ export function ResendIntegrationContent() {
                     {config.fromEmail || "onboarding@resend.dev"}&gt;
                   </span>
                 </div>
-                <span className="text-slate-400 text-[11px]">
+                <span className="text-slate-400 text-2xs">
                   Para: {testEmail || "aluno@exemplo.com"}
                 </span>
               </div>
@@ -1841,14 +1842,14 @@ export function ResendIntegrationContent() {
                       Registro de Remetente Autorizado
                     </span>
                   </div>
-                  <span className="text-[10px] text-muted uppercase tracking-wider">
+                  <span className="text-3xs text-muted uppercase tracking-wider">
                     Obrigatório
                   </span>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2 text-xs font-mono">
                   <div className="bg-surface p-2.5 rounded-lg border border-border/60 flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-muted font-sans">Nome / Host</p>
+                      <p className="text-3xs text-muted font-sans">Nome / Host</p>
                       <p className="text-foreground font-bold">@ (ou seu domínio)</p>
                     </div>
                     <button
@@ -1865,7 +1866,7 @@ export function ResendIntegrationContent() {
 
                   <div className="bg-surface p-2.5 rounded-lg border border-border/60 flex items-center justify-between">
                     <div className="truncate pr-2">
-                      <p className="text-[10px] text-muted font-sans">Valor / Conteúdo</p>
+                      <p className="text-3xs text-muted font-sans">Valor / Conteúdo</p>
                       <p className="text-foreground font-bold truncate">
                         v=spf1 include:amazonses.com ~all
                       </p>
@@ -1895,14 +1896,14 @@ export function ResendIntegrationContent() {
                       Assinatura Criptográfica de Autenticidade
                     </span>
                   </div>
-                  <span className="text-[10px] text-muted uppercase tracking-wider">
+                  <span className="text-3xs text-muted uppercase tracking-wider">
                     Obrigatório
                   </span>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2 text-xs font-mono">
                   <div className="bg-surface p-2.5 rounded-lg border border-border/60 flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-muted font-sans">Nome / Host</p>
+                      <p className="text-3xs text-muted font-sans">Nome / Host</p>
                       <p className="text-foreground font-bold">resend._domainkey</p>
                     </div>
                     <button
@@ -1919,7 +1920,7 @@ export function ResendIntegrationContent() {
 
                   <div className="bg-surface p-2.5 rounded-lg border border-border/60 flex items-center justify-between">
                     <div className="truncate pr-2">
-                      <p className="text-[10px] text-muted font-sans">Valor / Conteúdo</p>
+                      <p className="text-3xs text-muted font-sans">Valor / Conteúdo</p>
                       <p className="text-foreground font-bold truncate">
                         resend._domainkey.resend.com
                       </p>
@@ -1951,14 +1952,14 @@ export function ResendIntegrationContent() {
                       Política de Proteção contra Spoofing
                     </span>
                   </div>
-                  <span className="text-[10px] text-muted uppercase tracking-wider">
+                  <span className="text-3xs text-muted uppercase tracking-wider">
                     Recomendado
                   </span>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2 text-xs font-mono">
                   <div className="bg-surface p-2.5 rounded-lg border border-border/60 flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] text-muted font-sans">Nome / Host</p>
+                      <p className="text-3xs text-muted font-sans">Nome / Host</p>
                       <p className="text-foreground font-bold">_dmarc</p>
                     </div>
                     <button
@@ -1975,7 +1976,7 @@ export function ResendIntegrationContent() {
 
                   <div className="bg-surface p-2.5 rounded-lg border border-border/60 flex items-center justify-between">
                     <div className="truncate pr-2">
-                      <p className="text-[10px] text-muted font-sans">Valor / Conteúdo</p>
+                      <p className="text-3xs text-muted font-sans">Valor / Conteúdo</p>
                       <p className="text-foreground font-bold truncate">v=DMARC1; p=none;</p>
                     </div>
                     <button
@@ -2033,54 +2034,44 @@ export function ResendIntegrationContent() {
               Nenhum e-mail disparado até o momento.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-border text-muted font-bold uppercase tracking-wider">
-                    <th className="py-3 px-3">Status</th>
-                    <th className="py-3 px-3">Destinatário</th>
-                    <th className="py-3 px-3">Assunto</th>
-                    <th className="py-3 px-3">Template</th>
-                    <th className="py-3 px-3">ID / Resend ID</th>
-                    <th className="py-3 px-3 text-right">Data & Hora</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {logs.map((log) => (
-                    <tr key={log.id} className="hover:bg-background-secondary transition-colors">
-                      <td className="py-3 px-3">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            log.status === "sent"
-                              ? "bg-success-soft text-success"
-                              : log.status === "simulated"
-                              ? "bg-warning-soft text-warning"
-                              : "bg-danger-soft text-danger"
-                          }`}
-                        >
-                          {log.status === "sent" && "Enviado"}
-                          {log.status === "simulated" && "Simulado"}
-                          {log.status === "failed" && "Falhou"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 font-medium text-foreground">{log.to}</td>
-                      <td className="py-3 px-3 text-foreground truncate max-w-[220px]" title={log.subject}>
-                        {log.subject}
-                      </td>
-                      <td className="py-3 px-3 text-muted font-mono uppercase text-[10px]">
-                        {log.template}
-                      </td>
-                      <td className="py-3 px-3 font-mono text-[10px] text-muted truncate max-w-[150px]">
-                        {log.resendId || "—"}
-                      </td>
-                      <td className="py-3 px-3 text-right text-muted font-mono text-[11px]">
-                        {new Date(log.createdAt).toLocaleString("pt-BR")}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table.Root>
+              <Table.ScrollContainer>
+                <Table.Content aria-label="E-mails disparados recentemente">
+                  <Table.Header>
+                    <Table.Column isRowHeader>Status</Table.Column>
+                    <Table.Column>Destinatário</Table.Column>
+                    <Table.Column>Assunto</Table.Column>
+                    <Table.Column>Modelo</Table.Column>
+                    <Table.Column>ID Resend</Table.Column>
+                    <Table.Column className="text-right">Data e hora</Table.Column>
+                  </Table.Header>
+                  <Table.Body>
+                    {logs.map((log) => (
+                      <Table.Row key={log.id} id={log.id}>
+                        <Table.Cell>
+                          <StatusBadge tone={log.status === "sent" ? "positive" : log.status === "simulated" ? "warning" : "negative"}>
+                            {log.status === "sent" ? "Enviado" : log.status === "simulated" ? "Simulado" : "Falhou"}
+                          </StatusBadge>
+                        </Table.Cell>
+                        <Table.Cell className="font-medium text-foreground">{log.to}</Table.Cell>
+                        <Table.Cell className="max-w-[220px] text-foreground">
+                          <span className="block truncate" title={log.subject}>
+                            {log.subject}
+                          </span>
+                        </Table.Cell>
+                        <Table.Cell className="font-mono text-2xs uppercase text-muted">{log.template}</Table.Cell>
+                        <Table.Cell className="max-w-[150px] truncate font-mono text-2xs text-muted">
+                          {log.resendId || "—"}
+                        </Table.Cell>
+                        <Table.Cell className="text-right font-mono text-2xs text-muted">
+                          {new Date(log.createdAt).toLocaleString("pt-BR")}
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Content>
+              </Table.ScrollContainer>
+            </Table.Root>
           )}
         </div>
       )}

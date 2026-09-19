@@ -306,7 +306,7 @@ export default function QuizQuestionTypeEditor({ question: q, onChange }: QuizQu
                           Múltipla escolha
                         </button>
                       </div>
-                      <button type="button" onClick={() => removeBlank(i)} className="text-muted hover:text-danger p-1 shrink-0">
+                      <button type="button" aria-label="Remover lacuna" onClick={() => removeBlank(i)} className="shrink-0 rounded p-1 text-muted hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
                         <Trash2 className="size-4" />
                       </button>
                     </div>

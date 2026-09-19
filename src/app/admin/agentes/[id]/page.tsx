@@ -953,7 +953,7 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                           <p className="mt-1 text-xs font-medium text-foreground">
                             {formatAgentAccessSummary(draftAgent)}
                           </p>
-                          <p className="mt-0.5 text-[11px] text-muted leading-relaxed">
+                          <p className="mt-0.5 text-2xs text-muted leading-relaxed">
                             {selectedCourseIds.length === 0 && selectedPlanIds.length === 0
                               ? "Como nenhum curso ou plano foi vinculado, este agente estará acessível a todos os alunos cadastrados."
                               : "O aluno terá acesso se estiver matriculado em QUALQUER um dos cursos vinculados OU for assinante de QUALQUER um dos planos vinculados."}
@@ -1087,14 +1087,14 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                                         {course.name}
                                       </p>
                                       {course.category && (
-                                        <p className="text-[10px] text-muted">
+                                        <p className="text-3xs text-muted">
                                           {course.category} {course.subtitle ? `· ${course.subtitle}` : ""}
                                         </p>
                                       )}
                                     </div>
                                   </div>
                                   {isSelected && (
-                                    <Chip size="sm" variant="soft" color="accent" className="text-[10px] shrink-0">
+                                    <Chip size="sm" variant="soft" color="accent" className="text-3xs shrink-0">
                                       Vinculado
                                     </Chip>
                                   )}
@@ -1216,14 +1216,14 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                                       {plan.name}
                                     </p>
                                     {plan.subtitle && (
-                                      <p className="text-[10px] text-muted">
+                                      <p className="text-3xs text-muted">
                                         {plan.subtitle} {plan.badge ? `(${plan.badge})` : ""}
                                       </p>
                                     )}
                                   </div>
                                 </div>
                                 {isSelected && (
-                                  <Chip size="sm" variant="soft" color="accent" className="text-[10px] shrink-0">
+                                  <Chip size="sm" variant="soft" color="accent" className="text-3xs shrink-0">
                                     Incluso
                                   </Chip>
                                 )}
@@ -1404,7 +1404,7 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                             <ul className="mt-3 flex flex-wrap gap-1.5">
                               {skills.map((skill) => (
                                 <li key={skill}>
-                                  <Chip color="default" variant="soft" size="sm" className="text-[10px] py-0 px-2">
+                                  <Chip color="default" variant="soft" size="sm" className="text-3xs py-0 px-2">
                                     {skill}
                                   </Chip>
                                 </li>
@@ -1412,7 +1412,7 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                             </ul>
                           )}
 
-                          <dl className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3 text-[11px] text-muted">
+                          <dl className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3 text-2xs text-muted">
                             <div className="flex items-center gap-1">
                               <Star className="size-3 text-warning fill-warning" aria-hidden="true" />
                               <dd data-numeric className="font-semibold text-foreground">
@@ -1445,7 +1445,7 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                             )}
                           </dl>
                         </div>
-                        <p className="text-center text-[11px] text-muted">
+                        <p className="text-center text-2xs text-muted">
                           É exatamente assim que o card será renderizado na vitrine pública.
                         </p>
                       </Card.Content>
@@ -1474,7 +1474,7 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-foreground">Motor de IA Unificado via OpenRouter</h4>
-                        <p className="text-[11px] text-muted">
+                        <p className="text-2xs text-muted">
                           Os agentes processam prompts e conversas em tempo real usando os modelos conectados.
                         </p>
                       </div>
@@ -1511,19 +1511,19 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                             <div>
                               <div className="flex items-start justify-between gap-2">
                                 <div>
-                                  <span className="text-[11px] font-bold text-muted uppercase tracking-wider">
+                                  <span className="text-2xs font-bold text-muted uppercase tracking-wider">
                                     {model.provider}
                                   </span>
                                   <h4 className="font-display text-base font-bold text-foreground">{model.name}</h4>
                                 </div>
-                                <Chip color={model.badgeTone} variant="soft" size="sm" className="text-[10px]">
+                                <Chip color={model.badgeTone} variant="soft" size="sm" className="text-3xs">
                                   {model.badge}
                                 </Chip>
                               </div>
                               <p className="mt-2.5 text-xs leading-relaxed text-muted">{model.description}</p>
                             </div>
 
-                            <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-[11px] text-muted">
+                            <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-2xs text-muted">
                               <span>Velocidade: <strong className="text-foreground">{model.speed}</strong></span>
                               <span>Raciocínio: <strong className="text-foreground">{model.reasoning}</strong></span>
                             </div>
@@ -1558,7 +1558,7 @@ export default function AgentFormPage({ params }: { params: Promise<{ id: string
                             <p className="text-xs font-bold text-foreground group-hover:text-accent transition-colors">
                               {tpl.title}
                             </p>
-                            <p className="mt-1 text-[11px] leading-relaxed text-muted">{tpl.description}</p>
+                            <p className="mt-1 text-2xs leading-relaxed text-muted">{tpl.description}</p>
                           </button>
                         ))}
                       </div>
@@ -1655,7 +1655,7 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                                 <div className="flex items-center gap-2.5 min-w-0">
                                   <FileText className="size-4 text-accent shrink-0" />
                                   <span className="font-medium text-foreground truncate">{file.name}</span>
-                                  <Chip color="default" variant="soft" size="sm" className="text-[10px] shrink-0">
+                                  <Chip color="default" variant="soft" size="sm" className="text-3xs shrink-0">
                                     {fileExtensionLabel(file.name)}
                                     {formatFileSize(file.sizeBytes) ? ` • ${formatFileSize(file.sizeBytes)}` : ""}
                                   </Chip>
@@ -1887,7 +1887,7 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                           <p className="mt-2 font-display text-3xl font-bold text-foreground" data-numeric>
                             {draftAgent.conversationsCount}
                           </p>
-                          <p className="mt-1 text-[11px] text-muted">
+                          <p className="mt-1 text-2xs text-muted">
                             {isNew ? "Agente ainda não publicado" : "Desde a criação do agente"}
                           </p>
                         </div>
@@ -1904,7 +1904,7 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                           <p className="mt-2 font-display text-3xl font-bold text-foreground" data-numeric>
                             {draftAgent.rating > 0 ? `${draftAgent.rating.toFixed(1)} / 5.0` : "—"}
                           </p>
-                          <p className="mt-1 text-[11px] text-muted">
+                          <p className="mt-1 text-2xs text-muted">
                             {(() => {
                               const ratedCount = conversations.filter((c) => typeof c.rating === "number").length;
                               return ratedCount > 0 ? `Baseado em ${ratedCount} avaliações` : "Nenhuma avaliação ainda";
@@ -1924,7 +1924,7 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                           <p className="mt-2 font-display text-3xl font-bold text-foreground" data-numeric>
                             {draftAgent.avgMinutes} min
                           </p>
-                          <p className="mt-1 text-[11px] text-muted">Estimativa configurada para este agente</p>
+                          <p className="mt-1 text-2xs text-muted">Estimativa configurada para este agente</p>
                         </div>
                         <span className="grid size-12 place-items-center rounded-2xl bg-success-soft text-success-soft-foreground">
                           <Timer className="size-6" />
@@ -1982,7 +1982,7 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                                     color={conv.status === "resolvida" ? "success" : conv.status === "atencao" ? "danger" : "accent"}
                                     variant="soft"
                                     size="sm"
-                                    className="text-[10px]"
+                                    className="text-3xs"
                                   >
                                     {conv.status === "resolvida"
                                       ? "Resolvida"
@@ -2105,7 +2105,7 @@ Regra de ouro do curso: Nunca interromper o interlocutor nos primeiros 90 segund
                               : "bg-surface border border-border text-foreground rounded-bl-sm shadow-xs",
                           )}
                         >
-                          <div className="text-[10px] font-bold opacity-75 mb-1 uppercase tracking-wider">
+                          <div className="text-3xs font-bold opacity-75 mb-1 uppercase tracking-wider">
                             {isStudent ? "Aluno" : name.trim() || "Agente"}
                           </div>
                           <p className="whitespace-pre-line">{msg.text}</p>

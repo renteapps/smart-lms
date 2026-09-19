@@ -64,7 +64,7 @@ export function AiCreditAdminCard({ userId, userName, initialBalance }: AiCredit
               <div className="rounded-xl bg-background-secondary p-4">
                 <p className="text-xs font-semibold text-muted">Disponíveis agora</p>
                 <p className="mt-1 text-2xl font-bold text-foreground" data-numeric>{formatAiCredits(balance.availableCredits)}</p>
-                <p className="mt-1 text-[11px] text-muted">
+                <p className="mt-1 text-2xs text-muted">
                   {formatAiCostBrl(balance.availableCredits * balance.creditValueBrl)} nominais
                 </p>
               </div>
@@ -73,7 +73,7 @@ export function AiCreditAdminCard({ userId, userName, initialBalance }: AiCredit
                 <p className="mt-1 text-xl font-bold text-foreground" data-numeric>
                   {formatAiCredits(balance.dailyRemaining)} <span className="text-sm font-medium text-muted">de {formatAiCredits(balance.dailyLimit)}</span>
                 </p>
-                <p className="mt-1.5 flex items-center gap-1 text-[11px] text-muted">
+                <p className="mt-1.5 flex items-center gap-1 text-2xs text-muted">
                   <CalendarClock className="size-3" aria-hidden="true" />
                   {formatAiCreditRenewal(balance.dailyRenewsAt)}
                 </p>
@@ -83,7 +83,7 @@ export function AiCreditAdminCard({ userId, userName, initialBalance }: AiCredit
                 <p className="mt-1 text-xl font-bold text-foreground" data-numeric>
                   {formatAiCredits(balance.weeklyRemaining)} <span className="text-sm font-medium text-muted">de {formatAiCredits(balance.weeklyLimit)}</span>
                 </p>
-                <p className="mt-1.5 flex items-center gap-1 text-[11px] text-muted">
+                <p className="mt-1.5 flex items-center gap-1 text-2xs text-muted">
                   <CalendarClock className="size-3" aria-hidden="true" />
                   {formatAiCreditRenewal(balance.weeklyRenewsAt)}
                 </p>
@@ -93,7 +93,7 @@ export function AiCreditAdminCard({ userId, userName, initialBalance }: AiCredit
                 <p className="mt-1 text-xl font-bold text-foreground" data-numeric>
                   {formatAiCredits(balance.monthlyRemaining)} <span className="text-sm font-medium text-muted">de {formatAiCredits(balance.monthlyLimit)}</span>
                 </p>
-                <p className="mt-1.5 flex items-center gap-1 text-[11px] text-muted">
+                <p className="mt-1.5 flex items-center gap-1 text-2xs text-muted">
                   <CalendarClock className="size-3" aria-hidden="true" />
                   {formatAiCreditRenewal(balance.monthlyRenewsAt)}
                 </p>
@@ -103,7 +103,7 @@ export function AiCreditAdminCard({ userId, userName, initialBalance }: AiCredit
                 <p className="mt-1 text-2xl font-bold text-accent-soft-foreground" data-numeric>
                   +{formatAiCredits(balance.additionalCredits)}
                 </p>
-                <p className="mt-1.5 text-[11px] text-accent-soft-foreground/80">Não expiram nas renovações.</p>
+                <p className="mt-1.5 text-2xs text-accent-soft-foreground/80">Não expiram nas renovações.</p>
               </div>
             </div>
           ) : (

@@ -825,7 +825,7 @@ export function ChatAdminClient({
                     <Chip size="sm" variant="soft">{conversation.scope === "course" ? "Curso" : "Plataforma"}</Chip>
                   </div>
                   <p className="mt-1 truncate text-xs text-muted">{conversation.studentName || conversation.studentEmail || "Aluno"}</p>
-                  <p className="mt-2 flex items-center gap-1.5 text-[11px] text-muted"><Clock3 className="size-3" /> {formatDate(conversation.updatedAt)}</p>
+                  <p className="mt-2 flex items-center gap-1.5 text-2xs text-muted"><Clock3 className="size-3" /> {formatDate(conversation.updatedAt)}</p>
                 </button>
               )) : (
                 <div className="p-8 text-center text-sm text-muted"><Search className="mx-auto mb-3 size-6" />Nenhuma conversa corresponde aos filtros.</div>
@@ -851,7 +851,7 @@ export function ChatAdminClient({
                   {selectedConversation.messages.map((message) => (
                     <div key={message.id} className={cn("flex", message.author === "user" ? "justify-end" : "justify-start")}>
                       <div className={cn("max-w-[85%] rounded-2xl border px-4 py-3", message.author === "user" ? "border-accent/20 bg-accent text-accent-foreground" : "border-border bg-surface text-foreground")}>
-                        <div className="mb-1 flex items-center justify-between gap-4 text-[10px] font-bold uppercase tracking-wide opacity-70">
+                        <div className="mb-1 flex items-center justify-between gap-4 text-3xs font-bold uppercase tracking-wide opacity-70">
                           <span>{message.author === "user" ? "Aluno" : settings.displayName}</span>
                           <span>{formatDate(message.createdAt)}</span>
                         </div>
@@ -861,7 +861,7 @@ export function ChatAdminClient({
                           <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
                         )}
                         {message.model && (
-                          <div className="mt-3 border-t border-current/10 pt-2 text-[10px] opacity-65">
+                          <div className="mt-3 border-t border-current/10 pt-2 text-3xs opacity-65">
                             <p>
                               Modelo: {message.model}
                               {message.usage

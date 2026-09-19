@@ -259,7 +259,7 @@ export const OptionMappingRow: React.FC<OptionMappingRowProps> = ({ option, onUp
                   <div className="flex-1 min-w-0">
                     <div className="truncate font-medium text-foreground">{mapping.title}</div>
                     {orphan && (
-                      <div className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-danger">
+                      <div className="mt-0.5 flex items-center gap-1 text-2xs font-semibold text-danger">
                         <TriangleAlert size={11} />
                         Não encontrado no catálogo — remova ou substitua
                       </div>

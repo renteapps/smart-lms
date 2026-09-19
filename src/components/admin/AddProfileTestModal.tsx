@@ -183,7 +183,7 @@ export default function AddProfileTestModal({
                         <span className="mt-0.5 line-clamp-1 block text-xs text-muted">
                           {test.description}
                         </span>
-                        <span className="mt-1.5 block text-[11px] font-medium text-muted">
+                        <span className="mt-1.5 block text-2xs font-medium text-muted">
                           {test.questions.length} perguntas · {test.categories.length} perfis/categorias
                         </span>
                       </Radio.Content>

@@ -352,7 +352,7 @@ export default function AdminAgentesPage() {
                               </p>
                               {agent.planNames && agent.planNames.length > 0 && (
                                 <div className="mt-1 flex flex-wrap gap-1">
-                                  <Chip color="accent" variant="soft" size="sm" className="text-[10px] py-0 px-1.5">
+                                  <Chip color="accent" variant="soft" size="sm" className="text-3xs py-0 px-1.5">
                                     {agent.planNames.length === 1
                                       ? agent.planNames[0]
                                       : `${agent.planNames[0]} (+${agent.planNames.length - 1})`}
@@ -360,7 +360,7 @@ export default function AdminAgentesPage() {
                                 </div>
                               )}
                               <p className="mt-1 text-xs text-muted">por {agent.createdBy}</p>
-                              <p className="mt-0.5 font-mono text-[11px] text-muted">/agentes/{agent.slug}</p>
+                              <p className="mt-0.5 font-mono text-2xs text-muted">/agentes/{agent.slug}</p>
                             </Table.Cell>
 
                             <Table.Cell>
@@ -509,7 +509,7 @@ export default function AdminAgentesPage() {
                               : agent.courseTitle || "Acesso Geral"}
                           </span>
                           {agent.planNames && agent.planNames.length > 0 && (
-                            <Chip color="accent" variant="soft" size="sm" className="text-[10px] py-0 px-1.5">
+                            <Chip color="accent" variant="soft" size="sm" className="text-3xs py-0 px-1.5">
                               {agent.planNames.join(", ")}
                             </Chip>
                           )}
