@@ -1,5 +1,6 @@
 "use client";
 
+import { SwitchRow } from "@/components/ui/SwitchRow";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -11,7 +12,6 @@ import {
   ListBoxItem,
   Modal,
   Select,
-  Switch,
   TextArea,
   TextField,
 } from "@heroui/react";
@@ -215,7 +215,7 @@ export function SubscriptionCard({ userId, userName, initialSubscription, plans 
               <div className="rounded-xl bg-background-secondary p-4">
                 <p className="text-xs font-semibold text-muted">Plano</p>
                 <p className="mt-1 text-lg font-bold text-foreground">{subscription.planName || "-"}</p>
-                <p className="mt-1 text-[11px] text-muted">
+                <p className="mt-1 text-2xs text-muted">
                   {formatCurrency(subscription.amount)} · {subscription.gateway || "Manual"}
                 </p>
               </div>
@@ -276,22 +276,13 @@ export function SubscriptionCard({ userId, userName, initialSubscription, plans 
                   </Select.Popover>
                 </Select>
 
-                <Switch
+                <SwitchRow
                   isSelected={wasPaid}
                   onChange={setWasPaid}
                   isDisabled={isPending}
-                  className="w-full items-center justify-between gap-4"
-                >
-                  <Switch.Content className="flex-1 text-left">
-                    <span className="block text-sm font-semibold text-foreground">Aluno pagou por este plano</span>
-                    <span className="mt-0.5 block text-xs font-normal text-muted">
-                      Desligue para conceder cortesia (valor zerado).
-                    </span>
-                  </Switch.Content>
-                  <Switch.Control>
-                    <Switch.Thumb />
-                  </Switch.Control>
-                </Switch>
+                  label="Aluno pagou por este plano"
+                  description="Desligue para conceder cortesia (valor zerado)."
+                />
 
                 {wasPaid && (
                   <TextField value={amountPaid} onChange={setAmountPaid} isDisabled={isPending} isRequired>

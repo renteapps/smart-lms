@@ -1,11 +1,11 @@
 "use client";
 
+import { SwitchRow } from "@/components/ui/SwitchRow";
 import { useEffect, useState, useTransition } from "react";
-import Link from "next/link";
+import { PageHeader } from "@/components/ui/editorial";
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   Calendar,
   CalendarClock,
   Clock,
@@ -30,7 +30,6 @@ import {
   ListBox,
   ListBoxItem,
   Select,
-  Switch,
   TextArea,
   TextField,
 } from "@heroui/react";
@@ -338,40 +337,34 @@ export default function AdminArticlePage() {
   const showAudioFields = formData.format === "audio" || formData.format === "both";
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-5xl space-y-8 pb-16">
-      <header className="sticky top-[92px] z-10 -mx-1 flex flex-col gap-4 rounded-xl border border-border bg-surface/95 p-4 shadow-elev-2 backdrop-blur-xl md:flex-row md:items-center md:justify-between">
-        <div>
-          <Link
-            href="/admin/blog"
-            className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-muted transition-colors hover:text-accent"
-          >
-            <ArrowLeft className="size-4" aria-hidden="true" />
-            Voltar para o blog
-          </Link>
-          <h1 className="font-display text-2xl font-extrabold text-foreground sm:text-3xl">
-            {isNew ? "Novo artigo" : "Editar artigo"}
-          </h1>
-          {saveError && <p className="mt-2 text-sm font-medium text-danger">{saveError}</p>}
-        </div>
-        <div className="flex w-full gap-3 md:w-auto">
-          {!isNew && (
-            <Button
-              type="button"
-              variant="danger-soft"
-              isDisabled={isSaving || isDeleting}
-              onClick={handleDelete}
-              className="gap-2"
-            >
-              <Trash2 className="size-4" aria-hidden="true" />
-              Excluir
+    <form onSubmit={handleSubmit} className="mx-auto max-w-5xl space-y-7 pb-16">
+      <PageHeader
+        sticky
+        back={{ href: "/admin/blog", label: "Voltar para o blog" }}
+        eyebrow="Blog"
+        title={isNew ? "Novo artigo" : "Editar artigo"}
+        description={saveError ? <span className="font-medium text-danger">{saveError}</span> : undefined}
+        actions={
+          <>
+            {!isNew && (
+              <Button
+                type="button"
+                variant="danger-soft"
+                isDisabled={isSaving || isDeleting}
+                onPress={handleDelete}
+                className="gap-2"
+              >
+                <Trash2 className="size-4" aria-hidden="true" />
+                Excluir
+              </Button>
+            )}
+            <Button type="submit" variant="primary" isDisabled={isSaving} className="gap-2">
+              <Save className="size-4" aria-hidden="true" />
+              {isSaving ? "Salvando..." : formData.publishMode === "scheduled" ? "Agendar publicação" : "Salvar"}
             </Button>
-          )}
-          <Button type="submit" variant="primary" isDisabled={isSaving} className="flex-1 gap-2 md:flex-none">
-            <Save className="size-4" aria-hidden="true" />
-            {isSaving ? "Salvando..." : formData.publishMode === "scheduled" ? "Agendar publicação" : "Salvar"}
-          </Button>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Formulário principal */}
@@ -579,7 +572,7 @@ export default function AdminArticlePage() {
               <div className="space-y-2 rounded-xl border border-border bg-surface-secondary/30 p-3.5">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-bold text-foreground">Data e hora ({PLATFORM_TIMEZONE})</Label>
-                  <Chip size="sm" variant="soft" color="default" className="text-[10px]">
+                  <Chip size="sm" variant="soft" color="default" className="text-3xs">
                     GMT-3 Brasília
                   </Chip>
                 </div>
@@ -603,33 +596,33 @@ export default function AdminArticlePage() {
                 {/* Atalhos rápidos para agendamento */}
                 {formData.publishMode === "scheduled" && (
                   <div className="mt-3 space-y-1.5 border-t border-border pt-2.5">
-                    <p className="text-[11px] font-medium text-muted">Atalhos rápidos:</p>
+                    <p className="text-2xs font-medium text-muted">Atalhos rápidos:</p>
                     <div className="flex flex-wrap gap-1.5">
                       <button
                         type="button"
                         onClick={() => setQuickSchedule(0, 18, 0)}
-                        className="rounded-md border border-border bg-background px-2 py-1 text-[11px] text-muted hover:border-accent hover:text-foreground"
+                        className="rounded-md border border-border bg-background px-2 py-1 text-2xs text-muted hover:border-accent hover:text-foreground"
                       >
                         Hoje 18:00
                       </button>
                       <button
                         type="button"
                         onClick={() => setQuickSchedule(1, 9, 0)}
-                        className="rounded-md border border-border bg-background px-2 py-1 text-[11px] text-muted hover:border-accent hover:text-foreground"
+                        className="rounded-md border border-border bg-background px-2 py-1 text-2xs text-muted hover:border-accent hover:text-foreground"
                       >
                         Amanhã 09:00
                       </button>
                       <button
                         type="button"
                         onClick={() => setQuickSchedule(3, 9, 0)}
-                        className="rounded-md border border-border bg-background px-2 py-1 text-[11px] text-muted hover:border-accent hover:text-foreground"
+                        className="rounded-md border border-border bg-background px-2 py-1 text-2xs text-muted hover:border-accent hover:text-foreground"
                       >
                         Em 3 dias
                       </button>
                       <button
                         type="button"
                         onClick={() => setQuickSchedule(7, 9, 0)}
-                        className="rounded-md border border-border bg-background px-2 py-1 text-[11px] text-muted hover:border-accent hover:text-foreground"
+                        className="rounded-md border border-border bg-background px-2 py-1 text-2xs text-muted hover:border-accent hover:text-foreground"
                       >
                         Em 1 semana
                       </button>
@@ -660,33 +653,19 @@ export default function AdminArticlePage() {
 
               {/* Destaque e Premium */}
               <div className="space-y-4 pt-2">
-                <Switch
+                <SwitchRow
                   isSelected={formData.featured}
                   onChange={(value) => setFormData((prev) => ({ ...prev, featured: value }))}
-                  className="items-start gap-4"
-                >
-                  <Switch.Control className="mt-0.5">
-                    <Switch.Thumb />
-                  </Switch.Control>
-                  <Switch.Content className="text-left">
-                    <span className="block text-sm font-bold text-foreground">Destaque</span>
-                    <span className="mt-1 block text-xs font-normal text-muted">Aparece no topo do blog.</span>
-                  </Switch.Content>
-                </Switch>
+                  label="Destaque"
+                  description="Aparece no topo do blog."
+                />
 
-                <Switch
+                <SwitchRow
                   isSelected={formData.premium}
                   onChange={(value) => setFormData((prev) => ({ ...prev, premium: value }))}
-                  className="items-start gap-4"
-                >
-                  <Switch.Control className="mt-0.5">
-                    <Switch.Thumb />
-                  </Switch.Control>
-                  <Switch.Content className="text-left">
-                    <span className="block text-sm font-bold text-foreground">Premium</span>
-                    <span className="mt-1 block text-xs font-normal text-muted">Reservado para assinantes.</span>
-                  </Switch.Content>
-                </Switch>
+                  label="Premium"
+                  description="Reservado para assinantes."
+                />
               </div>
             </Card.Content>
           </Card>
@@ -802,7 +781,7 @@ export default function AdminArticlePage() {
                       <div className="min-w-0">
                         <p className="truncate text-xs font-bold text-foreground">{selectedAuthor.name}</p>
                         {selectedAuthor.title && (
-                          <p className="truncate text-[11px] text-muted">{selectedAuthor.title}</p>
+                          <p className="truncate text-2xs text-muted">{selectedAuthor.title}</p>
                         )}
                       </div>
                     </div>

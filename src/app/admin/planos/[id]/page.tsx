@@ -1,5 +1,6 @@
 "use client";
 
+import { SwitchRow } from "@/components/ui/SwitchRow";
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -13,7 +14,6 @@ import {
   Radio,
   RadioGroup,
   Select,
-  Switch,
   TextField,
   TextArea,
   toast,
@@ -93,17 +93,7 @@ function ToggleSwitch({
   label: string;
   description?: string;
 }) {
-  return (
-    <Switch isSelected={isSelected} onChange={onChange} className="w-full items-center justify-between gap-4">
-      <Switch.Content className="flex-1 text-left">
-        <span className="block text-sm font-semibold text-foreground">{label}</span>
-        {description && <span className="mt-0.5 block text-xs font-normal text-muted">{description}</span>}
-      </Switch.Content>
-      <Switch.Control>
-        <Switch.Thumb />
-      </Switch.Control>
-    </Switch>
-  );
+  return <SwitchRow isSelected={isSelected} onChange={onChange} label={label} description={description} />;
 }
 
 export default function EditPlanPage() {
@@ -714,7 +704,7 @@ export default function EditPlanPage() {
                                         </div>
                                         <span className="truncate">{course.title}</span>
                                         {course.category && (
-                                          <span className="text-[10px] text-muted uppercase">({course.category})</span>
+                                          <span className="text-3xs text-muted uppercase">({course.category})</span>
                                         )}
                                       </div>
                                     </div>

@@ -1,10 +1,11 @@
 "use client";
 
+import { SwitchRow } from "@/components/ui/SwitchRow";
 import { useState } from "react";
-import Link from "next/link";
+import { PageHeader } from "@/components/ui/editorial";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Shield, Award, MessageSquare, Clock, GalleryHorizontalEnd } from "lucide-react";
-import { Button, Card, Description, Input, Label, Switch, TextField, toast } from "@heroui/react";
+import { Save, Shield, Award, MessageSquare, Clock, GalleryHorizontalEnd } from "lucide-react";
+import { Button, Card, Description, Input, Label, TextField, toast } from "@heroui/react";
 import { saveCourse } from "@/app/actions/admin/catalog";
 import type { Course } from "@/types/course";
 
@@ -20,17 +21,7 @@ function SettingSwitch({
   description: string;
 }) {
   return (
-    <Switch isSelected={isSelected} onChange={onChange}>
-      <Switch.Content className="items-start gap-4">
-        <Switch.Control className="mt-0.5">
-          <Switch.Thumb />
-        </Switch.Control>
-        <span className="text-left">
-          <span className="block text-sm font-bold text-foreground">{title}</span>
-          <span className="mt-1 block text-sm font-normal text-muted">{description}</span>
-        </span>
-      </Switch.Content>
-    </Switch>
+    <SwitchRow isSelected={isSelected} onChange={onChange} label={title} description={description} />
   );
 }
 
@@ -85,29 +76,20 @@ export function CourseSettingsForm({ course }: { course: Course }) {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-16">
-      <header className="sticky top-[92px] z-10 -mx-1 flex flex-col gap-4 rounded-xl border border-border bg-surface/95 p-4 shadow-elev-2 backdrop-blur-xl md:flex-row md:items-center md:justify-between">
-        <div>
-          <Link href={`/admin/cursos/${id}`} className="inline-flex items-center gap-2 text-muted hover:text-accent transition-colors text-sm font-medium mb-4">
-            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-            Voltar para o Curso
-          </Link>
-          <h1 className="text-3xl font-display font-black text-foreground">Configurações</h1>
-          <p className="text-muted mt-1">Regras de negócio, certificados e preferências do curso {course.title}.</p>
-        </div>
-        <div className="flex gap-3 w-full md:w-auto">
-          <Link
-            href={`/admin/cursos/${id}`}
-            className="flex-1 md:flex-none text-center bg-background-secondary hover:bg-surface-hover text-foreground px-6 py-3 rounded-lg font-semibold border border-border transition-all"
-          >
-            Voltar
-          </Link>
-          <Button variant="primary" className="flex-1 gap-2 md:flex-none" isDisabled={isSaving} onClick={handleSave}>
+    <div className="max-w-5xl mx-auto space-y-7 pb-16">
+      <PageHeader
+        sticky
+        back={{ href: `/admin/cursos/${id}`, label: "Voltar para o curso" }}
+        eyebrow="Cursos"
+        title="Configurações"
+        description={`Regras de negócio, certificados e preferências do curso ${course.title}.`}
+        actions={
+          <Button variant="primary" className="gap-2" isDisabled={isSaving} onPress={handleSave}>
             <Save className="size-4" aria-hidden="true" />
             {isSaving ? "Salvando..." : "Salvar alterações"}
           </Button>
-        </div>
-      </header>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Progresso e Certificados */}

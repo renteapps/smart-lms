@@ -1,11 +1,12 @@
 "use client";
 
+import { SwitchRow } from "@/components/ui/SwitchRow";
 import { ArrowLeft, Film, Link2, Loader2, RefreshCw, Save, Tv, Sparkles } from "lucide-react";
+import { PageHeader } from "@/components/ui/editorial";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import dynamic from "next/dynamic";
-import { Switch } from "@heroui/react";
 import type { Lesson, Module } from "@/types/course";
 import { saveLesson } from "@/app/actions/admin/catalog";
 import { getPandaVideoTranscription } from "@/app/actions/admin/pandavideo";
@@ -283,21 +284,13 @@ export default function AulaAdminForm({
         }}
       />
 
-      <div className="mb-8">
-        <Link
-          href={`/admin/cursos/${courseId}/modulos`}
-          className="inline-flex items-center gap-2 text-muted hover:text-accent transition-colors text-sm font-medium mb-4"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Voltar para Módulos
-        </Link>
-        <h1 className="text-3xl font-display font-bold">
-          {isNew ? "Criar Nova Aula" : "Editar Aula"}
-        </h1>
-        <p className="text-muted mt-2">
-          {isNew ? "Preencha os detalhes da nova aula abaixo." : "Atualize os detalhes da aula."}
-        </p>
-      </div>
+      <PageHeader
+        back={{ href: `/admin/cursos/${courseId}/modulos`, label: "Voltar para módulos" }}
+        eyebrow="Cursos"
+        title={isNew ? "Criar nova aula" : "Editar aula"}
+        description={isNew ? "Preencha os detalhes da nova aula abaixo." : "Atualize os detalhes da aula."}
+        className="mb-8"
+      />
 
       <form onSubmit={handleSubmit} className="space-y-6 bg-surface border border-border rounded-2xl p-6 shadow-sm">
         {/* Título */}
@@ -649,21 +642,12 @@ export default function AulaAdminForm({
             onChange={(prerequisites) => setFormData((prev) => ({ ...prev, prerequisites }))}
           />
 
-          <Switch
+          <SwitchRow
             isSelected={formData.isEligibleForTrail ?? true}
             onChange={(value) => setFormData((prev) => ({ ...prev, isEligibleForTrail: value }))}
-            className="items-start gap-4"
-          >
-            <Switch.Control className="mt-0.5">
-              <Switch.Thumb />
-            </Switch.Control>
-            <Switch.Content className="text-left">
-              <span className="block text-sm font-bold text-foreground">Elegível para sugestão automática</span>
-              <span className="mt-1 block text-sm font-normal text-muted">
-                Permite que o ClassRank recomende esta aula na trilha de outros alunos.
-              </span>
-            </Switch.Content>
-          </Switch>
+            label="Elegível para sugestão automática"
+            description="Permite que o ClassRank recomende esta aula na trilha de outros alunos."
+          />
         </div>
 
         {/* Anexos */}

@@ -1,5 +1,6 @@
 "use client";
 
+import { SwitchRow } from "@/components/ui/SwitchRow";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
   BellRing,
@@ -24,7 +25,6 @@ import {
   ListBoxItem,
   Select,
   Spinner,
-  Switch,
   TextArea,
   TextField,
   toast,
@@ -766,53 +766,29 @@ export function ProfileEditor() {
           />
 
           <Card.Content className="divide-y divide-hairline pt-2">
-            <Switch
+            <SwitchRow
               isSelected={profile.lessonReminders}
               onChange={(value) => updateProfile("lessonReminders", value)}
-              className="justify-between gap-5 py-4"
-            >
-              <Switch.Content className="text-left">
-                <span className="block text-sm font-bold text-foreground">Lembretes de aula</span>
-                <span className="mt-1 block text-sm leading-5 text-muted">
-                  Receba um aviso quando uma nova prática da sua trilha estiver disponível.
-                </span>
-              </Switch.Content>
-              <Switch.Control>
-                <Switch.Thumb />
-              </Switch.Control>
-            </Switch>
+              className="py-4"
+              label="Lembretes de aula"
+              description="Receba um aviso quando uma nova prática da sua trilha estiver disponível."
+            />
 
-            <Switch
+            <SwitchRow
               isSelected={profile.emailDigest}
               onChange={(value) => updateProfile("emailDigest", value)}
-              className="justify-between gap-5 py-4"
-            >
-              <Switch.Content className="text-left">
-                <span className="block text-sm font-bold text-foreground">Resumo semanal por e-mail</span>
-                <span className="mt-1 block text-sm leading-5 text-muted">
-                  Uma visão breve do seu progresso e dos próximos passos recomendados.
-                </span>
-              </Switch.Content>
-              <Switch.Control>
-                <Switch.Thumb />
-              </Switch.Control>
-            </Switch>
+              className="py-4"
+              label="Resumo semanal por e-mail"
+              description="Uma visão breve do seu progresso e dos próximos passos recomendados."
+            />
 
-            <Switch
+            <SwitchRow
               isSelected={profile.achievementAlerts}
               onChange={(value) => updateProfile("achievementAlerts", value)}
-              className="justify-between gap-5 py-4"
-            >
-              <Switch.Content className="text-left">
-                <span className="block text-sm font-bold text-foreground">Conquistas e marcos</span>
-                <span className="mt-1 block text-sm leading-5 text-muted">
-                  Comemore conclusões de cursos, sequências e metas alcançadas.
-                </span>
-              </Switch.Content>
-              <Switch.Control>
-                <Switch.Thumb />
-              </Switch.Control>
-            </Switch>
+              className="py-4"
+              label="Conquistas e marcos"
+              description="Comemore conclusões de cursos, sequências e metas alcançadas."
+            />
           </Card.Content>
         </Card>
       </section>
