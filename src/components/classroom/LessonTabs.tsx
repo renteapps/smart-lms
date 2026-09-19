@@ -367,7 +367,7 @@ export default function LessonTabs({
                                 {comment.user.name}
                               </span>
                               {comment.status === "pending" && (
-                                <span className="rounded-full border border-warning/30 bg-warning/10 px-2.5 py-0.5 text-[10px] font-semibold text-warning">
+                                <span className="rounded-full border border-warning/30 bg-warning/10 px-2.5 py-0.5 text-3xs font-semibold text-warning">
                                   Aguardando aprovação
                                 </span>
                               )}
@@ -434,7 +434,7 @@ export default function LessonTabs({
                                   className="size-full aspect-square object-cover rounded-full"
                                 />
                               ) : (
-                                <Avatar.Fallback className="font-display text-[10px] font-bold">
+                                <Avatar.Fallback className="font-display text-3xs font-bold">
                                   {currentUser?.email?.substring(0, 2).toUpperCase() || "VC"}
                                 </Avatar.Fallback>
                               )}
@@ -497,7 +497,7 @@ export default function LessonTabs({
                                       className="size-full aspect-square object-cover rounded-full"
                                     />
                                   ) : (
-                                    <Avatar.Fallback className="font-display text-[10px] font-bold">
+                                    <Avatar.Fallback className="font-display text-3xs font-bold">
                                       {reply.user.name.substring(0, 2).toUpperCase()}
                                     </Avatar.Fallback>
                                   )}
@@ -516,7 +516,7 @@ export default function LessonTabs({
                                           </span>
                                         )}
                                       </div>
-                                      <span className="text-[11px] text-muted">
+                                      <span className="text-2xs text-muted">
                                         {formatDistanceToNow(new Date(reply.createdAt), {
                                           addSuffix: true,
                                           locale: ptBR,
@@ -533,7 +533,7 @@ export default function LessonTabs({
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-7 px-2 text-[11px] text-danger hover:bg-danger-soft hover:text-danger-soft-foreground"
+                                        className="h-7 px-2 text-2xs text-danger hover:bg-danger-soft hover:text-danger-soft-foreground"
                                         onClick={() => setCommentToDelete(reply.id)}
                                         isDisabled={isDeleting === reply.id}
                                       >

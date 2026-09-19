@@ -560,7 +560,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                   }`}
                 >
                   <span>Todas</span>
-                  <span className="rounded-full bg-surface-hover/80 px-1.5 py-0.5 text-[10px] text-inherit">
+                  <span className="rounded-full bg-surface-hover/80 px-1.5 py-0.5 text-3xs text-inherit">
                     {counts.todas}
                   </span>
                 </button>
@@ -576,7 +576,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                 >
                   <BookOpen className="size-3.5" />
                   <span>Aulas</span>
-                  <span className="rounded-full bg-surface-hover/80 px-1.5 py-0.5 text-[10px] text-inherit">
+                  <span className="rounded-full bg-surface-hover/80 px-1.5 py-0.5 text-3xs text-inherit">
                     {counts.aulas}
                   </span>
                 </button>
@@ -592,7 +592,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                 >
                   <Bot className="size-3.5" />
                   <span>Agentes IA</span>
-                  <span className="rounded-full bg-surface-hover/80 px-1.5 py-0.5 text-[10px] text-inherit">
+                  <span className="rounded-full bg-surface-hover/80 px-1.5 py-0.5 text-3xs text-inherit">
                     {counts.agentes}
                   </span>
                 </button>
@@ -608,7 +608,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                 >
                   <FileText className="size-3.5" />
                   <span>Pessoais</span>
-                  <span className="rounded-full bg-surface-hover/80 px-1.5 py-0.5 text-[10px] text-inherit">
+                  <span className="rounded-full bg-surface-hover/80 px-1.5 py-0.5 text-3xs text-inherit">
                     {counts.pessoal}
                   </span>
                 </button>
@@ -625,7 +625,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                   >
                     <Star className="size-3.5 fill-warning text-warning" />
                     <span>Fixadas</span>
-                    <span className="rounded-full bg-surface-hover/80 px-1.5 py-0.5 text-[10px] text-inherit">
+                    <span className="rounded-full bg-surface-hover/80 px-1.5 py-0.5 text-3xs text-inherit">
                       {counts.fixadas}
                     </span>
                   </button>
@@ -711,17 +711,17 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                             <div className="flex items-center justify-between gap-2">
                               {/* Badge de Origem */}
                               {isAgent ? (
-                                <Chip size="sm" variant="soft" color="accent" className="font-semibold text-[11px] gap-1">
+                                <Chip size="sm" variant="soft" color="accent" className="font-semibold text-2xs gap-1">
                                   <Bot className="size-3" />
                                   <span>Agente IA</span>
                                 </Chip>
                               ) : isPersonal ? (
-                                <Chip size="sm" variant="soft" color="default" className="font-semibold text-[11px] gap-1">
+                                <Chip size="sm" variant="soft" color="default" className="font-semibold text-2xs gap-1">
                                   <FileText className="size-3" />
                                   <span>Pessoal</span>
                                 </Chip>
                               ) : (
-                                <Chip size="sm" variant="soft" color="success" className="font-semibold text-[11px] gap-1">
+                                <Chip size="sm" variant="soft" color="success" className="font-semibold text-2xs gap-1">
                                   <BookOpen className="size-3" />
                                   <span>Aula</span>
                                 </Chip>
@@ -781,7 +781,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                             </div>
 
                             {/* Data de Modificação */}
-                            <div className="mt-3 flex items-center gap-1.5 text-[11px] font-medium text-muted">
+                            <div className="mt-3 flex items-center gap-1.5 text-2xs font-medium text-muted">
                               <Calendar className="size-3" />
                               <time dateTime={note.updatedAt}>{formatRelativeDate(note.updatedAt)}</time>
                             </div>
@@ -802,7 +802,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                                 {note.tags.map((tag) => (
                                   <span
                                     key={tag}
-                                    className="rounded-md bg-surface-hover px-2 py-0.5 text-[10px] font-medium text-muted"
+                                    className="rounded-md bg-surface-hover px-2 py-0.5 text-3xs font-medium text-muted"
                                   >
                                     #{tag}
                                   </span>
@@ -915,7 +915,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                       required
                       className="w-full rounded-xl border border-border bg-surface p-3.5 text-sm leading-relaxed text-foreground placeholder:text-muted outline-none transition-colors focus:border-accent resize-y"
                     />
-                    <p className="mt-1 text-right text-[11px] text-muted">
+                    <p className="mt-1 text-right text-2xs text-muted">
                       {formContent.length} caracteres • {formContent.trim().split(/\s+/).filter(Boolean).length} palavras
                     </p>
                   </div>
@@ -1095,17 +1095,17 @@ export default function NotesClient({ initialNotes }: { initialNotes: StudentNot
                   <Modal.Header className="flex flex-col gap-2 pb-5 border-b border-border/80 pr-12">
                     <div className="flex flex-wrap items-center gap-2">
                       {isAgentNote(viewingNote) ? (
-                        <Chip size="sm" variant="soft" color="accent" className="font-semibold text-[11px] gap-1">
+                        <Chip size="sm" variant="soft" color="accent" className="font-semibold text-2xs gap-1">
                           <Bot className="size-3" />
                           <span>Agente IA</span>
                         </Chip>
                       ) : isPersonalNote(viewingNote) ? (
-                        <Chip size="sm" variant="soft" color="default" className="font-semibold text-[11px] gap-1">
+                        <Chip size="sm" variant="soft" color="default" className="font-semibold text-2xs gap-1">
                           <FileText className="size-3" />
                           <span>Anotação Pessoal</span>
                         </Chip>
                       ) : (
-                        <Chip size="sm" variant="soft" color="success" className="font-semibold text-[11px] gap-1">
+                        <Chip size="sm" variant="soft" color="success" className="font-semibold text-2xs gap-1">
                           <BookOpen className="size-3" />
                           <span>Aula / Curso</span>
                         </Chip>

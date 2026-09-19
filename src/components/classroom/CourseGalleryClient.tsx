@@ -88,7 +88,7 @@ export default function CourseGalleryClient({
           />
 
           <div className="relative z-10 max-w-3xl px-5 py-8 sm:px-8 sm:py-12 md:px-10 md:py-16 lg:px-14 lg:py-20">
-            <p className="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-white/70">
+            <p className="text-2xs sm:text-xs font-bold uppercase tracking-widest text-white/70">
               {course.category || "Geral"} · Coleção de aulas
             </p>
             <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:display-1 mt-3 sm:mt-4 font-extrabold text-white tracking-tight leading-[1.1] break-words">
@@ -173,7 +173,7 @@ export default function CourseGalleryClient({
       <section className="editorial-container pb-16 sm:pb-24">
         <Rise>
           <header className="mb-5 sm:mb-7">
-            <p className="eyebrow text-[11px] sm:text-xs">Galeria</p>
+            <p className="eyebrow text-2xs sm:text-xs">Galeria</p>
             <h2 className="display-3 sm:display-2 mt-1.5 sm:mt-2 text-foreground">Todas as aulas</h2>
           </header>
         </Rise>

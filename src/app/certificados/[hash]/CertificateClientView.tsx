@@ -185,7 +185,7 @@ export default function CertificateClientView({
               <p className="text-sm sm:text-base font-serif font-bold text-[#0f172a]">
                 {certificate.coordinatorName || platformName}
               </p>
-              <p className="text-[10px] sm:text-xs text-amber-700 uppercase tracking-widest mt-1">Direção / Coordenação</p>
+              <p className="text-3xs sm:text-xs text-amber-700 uppercase tracking-widest mt-1">Direção / Coordenação</p>
             </div>
 
             <div className="flex flex-col items-center">
@@ -193,15 +193,15 @@ export default function CertificateClientView({
               <p className="text-sm sm:text-base font-serif font-bold text-[#0f172a]">
                 {dateFormatter.format(new Date(certificate.issueDate))}
               </p>
-              <p className="text-[10px] sm:text-xs text-amber-700 uppercase tracking-widest mt-1">Data de Emissão</p>
+              <p className="text-3xs sm:text-xs text-amber-700 uppercase tracking-widest mt-1">Data de Emissão</p>
             </div>
           </div>
 
           {/* Rodapé e QR Code */}
           <div className="mt-16 w-full flex flex-col-reverse sm:flex-row justify-between items-end gap-6">
             <div className="text-center sm:text-left">
-              <p className="text-[9px] sm:text-[10px] text-slate-400 uppercase tracking-wider mb-1">Código de Autenticidade</p>
-              <p className="text-[10px] sm:text-xs font-mono text-slate-500 max-w-full break-all">
+              <p className="text-[9px] sm:text-3xs text-slate-400 uppercase tracking-wider mb-1">Código de Autenticidade</p>
+              <p className="text-3xs sm:text-xs font-mono text-slate-500 max-w-full break-all">
                 {certificate.validationHash}
               </p>
             </div>

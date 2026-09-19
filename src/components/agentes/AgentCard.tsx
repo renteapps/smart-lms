@@ -92,7 +92,7 @@ export default function AgentCard({ agent, conversationCount, featured = false }
                   : agent.courseTitle || "Acesso Geral"}
               </span>
               {agent.planNames && agent.planNames.length > 0 && (
-                <Chip size="sm" variant="soft" color="accent" className="text-[10px] py-0 px-1.5">
+                <Chip size="sm" variant="soft" color="accent" className="text-3xs py-0 px-1.5">
                   {agent.planNames.length === 1
                     ? agent.planNames[0]
                     : `${agent.planNames[0]} (+${agent.planNames.length - 1})`}

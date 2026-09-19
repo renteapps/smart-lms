@@ -211,7 +211,7 @@ export function BulkInviteModal({
               {/* Textarea de Entrada */}
               <TextField value={rawText} onChange={setRawText}>
                 <Label className="text-xs">
-                  Cole abaixo os dados no formato: <code className="bg-surface-secondary px-1 py-0.5 rounded text-[11px]">Nome, e-mail, departamento, cargo</code> (um por linha)
+                  Cole abaixo os dados no formato: <code className="bg-surface-secondary px-1 py-0.5 rounded text-2xs">Nome, e-mail, departamento, cargo</code> (um por linha)
                 </Label>
                 <TextArea
                   rows={5}
@@ -253,7 +253,7 @@ export function BulkInviteModal({
                             <p className="font-semibold text-foreground truncate">
                               {item.name} <span className="font-normal text-muted">({item.email})</span>
                             </p>
-                            <p className="text-[11px] text-muted truncate">
+                            <p className="text-2xs text-muted truncate">
                               {item.department} {item.jobTitle ? `· ${item.jobTitle}` : ""}
                             </p>
                           </div>

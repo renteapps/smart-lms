@@ -187,7 +187,7 @@ export function AssignCourseModal({
 
                         <div className="flex items-center gap-2 shrink-0">
                           <Chip variant="soft" size="sm">{course.category}</Chip>
-                          <span className="text-[11px] text-muted hidden sm:inline">{course.duration}</span>
+                          <span className="text-2xs text-muted hidden sm:inline">{course.duration}</span>
                         </div>
                       </div>
                     );

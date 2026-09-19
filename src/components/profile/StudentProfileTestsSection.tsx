@@ -77,7 +77,7 @@ export function StudentProfileTestsSection({ completedResults, availableTests }:
                         const scoreColor = scoreCat?.color || "#cbd5e1";
                         return (
                           <ProgressBar key={score.categoryId} value={score.percentage} size="sm">
-                            <div className="flex justify-between items-center text-[10px] font-bold mb-1">
+                            <div className="flex justify-between items-center text-3xs font-bold mb-1">
                               <span className="text-muted truncate mr-2">{scoreCat?.emoji || ''} {score.categoryName}</span>
                               <ProgressBar.Output className="text-foreground shrink-0" />
                             </div>

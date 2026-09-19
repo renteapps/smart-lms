@@ -130,7 +130,7 @@ export function SeatsUpgradeModal({
                           </span>
                         )}
                         <p className="font-bold text-sm">{pack.label}</p>
-                        <p className="text-[11px] text-muted mt-1">
+                        <p className="text-2xs text-muted mt-1">
                           R$ {pack.perSeatMonth}/vaga/mês
                         </p>
                       </button>
@@ -180,7 +180,7 @@ export function SeatsUpgradeModal({
               </TextField>
 
               {/* Garantias */}
-              <div className="flex items-center gap-4 text-[11px] text-muted bg-surface-secondary/20 p-2.5 rounded-lg border border-border">
+              <div className="flex items-center gap-4 text-2xs text-muted bg-surface-secondary/20 p-2.5 rounded-lg border border-border">
                 <span className="flex items-center gap-1">
                   <ShieldCheck className="size-3.5 text-success" /> Ativação imediata
                 </span>

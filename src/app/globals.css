@@ -166,6 +166,9 @@
 }
 
 @theme inline {
+  /* Escala de texto pequeno (substitui tamanhos arbitrários de 10px e 11px). */
+  --text-3xs: 0.625rem;
+  --text-2xs: 0.6875rem;
   --color-bg: var(--bg);
   --color-canvas: var(--canvas);
   --color-canvas-soft: var(--canvas-soft);

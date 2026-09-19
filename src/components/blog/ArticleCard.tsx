@@ -93,7 +93,7 @@ export function ArticleCard({ article, className }: ArticleCardProps) {
           <div className="min-w-0">
             <span className="truncate block text-sm font-medium text-foreground">{article.author}</span>
             {article.authorDetails?.title && (
-              <span className="truncate block text-[11px] text-muted">{article.authorDetails.title}</span>
+              <span className="truncate block text-2xs text-muted">{article.authorDetails.title}</span>
             )}
           </div>
         </div>

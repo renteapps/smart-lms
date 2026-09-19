@@ -423,7 +423,7 @@ function EmpresaGestaoContent() {
             />
 
             <div className="flex items-center justify-between pt-1">
-              <span className="text-[11px] text-muted">
+              <span className="text-2xs text-muted">
                 <strong className={availableSeats > 0 ? "text-success font-bold" : "text-danger font-bold"}>
                   {availableSeats} {availableSeats === 1 ? "vaga livre" : "vagas livres"}
                 </strong>{" "}
@@ -637,11 +637,11 @@ function EmpresaGestaoContent() {
                                   <span className="block text-xs font-semibold text-foreground">
                                     {member.department}
                                   </span>
-                                  <span className="block text-[11px] text-muted">{member.jobTitle || "—"}</span>
+                                  <span className="block text-2xs text-muted">{member.jobTitle || "—"}</span>
                                 </Table.Cell>
 
                                 <Table.Cell>
-                                  <Chip variant="soft" size="sm" className="capitalize text-[11px]">
+                                  <Chip variant="soft" size="sm" className="capitalize text-2xs">
                                     {member.roleInCompany.replace("_", " ")}
                                   </Chip>
                                 </Table.Cell>
@@ -650,7 +650,7 @@ function EmpresaGestaoContent() {
                                   <div className="w-32 space-y-1">
                                     <div className="flex justify-between text-xs font-medium">
                                       <span>{member.progressPercentage}%</span>
-                                      <span className="text-[10px] text-muted">
+                                      <span className="text-3xs text-muted">
                                         {member.completedCoursesCount} conc.
                                       </span>
                                     </div>
@@ -864,7 +864,7 @@ function EmpresaGestaoContent() {
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-foreground">{dept.department}</span>
-                        <Chip variant="soft" size="sm" className="text-[10px]">
+                        <Chip variant="soft" size="sm" className="text-3xs">
                           {dept.memberCount} pessoa(s)
                         </Chip>
                       </div>
@@ -894,13 +894,13 @@ function EmpresaGestaoContent() {
                   >
                     <div className="min-w-0 pr-3">
                       <p className="font-semibold text-foreground truncate">{c.courseTitle}</p>
-                      <p className="text-[11px] text-muted">
+                      <p className="text-2xs text-muted">
                         {c.enrolledCount} matriculados · {c.completedCount} concluíram
                       </p>
                     </div>
                     <div className="text-right shrink-0">
                       <span className="font-bold text-accent block">{c.avgProgress}%</span>
-                      <span className="text-[10px] text-muted">média</span>
+                      <span className="text-3xs text-muted">média</span>
                     </div>
                   </div>
                 ))}
@@ -932,7 +932,7 @@ function EmpresaGestaoContent() {
                   <div className="relative aspect-video w-full overflow-hidden bg-surface-secondary">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={course.cover} alt={course.title} className="size-full object-cover" />
-                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold bg-black/60 text-white backdrop-blur-md">
+                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md text-3xs font-bold bg-black/60 text-white backdrop-blur-md">
                       {course.category}
                     </span>
                   </div>

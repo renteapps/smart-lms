@@ -204,7 +204,7 @@ export default function LessonThumbCard({
             <p
               className={cn(
                 "truncate font-bold uppercase tracking-wider text-muted",
-                isLarge ? "text-[11px]" : "text-[10px]",
+                isLarge ? "text-2xs" : "text-3xs",
               )}
             >
               {eyebrow}
@@ -221,7 +221,7 @@ export default function LessonThumbCard({
           <p
             className={cn(
               "mt-1 flex items-center gap-1 font-semibold text-muted",
-              isLarge ? "text-xs" : "text-[10px]",
+              isLarge ? "text-xs" : "text-3xs",
             )}
             data-numeric
           >

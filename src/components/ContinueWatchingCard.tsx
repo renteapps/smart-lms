@@ -93,7 +93,7 @@ export default function ContinueWatchingCard({ lesson, className, eager = false 
         </div>
 
         <div className="px-0.5 pt-2.5">
-          <p className="truncate text-[11px] font-bold uppercase tracking-wider text-muted">
+          <p className="truncate text-2xs font-bold uppercase tracking-wider text-muted">
             {lesson.moduleName}
           </p>
           <p className="line-clamp-2 text-sm font-bold leading-snug text-foreground">{lesson.title}</p>

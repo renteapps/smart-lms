@@ -222,7 +222,7 @@ export default function NavBar({ items }: { items: NavItem[] }) {
           >
             <Search className="size-5" aria-hidden="true" />
             <span className="hidden text-sm font-semibold xl:inline">Buscar conteúdos</span>
-            <kbd className="ml-auto hidden items-center gap-0.5 rounded-md border border-hairline px-1.5 py-0.5 text-[11px] font-semibold text-muted xl:flex">
+            <kbd className="ml-auto hidden items-center gap-0.5 rounded-md border border-hairline px-1.5 py-0.5 text-2xs font-semibold text-muted xl:flex">
               <span aria-hidden="true">⌘</span>
               <span>K</span>
             </kbd>

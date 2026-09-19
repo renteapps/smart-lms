@@ -167,7 +167,7 @@ export default function CourseOverviewClient({
           />
 
           <div className="relative z-10 max-w-3xl px-5 py-8 sm:px-8 sm:py-12 md:px-10 md:py-16 lg:px-14 lg:py-20">
-            <p className="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-white/70">
+            <p className="text-2xs sm:text-xs font-bold uppercase tracking-widest text-white/70">
               {course.category || "Geral"} · Curso {course.level ? course.level.toLowerCase() : "essencial"}
             </p>
             <h1 className="font-display text-2xl sm:text-3xl md:text-4xl lg:display-1 mt-3 sm:mt-4 font-extrabold text-white tracking-tight leading-[1.1] break-words">
@@ -271,13 +271,13 @@ export default function CourseOverviewClient({
 
                 <dl className="grid grid-cols-2 gap-2 sm:flex sm:flex-col sm:gap-3.5 text-xs sm:text-sm">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4 rounded-lg bg-surface-secondary/50 p-2.5 sm:bg-transparent sm:p-0">
-                    <dt className="text-muted text-[11px] sm:text-sm">Tempo estimado</dt>
+                    <dt className="text-muted text-2xs sm:text-sm">Tempo estimado</dt>
                     <dd className="font-bold text-foreground text-xs sm:text-sm" data-numeric>{durationLabel}</dd>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4 rounded-lg bg-surface-secondary/50 p-2.5 sm:bg-transparent sm:p-0">
-                    <dt className="text-muted text-[11px] sm:text-sm">Certificado</dt>
+                    <dt className="text-muted text-2xs sm:text-sm">Certificado</dt>
                     <dd>
-                      <Chip color="success" variant="soft" size="sm" className="h-5 sm:h-6 text-[10px] sm:text-xs">
+                      <Chip color="success" variant="soft" size="sm" className="h-5 sm:h-6 text-3xs sm:text-xs">
                         Incluso
                       </Chip>
                     </dd>
@@ -330,7 +330,7 @@ export default function CourseOverviewClient({
         <div className="order-2 lg:order-1 min-w-0">
           <Rise>
             <header className="mb-5 sm:mb-7">
-              <p className="eyebrow text-[11px] sm:text-xs">Plano do curso</p>
+              <p className="eyebrow text-2xs sm:text-xs">Plano do curso</p>
               <h2 className="display-3 sm:display-2 mt-1.5 sm:mt-2 text-foreground break-words">
                 O que você vai praticar
               </h2>
@@ -357,7 +357,7 @@ export default function CourseOverviewClient({
                       <Disclosure.Heading level={3}>
                         <Disclosure.Trigger className="flex min-h-16 sm:min-h-20 w-full items-center gap-3 sm:gap-4 p-4 sm:p-6 text-left transition-colors duration-[var(--duration-md)] hover:bg-surface-secondary">
                           <span className="min-w-0 flex-1">
-                            <span className="eyebrow block text-accent text-[11px] sm:text-xs">Módulo {courseModule.order}</span>
+                            <span className="eyebrow block text-accent text-2xs sm:text-xs">Módulo {courseModule.order}</span>
                             <span className="mt-0.5 sm:mt-1 block font-display text-base sm:text-lg lg:text-xl font-bold tracking-tight text-foreground break-words">
                               {courseModule.title}
                             </span>
@@ -405,7 +405,7 @@ export default function CourseOverviewClient({
                                     >
                                       <span data-numeric>{lessonIndex + 1}.</span> {lesson.title}
                                     </span>
-                                    <span className="mt-0.5 sm:mt-1 flex flex-wrap items-center gap-x-1.5 text-[11px] sm:text-xs font-medium text-muted">
+                                    <span className="mt-0.5 sm:mt-1 flex flex-wrap items-center gap-x-1.5 text-2xs sm:text-xs font-medium text-muted">
                                       {LESSON_KIND[lesson.type] ?? "Leitura"}
                                       {progress > 0 && (
                                         <span className="font-semibold text-accent" data-numeric>
@@ -414,7 +414,7 @@ export default function CourseOverviewClient({
                                       )}
                                     </span>
                                   </span>
-                                  <span className="flex shrink-0 items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold text-muted" data-numeric>
+                                  <span className="flex shrink-0 items-center gap-1 sm:gap-1.5 text-2xs sm:text-xs font-semibold text-muted" data-numeric>
                                     <Clock3 className="size-3 sm:size-3.5" aria-hidden="true" />
                                     <span>{lesson.durationInMinutes} min</span>
                                   </span>

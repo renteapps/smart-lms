@@ -198,7 +198,7 @@ export function InviteMemberModal({
                         }`}
                       >
                         <span className="block font-semibold">{item.title}</span>
-                        <span className="block text-[10px] text-muted">{item.desc}</span>
+                        <span className="block text-3xs text-muted">{item.desc}</span>
                       </button>
                     ))}
                   </div>
@@ -210,7 +210,7 @@ export function InviteMemberModal({
                     <Label className="text-xs font-semibold text-foreground">
                       Cursos Inicialmente Atribuídos ({selectedCourses.length} selecionados)
                     </Label>
-                    <span className="text-[11px] text-muted">
+                    <span className="text-2xs text-muted">
                       Colaborador também poderá navegar no catálogo liberado
                     </span>
                   </div>
@@ -240,7 +240,7 @@ export function InviteMemberModal({
                             </span>
                             <span className="truncate">{course.title}</span>
                           </div>
-                          <span className="text-[10px] text-muted shrink-0">{course.category}</span>
+                          <span className="text-3xs text-muted shrink-0">{course.category}</span>
                         </button>
                       );
                     })}

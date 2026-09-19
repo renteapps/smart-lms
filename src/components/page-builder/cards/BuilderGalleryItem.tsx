@@ -63,7 +63,7 @@ export function BuilderGalleryItem({ lesson, href, locked, className }: BuilderG
       </div>
       <div className="px-0.5 pt-2">
         <p className="line-clamp-2 text-xs font-bold leading-snug text-foreground">{lesson.title}</p>
-        <p className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-muted" data-numeric>
+        <p className="mt-1 flex items-center gap-1 text-3xs font-semibold text-muted" data-numeric>
           <Clock3 className="size-3" aria-hidden="true" />
           {lesson.durationInMinutes} min
         </p>

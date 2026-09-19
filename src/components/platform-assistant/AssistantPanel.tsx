@@ -389,7 +389,7 @@ export function AssistantPanel({
             </Button>
           </div>
 
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] leading-4 text-muted">
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-2xs leading-4 text-muted">
             <span className="hidden items-center gap-1.5 sm:flex">
               <CornerDownLeft className="size-3" aria-hidden="true" />
               Enter envia · Shift+Enter quebra linha
@@ -408,7 +408,7 @@ export function AssistantPanel({
               {lastCharge && <span>Última: {formatAiCredits(lastCharge.charged)}</span>}
             </span>
           </div>
-          <p className="mt-1.5 text-center text-[11px] leading-4 text-muted">
+          <p className="mt-1.5 text-center text-2xs leading-4 text-muted">
             A IA pode cometer erros. As conversas ficam armazenadas e podem ser revisadas pelo administrador.
           </p>
         </footer>
@@ -492,7 +492,7 @@ function AssistantBubble({
           <button
             type="button"
             onClick={() => void copy()}
-            className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-muted transition-opacity hover:text-foreground pointer-fine:opacity-0 pointer-fine:group-hover/bubble:opacity-100 group-focus-within/bubble:opacity-100"
+            className="mt-1 flex items-center gap-1 text-2xs font-semibold text-muted transition-opacity hover:text-foreground pointer-fine:opacity-0 pointer-fine:group-hover/bubble:opacity-100 group-focus-within/bubble:opacity-100"
           >
             {isCopied ? <Check className="size-3" aria-hidden="true" /> : <Copy className="size-3" aria-hidden="true" />}
             {isCopied ? "Copiado" : "Copiar"}
