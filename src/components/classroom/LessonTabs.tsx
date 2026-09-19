@@ -29,6 +29,7 @@ import type { User } from "@supabase/supabase-js";
 import { saveLessonNote } from "@/app/actions/notes";
 import { addLessonComment, deleteLessonComment } from "@/app/actions/comments";
 import BlockViewer from "./BlockViewer";
+import { lessonMaterialHref } from "@/lib/lessonMaterials";
 
 interface LessonTabsProps {
   lesson: Lesson;
@@ -196,7 +197,7 @@ export default function LessonTabs({
               {lesson.attachments.map((attachment, idx) => (
                 <li key={attachment.id ?? idx}>
                   <a
-                    href={attachment.url}
+                    href={attachment.id ? lessonMaterialHref(attachment.id) : attachment.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="lift group flex min-h-16 items-center justify-between gap-3 rounded-xl border border-hairline bg-surface px-3 py-3 shadow-elev-1 sm:gap-4 sm:px-4"
