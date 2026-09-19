@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, ChevronDown, ChevronRight, Copy, KeyRound, Link2, ListChecks, Pencil, Plus, RefreshCw, Trash2, Webhook } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import {
   deleteEduzzMapping,
@@ -180,7 +180,7 @@ export function EduzzIntegrationContent() {
           <div className="flex gap-2">
             <button className={`${buttonClass} bg-accent text-accent-foreground`} disabled={busy || (!webhookSecret && !clientId && !clientSecret)} onClick={() => void saveCredentials()}><CheckCircle2 className="size-4" /> Adicionar chave</button>
             {Boolean(data?.webhookKeyCount) && <button className={`${buttonClass} border border-border`} disabled={busy || !webhookSecret} onClick={() => void saveCredentials(true)}>Trocar e aposentar anteriores</button>}
-            <button className={`${buttonClass} border border-border`} disabled={busy || !data?.enabled} onClick={async () => { setBusy(true); const result = await saveEduzzConfiguration({ enabled: false }); setBusy(false); if (!result.success) toast.error(result.message); else { toast.success("Novos webhooks foram desativados; acessos existentes foram preservados."); await reload(); } }}>Desativar</button>
+            <button className={`${buttonClass} border border-border`} disabled={busy || !data?.enabled} onClick={async () => { setBusy(true); const result = await saveEduzzConfiguration({ enabled: false }); setBusy(false); if (!result.success) toast.error(result.message || "Erro ao salvar configuração."); else { toast.success("Novos webhooks foram desativados; acessos existentes foram preservados."); await reload(); } }}>Desativar</button>
           </div>
         </div>
       </section>
@@ -203,7 +203,7 @@ export function EduzzIntegrationContent() {
         <div className="flex flex-wrap items-center gap-3">
           <button className={`${buttonClass} border border-border`} disabled={busy || (!clientId && !clientSecret)} onClick={() => void saveCredentials()}>Salvar credenciais</button>
           <a className={`${buttonClass} bg-accent text-accent-foreground`} href="/api/admin/integracoes/eduzz/connect"><Link2 className="size-4" /> {data?.oauthConnected ? "Reconectar Eduzz" : "Conectar Eduzz"}</a>
-          {data?.oauthConnected && <button className={`${buttonClass} border border-danger/40 text-danger`} onClick={async () => { const result = await disconnectEduzzOAuth(); if (!result.success) toast.error(result.message); else { toast.success("OAuth desconectado."); await reload(); } }}>Desconectar</button>}
+          {data?.oauthConnected && <button className={`${buttonClass} border border-danger/40 text-danger`} onClick={async () => { const result = await disconnectEduzzOAuth(); if (!result.success) toast.error(result.message || "Erro ao desconectar OAuth."); else { toast.success("OAuth desconectado."); await reload(); } }}>Desconectar</button>}
           <span className="text-sm text-muted">{data?.oauthConnected ? `Conectada${data.accountName ? `: ${data.accountName}` : ""}` : "Não conectada"} · saúde: {data?.status}</span>
         </div>
       </section>
@@ -290,7 +290,7 @@ export function EduzzIntegrationContent() {
           {(data?.mappings ?? []).map((mapping) => {
             const plan = data?.plans.find((item) => item.id === mapping.planId)?.name;
             const course = data?.courses.find((item) => item.id === mapping.courseId)?.title;
-            return <div key={mapping.id} className="flex items-center gap-3 p-3 text-sm"><code className="font-semibold">{mapping.productId}</code><span className="text-muted">{mapping.offerId ? `/ ${mapping.offerId}` : "/ qualquer oferta"}</span><span className="flex-1">→ {plan ? `Plano ${plan}` : `Curso ${course ?? "removido"}`}</span><button aria-label="Editar mapeamento" className="text-accent" onClick={() => { setMappingId(mapping.id); setProductId(mapping.productId); setOfferId(mapping.offerId ?? ""); setTarget(mapping.planId ? `plan:${mapping.planId}` : `course:${mapping.courseId}`); setAccessDays(mapping.accessDays ? String(mapping.accessDays) : ""); }}><Pencil className="size-4" /></button><button aria-label="Excluir mapeamento" className="text-danger" onClick={async () => { const result = await deleteEduzzMapping(mapping.id); if (!result.success) toast.error(result.message); else await reload(); }}><Trash2 className="size-4" /></button></div>;
+            return <div key={mapping.id} className="flex items-center gap-3 p-3 text-sm"><code className="font-semibold">{mapping.productId}</code><span className="text-muted">{mapping.offerId ? `/ ${mapping.offerId}` : "/ qualquer oferta"}</span><span className="flex-1">→ {plan ? `Plano ${plan}` : `Curso ${course ?? "removido"}`}</span><button aria-label="Editar mapeamento" className="text-accent" onClick={() => { setMappingId(mapping.id); setProductId(mapping.productId); setOfferId(mapping.offerId ?? ""); setTarget(mapping.planId ? `plan:${mapping.planId}` : `course:${mapping.courseId}`); setAccessDays(mapping.accessDays ? String(mapping.accessDays) : ""); }}><Pencil className="size-4" /></button><button aria-label="Excluir mapeamento" className="text-danger" onClick={async () => { const result = await deleteEduzzMapping(mapping.id); if (!result.success) toast.error(result.message || "Erro ao excluir mapeamento."); else await reload(); }}><Trash2 className="size-4" /></button></div>;
           })}
           {data?.mappings.length === 0 && <p className="p-4 text-sm text-muted">Nenhum produto mapeado.</p>}
         </div>
@@ -299,7 +299,7 @@ export function EduzzIntegrationContent() {
       <section className="rounded-xl border border-border bg-surface p-6 space-y-4">
         <div className="flex items-center justify-between"><div><h2 className="text-lg font-bold">Eventos recentes</h2><p className="text-sm text-muted">Payloads não são enviados ao navegador; apenas estado, avisos e tentativas.</p></div><button className={`${buttonClass} border border-border`} onClick={() => void reload()}><RefreshCw className="size-4" /> Atualizar</button></div>
         <div className="divide-y divide-border rounded-lg border border-border">
-          {(data?.events ?? []).map((event) => <div key={event.id} className="grid gap-1 p-3 text-sm md:grid-cols-[1fr_auto_auto] md:items-center"><div><code>{event.eventType}</code><p className="text-xs text-muted">{new Date(event.receivedAt).toLocaleString("pt-BR")} · tentativa {event.attempts}{event.warning ? ` · fallback: ${event.warning}` : ""}</p>{event.error && <p className="text-xs text-danger">{event.error}</p>}</div><span className="rounded-full bg-background-secondary px-2 py-1 text-xs">{event.status}</span>{event.status === "failed" ? <button className={`${buttonClass} border border-border`} onClick={async () => { const result = await replayEduzzEvent(event.id); if (!result.success) toast.error(result.message); else { toast.success("Evento reprocessado."); await reload(); } }}><RefreshCw className="size-3" /> Reprocessar</button> : <span />}</div>)}
+          {(data?.events ?? []).map((event) => <div key={event.id} className="grid gap-1 p-3 text-sm md:grid-cols-[1fr_auto_auto] md:items-center"><div><code>{event.eventType}</code><p className="text-xs text-muted">{new Date(event.receivedAt).toLocaleString("pt-BR")} · tentativa {event.attempts}{event.warning ? ` · fallback: ${event.warning}` : ""}</p>{event.error && <p className="text-xs text-danger">{event.error}</p>}</div><span className="rounded-full bg-background-secondary px-2 py-1 text-xs">{event.status}</span>{event.status === "failed" ? <button className={`${buttonClass} border border-border`} onClick={async () => { const result = await replayEduzzEvent(event.id); if (!result.success) toast.error(result.message || "Erro ao reprocessar evento."); else { toast.success("Evento reprocessado."); await reload(); } }}><RefreshCw className="size-3" /> Reprocessar</button> : <span />}</div>)}
           {data?.events.length === 0 && <p className="p-4 text-sm text-muted">Nenhum evento recebido.</p>}
         </div>
       </section>

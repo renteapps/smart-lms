@@ -1,7 +1,8 @@
+import { cache } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { getSupabaseUrl, getSupabaseServiceRoleKey, getSupabaseAnonKey } from "./env";
 
-export function createAdminClient() {
+export const createAdminClient = cache(() => {
   const supabaseUrl = getSupabaseUrl();
   const serviceRoleKey = getSupabaseServiceRoleKey();
   const apiKey = serviceRoleKey || getSupabaseAnonKey();
@@ -16,4 +17,4 @@ export function createAdminClient() {
       persistSession: false,
     },
   });
-}
+});

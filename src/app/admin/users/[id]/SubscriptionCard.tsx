@@ -15,7 +15,8 @@ import {
   TextArea,
   TextField,
 } from "@heroui/react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Ban, CreditCard, Plus } from "lucide-react";
 import type { Plan, Subscription } from "@/lib/data/plans";
 import { assignManualSubscription, cancelManualSubscription } from "@/app/actions/admin/subscriptions";
@@ -69,6 +70,7 @@ export function SubscriptionCard({ userId, userName, initialSubscription, plans 
   const router = useRouter();
   const [subscription, setSubscription] = useState(initialSubscription);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const [planId, setPlanId] = useState<string>("");
@@ -157,16 +159,20 @@ export function SubscriptionCard({ userId, userName, initialSubscription, plans 
 
   function handleCancel() {
     if (!subscription) return;
-    if (!confirm(`Cancelar a assinatura manual de ${userName}? O acesso ao plano será revogado.`)) return;
+    setIsCancelConfirmOpen(true);
+  }
 
+  function confirmCancel() {
+    if (!subscription) return;
     startTransition(async () => {
       const result = await cancelManualSubscription({ subscriptionId: subscription.id, userId });
       if (!result.success) {
-        toast.error(result.message || "Erro ao cancelar assinatura.");
+        toast.danger(result.message || "Erro ao cancelar assinatura.");
         return;
       }
       setSubscription((prev) => (prev ? { ...prev, status: "canceled" } : prev));
       toast.success("Assinatura cancelada.");
+      setIsCancelConfirmOpen(false);
       router.refresh();
     });
   }
@@ -373,6 +379,17 @@ export function SubscriptionCard({ userId, userName, initialSubscription, plans 
           </Modal.Container>
         </Modal.Backdrop>
       </Modal.Root>
+
+      <ConfirmDialog
+        isOpen={isCancelConfirmOpen}
+        onOpenChange={setIsCancelConfirmOpen}
+        title="Cancelar assinatura"
+        description={`Cancelar a assinatura manual de ${userName}? O acesso ao plano será revogado.`}
+        confirmLabel="Cancelar assinatura"
+        confirmTone="danger"
+        isLoading={isPending}
+        onConfirm={confirmCancel}
+      />
     </>
   );
 }

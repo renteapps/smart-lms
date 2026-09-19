@@ -8,6 +8,8 @@ import { getCatalogCourses, getContinueLessons, getHomeCarouselRows } from "@/li
 import { getAllArticles } from "@/lib/data/blog";
 import { getAppearanceConfig } from "@/lib/data/appearance";
 import { getPageBuilderData, getProductAccess, getPublishedPage } from "@/lib/data/pages";
+import { getDailyPilulaForUser } from "@/lib/data/pilulas";
+import { getProfileTests } from "@/lib/data/profileTests";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -58,12 +60,23 @@ export default async function Home() {
     );
   }
 
-  const [courses, articles, masterclassRows, continueLessons] = await Promise.all([
+  const [courses, articles, masterclassRows, continueLessons, dailyPilula, profileTests] = await Promise.all([
     getCatalogCourses(supabase, user.id),
     getAllArticles(supabase),
     getHomeCarouselRows(supabase, user.id),
     getContinueLessons(supabase, user.id, 8),
+    getDailyPilulaForUser(supabase, user.id),
+    getProfileTests(supabase, true),
   ]);
+
+  const initialDailyPill = dailyPilula
+    ? {
+        id: dailyPilula.id,
+        title: dailyPilula.title,
+        challenge: dailyPilula.challenge,
+        likesCount: dailyPilula.likesCount,
+      }
+    : null;
 
   return (
     <StudentShell>
@@ -73,6 +86,8 @@ export default async function Home() {
         masterclassRows={masterclassRows}
         continueLessons={continueLessons}
         hasPlan={hasPlan}
+        initialDailyPill={initialDailyPill}
+        initialProfileTests={profileTests}
       />
     </StudentShell>
   );

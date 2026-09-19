@@ -2,6 +2,7 @@
 
 import React, { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { Spinner } from "@heroui/react";
 import { CompanyForm } from "@/components/admin/business/CompanyForm";
 import { getCompanyById } from "@/lib/data/business";
 import { getCatalogCourses } from "@/lib/data/courses";
@@ -32,7 +33,7 @@ function BusinessNewContent() {
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <div className="size-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+        <Spinner size="lg" color="accent" />
       </div>
     );
   }
@@ -51,7 +52,7 @@ export default function AdminBusinessNewPage() {
     <Suspense
       fallback={
         <div className="flex min-h-[400px] items-center justify-center">
-          <div className="size-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+          <Spinner size="lg" color="accent" />
         </div>
       }
     >

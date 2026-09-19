@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, ArrowRight, RotateCcw, BarChart3, Award, ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@heroui/react';
 import { ProfileTest, ProfileCategory } from '@/types/profileTest';
 import { ArrowRight02Icon } from '@/components/ui/arrow-right-02';
 import Link from 'next/link';
@@ -167,9 +167,9 @@ export function TakeTestClient({ test, isPublicFlow }: TakeTestClientProps) {
                   className="pt-8"
                 >
                   <Button
-                    variant="default"
+                    variant="primary"
                     size="lg"
-                    className="gap-3 rounded-full px-10 py-7 text-lg font-bold shadow-xl shadow-accent/20 hover:-translate-y-1 hover:shadow-2xl transition-all"
+                    className="press gap-3 rounded-full px-10 py-7 text-lg font-bold shadow-xl shadow-accent/20 hover:-translate-y-1 hover:shadow-2xl transition-all"
                     onClick={handleNext}
                   >
                     Iniciar Avaliação
@@ -259,9 +259,9 @@ export function TakeTestClient({ test, isPublicFlow }: TakeTestClientProps) {
                 </p>
 
                 <Button
-                  variant="default"
+                  variant="primary"
                   size="lg"
-                  className="w-full gap-2 rounded-full py-6 shadow-xl"
+                  className="press w-full gap-2 rounded-full py-6 shadow-xl"
                   onClick={handleFinish}
                 >
                   {isPublicFlow ? 'Ver meu Resultado' : 'Ver Diagnóstico Completo'}

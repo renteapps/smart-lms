@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button, Card, Input, TextField, Label } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Check, Plug } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { saveIntegration } from "@/app/actions/admin/platform";

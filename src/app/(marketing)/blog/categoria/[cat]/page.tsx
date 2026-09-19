@@ -40,7 +40,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ cat: 
             Voltar para o blog
           </Link>
           <p className="eyebrow">Categoria</p>
-          <h1 className="mt-3 text-4xl font-extrabold tracking-[-0.05em] text-ink md:text-5xl">
+          <h1 className="mt-3 text-4xl font-extrabold tracking-[-0.05em] text-foreground md:text-5xl">
             {formattedCat}
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl">

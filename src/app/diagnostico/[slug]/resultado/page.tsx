@@ -4,9 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { BarChart3, Award, RotateCcw, Mail } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, Spinner } from '@heroui/react';
 import { ProfileCategory } from '@/types/profileTest';
-import { toast } from 'sonner';
+import { toast } from "@/lib/toast";
 import { createClient } from '@/lib/supabase/client';
 
 interface ResultPayload {
@@ -145,8 +145,8 @@ export default function DiagnosticResultPage({ params }: { params: Promise<{ slu
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg">
-        <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen flex items-center justify-center bg-bg" aria-busy="true" aria-label="Carregando diagnóstico">
+        <Spinner size="lg" color="accent" />
       </div>
     );
   }
@@ -157,7 +157,7 @@ export default function DiagnosticResultPage({ params }: { params: Promise<{ slu
         <div>
           <h1 className="text-xl font-bold mb-2">Resultado Indisponível</h1>
           <p className="text-muted">Não conseguimos carregar o seu resultado.</p>
-          <Button className="mt-4" onClick={() => router.push(`/diagnostico/${resolvedParams.slug}`)}>
+          <Button variant="secondary" className="press mt-4 rounded-xl" onClick={() => router.push(`/diagnostico/${resolvedParams.slug}`)}>
             Refazer Teste
           </Button>
         </div>
@@ -262,9 +262,9 @@ export default function DiagnosticResultPage({ params }: { params: Promise<{ slu
           className="pt-4 flex flex-col sm:flex-row gap-4 justify-center w-full"
         >
           <Button
-            variant="default"
+            variant="primary"
             size="lg"
-            className="rounded-full px-8 py-4 shadow-xl shadow-accent/20 flex-1 sm:flex-none"
+            className="press rounded-xl px-8 py-4 shadow-xl shadow-accent/20 flex-1 sm:flex-none font-bold"
             onClick={() => router.push('/perfil')}
           >
             Ir para o meu Perfil
@@ -272,7 +272,7 @@ export default function DiagnosticResultPage({ params }: { params: Promise<{ slu
           <Button
             variant="outline"
             size="lg"
-            className="gap-2 rounded-full px-8 py-4 flex-1 sm:flex-none"
+            className="press gap-2 rounded-xl px-8 py-4 flex-1 sm:flex-none font-bold"
             onClick={async () => {
               const { sendProfileTestResultEmail } = await import('@/app/actions/profile');
               const toastId = toast.loading("Enviando e-mail...");
@@ -305,7 +305,7 @@ export default function DiagnosticResultPage({ params }: { params: Promise<{ slu
           <Button
             variant="outline"
             size="lg"
-            className="gap-2 rounded-full px-8 py-4 flex-1 sm:flex-none"
+            className="press gap-2 rounded-xl px-8 py-4 flex-1 sm:flex-none font-bold"
             onClick={() => router.push(`/diagnostico/${resolvedParams.slug}`)}
           >
             <RotateCcw className="size-4" aria-hidden="true" />

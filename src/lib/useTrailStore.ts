@@ -7,30 +7,13 @@ import {
   readLearningTrail,
   TRAIL_STORAGE_KEY,
   saveLearningTrail,
+  TRAIL_CHANGED_EVENT,
+  notifyTrailChanged,
 } from "@/lib/trailStorage";
 import type { LearningTrail, Questionnaire } from "@/types/trilha";
 import { createClient } from "@/lib/supabase/client";
 
-/**
- * A trilha mora no dispositivo, e o dispositivo é um sistema externo ao React.
- *
- * `useSyncExternalStore` é o caminho certo para isso: nada de ler no `useEffect`
- * e chamar `setState` (o que dispara renderização em cascata e é justamente o que
- * a regra `react-hooks/set-state-in-effect` proíbe). De quebra, a home passa a
- * reagir a mudanças feitas em /minha-trilha, na sala de aula ou em outra aba.
- *
- * O snapshot é a **string crua** do storage porque `getSnapshot` precisa devolver
- * um valor referencialmente estável — devolver um objeto recém-parseado a cada
- * chamada colocaria o React num laço infinito. O parse acontece no `useMemo`.
- */
-
-export const TRAIL_CHANGED_EVENT = "smartlms:trail-changed";
-
-/** Chamar depois de gravar a trilha: o evento `storage` não dispara na própria aba. */
-export function notifyTrailChanged(): void {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new Event(TRAIL_CHANGED_EVENT));
-}
+export { TRAIL_CHANGED_EVENT, notifyTrailChanged };
 
 function subscribe(onChange: () => void): () => void {
   window.addEventListener("storage", onChange);
@@ -118,7 +101,7 @@ export function useTrailStore(): TrailStoreValue {
                 Math.max(candidate.generatedAt || 0, candidate.replannedAt || 0);
 
               if (!localTrail || freshness(remoteTrail) > freshness(localTrail)) {
-                saveLearningTrail(remoteTrail);
+                saveLearningTrail(remoteTrail, { skipSupabaseSync: true });
               }
             }
           });

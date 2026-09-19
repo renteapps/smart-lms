@@ -1,7 +1,7 @@
 'use client';
 
-import type { LegacyAnimationControls } from 'motion/react';
-import { useReducedMotion } from 'motion/react';
+import type { LegacyAnimationControls } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
 import type {
   ForwardedRef,
   MouseEventHandler,

@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { Route } from "lucide-react";
 import { Card } from "@heroui/react/card";
 import { Label } from "@heroui/react/label";
 import { ProgressBar } from "@heroui/react/progress-bar";
+import { buttonVariants } from "@heroui/react";
 import { getSessionUser } from "@/lib/supabase/auth";
 import { getEnrolledCourses, getProgressByCourse } from "@/lib/data/courses";
 
@@ -26,6 +28,12 @@ export async function CurrentStageCard() {
                 <p className="truncate font-bold text-foreground">Nenhum curso ativo</p>
               </div>
             </div>
+            <Link
+              href="/cursos"
+              className={buttonVariants({ variant: "secondary", size: "sm", className: "w-full text-xs font-semibold" })}
+            >
+              Explorar cursos
+            </Link>
           </Card.Content>
         </Card>
       );

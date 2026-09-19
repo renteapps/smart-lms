@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { ProfileQuestion, ProfileCategory, QuestionOption } from '@/types/profileTest';
 import { Trash2, Plus, GripVertical, HelpCircle, ChevronDown, ChevronRight, Calculator } from 'lucide-react';
+import { toast } from '@/lib/toast';
 import { ScoreDistributionBar } from './ScoreDistributionBar';
 
 interface QuestionEditorProps {
@@ -54,7 +55,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
 
   const handleRemoveQuestion = (qId: string) => {
     if (questions.length <= 1) {
-      alert('O teste precisa ter pelo menos 1 pergunta.');
+      toast.warning('O teste precisa ter pelo menos 1 pergunta.');
       return;
     }
     onChange(questions.filter((q) => q.id !== qId));
@@ -92,7 +93,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({ questions, categ
     if (!targetQ) return;
 
     if (targetQ.options.length <= 2) {
-      alert('Cada pergunta precisa ter pelo menos 2 alternativas.');
+      toast.warning('Cada pergunta precisa ter pelo menos 2 alternativas.');
       return;
     }
 

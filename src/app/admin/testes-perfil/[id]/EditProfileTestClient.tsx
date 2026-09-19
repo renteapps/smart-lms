@@ -11,7 +11,7 @@ import { QuestionEditor } from '@/components/admin/profile-tests/QuestionEditor'
 import { TestPreview } from '@/components/admin/profile-tests/TestPreview';
 import { ArrowLeft, Save, Eye, CheckCircle2 } from 'lucide-react';
 import { ArrowRight02Icon } from '@/components/ui/arrow-right-02';
-import { toast } from 'sonner';
+import { toast } from "@/lib/toast";
 import { ImageUpload } from '@/components/ui/ImageUpload';
 
 const STEPS: WizardStep[] = [

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Save, Shield, KeyRound, Bell } from "lucide-react";
 import { Button, Card, Checkbox, Label, ListBox, ListBoxItem, Select } from "@heroui/react";
+import { toast } from "@/lib/toast";
 import { updateUserConfig, resetUserPassword, forceUserLogoff } from "../support-actions";
 
 const statusOptions = [
@@ -41,9 +42,13 @@ export function ConfigForm({ userId, email, initialStatus, initialRole }: Config
     setLoading(true);
     try {
       const res = await updateUserConfig(userId, { status, role });
-      alert(res.message);
-    } catch (err) {
-      alert("Erro ao salvar configurações.");
+      if (res.success) {
+        toast.success(res.message);
+      } else {
+        toast.danger(res.message || "Erro ao salvar configurações.");
+      }
+    } catch {
+      toast.danger("Erro ao salvar configurações.");
     } finally {
       setLoading(false);
     }
@@ -53,9 +58,13 @@ export function ConfigForm({ userId, email, initialStatus, initialRole }: Config
     setActionLoading(actionId);
     try {
       const res = await actionFn();
-      alert(res.message);
-    } catch (err) {
-      alert("Ocorreu um erro ao realizar a ação.");
+      if (res.success) {
+        toast.success(res.message);
+      } else {
+        toast.danger(res.message || "Ocorreu um erro ao realizar a ação.");
+      }
+    } catch {
+      toast.danger("Ocorreu um erro ao realizar a ação.");
     } finally {
       setActionLoading(null);
     }

@@ -46,9 +46,10 @@ import {
   interpolateVariables,
   EmailTemplateData,
 } from "@/lib/emailTemplates";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { UserVariablePicker } from "@/components/admin/UserVariablePicker";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface EmailTemplateEditorProps {
   initialType?: EmailTemplateType;
@@ -69,6 +70,7 @@ export function EmailTemplateEditor({
   const [activeEditorTab, setActiveEditorTab] = useState<"editor" | "preview" | "split">("split");
   const [isSaving, setIsSaving] = useState(false);
   const [copiedTag, setCopiedTag] = useState<string | null>(null);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
   // Sample data for live interpolation
   const [sampleData, setSampleData] = useState<EmailTemplateData>({
@@ -216,11 +218,7 @@ export function EmailTemplateEditor({
   };
 
   // Reset to default
-  const handleReset = () => {
-    if (!confirm(`Deseja realmente restaurar o modelo "${currentTemplate?.name}" para o layout original?`)) {
-      return;
-    }
-
+  const handleConfirmReset = () => {
     const reset = resetCustomTemplate(selectedType);
     setTemplates((prev) => ({ ...prev, [selectedType]: reset }));
     setSubject(reset.subject);
@@ -235,6 +233,7 @@ export function EmailTemplateEditor({
     }).catch(() => {});
 
     toast.success(`Modelo "${reset.name}" restaurado para o padrão original.`);
+    setIsResetConfirmOpen(false);
   };
 
   // Send Test Email
@@ -324,7 +323,7 @@ export function EmailTemplateEditor({
                 <Button
                   variant="ghost"
                   size="md"
-                  onClick={handleReset}
+                  onClick={() => setIsResetConfirmOpen(true)}
                   className="gap-2 text-warning hover:text-warning"
                 >
                   <RotateCcw className="size-4" aria-hidden="true" />
@@ -599,6 +598,16 @@ export function EmailTemplateEditor({
           </Modal.Container>
         </Modal.Backdrop>
       </Modal.Root>
+
+      <ConfirmDialog
+        isOpen={isResetConfirmOpen}
+        onOpenChange={setIsResetConfirmOpen}
+        title="Restaurar layout original"
+        description={`Deseja realmente restaurar o modelo "${templates[selectedType]?.name || "selecionado"}" para o layout original? As customizações atuais serão perdidas.`}
+        confirmLabel="Restaurar padrão"
+        variant="warning"
+        onConfirm={handleConfirmReset}
+      />
     </div>
   );
 }

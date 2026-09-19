@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { AlertTriangle, RotateCcw } from "lucide-react";
+import { Button } from "@heroui/react";
 
 export default function AdminError({
   error,
@@ -31,14 +32,14 @@ export default function AdminError({
           )}
         </p>
       </div>
-      <button
-        type="button"
+      <Button
+        variant="primary"
         onClick={reset}
-        className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-bold text-accent-foreground hover:bg-accent-hover"
+        className="gap-2"
       >
         <RotateCcw className="size-4" aria-hidden="true" />
         Tentar novamente
-      </button>
+      </Button>
     </div>
   );
 }

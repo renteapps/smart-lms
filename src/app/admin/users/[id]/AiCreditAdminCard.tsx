@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { CalendarClock, Plus, Sparkles, Zap } from "lucide-react";
 import { Button, Card, Label, Modal, NumberField } from "@heroui/react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import {
   formatAiCostBrl,
   formatAiCreditRenewal,
@@ -29,7 +29,7 @@ export function AiCreditAdminCard({ userId, userName, initialBalance }: AiCredit
       const result = await addAiCreditsToUser(userId, amount);
 
       if (!result.success) {
-        toast.error(result.message);
+        toast.error(result.message || "Erro ao adicionar créditos.");
         return;
       }
 

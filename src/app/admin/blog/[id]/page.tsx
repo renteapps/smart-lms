@@ -33,8 +33,9 @@ import {
   Switch,
   TextArea,
   TextField,
-  toast,
 } from "@heroui/react";
+import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { AudioUpload } from "@/components/ui/AudioUpload";
 import { AuthorModal } from "@/components/admin/blog/AuthorModal";
@@ -138,6 +139,7 @@ export default function AdminArticlePage() {
 
   const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
   const [authorToEdit, setAuthorToEdit] = useState<ArticleAuthor | null>(null);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -312,7 +314,10 @@ export default function AdminArticlePage() {
   };
 
   const handleDelete = () => {
-    if (!confirm(`Tem certeza que deseja excluir o artigo "${formData.title}"?`)) return;
+    setIsConfirmDeleteOpen(true);
+  };
+
+  const confirmDelete = () => {
     startDeleting(async () => {
       const result = await deleteArticle(id);
       if (result.success) {
@@ -321,6 +326,7 @@ export default function AdminArticlePage() {
         router.refresh();
       } else {
         toast.danger("Erro ao excluir", { description: result.message });
+        setIsConfirmDeleteOpen(false);
       }
     });
   };
@@ -879,6 +885,17 @@ export default function AdminArticlePage() {
         onClose={() => setIsAuthorModalOpen(false)}
         onSaved={handleAuthorSaved}
         authorToEdit={authorToEdit}
+      />
+
+      <ConfirmDialog
+        isOpen={isConfirmDeleteOpen}
+        onOpenChange={setIsConfirmDeleteOpen}
+        title="Excluir artigo"
+        description={`Tem certeza que deseja excluir o artigo "${formData.title}"? Esta ação não pode ser desfeita.`}
+        confirmLabel="Excluir artigo"
+        confirmTone="danger"
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
       />
     </form>
   );

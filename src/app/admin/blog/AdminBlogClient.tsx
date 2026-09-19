@@ -16,8 +16,9 @@ import {
   Table,
   Tooltip,
   buttonVariants,
-  toast,
 } from "@heroui/react";
+import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 import { deleteArticle } from "@/app/actions/admin/content";
 import { getArticleStatus, formatPlatformDateTime } from "@/lib/timezone";
@@ -45,6 +46,7 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isPending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [articleToDelete, setArticleToDelete] = useState<AdminArticleRow | null>(null);
 
   const categoriesList = Array.from(new Set(articles.map((a) => a.category)));
 
@@ -64,18 +66,23 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
   const isEmpty = filtered.length === 0;
 
   const handleDelete = (article: AdminArticleRow) => {
-    if (!confirm(`Tem certeza que deseja excluir o artigo "${article.title}"?`)) return;
+    setArticleToDelete(article);
+  };
 
-    setDeletingId(article.id);
+  const confirmDelete = () => {
+    if (!articleToDelete) return;
+    const toDelete = articleToDelete;
+    setDeletingId(toDelete.id);
     startTransition(async () => {
-      const result = await deleteArticle(article.id);
+      const result = await deleteArticle(toDelete.id);
       if (result.success) {
-        setArticles((prev) => prev.filter((a) => a.id !== article.id));
+        setArticles((prev) => prev.filter((a) => a.id !== toDelete.id));
         toast.success("Artigo excluído com sucesso!");
       } else {
         toast.danger("Erro ao excluir", { description: result.message });
       }
       setDeletingId(null);
+      setArticleToDelete(null);
     });
   };
 
@@ -379,6 +386,17 @@ export function AdminBlogClient({ initialArticles }: { initialArticles: AdminArt
           )}
         </Card.Content>
       </Card>
+
+      <ConfirmDialog
+        isOpen={Boolean(articleToDelete)}
+        onOpenChange={(open) => !open && setArticleToDelete(null)}
+        title="Excluir artigo"
+        description={`Tem certeza que deseja excluir o artigo "${articleToDelete?.title}"? Esta ação não pode ser desfeita.`}
+        confirmLabel="Excluir artigo"
+        confirmTone="danger"
+        isLoading={Boolean(deletingId)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

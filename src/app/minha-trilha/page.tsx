@@ -4,11 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
-  CalendarDays, Check, CheckCircle2, Clock3,
+  CalendarClock, CalendarDays, Check, CheckCircle2, Clock3,
   ExternalLink, FileText, LayoutList, PlayCircle, RefreshCw, Route, Settings2, Sparkles, TriangleAlert,
 } from 'lucide-react';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { CalendarCheckOut01Icon } from '@hugeicons/core-free-icons';
 import { ArrowRight02Icon } from '@/components/ui/arrow-right-02';
 import { UndoIcon, type UndoIconHandle } from '@/components/ui/undo';
 import {
@@ -874,7 +872,7 @@ export default function MinhaTrilhaPage() {
                       className="self-start sm:self-auto"
                       onClick={() => setPostponeTarget({ kind: 'session', sessionId })}
                     >
-                      <HugeiconsIcon icon={CalendarCheckOut01Icon} size={16} strokeWidth={1.8} aria-hidden="true" />
+                      <CalendarClock className="size-4" aria-hidden="true" />
                       Adiar sessão
                     </Button>
                   )}
@@ -890,7 +888,7 @@ export default function MinhaTrilhaPage() {
                   className="h-8 w-full justify-center text-xs"
                   onClick={() => setPostponeTarget({ kind: 'session', sessionId })}
                 >
-                  <HugeiconsIcon icon={CalendarCheckOut01Icon} size={14} strokeWidth={1.8} aria-hidden="true" />
+                  <CalendarClock className="size-3.5" aria-hidden="true" />
                   Adiar sessão
                 </Button>
               </div>
@@ -939,10 +937,8 @@ export default function MinhaTrilhaPage() {
                           mode === 'calendar' ? 'right-2 top-2 size-7' : 'right-2.5 top-2.5 size-8',
                         )}
                       >
-                        <HugeiconsIcon
-                          icon={CalendarCheckOut01Icon}
-                          size={mode === 'calendar' ? 13 : 15}
-                          strokeWidth={1.8}
+                        <CalendarClock
+                          className={mode === 'calendar' ? 'size-3.5' : 'size-4'}
                           aria-hidden="true"
                         />
                       </button>
@@ -1394,7 +1390,7 @@ export default function MinhaTrilhaPage() {
             <AlertDialog.Dialog>
               <AlertDialog.Header>
                 <AlertDialog.Icon status="warning">
-                  <HugeiconsIcon icon={CalendarCheckOut01Icon} size={20} strokeWidth={1.8} aria-hidden="true" />
+                  <CalendarClock className="size-5" aria-hidden="true" />
                 </AlertDialog.Icon>
                 <AlertDialog.Heading>
                   {postponeTarget?.kind === 'item' ? 'Adiar este conteúdo?' : 'Adiar esta sessão?'}

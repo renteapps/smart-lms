@@ -18,7 +18,7 @@ import {
   TextArea,
   TextField,
 } from '@heroui/react';
-import { toast } from 'sonner';
+import { toast } from "@/lib/toast";
 import { generatePilulaWithAI } from '@/app/actions/admin/ai-generation';
 import TagInputField from '@/components/admin/TagInputField';
 

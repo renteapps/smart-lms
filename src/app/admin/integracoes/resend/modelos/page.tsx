@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/editorial";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { type LucideIcon } from "lucide-react";
 import {
   FileCode,
@@ -77,11 +78,13 @@ export default function ResendModelosCatalogPage() {
     };
   }, []);
 
-  const handleReset = async (type: EmailTemplateType, name: string) => {
-    if (!confirm(`Deseja restaurar o modelo "${name}" para o HTML original do sistema?`)) {
-      return;
-    }
+  const [templateToReset, setTemplateToReset] = useState<{ type: EmailTemplateType; name: string } | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
+  const handleConfirmReset = async () => {
+    if (!templateToReset) return;
+    const { type, name } = templateToReset;
+    setIsResetting(true);
     try {
       const res = await fetch("/api/admin/integracoes/resend", {
         method: "POST",
@@ -102,6 +105,9 @@ export default function ResendModelosCatalogPage() {
       const reset = resetCustomTemplate(type);
       setTemplates((prev) => ({ ...prev, [type]: reset }));
       toast.success(`Modelo restaurado localmente!`);
+    } finally {
+      setIsResetting(false);
+      setTemplateToReset(null);
     }
   };
 
@@ -346,7 +352,7 @@ export default function ResendModelosCatalogPage() {
                   {tpl.isCustomized && (
                     <button
                       type="button"
-                      onClick={() => handleReset(tpl.type, tpl.name)}
+                      onClick={() => setTemplateToReset({ type: tpl.type, name: tpl.name })}
                       className="p-2 rounded-lg text-muted hover:text-danger hover:bg-danger-soft transition-colors"
                       title="Restaurar layout original"
                     >
@@ -436,6 +442,21 @@ export default function ResendModelosCatalogPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={!!templateToReset}
+        onOpenChange={(open) => !open && setTemplateToReset(null)}
+        title="Restaurar layout original"
+        description={
+          templateToReset
+            ? `Deseja restaurar o modelo "${templateToReset.name}" para o HTML original do sistema? Suas personalizações serão perdidas.`
+            : ""
+        }
+        confirmLabel="Restaurar padrão"
+        variant="warning"
+        isLoading={isResetting}
+        onConfirm={handleConfirmReset}
+      />
     </div>
   );
 }

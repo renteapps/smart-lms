@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { Award, BookOpen, CalendarDays, ShieldCheck } from 'lucide-react';
 import { buttonVariants, Card, Chip, EmptyState } from '@heroui/react';
 import { Rise } from '@/components/ui/Rise';
+import { CopyCertLinkButton } from '@/components/certificates/CopyCertLinkButton';
 import { getSessionUser } from '@/lib/supabase/auth';
 import { getStudentCertificates } from '@/lib/data/certificates';
 import { cn } from '@/lib/utils';
@@ -114,13 +115,16 @@ export default async function CertificadosPage({
                     </Card.Content>
 
                     <Card.Footer className="mt-auto border-t border-hairline px-5 py-4">
-                      <Link
-                        href={`/certificados/${certificate.validationHash}`}
-                        className={cn(buttonVariants({ variant: 'primary', size: 'sm' }), 'w-full')}
-                      >
-                        <Award className="size-4" aria-hidden="true" />
-                        Visualizar Certificado
-                      </Link>
+                      <div className="flex w-full items-center gap-2">
+                        <Link
+                          href={`/certificados/${certificate.validationHash}`}
+                          className={cn(buttonVariants({ variant: 'primary', size: 'sm' }), 'flex-1')}
+                        >
+                          <Award className="size-4" aria-hidden="true" />
+                          Visualizar Certificado
+                        </Link>
+                        <CopyCertLinkButton validationHash={certificate.validationHash} />
+                      </div>
                     </Card.Footer>
                   </Card>
                 </Rise>

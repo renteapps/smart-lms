@@ -5,10 +5,9 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { ArrowLeft, Brain, Check, History, Maximize, Minimize, Sparkles, Star } from "lucide-react";
 import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
 import { Button, Chip, Separator, Tooltip, buttonVariants } from "@heroui/react";
+import dynamic from "next/dynamic";
 import VideoPlayer from "./VideoPlayer";
 import LessonTabs from "./LessonTabs";
-import ProfileTestRunner from "./ProfileTestRunner";
-import QuizRunner from "./QuizRunner";
 import type { CourseOutline, Lesson } from "@/types/course";
 import type { ProfileTest } from "@/types/profileTest";
 import type { Quiz, QuizDraft, QuizResult } from "@/types/quiz";
@@ -19,9 +18,21 @@ import { useZenMode } from "@/contexts/ZenModeContext";
 import { rateLesson, saveWatchPosition, setLessonCompletion } from "@/app/actions/progress";
 import { setTrailItemCompletion } from "@/app/actions/trail";
 import { formatPandaVideoDuration } from "@/lib/pandavideo";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import PersonalizedLessonExperience from "./PersonalizedLessonExperience";
 import type { PersonalizedLessonStudentState } from "@/types/personalizedLesson";
+
+const ProfileTestRunner = dynamic(() => import("./ProfileTestRunner"), {
+  loading: () => <div className="min-h-[400px] animate-pulse rounded-3xl bg-surface" />,
+});
+
+const QuizRunner = dynamic(() => import("./QuizRunner"), {
+  loading: () => <div className="min-h-[400px] animate-pulse rounded-3xl bg-surface" />,
+});
+
+const PersonalizedLessonExperience = dynamic(() => import("./PersonalizedLessonExperience"), {
+  loading: () => <div className="min-h-[400px] animate-pulse rounded-3xl bg-surface" />,
+});
 
 /**
  * Fora do componente: `sendBeacon` precisa sobreviver ao descarregamento da
@@ -83,11 +94,10 @@ export default function LessonClientWrapper({
 
   /*
    * "Continuar assistindo" na home lê `last_watched_second`. Sem throttle,
-   * `timeupdate` dispara várias vezes por segundo — só gravamos quando o
-   * vídeo avançou pelo menos 10s desde o último envio. `latestSecondRef`
-   * guarda a posição mais recente mesmo entre um envio e outro, pra podermos
-   * forçar a gravação assim que o aluno pausa (evento do PandaVideo/`<video>`),
-   * sem esperar os próximos 10s de avanço.
+   * `timeupdate` dispara várias vezes por segundo. Gravamos a cada 30s no
+   * servidor e guardamos o segundo exato no `sessionStorage` e no `latestSecondRef`.
+   * Ao pausar ou sair da página (`pagehide`/`sendBeacon`), gravamos na hora
+   * sem perda de precisão, economizando ~67% de requisições de rede.
    */
   const lastSavedSecondRef = useRef(0);
   const latestSecondRef = useRef(0);
@@ -101,7 +111,12 @@ export default function LessonClientWrapper({
 
   const handleTimeUpdate = (seconds: number) => {
     latestSecondRef.current = seconds;
-    if (seconds < 1 || Math.abs(seconds - lastSavedSecondRef.current) < 10) return;
+    try {
+      sessionStorage.setItem(`@smartlms:watch:${lesson.id}`, String(seconds));
+    } catch {
+      // ignore quota
+    }
+    if (seconds < 1 || Math.abs(seconds - lastSavedSecondRef.current) < 30) return;
     persistWatchPosition(seconds);
   };
 
@@ -121,11 +136,23 @@ export default function LessonClientWrapper({
   /*
    * A cada aula (troca de `lesson.id`, sem remontar o componente — a
    * navegação entre etapas troca só a prop), os refs de posição partem do que
-   * o servidor já sabe, não de zero.
+   * o servidor já sabe, complementado pelo sessionStorage se houver dado mais recente.
    */
   useEffect(() => {
-    lastSavedSecondRef.current = lesson.lastWatchedSecond ?? 0;
-    latestSecondRef.current = lesson.lastWatchedSecond ?? 0;
+    let initialSecond = lesson.lastWatchedSecond ?? 0;
+    try {
+      const stored = sessionStorage.getItem(`@smartlms:watch:${lesson.id}`);
+      if (stored) {
+        const parsed = Number(stored);
+        if (Number.isFinite(parsed) && parsed > initialSecond) {
+          initialSecond = parsed;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    lastSavedSecondRef.current = initialSecond;
+    latestSecondRef.current = initialSecond;
   }, [lesson.id, lesson.lastWatchedSecond]);
 
   /*
@@ -235,12 +262,13 @@ export default function LessonClientWrapper({
     setRating(value);
     startTransition(async () => {
       await rateLesson(lesson.id, value);
+      toast.success(value === 1 ? "Avaliação de 1 estrela registrada!" : `Avaliação de ${value} estrelas registrada!`);
     });
   };
 
   return (
-    <div className="mx-auto w-full max-w-[76rem] px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-12">
-      <header className="mb-7 sm:mb-8">
+    <div className="mx-auto w-full max-w-[76rem] px-4 py-5 sm:px-6 sm:py-8 lg:px-10 lg:py-12">
+      <header className="mb-5 sm:mb-8">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <p className="eyebrow" data-numeric>
             Etapa {currentIndex + 1} de {allLessons.length}
@@ -272,7 +300,7 @@ export default function LessonClientWrapper({
           celular não há largura para "concluir + avaliar + navegar" na mesma
           faixa sem quebrar em pedaços desalinhados.
         */}
-        <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-x-6 lg:gap-y-4">
+        <div className="mt-4 flex flex-col gap-3 sm:mt-6 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between lg:gap-x-6 lg:gap-y-4">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {lesson.type !== 'quiz' && !isProfileTest && (
               <>

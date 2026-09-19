@@ -8,7 +8,7 @@ import { getCatalogCourses } from "@/lib/data/courses";
 import { createClient } from "@/lib/supabase/client";
 import { Company } from "@/types/business";
 import { CatalogCourse } from "@/types/course";
-import { Button } from "@heroui/react";
+import { Button, Spinner } from "@heroui/react";
 import Link from "next/link";
 import { ArrowLeft, Building2 } from "lucide-react";
 
@@ -38,7 +38,7 @@ export default function AdminBusinessEditPage() {
   if (!loaded) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <div className="size-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+        <Spinner size="lg" color="accent" />
       </div>
     );
   }

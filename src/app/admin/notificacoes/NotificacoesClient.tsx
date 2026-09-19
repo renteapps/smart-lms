@@ -19,7 +19,7 @@ import {
   X,
   RefreshCw,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { PageHeader, StatusBadge } from "@/components/ui/editorial";
 import { UserVariablePicker } from "@/components/admin/UserVariablePicker";
 import { AutomationsTab } from "./AutomationsTab";

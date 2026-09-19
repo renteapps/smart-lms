@@ -8,7 +8,7 @@ import BlockViewer from '@/components/classroom/BlockViewer';
 import { Clock, Headphones, BookOpen, ArrowLeft, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { ArticleAudioPlayer } from '@/components/audio/ArticleAudioPlayer';
-import { buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@heroui/react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { ArticleCard } from '@/components/blog/ArticleCard';
@@ -60,7 +60,7 @@ function PremiumArticleLock({ isAuthenticated }: { isAuthenticated: boolean }) {
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Link
           href="/criar-conta"
-          className={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'rounded-full px-8 font-bold text-on-primary')}
+          className={cn(buttonVariants({ variant: 'primary', size: 'lg' }), 'press rounded-xl px-8 font-bold')}
         >
           Assinar agora
         </Link>
@@ -123,7 +123,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           </span>
         </div>
 
-        <h1 className="mb-8 text-4xl font-extrabold leading-[1.06] tracking-[-0.05em] text-ink md:text-5xl lg:text-6xl">
+        <h1 className="mb-8 text-4xl font-extrabold leading-[1.06] tracking-[-0.05em] text-foreground md:text-5xl lg:text-6xl">
           {article.title}
         </h1>
 
@@ -270,7 +270,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               <div>
                 <Link 
                   href={`/courses/${relatedCourse.slug}`}
-                  className={cn(buttonVariants({ variant: "default", size: "lg" }), "h-14 rounded-full px-8 font-bold text-base text-on-primary shadow-lg")}
+                  className={cn(buttonVariants({ variant: "primary", size: "lg" }), "press h-14 rounded-xl px-8 font-bold text-base shadow-lg")}
                 >
                   Conhecer o Curso
                 </Link>

@@ -4,7 +4,9 @@ import { useRef, useState, useTransition, type DragEvent, type KeyboardEvent } f
 import { GripVertical, Plus, Edit2, Trash2, ChevronDown, ChevronUp, PlayCircle, FileText, CheckCircle, Brain, SkipForward, RotateCcw, Image as ImageIcon, HelpCircle, LoaderCircle, Sparkles } from "lucide-react";
 import { Course, Module, Lesson } from "@/types/course";
 import Link from "next/link";
-import { Button, Toast } from "@heroui/react";
+import { Button } from "@heroui/react";
+import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import AddProfileTestModal from "./AddProfileTestModal";
 import AddEditModuleModal from "./AddEditModuleModal";
 import { saveModule, deleteModule, saveLesson, deleteLesson, reorderLessons, reorderModules } from "@/app/actions/admin/catalog";
@@ -97,6 +99,10 @@ export default function ModuleList({ courseId, initialCourse, lessonRatings }: M
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
 
+  const [moduleToDelete, setModuleToDelete] = useState<string | null>(null);
+  const [lessonToDelete, setLessonToDelete] = useState<{ moduleId: string; lessonId: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Module Add/Edit Modal State
   const [isModuleModalOpen, setIsModuleModalOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
@@ -125,13 +131,13 @@ export default function ModuleList({ courseId, initialCourse, lessonRatings }: M
 
       if (!result.success) {
         replaceModuleLessons(moduleId, previousLessons);
-        Toast.toast.danger("Não foi possível salvar a ordem das aulas.", {
+        toast.danger("Não foi possível salvar a ordem das aulas.", {
           description: result.message || "A ordem anterior foi restaurada.",
         });
         return;
       }
 
-      Toast.toast.success("Ordem das aulas atualizada.");
+      toast.success("Ordem das aulas atualizada.");
     });
   };
 
@@ -228,13 +234,13 @@ export default function ModuleList({ courseId, initialCourse, lessonRatings }: M
 
       if (!result.success) {
         setCourse((previousCourse) => ({ ...previousCourse, modules: previousModules }));
-        Toast.toast.danger("Não foi possível salvar a ordem dos módulos.", {
+        toast.danger("Não foi possível salvar a ordem dos módulos.", {
           description: result.message || "A ordem anterior foi restaurada.",
         });
         return;
       }
 
-      Toast.toast.success("Ordem dos módulos atualizada.");
+      toast.success("Ordem dos módulos atualizada.");
     });
   };
 
@@ -360,22 +366,32 @@ export default function ModuleList({ courseId, initialCourse, lessonRatings }: M
         }
       });
     } else {
-      alert("Erro ao salvar módulo: " + res.message);
+      toast.danger("Erro ao salvar módulo", { description: res.message });
     }
   };
 
-  const handleDeleteModule = async (moduleId: string) => {
-    if (confirm("Tem certeza que deseja excluir este módulo e todos os seus conteúdos?")) {
-      const res = await deleteModule(moduleId, courseId);
+  const handleDeleteModule = (moduleId: string) => {
+    setModuleToDelete(moduleId);
+  };
+
+  const confirmDeleteModule = async () => {
+    if (!moduleToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await deleteModule(moduleToDelete, courseId);
       if (res.success) {
         router.refresh();
         setCourse((prev) => ({
           ...prev,
-          modules: prev.modules.filter((m) => m.id !== moduleId)
+          modules: prev.modules.filter((m) => m.id !== moduleToDelete),
         }));
+        toast.success("Módulo excluído com sucesso!");
+        setModuleToDelete(null);
       } else {
-        alert("Erro ao excluir módulo: " + res.message);
+        toast.danger("Erro ao excluir módulo", { description: res.message });
       }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -444,12 +460,19 @@ export default function ModuleList({ courseId, initialCourse, lessonRatings }: M
         };
       });
     } else {
-      alert("Erro ao salvar teste de perfil: " + res.message);
+      toast.danger("Erro ao salvar teste de perfil", { description: res.message });
     }
   };
 
-  const handleDeleteLesson = async (moduleId: string, lessonId: string) => {
-    if (confirm("Tem certeza que deseja remover este item do módulo?")) {
+  const handleDeleteLesson = (moduleId: string, lessonId: string) => {
+    setLessonToDelete({ moduleId, lessonId });
+  };
+
+  const confirmDeleteLesson = async () => {
+    if (!lessonToDelete) return;
+    const { moduleId, lessonId } = lessonToDelete;
+    setIsDeleting(true);
+    try {
       const res = await deleteLesson(lessonId);
       if (res.success) {
         router.refresh();
@@ -459,13 +482,17 @@ export default function ModuleList({ courseId, initialCourse, lessonRatings }: M
             if (m.id !== moduleId) return m;
             return {
               ...m,
-              lessons: m.lessons.filter((l) => l.id !== lessonId)
+              lessons: m.lessons.filter((l) => l.id !== lessonId),
             };
-          })
+          }),
         }));
+        toast.success("Item removido do módulo com sucesso!");
+        setLessonToDelete(null);
       } else {
-        alert("Erro ao excluir item: " + res.message);
+        toast.danger("Erro ao excluir item", { description: res.message });
       }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -776,6 +803,30 @@ export default function ModuleList({ courseId, initialCourse, lessonRatings }: M
               }
             : null
         }
+      />
+
+      {/* Confirmação de Exclusão de Módulo */}
+      <ConfirmDialog
+        isOpen={Boolean(moduleToDelete)}
+        onOpenChange={(open) => !open && setModuleToDelete(null)}
+        title="Excluir módulo"
+        description="Tem certeza que deseja excluir este módulo e todos os seus conteúdos? Esta ação não pode ser desfeita."
+        confirmLabel="Excluir módulo"
+        confirmTone="danger"
+        isLoading={isDeleting}
+        onConfirm={confirmDeleteModule}
+      />
+
+      {/* Confirmação de Exclusão de Aula/Item */}
+      <ConfirmDialog
+        isOpen={Boolean(lessonToDelete)}
+        onOpenChange={(open) => !open && setLessonToDelete(null)}
+        title="Remover item do módulo"
+        description="Tem certeza que deseja remover este item do módulo? Esta ação não pode ser desfeita."
+        confirmLabel="Remover item"
+        confirmTone="danger"
+        isLoading={isDeleting}
+        onConfirm={confirmDeleteLesson}
       />
     </div>
   );

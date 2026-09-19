@@ -10,6 +10,7 @@ import {
   Label,
   ProgressBar,
   SearchField,
+  Spinner,
   Table,
   buttonVariants,
 } from "@heroui/react";
@@ -28,7 +29,8 @@ import { Company } from "@/types/business";
 import { deleteCompany } from "@/app/actions/admin/platform";
 import { getCompanies } from "@/lib/data/business";
 import { createClient } from "@/lib/supabase/client";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { cn } from "@/lib/utils";
 
 const initials = (name: string) =>
@@ -64,19 +66,23 @@ export default function AdminBusinessPage() {
     loadCompanies();
   }, []);
 
-  const handleDelete = async (company: Company) => {
-    if (
-      confirm(
-        `Tem certeza que deseja excluir a empresa "${company.tradeName}" e todos os colaboradores vinculados?`
-      )
-    ) {
-      const res = await deleteCompany(company.id);
+  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!companyToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await deleteCompany(companyToDelete.id);
       if (res.success) {
-        toast.success(`Empresa ${company.tradeName} removida com sucesso.`);
+        toast.success(`Empresa ${companyToDelete.tradeName} removida com sucesso.`);
+        setCompanyToDelete(null);
         loadCompanies();
       } else {
         toast.error(res.message || "Erro ao remover empresa.");
       }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -185,8 +191,8 @@ export default function AdminBusinessPage() {
 
         <Card.Content className="px-0 pb-0 pt-0">
           {isLoading ? (
-            <div className="flex justify-center items-center py-16">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+            <div className="flex justify-center items-center py-16" aria-busy="true" aria-label="Carregando empresas">
+              <Spinner size="md" color="accent" />
             </div>
           ) : filtered.length === 0 ? (
             <EmptyState className="flex flex-col items-center gap-3 px-6 py-16 text-center">
@@ -347,7 +353,7 @@ export default function AdminBusinessPage() {
                                     size="sm"
                                     aria-label="Excluir"
                                     className="text-danger hover:bg-danger/10"
-                                    onPress={() => handleDelete(company)}
+                                    onPress={() => setCompanyToDelete(company)}
                                   >
                                     <Trash2 className="size-3.5" />
                                   </Button>
@@ -415,6 +421,19 @@ export default function AdminBusinessPage() {
         </Card.Content>
       </Card>
 
+      <ConfirmDialog
+        isOpen={Boolean(companyToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setCompanyToDelete(null);
+        }}
+        title="Excluir empresa corporativa"
+        description={companyToDelete ? `Tem certeza que deseja excluir a empresa "${companyToDelete.tradeName}" e todos os colaboradores vinculados? Esta ação não pode ser desfeita.` : undefined}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { parseNavigationConfig, type NavigationConfig } from "@/types/navigation";
 import type { DB } from "./types";
 
@@ -10,7 +11,7 @@ export const NAVIGATION_SETTINGS_KEY = "navigation";
  * para visitante — o header não pode depender de sessão para saber que links
  * mostrar.
  */
-export async function getNavigationConfig(db: DB): Promise<NavigationConfig> {
+export const getNavigationConfig = cache(async (db: DB): Promise<NavigationConfig> => {
   const { data } = await db
     .from("app_settings")
     .select("value")
@@ -18,4 +19,4 @@ export async function getNavigationConfig(db: DB): Promise<NavigationConfig> {
     .maybeSingle();
 
   return parseNavigationConfig(data?.value);
-}
+});

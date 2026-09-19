@@ -11,7 +11,7 @@ import {
 import { BookOpen, Check, Sparkles } from "lucide-react";
 import { Company, CompanyMember } from "@/types/business";
 import { assignCoursesToDepartment, assignCoursesToMember } from "@/app/actions/admin/platform";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { CatalogCourse } from "@/types/course";
 
 interface AssignCourseModalProps {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Ban, CheckCircle2, ChevronDown, ChevronRight, Copy, KeyRound, ListChecks, Pencil, PlayCircle, Plus, RefreshCw, Repeat, Trash2, Webhook } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 import {
   cancelHotmartSubscriptionAction,
@@ -20,6 +20,7 @@ import {
 } from "@/app/actions/admin/hotmart";
 import type { HotmartOfferSummary, HotmartProductSummary, HotmartSubscriberPageInfo, HotmartSubscriberSummary } from "@/lib/billing/hotmartApi";
 import { PageHeader } from "@/components/ui/editorial";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const SUBSCRIPTION_STATUSES = [
   { value: "ACTIVE", label: "Ativa" },
@@ -101,6 +102,10 @@ export function HotmartIntegrationContent() {
   const [subsEmailFilter, setSubsEmailFilter] = useState("");
   const [subsProductFilter, setSubsProductFilter] = useState("");
   const [subsBusyCode, setSubsBusyCode] = useState<string | null>(null);
+  const [subActionConfirm, setSubActionConfirm] = useState<{
+    type: "cancel" | "reactivate";
+    subscriberCode: string;
+  } | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -212,24 +217,32 @@ export function HotmartIntegrationContent() {
     if (next && subsItems.length === 0 && !subsLoading) await loadSubscriptions();
   }
 
-  async function handleCancelSubscription(subscriberCode: string) {
-    if (!confirm("Cancelar esta assinatura na Hotmart? O acesso do assinante é mantido até o fim do período já pago.")) return;
+  async function handleConfirmSubAction() {
+    if (!subActionConfirm) return;
+    const { type, subscriberCode } = subActionConfirm;
     setSubsBusyCode(subscriberCode);
-    const result = await cancelHotmartSubscriptionAction(subscriberCode, true);
-    setSubsBusyCode(null);
-    if (!result.success) return toast.error(result.message ?? "Falha ao cancelar a assinatura.");
-    toast.success("Assinatura cancelada.");
-    await loadSubscriptions(subsCurrentToken);
-  }
-
-  async function handleReactivateSubscription(subscriberCode: string) {
-    if (!confirm("Enviar solicitação de reativação para o assinante? A Hotmart manda um e-mail de aceite (válido por 3 dias) — o acesso só volta quando ele aceitar.")) return;
-    setSubsBusyCode(subscriberCode);
-    const result = await reactivateHotmartSubscriptionAction(subscriberCode, false);
-    setSubsBusyCode(null);
-    if (!result.success) return toast.error(result.message ?? "Falha ao solicitar a reativação.");
-    toast.success(result.message ?? "Solicitação enviada.");
-    await loadSubscriptions(subsCurrentToken);
+    try {
+      if (type === "cancel") {
+        const result = await cancelHotmartSubscriptionAction(subscriberCode, true);
+        if (!result.success) toast.error(result.message ?? "Falha ao cancelar a assinatura.");
+        else {
+          toast.success("Assinatura cancelada.");
+          await loadSubscriptions(subsCurrentToken);
+        }
+      } else {
+        const result = await reactivateHotmartSubscriptionAction(subscriberCode, false);
+        if (!result.success) toast.error(result.message ?? "Falha ao solicitar a reativação.");
+        else {
+          toast.success(result.message ?? "Solicitação enviada.");
+          await loadSubscriptions(subsCurrentToken);
+        }
+      }
+    } catch {
+      toast.error("Ocorreu um erro ao processar a assinatura.");
+    } finally {
+      setSubsBusyCode(null);
+      setSubActionConfirm(null);
+    }
   }
 
   async function handleSyncSubscription(subscriberCode: string) {
@@ -315,7 +328,7 @@ export function HotmartIntegrationContent() {
               className={`${buttonClass} border border-danger/40 text-danger`}
               onClick={async () => {
                 const result = await clearHotmartApiCredentials();
-                if (!result.success) toast.error(result.message);
+                if (!result.success) toast.error(result.message || "Erro ao remover credenciais.");
                 else { toast.success("Credenciais removidas."); await reload(); }
               }}
             >
@@ -430,7 +443,7 @@ export function HotmartIntegrationContent() {
                   className="text-danger"
                   onClick={async () => {
                     const result = await deleteHotmartMapping(mapping.id);
-                    if (!result.success) toast.error(result.message);
+                    if (!result.success) toast.error(result.message || "Erro ao excluir mapeamento.");
                     else await reload();
                   }}
                 >
@@ -493,12 +506,12 @@ export function HotmartIntegrationContent() {
                           <RefreshCw className="size-4" />
                         </button>
                         {item.status === "ACTIVE" && (
-                          <button aria-label="Cancelar assinatura" className={`${buttonClass} border border-danger/40 text-danger`} disabled={busy} onClick={() => void handleCancelSubscription(item.subscriberCode)}>
+                          <button aria-label="Cancelar assinatura" className={`${buttonClass} border border-danger/40 text-danger`} disabled={busy || subsBusyCode === item.subscriberCode} onClick={() => setSubActionConfirm({ type: "cancel", subscriberCode: item.subscriberCode })}>
                             <Ban className="size-4" /> Cancelar
                           </button>
                         )}
                         {canReactivateSubscription(item.status) && (
-                          <button aria-label="Reativar assinatura" className={`${buttonClass} border border-border`} disabled={busy} onClick={() => void handleReactivateSubscription(item.subscriberCode)}>
+                          <button aria-label="Reativar assinatura" className={`${buttonClass} border border-border`} disabled={busy || subsBusyCode === item.subscriberCode} onClick={() => setSubActionConfirm({ type: "reactivate", subscriberCode: item.subscriberCode })}>
                             <PlayCircle className="size-4" /> Reativar
                           </button>
                         )}
@@ -542,6 +555,21 @@ export function HotmartIntegrationContent() {
           {data?.events.length === 0 && <p className="p-4 text-sm text-muted">Nenhum evento recebido.</p>}
         </div>
       </section>
+
+      <ConfirmDialog
+        isOpen={!!subActionConfirm}
+        onOpenChange={(open) => !open && setSubActionConfirm(null)}
+        title={subActionConfirm?.type === "cancel" ? "Cancelar assinatura na Hotmart" : "Reativar assinatura na Hotmart"}
+        description={
+          subActionConfirm?.type === "cancel"
+            ? "Cancelar esta assinatura na Hotmart? O acesso do assinante é mantido até o fim do período já pago."
+            : "Enviar solicitação de reativação para o assinante? A Hotmart manda um e-mail de aceite (válido por 3 dias) — o acesso só volta quando ele aceitar."
+        }
+        confirmLabel={subActionConfirm?.type === "cancel" ? "Cancelar assinatura" : "Enviar solicitação"}
+        isDestructive={subActionConfirm?.type === "cancel"}
+        isLoading={subsBusyCode !== null}
+        onConfirm={handleConfirmSubAction}
+      />
     </div>
   );
 }

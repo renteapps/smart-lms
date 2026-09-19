@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import {
+  Bot,
   CalendarClock,
   Compass,
   Drama,
@@ -11,8 +12,6 @@ import {
   Presentation,
   UserRoundCheck,
 } from "lucide-react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { BubbleChatSpark01Icon } from "@hugeicons/core-free-icons";
 import type { AgentAvatarKey } from "@/types/agente";
 import { cn } from "@/lib/utils";
 
@@ -123,7 +122,7 @@ export function AgentAvatar({ avatar, themeColor, iconSvg, photoUrl, size = "md"
       ) : avatarConfig ? (
         <avatarConfig.icon className={iconSizes[size]} />
       ) : (
-        <HugeiconsIcon icon={BubbleChatSpark01Icon} className={iconSizes[size]} />
+        <Bot className={iconSizes[size]} />
       )}
     </span>
   );

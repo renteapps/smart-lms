@@ -33,10 +33,10 @@ export default async function BlogIndexPage() {
       <div className="editorial-container">
         <header className="mb-12 max-w-4xl pt-14 sm:pt-20">
           <p className="eyebrow">Revista Skill Academy</p>
-          <h1 className="mt-3 text-4xl font-extrabold tracking-[-0.05em] text-ink md:text-5xl lg:text-6xl">
+          <h1 className="mt-3 text-4xl font-extrabold tracking-[-0.05em] text-foreground md:text-5xl lg:text-6xl">
             Reflexões para crescer com intenção
           </h1>
-          <p className="mt-5 max-w-2xl text-xl leading-8 text-text-soft">
+          <p className="mt-5 max-w-2xl text-xl leading-8 text-muted">
             Aprofunde-se em temas como comunicação, liderança e inteligência emocional. 
             Leia no seu tempo ou ouça no trânsito.
           </p>

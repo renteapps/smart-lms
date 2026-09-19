@@ -10,7 +10,7 @@ export type AuthorRow = ArticleAuthor & {
 
 export type AuthorInput = {
   name: string;
-  title: string;
+  title?: string;
   avatarUrl?: string | null;
   bio?: string | null;
   slug?: string;

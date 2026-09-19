@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/editorial";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   FileText,
   Trash2,
@@ -23,6 +24,8 @@ export default function ResendLogsPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "sent" | "simulated" | "failed">("all");
   const [selectedLog, setSelectedLog] = useState<EmailLog | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -50,11 +53,8 @@ export default function ResendLogsPage() {
     };
   }, []);
 
-  const handleClearLogs = async () => {
-    if (!confirm("Deseja realmente limpar todo o histórico de disparos de e-mail?")) {
-      return;
-    }
-
+  const handleConfirmClearLogs = async () => {
+    setIsClearing(true);
     try {
       await fetch("/api/admin/integracoes/resend", {
         method: "POST",
@@ -69,6 +69,9 @@ export default function ResendLogsPage() {
       clearEmailLogs();
       setLogs([]);
       toast.success("Histórico limpo.");
+    } finally {
+      setIsClearing(false);
+      setIsClearConfirmOpen(false);
     }
   };
 
@@ -114,7 +117,7 @@ export default function ResendLogsPage() {
             {logs.length > 0 && (
               <button
                 type="button"
-                onClick={handleClearLogs}
+                onClick={() => setIsClearConfirmOpen(true)}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-2 text-xs font-semibold text-muted hover:text-danger hover:border-danger/30 transition-colors"
               >
                 <Trash2 className="size-3.5" /> Limpar Histórico
@@ -387,6 +390,17 @@ export default function ResendLogsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={isClearConfirmOpen}
+        onOpenChange={setIsClearConfirmOpen}
+        title="Limpar histórico de disparos"
+        description="Deseja realmente limpar todo o histórico de disparos de e-mail? Esta ação não pode ser desfeita."
+        confirmLabel="Limpar histórico"
+        isDestructive
+        isLoading={isClearing}
+        onConfirm={handleConfirmClearLogs}
+      />
     </div>
   );
 }

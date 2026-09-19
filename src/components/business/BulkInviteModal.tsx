@@ -12,7 +12,7 @@ import {
 import { Users, Upload, CheckCircle2, AlertTriangle, XCircle, Sparkles } from "lucide-react";
 import { Company } from "@/types/business";
 import { bulkInviteMembers } from "@/app/actions/admin/platform";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 interface BulkInviteModalProps {
   isOpen: boolean;

@@ -26,7 +26,7 @@ import {
   type TimePeriod,
 } from "@/components/admin/analytics/AnalyticsComponents";
 // Mock import removed
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 export interface StudentsAnalyticsViewProps {
   basePath?: string;

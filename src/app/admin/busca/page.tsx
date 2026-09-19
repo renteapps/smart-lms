@@ -44,11 +44,11 @@ export default async function AdminBuscaUnificada({ searchParams }: { searchPara
     .textSearch("search_vector", q, { type: 'websearch', config: 'public.pt_unaccent' })
     .limit(5);
 
-  // Busca em empresas
+  // Busca em empresas (organizações B2B)
   const { data: companies } = await supabase
-    .from("companies")
-    .select("id, name, cnpj")
-    .textSearch("search_vector", q, { type: 'websearch', config: 'public.pt_unaccent' })
+    .from("organizations")
+    .select("id, name, document, trade_name")
+    .or(`name.ilike.%${q}%,document.ilike.%${q}%,trade_name.ilike.%${q}%`)
     .limit(5);
 
   const hasResults = (users?.length || 0) > 0 || (courses?.length || 0) > 0 || (companies?.length || 0) > 0;
@@ -135,9 +135,9 @@ export default async function AdminBuscaUnificada({ searchParams }: { searchPara
               <ul className="divide-y divide-separator">
                 {companies.map(company => (
                   <li key={company.id}>
-                    <Link href={`/admin/business/empresa/${company.id}`} className="block p-4 hover:bg-surface transition-colors">
+                    <Link href={`/admin/business/${company.id}`} className="block p-4 hover:bg-surface transition-colors">
                       <p className="font-semibold text-sm text-foreground">{company.name}</p>
-                      <p className="text-xs text-muted mt-0.5">{company.cnpj || "Sem CNPJ"}</p>
+                      <p className="text-xs text-muted mt-0.5">{company.document || "Sem CNPJ"}</p>
                     </Link>
                   </li>
                 ))}

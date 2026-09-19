@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button, Card, Input, Label, TextField, toast, Table } from "@heroui/react";
+import { Button, Card, Input, Label, TextField, Table } from "@heroui/react";
+import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Edit2, Save, Trash2 } from "lucide-react";
 import type { CategoryRow } from "@/app/actions/admin/categories";
 import {
@@ -27,6 +29,7 @@ export function ArticleCategoriesManager({ initialCategories }: { initialCategor
   const [editingId, setEditingId] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState("");
   const [oldNameInput, setOldNameInput] = useState("");
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const resetForm = () => {
     setEditingId(null);
@@ -46,9 +49,13 @@ export function ArticleCategoriesManager({ initialCategories }: { initialCategor
 
     startTransition(async () => {
       const slug = slugify(nameInput);
-      const res = editingId
-        ? await updateArticleCategory(editingId, nameInput.trim(), slug, oldNameInput)
-        : await createArticleCategory(nameInput.trim(), slug);
+      let res;
+
+      if (editingId) {
+        res = await updateArticleCategory(editingId, nameInput.trim(), slug, oldNameInput);
+      } else {
+        res = await createArticleCategory(nameInput.trim(), slug);
+      }
 
       if (res.success) {
         toast.success("Categoria salva com sucesso!");
@@ -60,7 +67,12 @@ export function ArticleCategoriesManager({ initialCategories }: { initialCategor
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Tem certeza que deseja excluir '${name}'? Os artigos que utilizam esta opção poderão ser afetados.`)) return;
+    setItemToDelete({ id, name });
+  };
+
+  const confirmDelete = () => {
+    if (!itemToDelete) return;
+    const { id, name } = itemToDelete;
 
     startTransition(async () => {
       const res = await deleteArticleCategory(id, name);
@@ -69,6 +81,7 @@ export function ArticleCategoriesManager({ initialCategories }: { initialCategor
       } else {
         toast.danger("Erro ao excluir", { description: res.message });
       }
+      setItemToDelete(null);
     });
   };
 
@@ -152,6 +165,17 @@ export function ArticleCategoriesManager({ initialCategories }: { initialCategor
           </Card.Content>
         </Card>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(itemToDelete)}
+        onOpenChange={(open) => !open && setItemToDelete(null)}
+        title="Excluir categoria"
+        description={`Tem certeza que deseja excluir '${itemToDelete?.name}'? Os artigos que utilizam esta opção poderão ser afetados.`}
+        confirmLabel="Excluir categoria"
+        confirmTone="danger"
+        isLoading={isPending}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

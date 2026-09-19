@@ -82,9 +82,20 @@ export function readLearningTrail(rawInput?: string | null): StorageReadResult<L
   }
 }
 
-export function saveLearningTrail(trail: LearningTrail): void {
+export const TRAIL_CHANGED_EVENT = 'smartlms:trail-changed';
+
+/** Notifica observadores (ex: useSyncExternalStore) de que a trilha mudou na aba atual. */
+export function notifyTrailChanged(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(TRAIL_CHANGED_EVENT));
+}
+
+export function saveLearningTrail(trail: LearningTrail, options?: { skipSupabaseSync?: boolean }): void {
   window.localStorage.setItem(TRAIL_STORAGE_KEY, JSON.stringify(trail));
+  notifyTrailChanged();
   
+  if (options?.skipSupabaseSync) return;
+
   // Sincronizar com Supabase em background
   const supabase = createClient();
   supabase.auth.getUser().then(({ data: { user } }) => {

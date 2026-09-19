@@ -15,7 +15,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { StatusBadge } from "@/components/ui/editorial";
 import { UserVariablePicker } from "@/components/admin/UserVariablePicker";
 import { EmailTemplateType } from "@/types/resend";

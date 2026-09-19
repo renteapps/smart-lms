@@ -5,16 +5,19 @@ import { cn, getContrastForeground } from "@/lib/utils";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppearanceConfig } from "@/lib/data/appearance";
 import { AppearanceProvider } from "@/contexts/AppearanceContext";
-import { Toaster } from "sonner";
 
-const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
-const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
+const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", display: "swap" });
 
 export async function generateMetadata(): Promise<Metadata> {
   const supabase = createAdminClient();
   const appearance = await getAppearanceConfig(supabase);
+  const siteUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://smartlms.com.br");
 
   return {
+    metadataBase: new URL(siteUrl),
     title: {
       default: appearance.platformName,
       template: `%s | ${appearance.platformName}`,
@@ -34,6 +37,12 @@ export async function generateMetadata(): Promise<Metadata> {
           images: [appearance.ogImageUrl],
         }
       : undefined,
+    twitter: {
+      card: "summary_large_image",
+      title: appearance.platformName,
+      description: appearance.slogan,
+      images: appearance.ogImageUrl ? [appearance.ogImageUrl] : undefined,
+    },
   };
 }
 
@@ -77,7 +86,6 @@ export default async function RootLayout({
       <body>
         <AppearanceProvider value={appearance}>
           {children}
-          <Toaster position="top-right" richColors closeButton />
         </AppearanceProvider>
       </body>
     </html>

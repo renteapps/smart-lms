@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { PageHeader } from "@/components/ui/editorial";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   Mail,
   Key,
@@ -76,6 +77,7 @@ export function ResendIntegrationContent() {
   const [useSampleData, setUseSampleData] = useState(true);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [isResettingTemplate, setIsResettingTemplate] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const codeTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -98,6 +100,8 @@ export function ResendIntegrationContent() {
 
   // Logs State
   const [logs, setLogs] = useState<EmailLog[]>([]);
+  const [isClearLogsConfirmOpen, setIsClearLogsConfirmOpen] = useState(false);
+  const [isClearingLogs, setIsClearingLogs] = useState(false);
   /*
    * A API não devolve mais a chave em claro (só `hasApiKey` e a versão
    * mascarada), então o estado de "conectado" não pode mais ser inferido do
@@ -340,11 +344,7 @@ export function ResendIntegrationContent() {
   };
 
   // Reset template to default
-  const handleResetTemplate = async () => {
-    if (!confirm("Deseja realmente restaurar este modelo para o HTML original do sistema?")) {
-      return;
-    }
-
+  const handleConfirmResetTemplate = async () => {
     setIsResettingTemplate(true);
     try {
       const res = await fetch("/api/admin/integracoes/resend", {
@@ -390,6 +390,7 @@ export function ResendIntegrationContent() {
       toast.success("Modelo restaurado localmente!");
     } finally {
       setIsResettingTemplate(false);
+      setIsResetConfirmOpen(false);
     }
   };
 
@@ -507,8 +508,8 @@ export function ResendIntegrationContent() {
     }
   };
 
-  const handleClearLogs = async () => {
-    if (!confirm("Deseja realmente limpar todo o histórico de envios de e-mail?")) return;
+  const handleConfirmClearLogs = async () => {
+    setIsClearingLogs(true);
     try {
       await fetch("/api/admin/integracoes/resend", {
         method: "POST",
@@ -519,6 +520,9 @@ export function ResendIntegrationContent() {
       toast.success("Histórico de envios limpo.");
     } catch (_e) {
       toast.error("Erro ao limpar logs.");
+    } finally {
+      setIsClearingLogs(false);
+      setIsClearLogsConfirmOpen(false);
     }
   };
 
@@ -1095,7 +1099,7 @@ export function ResendIntegrationContent() {
                   {currentTemplate.isCustomized && (
                     <button
                       type="button"
-                      onClick={handleResetTemplate}
+                      onClick={() => setIsResetConfirmOpen(true)}
                       disabled={isResettingTemplate}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-muted hover:text-danger hover:border-danger/30 transition-colors disabled:opacity-50"
                       title="Restaurar para o layout original"
@@ -2015,7 +2019,7 @@ export function ResendIntegrationContent() {
             </div>
             {logs.length > 0 && (
               <button
-                onClick={handleClearLogs}
+                onClick={() => setIsClearLogsConfirmOpen(true)}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-muted hover:text-danger hover:border-danger/30 transition-colors"
               >
                 <Trash2 className="size-3.5" /> Limpar Histórico
@@ -2080,6 +2084,28 @@ export function ResendIntegrationContent() {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={isResetConfirmOpen}
+        onOpenChange={setIsResetConfirmOpen}
+        title="Restaurar layout original"
+        description="Deseja realmente restaurar este modelo para o HTML original do sistema? As alterações customizadas serão perdidas."
+        confirmLabel="Restaurar padrão"
+        variant="warning"
+        isLoading={isResettingTemplate}
+        onConfirm={handleConfirmResetTemplate}
+      />
+
+      <ConfirmDialog
+        isOpen={isClearLogsConfirmOpen}
+        onOpenChange={setIsClearLogsConfirmOpen}
+        title="Limpar histórico de disparos"
+        description="Deseja realmente limpar todo o histórico de envios de e-mail? Esta ação não pode ser desfeita."
+        confirmLabel="Limpar histórico"
+        isDestructive
+        isLoading={isClearingLogs}
+        onConfirm={handleConfirmClearLogs}
+      />
     </div>
   );
 }

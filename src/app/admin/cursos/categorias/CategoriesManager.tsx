@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button, Card, Input, Label, TextField, toast, Table } from "@heroui/react";
+import { Button, Card, Input, Label, TextField, Table } from "@heroui/react";
+import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Edit2, Plus, Save, Trash2 } from "lucide-react";
 import type { CategoryRow, TagRow } from "@/app/actions/admin/categories";
 import { 
@@ -38,6 +40,7 @@ export function CategoriesManager({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState("");
   const [oldNameInput, setOldNameInput] = useState("");
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const resetForm = () => {
     setEditingId(null);
@@ -83,8 +86,12 @@ export function CategoriesManager({
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Tem certeza que deseja excluir '${name}'? Os cursos que utilizam esta opção poderão ser afetados.`)) return;
-    
+    setItemToDelete({ id, name });
+  };
+
+  const confirmDelete = () => {
+    if (!itemToDelete) return;
+    const { id, name } = itemToDelete;
     startTransition(async () => {
       let res;
       if (activeTab === "categories") {
@@ -98,6 +105,7 @@ export function CategoriesManager({
       } else {
         toast.danger("Erro ao excluir", { description: res.message });
       }
+      setItemToDelete(null);
     });
   };
 
@@ -205,6 +213,17 @@ export function CategoriesManager({
           </Card.Content>
         </Card>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(itemToDelete)}
+        onOpenChange={(open) => !open && setItemToDelete(null)}
+        title={activeTab === "categories" ? "Excluir categoria" : "Excluir tag"}
+        description={`Tem certeza que deseja excluir '${itemToDelete?.name}'? Os cursos que utilizam esta opção poderão ser afetados.`}
+        confirmLabel={activeTab === "categories" ? "Excluir categoria" : "Excluir tag"}
+        confirmTone="danger"
+        isLoading={isPending}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

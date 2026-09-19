@@ -30,7 +30,7 @@ import {
   SimpleBarChart,
   type TimePeriod,
 } from "@/components/admin/analytics/AnalyticsComponents";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 export interface AgentsAnalyticsViewProps {
   basePath?: string;

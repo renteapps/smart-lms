@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { Spinner } from "@heroui/react";
 import { SearchPageView } from "@/components/search/SearchPageView";
 
 export const metadata: Metadata = {
@@ -13,7 +14,7 @@ export default function BuscaPage() {
       fallback={
         <div className="flex min-h-screen items-center justify-center pt-24">
           <div className="flex flex-col items-center gap-3">
-            <div className="size-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+            <Spinner size="lg" color="accent" />
             <p className="text-sm font-medium text-muted">Carregando busca...</p>
           </div>
         </div>

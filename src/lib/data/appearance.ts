@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { DEFAULT_APPEARANCE, type AppearanceConfig } from "@/types/appearance";
 import type { DB } from "./types";
 
@@ -33,7 +34,7 @@ export function sanitizeAssetUrl(value: unknown): string | null {
  * A leitura de `app_settings` é pública por RLS para garantir que visitantes
  * e alunos vejam a marca e as cores corretas em toda a aplicação.
  */
-export async function getAppearanceConfig(db: DB): Promise<AppearanceConfig> {
+export const getAppearanceConfig = cache(async (db: DB): Promise<AppearanceConfig> => {
   const { data } = await db
     .from("app_settings")
     .select("value")
@@ -58,4 +59,4 @@ export async function getAppearanceConfig(db: DB): Promise<AppearanceConfig> {
     faviconUrl: sanitizeAssetUrl(v.faviconUrl),
     ogImageUrl: sanitizeAssetUrl(v.ogImageUrl),
   };
-}
+});

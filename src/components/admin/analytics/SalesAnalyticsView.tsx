@@ -46,7 +46,7 @@ import {
   type TimePeriod,
 } from "@/components/admin/analytics/AnalyticsComponents";
 import { type SalesTransaction } from "@/lib/mocks/analyticsMocks";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 type SalesTabId = "visao_geral" | "funil_checkout" | "transacoes" | "produtos" | "gateways";

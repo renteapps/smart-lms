@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button, Card, Input, Label, TextArea, TextField, toast, Table } from "@heroui/react";
+import { Button, Card, Input, Label, TextArea, TextField, Table } from "@heroui/react";
+import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Edit2, Plus, Save, Trash2, User, UserCheck } from "lucide-react";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import type { AuthorRow } from "@/app/actions/admin/authors";
@@ -19,6 +21,7 @@ export function ArticleAuthorsManager({ initialAuthors }: { initialAuthors: Auth
   const [titleInput, setTitleInput] = useState("");
   const [avatarUrlInput, setAvatarUrlInput] = useState("");
   const [bioInput, setBioInput] = useState("");
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const resetForm = () => {
     setEditingId(null);
@@ -44,19 +47,25 @@ export function ArticleAuthorsManager({ initialAuthors }: { initialAuthors: Auth
     }
 
     startTransition(async () => {
-      const payload = {
-        name: nameInput.trim(),
-        title: titleInput.trim(),
-        avatarUrl: avatarUrlInput.trim() || null,
-        bio: bioInput.trim() || null,
-      };
-
-      const res = editingId
-        ? await updateArticleAuthor(editingId, payload)
-        : await createArticleAuthor(payload);
+      let res;
+      if (editingId) {
+        res = await updateArticleAuthor(editingId, {
+          name: nameInput.trim(),
+          title: titleInput.trim(),
+          avatarUrl: avatarUrlInput.trim() || null,
+          bio: bioInput.trim() || null,
+        });
+      } else {
+        res = await createArticleAuthor({
+          name: nameInput.trim(),
+          title: titleInput.trim(),
+          avatarUrl: avatarUrlInput.trim() || null,
+          bio: bioInput.trim() || null,
+        });
+      }
 
       if (res.success) {
-        toast.success(editingId ? "Autor atualizado com sucesso!" : "Autor criado com sucesso!");
+        toast.success(editingId ? "Autor atualizado com sucesso!" : "Autor cadastrado com sucesso!");
         resetForm();
       } else {
         toast.danger("Erro ao salvar", { description: res.message });
@@ -65,7 +74,12 @@ export function ArticleAuthorsManager({ initialAuthors }: { initialAuthors: Auth
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Tem certeza que deseja excluir o autor "${name}"? Os artigos associados não serão apagados.`)) return;
+    setItemToDelete({ id, name });
+  };
+
+  const confirmDelete = () => {
+    if (!itemToDelete) return;
+    const { id, name } = itemToDelete;
 
     startTransition(async () => {
       const res = await deleteArticleAuthor(id, name);
@@ -75,6 +89,7 @@ export function ArticleAuthorsManager({ initialAuthors }: { initialAuthors: Auth
       } else {
         toast.danger("Erro ao excluir", { description: res.message });
       }
+      setItemToDelete(null);
     });
   };
 
@@ -239,6 +254,17 @@ export function ArticleAuthorsManager({ initialAuthors }: { initialAuthors: Auth
           </Card.Content>
         </Card>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(itemToDelete)}
+        onOpenChange={(open) => !open && setItemToDelete(null)}
+        title="Excluir autor"
+        description={`Tem certeza que deseja excluir o autor "${itemToDelete?.name}"? Os artigos associados não serão apagados.`}
+        confirmLabel="Excluir autor"
+        confirmTone="danger"
+        isLoading={isPending}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

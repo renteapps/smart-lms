@@ -25,6 +25,7 @@ import RecalibrationSlot from "@/components/home/RecalibrationSlot";
 import type { LearningTrailItem, Questionnaire, SessionLoadRating } from "@/types/trilha";
 import type { CatalogCourse, ContinueLesson } from "@/types/course";
 import type { Article } from "@/types/blog";
+import type { ProfileTest } from "@/types/profileTest";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { PROFILE_STORAGE_KEY, PROFILE_SAVED_EVENT } from "@/lib/profilePreferences";
 import DailyPill from "@/components/DailyPill";
@@ -108,12 +109,16 @@ export default function StudentHomeClient({
   masterclassRows = [],
   continueLessons = [],
   hasPlan,
+  initialDailyPill = null,
+  initialProfileTests = [],
 }: {
   courses: CatalogCourse[];
   articles?: Article[];
   masterclassRows?: HomeCarouselRow[];
   continueLessons?: ContinueLesson[];
   hasPlan: boolean;
+  initialDailyPill?: { id: string; title: string; challenge: string; likesCount?: number } | null;
+  initialProfileTests?: ProfileTest[];
 }) {
   const { hydrated, trail, error, migrated } = useTrailStore();
   /*
@@ -126,7 +131,10 @@ export default function StudentHomeClient({
    * melhor do que uma pergunta inventada.
    */
   const [questionnaire, setQuestionnaire] = useState<Questionnaire | null>(null);
-  const { dailyPill, profileTests, loading } = useSupabaseData();
+  const { dailyPill, profileTests, loading } = useSupabaseData({
+    initialDailyPill,
+    initialProfileTests,
+  });
   const profileRaw = useSyncExternalStore(subscribeToProfile, readProfileRaw, noProfile);
   const refinementRaw = useStoredValue(REFINEMENT_STORAGE_KEY);
   /** O que a última recalibração mudou — some na próxima navegação, de propósito. */

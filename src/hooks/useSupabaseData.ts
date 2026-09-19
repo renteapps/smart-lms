@@ -20,13 +20,21 @@ type ProfileTestRow = {
   updated_at: string;
 };
 
-export function useSupabaseData() {
-  const [dailyPill, setDailyPill] = useState<DailyPillData | null>(null);
-  const [profileTests, setProfileTests] = useState<ProfileTest[]>([]);
-  const [loading, setLoading] = useState(true);
+export interface UseSupabaseDataOptions {
+  initialDailyPill?: DailyPillData | null;
+  initialProfileTests?: ProfileTest[];
+}
+
+export function useSupabaseData(options?: UseSupabaseDataOptions) {
+  const hasInitialData = options?.initialProfileTests !== undefined || options?.initialDailyPill !== undefined;
+  const [dailyPill, setDailyPill] = useState<DailyPillData | null>(options?.initialDailyPill ?? null);
+  const [profileTests, setProfileTests] = useState<ProfileTest[]>(options?.initialProfileTests ?? []);
+  const [loading, setLoading] = useState(!hasInitialData);
   const supabase = createClient();
 
   useEffect(() => {
+    if (hasInitialData) return;
+
     async function fetchData() {
       setLoading(true);
       try {
@@ -157,7 +165,7 @@ export function useSupabaseData() {
     }
 
     fetchData();
-  }, [supabase]);
+  }, [supabase, hasInitialData]);
 
   return { dailyPill, profileTests, loading };
 }

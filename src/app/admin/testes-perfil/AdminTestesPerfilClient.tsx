@@ -7,7 +7,8 @@ import { TestCard } from '@/components/admin/profile-tests/TestCard';
 import { TestPreview } from '@/components/admin/profile-tests/TestPreview';
 import { PlusCircle, Sparkles, SlidersHorizontal, ClipboardCheck } from 'lucide-react';
 import { Button, EmptyState, Label, SearchField, buttonVariants } from '@heroui/react';
-import { toast } from 'sonner';
+import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { cn } from '@/lib/utils';
 import { deleteProfileTest, duplicateProfileTest } from '@/app/actions/admin/content';
 
@@ -29,15 +30,23 @@ export function AdminTestesPerfilClient({ initialTests }: AdminTestesPerfilClien
     return matchesSearch && matchesStatus;
   });
 
-  const handleDeleteTest = async (testId: string) => {
-    if (confirm('Tem certeza que deseja excluir este teste de perfil?')) {
-      const res = await deleteProfileTest(testId);
+  const [testToDelete, setTestToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!testToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await deleteProfileTest(testToDelete);
       if (res.success) {
-        setTests(tests.filter((t) => t.id !== testId));
+        setTests(tests.filter((t) => t.id !== testToDelete));
         toast.success('Teste de perfil excluído com sucesso.');
+        setTestToDelete(null);
       } else {
         toast.error('Erro ao excluir: ' + res.message);
       }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -144,7 +153,7 @@ export function AdminTestesPerfilClient({ initialTests }: AdminTestesPerfilClien
               key={test.id}
               test={test}
               onPreview={(t) => setActivePreviewTest(t)}
-              onDelete={(id) => handleDeleteTest(id)}
+              onDelete={(id) => setTestToDelete(id)}
               onDuplicate={(t) => handleDuplicateTest(t)}
             />
           ))}
@@ -155,6 +164,20 @@ export function AdminTestesPerfilClient({ initialTests }: AdminTestesPerfilClien
       {activePreviewTest && (
         <TestPreview test={activePreviewTest} onClose={() => setActivePreviewTest(null)} />
       )}
+
+      <ConfirmDialog
+        isOpen={Boolean(testToDelete)}
+        onOpenChange={(open) => {
+          if (!open) setTestToDelete(null);
+        }}
+        title="Excluir teste de perfil"
+        description="Tem certeza que deseja excluir este teste de perfil? O teste e suas categorias associadas serão removidos."
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

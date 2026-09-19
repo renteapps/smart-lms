@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@heroui/react";
 
 type NoticeAction = { label: string; href: string };
 
@@ -29,7 +29,7 @@ export function AccessNotice({
             {primaryAction && (
               <Link
                 href={primaryAction.href}
-                className={cn(buttonVariants({ variant: "default", size: "lg" }), "rounded-full px-8")}
+                className={cn(buttonVariants({ variant: "primary", size: "lg" }), "press rounded-xl px-8 font-bold")}
               >
                 {primaryAction.label}
               </Link>
@@ -37,7 +37,7 @@ export function AccessNotice({
             {secondaryAction && (
               <Link
                 href={secondaryAction.href}
-                className={cn(buttonVariants({ variant: "outline", size: "lg" }), "rounded-full px-8")}
+                className={cn(buttonVariants({ variant: "outline", size: "lg" }), "press rounded-xl px-8 font-bold")}
               >
                 {secondaryAction.label}
               </Link>

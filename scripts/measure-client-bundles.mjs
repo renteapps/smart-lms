@@ -27,7 +27,7 @@ for (const file of walk(serverApp).filter((path) => path.endsWith("client-refere
   manifests.set(match[1], JSON.parse(match[2]));
 }
 
-const defaults = ["/page", "/(marketing)/blog/page", "/courses/[id]/lessons/[lessonId]/page"];
+const defaults = ["/page", "/(marketing)/blog/page", "/courses/[slug]/lessons/[lessonSlug]/page"];
 const routes = requested.length ? requested : defaults;
 
 for (const route of routes) {

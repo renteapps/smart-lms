@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/editorial";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   ArrowLeft,
   Upload,
@@ -46,6 +47,7 @@ export default function ResendTemplateStudioPage() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Quick Test Modal
@@ -148,12 +150,8 @@ export default function ResendTemplateStudioPage() {
     }
   };
 
-  const handleReset = async () => {
+  const handleConfirmReset = async () => {
     if (!template) return;
-    if (!confirm(`Deseja restaurar o modelo "${template.name}" para o HTML original do sistema?`)) {
-      return;
-    }
-
     setIsResetting(true);
     try {
       const res = await fetch("/api/admin/integracoes/resend", {
@@ -187,6 +185,7 @@ export default function ResendTemplateStudioPage() {
       toast.success("Modelo restaurado localmente!");
     } finally {
       setIsResetting(false);
+      setIsResetConfirmOpen(false);
     }
   };
 
@@ -346,7 +345,7 @@ export default function ResendTemplateStudioPage() {
             {template.isCustomized && (
               <button
                 type="button"
-                onClick={handleReset}
+                onClick={() => setIsResetConfirmOpen(true)}
                 disabled={isResetting}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted hover:text-danger hover:border-danger/30 transition-colors disabled:opacity-50"
               >
@@ -648,6 +647,17 @@ export default function ResendTemplateStudioPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={isResetConfirmOpen}
+        onOpenChange={setIsResetConfirmOpen}
+        title="Restaurar layout original"
+        description={`Deseja restaurar o modelo "${template?.name || ""}" para o HTML original do sistema? Suas alterações serão perdidas.`}
+        confirmLabel="Restaurar padrão"
+        variant="warning"
+        isLoading={isResetting}
+        onConfirm={handleConfirmReset}
+      />
     </div>
   );
 }

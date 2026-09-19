@@ -11,7 +11,7 @@ import {
 import { Check, ShieldCheck, Zap } from "lucide-react";
 import { Company } from "@/types/business";
 import { saveCompany } from "@/app/actions/admin/platform";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 
 interface SeatsUpgradeModalProps {
   isOpen: boolean;

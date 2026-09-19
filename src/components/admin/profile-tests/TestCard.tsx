@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { Button, buttonVariants } from '@heroui/react';
 import { StatusBadge } from '@/components/ui/editorial';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { toast } from "@/lib/toast";
 
 interface TestCardProps {
   test: ProfileTest;

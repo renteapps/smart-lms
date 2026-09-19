@@ -5,10 +5,14 @@ import { requireAdmin } from "@/lib/supabase/auth";
 import type { Course, Lesson, Module } from "@/types/course";
 import type { CourseSalesConfig } from "@/lib/salesUrlHelper";
 import type { ActionResult } from "../progress";
-
 type Saved<T> = { success: boolean; message?: string; data?: T };
 
-const generateShortId = () => Math.random().toString(36).substring(2, 10);
+const generateShortId = () => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID().replace(/-/g, "").substring(0, 8);
+  }
+  return Date.now().toString(36);
+};
 
 // ---------------------------------------------------------------------------
 // Cursos

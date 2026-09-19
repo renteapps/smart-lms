@@ -90,7 +90,15 @@ export default function Footer({ groups }: { groups: NavFooterGroup[] }) {
 
       <div className="editorial-container flex flex-col gap-2 py-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
         <p>© {new Date().getFullYear()} {platformName || "Smart LMS"}. Aprender também é humano.</p>
-        <p>Privacidade · Termos de uso</p>
+        <p className="flex items-center gap-1.5">
+          <Link href="/privacidade" className="hover:text-foreground transition-colors">
+            Privacidade
+          </Link>
+          <span>·</span>
+          <Link href="/termos" className="hover:text-foreground transition-colors">
+            Termos de uso
+          </Link>
+        </p>
       </div>
     </footer>
   );

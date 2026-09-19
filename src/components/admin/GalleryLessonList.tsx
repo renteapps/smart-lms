@@ -4,7 +4,9 @@ import { useState, useTransition, type DragEvent, type KeyboardEvent } from "rea
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Edit2, GripVertical, HelpCircle, Image as ImageIcon, LoaderCircle, Plus, Trash2 } from "lucide-react";
-import { Button, Toast } from "@heroui/react";
+import { Button } from "@heroui/react";
+import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { Lesson } from "@/types/course";
 import { deleteLesson, reorderLessons } from "@/app/actions/admin/catalog";
 import { RatingSummary } from "@/components/admin/RatingSummary";
@@ -77,12 +79,12 @@ export default function GalleryLessonList({
       const result = await reorderLessons(courseId, moduleId, next.map((lesson) => lesson.id));
       if (!result.success) {
         setLessons(previous);
-        Toast.toast.danger("Não foi possível salvar a ordem das aulas.", {
+        toast.danger("Não foi possível salvar a ordem das aulas.", {
           description: result.message || "A ordem anterior foi restaurada.",
         });
         return;
       }
-      Toast.toast.success("Ordem das aulas atualizada.");
+      toast.success("Ordem das aulas atualizada.");
     });
   };
 
@@ -139,14 +141,26 @@ export default function GalleryLessonList({
     persistOrder(next, lessons);
   };
 
-  const handleDelete = async (lessonId: string) => {
-    if (!confirm("Tem certeza que deseja remover esta aula?")) return;
-    const result = await deleteLesson(lessonId);
-    if (result.success) {
-      setLessons((prev) => prev.filter((lesson) => lesson.id !== lessonId));
-      router.refresh();
-    } else {
-      Toast.toast.danger("Não foi possível remover a aula.", { description: result.message });
+  const [lessonToDelete, setLessonToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!lessonToDelete) return;
+    setIsDeleting(true);
+    try {
+      const result = await deleteLesson(lessonToDelete);
+      if (result.success) {
+        setLessons((prev) => prev.filter((lesson) => lesson.id !== lessonToDelete));
+        toast.success("Aula removida com sucesso.");
+        router.refresh();
+      } else {
+        toast.danger("Não foi possível remover a aula.", { description: result.message });
+      }
+    } catch {
+      toast.danger("Ocorreu um erro ao remover a aula.");
+    } finally {
+      setIsDeleting(false);
+      setLessonToDelete(null);
     }
   };
 
@@ -265,7 +279,7 @@ export default function GalleryLessonList({
                     size="sm"
                     aria-label="Remover aula"
                     className="text-danger hover:bg-danger-soft hover:text-danger-soft-foreground"
-                    onClick={() => handleDelete(lesson.id)}
+                    onClick={() => setLessonToDelete(lesson.id)}
                   >
                     <Trash2 className="size-4" aria-hidden="true" />
                   </Button>
@@ -282,6 +296,17 @@ export default function GalleryLessonList({
           Salvando ordem...
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={!!lessonToDelete}
+        onOpenChange={(open) => !open && setLessonToDelete(null)}
+        title="Remover aula"
+        description="Tem certeza que deseja remover esta aula? Esta ação não pode ser desfeita."
+        confirmLabel="Remover aula"
+        isDestructive
+        isLoading={isDeleting}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

@@ -8,7 +8,7 @@ import {
   Save, PlayCircle, BarChart3, ListChecks, Plus, TriangleAlert, Activity,
   CheckCircle2, Clock3, RefreshCw, History, UploadCloud, Undo2, X, Loader2, HelpCircle,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from "@/lib/toast";
 import { Questionnaire, Question, ContentMapping, QuestionnaireVersion, EligibleLesson } from '@/types/trilha';
 import { createContentIndex, type ContentItem } from '@/lib/contentCatalog';
 import { validateQuestionnaire } from '@/lib/matching';
@@ -25,6 +25,7 @@ import { ContentPickerModal } from '@/components/admin/onboarding/ContentPickerM
 import { TrailPreview } from '@/components/admin/onboarding/TrailPreview';
 import { VersionHistoryPanel } from '@/components/admin/onboarding/VersionHistoryPanel';
 import { PageHeader, StatusBadge } from '@/components/ui/editorial';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { OnboardingVariableDefinition } from '@/lib/userVariables';
 
 const BACKUP_KEY = 'smartlms_onboarding_draft_backup_v1';
@@ -108,6 +109,7 @@ export function OnboardingClient({
 
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [activePickerContext, setActivePickerContext] = useState<{ questionId: string; optionIndex: number } | null>(null);
+  const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
 
   const [analytics, setAnalytics] = useState<TrailAnalyticsSummary | null>(null);
 
@@ -334,8 +336,11 @@ export function OnboardingClient({
     }
   };
 
-  const handleDiscardDraft = async () => {
-    if (!window.confirm('Descartar o rascunho e voltar para o que está publicado?')) return;
+  const handleDiscardDraft = () => {
+    setIsDiscardConfirmOpen(true);
+  };
+
+  const confirmDiscard = async () => {
     setIsDiscarding(true);
     try {
       const res = await discardQuestionnaireDraft();
@@ -349,6 +354,7 @@ export function OnboardingClient({
       setSavedSnapshot(JSON.stringify(publishedQuestions));
       clearBackup();
       toast.success('Rascunho descartado.');
+      setIsDiscardConfirmOpen(false);
     } finally {
       setIsDiscarding(false);
     }
@@ -548,7 +554,7 @@ export function OnboardingClient({
               </button>
               <button
                 onClick={handleAddOpenQuestion}
-                className="flex items-center justify-center gap-2 py-4 border-2 border-dashed border-primary/35 rounded-2xl text-primary font-bold hover:border-primary hover:bg-primary-pale/45 transition-all"
+                className="flex items-center justify-center gap-2 py-4 border-2 border-dashed border-accent/35 rounded-2xl text-accent font-bold hover:border-accent hover:bg-accent-soft/45 transition-all"
               >
                 <Plus size={20} />
                 Pergunta aberta para IA
@@ -661,6 +667,17 @@ export function OnboardingClient({
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        isOpen={isDiscardConfirmOpen}
+        onOpenChange={setIsDiscardConfirmOpen}
+        title="Descartar rascunho"
+        description="Tem certeza que deseja descartar o rascunho atual e voltar para o questionário publicado? Todas as alterações não salvas serão perdidas."
+        confirmLabel="Descartar rascunho"
+        confirmTone="danger"
+        isLoading={isDiscarding}
+        onConfirm={confirmDiscard}
+      />
     </div>
   );
 }

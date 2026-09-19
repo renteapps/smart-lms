@@ -3,6 +3,7 @@
 import React from 'react';
 import { ProfileCategory } from '@/types/profileTest';
 import { Trash2, Plus, Sparkles, Award } from 'lucide-react';
+import { toast } from '@/lib/toast';
 
 interface CategoryEditorProps {
   categories: ProfileCategory[];
@@ -47,7 +48,7 @@ export const CategoryEditor: React.FC<CategoryEditorProps> = ({ categories, onCh
 
   const handleRemoveCategory = (id: string) => {
     if (categories.length <= 1) {
-      alert('O teste precisa ter pelo menos 1 categoria de perfil.');
+      toast.warning('O teste precisa ter pelo menos 1 categoria de perfil.');
       return;
     }
     onChange(categories.filter((cat) => cat.id !== id));

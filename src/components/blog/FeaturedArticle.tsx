@@ -4,7 +4,7 @@ import { formatPlatformDate } from '@/lib/timezone';
 import { Clock, Headphones, BookOpen } from 'lucide-react';
 import { ArrowRight02Icon } from '@/components/ui/arrow-right-02';
 import { cn } from '@/lib/utils';
-import { buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@heroui/react';
 import Image from 'next/image';
 
 const FALLBACK_BLOG_COVER =
@@ -71,7 +71,7 @@ export function FeaturedArticle({ article, className }: FeaturedArticleProps) {
           <div className="flex items-center gap-6">
             <Link 
               href={`/blog/${article.slug}`}
-              className={cn(buttonVariants({ size: "lg" }), "min-h-12 rounded-[13px] px-6 font-bold text-base")}
+              className={cn(buttonVariants({ variant: "primary", size: "lg" }), "press min-h-12 rounded-xl px-6 font-bold text-base")}
             >
               Ler Artigo
               <ArrowRight02Icon size={20} className="ml-2" />

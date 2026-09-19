@@ -119,25 +119,30 @@ export default function AgentesPage() {
             </SearchField.Group>
           </SearchField>
 
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar lg:pb-0">
-            <SlidersHorizontal className="mr-1 size-4 shrink-0 text-muted" aria-hidden="true" />
-            <ToggleButtonGroup
-              aria-label="Filtrar agentes por categoria"
-              selectionMode="single"
-              disallowEmptySelection
-              isDetached
-              selectedKeys={[activeCategory]}
-              onSelectionChange={(keys) => {
-                const [next] = Array.from(keys);
-                if (next !== undefined) setCategory(String(next));
-              }}
-            >
-              {categories.map((item) => (
-                <ToggleButton key={item} id={item} className="shrink-0">
-                  {item}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
+          <div className="relative flex items-center gap-2 overflow-hidden">
+            <SlidersHorizontal className="mr-1 size-4 shrink-0 text-muted hidden sm:block" aria-hidden="true" />
+            <div className="relative flex-1 overflow-hidden">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar lg:pb-0">
+                <ToggleButtonGroup
+                  aria-label="Filtrar agentes por categoria"
+                  selectionMode="single"
+                  disallowEmptySelection
+                  isDetached
+                  selectedKeys={[activeCategory]}
+                  onSelectionChange={(keys) => {
+                    const [next] = Array.from(keys);
+                    if (next !== undefined) setCategory(String(next));
+                  }}
+                >
+                  {categories.map((item) => (
+                    <ToggleButton key={item} id={item} className="shrink-0">
+                      {item}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+              </div>
+              <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent lg:hidden" />
+            </div>
           </div>
         </div>
 

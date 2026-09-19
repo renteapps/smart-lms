@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BookOpen, Clock3, MessageSquare, Plus, Route, TrendingUp, Users } from "lucide-react";
 import { ArrowRight02Icon } from "@/components/ui/arrow-right-02";
-import { Button, Card, buttonVariants } from "@heroui/react";
+import { Button, Card, EmptyState, buttonVariants } from "@heroui/react";
 import { PageHeader, StatCard, StatusBadge } from "@/components/ui/editorial";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
@@ -133,7 +133,15 @@ export default async function AdminDashboard() {
                 ))}
               </ul>
             ) : (
-              <div className="px-6 py-8 text-center text-sm text-muted">Nenhuma atividade recente registrada.</div>
+              <EmptyState className="py-12 px-6">
+                <span className="grid size-12 place-items-center rounded-2xl bg-surface-secondary text-muted">
+                  <Clock3 className="size-6" aria-hidden="true" />
+                </span>
+                <p className="font-semibold text-foreground">Nenhuma atividade recente</p>
+                <p className="max-w-xs text-center text-xs text-muted">
+                  Os registros de auditoria aparecerão conforme novas interações ocorrerem na plataforma.
+                </p>
+              </EmptyState>
             )}
           </Card.Content>
         </Card>

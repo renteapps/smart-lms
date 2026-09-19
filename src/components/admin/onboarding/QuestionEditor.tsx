@@ -265,13 +265,13 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
               </div>
 
               {question.type === 'open' ? (
-                <div className="rounded-xl border border-primary/20 bg-primary-pale/30 p-4">
+                <div className="rounded-xl border border-accent/20 bg-accent-soft/30 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <h4 className="text-sm font-bold text-foreground">Resposta aberta e privada</h4>
                       <p className="mt-1 max-w-2xl text-xs leading-5 text-muted">A resposta não aceita conteúdos, tags, pesos ou mapeamentos e nunca altera a trilha. Ela fica vinculada ao aluno e pode enriquecer os agentes e o Assistente IA.</p>
                     </div>
-                    <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-bold text-primary">Contexto de IA</span>
+                    <span className="rounded-full bg-surface px-2.5 py-1 text-xs font-bold text-accent">Contexto de IA</span>
                   </div>
                   <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_10rem]">
                     <label className="text-xs font-semibold text-muted">

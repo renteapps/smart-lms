@@ -32,7 +32,6 @@ const reportOnlyPolicy = [
     "connect-src 'self'",
     "https://*.supabase.co wss://*.supabase.co",
     "https://servicodados.ibge.gov.br",
-    "https://openrouter.ai https://api.resend.com",
     "https://*.pandavideo.com.br",
     ...(isDev ? ["ws://localhost:*"] : []),
   ].join(" "),
@@ -63,16 +62,40 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: {
+    optimizePackageImports: [
+      "@heroui/react",
+      "@base-ui/react",
+      "lucide-react",
+      "framer-motion",
+    ],
+  },
   images: {
-    unoptimized: true,
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**",
+        hostname: "**.supabase.co",
       },
       {
-        protocol: "http",
-        hostname: "**",
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "avatars.githubusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "avatar.vercel.sh",
+      },
+      {
+        protocol: "https",
+        hostname: "**.pandavideo.com.br",
       },
     ],
   },

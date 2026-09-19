@@ -11,7 +11,7 @@ import {
 import { UserPlus, Mail, Building2, Check, AlertCircle } from "lucide-react";
 import { Company, MemberRole } from "@/types/business";
 import { inviteMember } from "@/app/actions/admin/platform";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { CatalogCourse } from "@/types/course";
 
 interface InviteMemberModalProps {

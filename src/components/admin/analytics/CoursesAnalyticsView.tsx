@@ -33,7 +33,7 @@ import {
   UrlPeriodSelector,
 } from "@/components/admin/analytics/AnalyticsComponents";
 // Mock import removed
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { downloadCsv } from "@/lib/downloadCsv";
 import { formatAnalyticsHours, type AnalyticsPeriod } from "@/lib/analytics";

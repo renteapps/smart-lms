@@ -25,7 +25,7 @@ import { Button, Card } from "@heroui/react";
 import { Company, CompanyPlanType, CompanyStatus } from "@/types/business";
 import { saveCompany } from "@/app/actions/admin/platform";
 import { StatusBadge } from "@/components/ui/editorial";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 

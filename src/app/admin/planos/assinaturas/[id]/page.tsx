@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button, Card, Table } from "@heroui/react";
 import { PageHeader } from "@/components/ui/editorial";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { ChevronLeft, Ban, PlayCircle, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getSubscriptionById, type Subscription } from "@/lib/data/plans";
 import { cancelHotmartSubscriptionAction, reactivateHotmartSubscriptionAction } from "@/app/actions/admin/hotmart";
 import { cancelManualSubscription } from "@/app/actions/admin/subscriptions";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 type SubscriptionDetail = Subscription & {
   history?: {
@@ -25,6 +26,7 @@ export default function AssinaturaDetalhePage() {
   const router = useRouter();
   const [sub, setSub] = useState<SubscriptionDetail | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<"cancel_hotmart" | "reactivate_hotmart" | "cancel_manual" | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -70,39 +72,68 @@ export default function AssinaturaDetalhePage() {
   const isHotmart = sub.gateway === "hotmart";
   const isManual = !sub.gateway || sub.gateway === "manual";
 
-  const handleCancelContract = async () => {
-    if (!sub.gatewaySubscriptionId) return toast.error("Assinatura sem identificador da Hotmart.");
-    if (!confirm("Cancelar esta assinatura na Hotmart? O acesso do assinante é mantido até o fim do período já pago.")) return;
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return;
 
-    setIsProcessing(true);
-    const result = await cancelHotmartSubscriptionAction(sub.gatewaySubscriptionId, true);
-    setIsProcessing(false);
-    if (!result.success) return toast.error(result.message ?? "Falha ao cancelar a assinatura.");
-    toast.success("Assinatura cancelada na Hotmart.");
-    await reloadSubscription();
-  };
-
-  const handleReactivateContract = async () => {
-    if (!sub.gatewaySubscriptionId) return toast.error("Assinatura sem identificador da Hotmart.");
-    if (!confirm("Enviar solicitação de reativação? A Hotmart manda um e-mail de aceite ao assinante (válido por 3 dias) — o acesso só volta quando ele aceitar.")) return;
-
-    setIsProcessing(true);
-    const result = await reactivateHotmartSubscriptionAction(sub.gatewaySubscriptionId, false);
-    setIsProcessing(false);
-    if (!result.success) return toast.error(result.message ?? "Falha ao solicitar a reativação.");
-    toast.success(result.message ?? "Solicitação de reativação enviada.");
-    await reloadSubscription();
-  };
-
-  const handleCancelManual = async () => {
-    if (!confirm("Cancelar esta assinatura manual? O acesso ao plano será revogado imediatamente.")) return;
-
-    setIsProcessing(true);
-    const result = await cancelManualSubscription({ subscriptionId: sub.id, userId: sub.userId ?? "" });
-    setIsProcessing(false);
-    if (!result.success) return toast.error(result.message ?? "Falha ao cancelar a assinatura.");
-    toast.success("Assinatura manual cancelada.");
-    await reloadSubscription();
+    if (confirmAction === "cancel_hotmart") {
+      if (!sub.gatewaySubscriptionId) {
+        toast.error("Assinatura sem identificador da Hotmart.");
+        setConfirmAction(null);
+        return;
+      }
+      setIsProcessing(true);
+      try {
+        const result = await cancelHotmartSubscriptionAction(sub.gatewaySubscriptionId, true);
+        if (!result.success) {
+          toast.error(result.message ?? "Falha ao cancelar a assinatura.");
+        } else {
+          toast.success("Assinatura cancelada na Hotmart.");
+          await reloadSubscription();
+        }
+      } catch {
+        toast.error("Erro ao cancelar assinatura na Hotmart.");
+      } finally {
+        setIsProcessing(false);
+        setConfirmAction(null);
+      }
+    } else if (confirmAction === "reactivate_hotmart") {
+      if (!sub.gatewaySubscriptionId) {
+        toast.error("Assinatura sem identificador da Hotmart.");
+        setConfirmAction(null);
+        return;
+      }
+      setIsProcessing(true);
+      try {
+        const result = await reactivateHotmartSubscriptionAction(sub.gatewaySubscriptionId, false);
+        if (!result.success) {
+          toast.error(result.message ?? "Falha ao solicitar a reativação.");
+        } else {
+          toast.success(result.message ?? "Solicitação de reativação enviada.");
+          await reloadSubscription();
+        }
+      } catch {
+        toast.error("Erro ao solicitar reativação na Hotmart.");
+      } finally {
+        setIsProcessing(false);
+        setConfirmAction(null);
+      }
+    } else if (confirmAction === "cancel_manual") {
+      setIsProcessing(true);
+      try {
+        const result = await cancelManualSubscription({ subscriptionId: sub.id, userId: sub.userId ?? "" });
+        if (!result.success) {
+          toast.error(result.message ?? "Falha ao cancelar a assinatura.");
+        } else {
+          toast.success("Assinatura manual cancelada.");
+          await reloadSubscription();
+        }
+      } catch {
+        toast.error("Erro ao cancelar assinatura manual.");
+      } finally {
+        setIsProcessing(false);
+        setConfirmAction(null);
+      }
+    }
   };
 
   const handleChangeCard = async () => {
@@ -115,6 +146,29 @@ export default function AssinaturaDetalhePage() {
   };
 
   const isCanceled = sub.status === "cancelado" || sub.status === "canceled";
+
+  const confirmConfig = confirmAction
+    ? {
+        cancel_hotmart: {
+          title: "Cancelar assinatura na Hotmart",
+          description: "Tem certeza que deseja cancelar esta assinatura na Hotmart? O acesso do assinante é mantido até o fim do período já pago.",
+          confirmLabel: "Cancelar assinatura",
+          isDestructive: true,
+        },
+        reactivate_hotmart: {
+          title: "Reativar assinatura na Hotmart",
+          description: "Enviar solicitação de reativação? A Hotmart enviará um e-mail de aceite ao assinante (válido por 3 dias). O acesso só volta quando ele aceitar.",
+          confirmLabel: "Enviar solicitação",
+          isDestructive: false,
+        },
+        cancel_manual: {
+          title: "Cancelar assinatura manual",
+          description: "Tem certeza que deseja cancelar esta assinatura manual? O acesso ao plano será revogado imediatamente.",
+          confirmLabel: "Cancelar assinatura",
+          isDestructive: true,
+        },
+      }[confirmAction]
+    : null;
 
   return (
     <div className="space-y-6">
@@ -210,7 +264,7 @@ export default function AssinaturaDetalhePage() {
                     variant="primary"
                     className="w-full justify-start gap-2"
                     isDisabled={isProcessing}
-                    onPress={handleReactivateContract}
+                    onPress={() => setConfirmAction("reactivate_hotmart")}
                   >
                     <PlayCircle className="size-4" />
                     Reativar Contrato
@@ -225,7 +279,7 @@ export default function AssinaturaDetalhePage() {
                       variant="ghost"
                       className="w-full justify-start gap-2 text-danger hover:bg-danger/10 hover:text-danger"
                       isDisabled={isProcessing}
-                      onPress={handleCancelManual}
+                      onPress={() => setConfirmAction("cancel_manual")}
                     >
                       <Ban className="size-4" />
                       Cancelar Assinatura Manual
@@ -246,7 +300,7 @@ export default function AssinaturaDetalhePage() {
                           variant="ghost"
                           className="w-full justify-start gap-2 text-danger hover:bg-danger/10 hover:text-danger"
                           isDisabled={isProcessing}
-                          onPress={handleCancelContract}
+                          onPress={() => setConfirmAction("cancel_hotmart")}
                         >
                           <Ban className="size-4" />
                           Cancelar Contrato
@@ -262,6 +316,19 @@ export default function AssinaturaDetalhePage() {
           </Card>
         </div>
       </div>
+
+      {confirmConfig && (
+        <ConfirmDialog
+          isOpen={!!confirmAction}
+          onOpenChange={(open) => !open && setConfirmAction(null)}
+          title={confirmConfig.title}
+          description={confirmConfig.description}
+          confirmLabel={confirmConfig.confirmLabel}
+          isDestructive={confirmConfig.isDestructive}
+          isLoading={isProcessing}
+          onConfirm={handleConfirmAction}
+        />
+      )}
     </div>
   );
 }

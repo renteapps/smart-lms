@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Braces, Copy } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from "@/lib/toast";
 import { getActiveOnboardingVariableCatalog } from '@/app/actions/userVariables';
 import type { OnboardingVariableDefinition } from '@/lib/userVariables';
 

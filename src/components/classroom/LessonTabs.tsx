@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -14,14 +15,7 @@ import {
   TextField,
   Typography,
 } from "@heroui/react";
-import { Check, Download, FileText, MessageSquare, Save, Send, Trash } from "lucide-react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  AlignBoxBottomLeftIcon,
-  Comment01Icon,
-  Files01Icon,
-  Folder01Icon,
-} from "@hugeicons/core-free-icons";
+import { BookOpen, Check, Download, FileText, Folder, MessageSquare, NotebookPen, Save, Send, Sparkles, Trash, type LucideIcon } from "lucide-react";
 import { Lesson } from "@/types/course";
 import type { StudentNote } from "@/lib/data/notes";
 import type { Comment } from "@/lib/data/comments";
@@ -30,6 +24,8 @@ import { saveLessonNote } from "@/app/actions/notes";
 import { addLessonComment, deleteLessonComment } from "@/app/actions/comments";
 import BlockViewer from "./BlockViewer";
 import { lessonMaterialHref } from "@/lib/lessonMaterials";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { toast } from "@/lib/toast";
 
 interface LessonTabsProps {
   lesson: Lesson;
@@ -44,7 +40,7 @@ type TabKey = "overview" | "materials" | "comments" | "notes";
 type TabDefinition = {
   id: TabKey;
   label: string;
-  icon: typeof AlignBoxBottomLeftIcon;
+  icon: LucideIcon;
   badge?: number;
 };
 
@@ -58,6 +54,7 @@ export default function LessonTabs({
   currentUser = null,
   enableComments = true,
 }: LessonTabsProps) {
+  const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<TabKey>("overview");
   const [note, setNote] = useState(initialNote?.content ?? "");
   const [isSaving, startSaving] = useTransition();
@@ -66,6 +63,9 @@ export default function LessonTabs({
 
   const [newComment, setNewComment] = useState("");
   const [isSubmittingComment, startSubmittingComment] = useTransition();
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState("");
+  const [isSubmittingReply, startSubmittingReply] = useTransition();
 
   /*
    * Uma aba vazia é ruído: ela promete algo e entrega um estado vazio. Então o
@@ -80,10 +80,10 @@ export default function LessonTabs({
   );
 
   const tabs: TabDefinition[] = [];
-  if (hasOverview) tabs.push({ id: "overview", label: "Visão geral", icon: AlignBoxBottomLeftIcon });
-  if (hasMaterials) tabs.push({ id: "materials", label: "Materiais", icon: Folder01Icon });
-  if (enableComments) tabs.push({ id: "comments", label: "Comentários", icon: Comment01Icon, badge: commentCount });
-  tabs.push({ id: "notes", label: "Anotações", icon: Files01Icon });
+  if (hasOverview) tabs.push({ id: "overview", label: "Visão geral", icon: BookOpen });
+  if (hasMaterials) tabs.push({ id: "materials", label: "Materiais", icon: Folder });
+  if (enableComments) tabs.push({ id: "comments", label: "Comentários", icon: MessageSquare, badge: commentCount });
+  tabs.push({ id: "notes", label: "Anotações", icon: NotebookPen });
 
   // Ao trocar de aula o conjunto muda; a seleção cai na primeira aba disponível.
   const activeTab = tabs.some((tab) => tab.id === selectedTab) ? selectedTab : tabs[0].id;
@@ -108,21 +108,54 @@ export default function LessonTabs({
       const result = await addLessonComment(lesson.id, newComment);
       if (result.success) {
         setNewComment("");
+        toast.success("Comentário publicado!");
+        router.refresh();
       } else {
-        alert(result.message || "Erro ao adicionar comentário");
+        toast.danger(result.message || "Erro ao adicionar comentário.");
+      }
+    });
+  };
+
+  const handleToggleReply = (commentId: string) => {
+    if (replyingToId === commentId) {
+      setReplyingToId(null);
+      setReplyContent("");
+    } else {
+      setReplyingToId(commentId);
+      setReplyContent("");
+    }
+  };
+
+  const handleSubmitReply = (parentId: string) => {
+    if (!replyContent.trim()) return;
+
+    startSubmittingReply(async () => {
+      const result = await addLessonComment(lesson.id, replyContent, parentId);
+      if (result.success) {
+        setReplyContent("");
+        setReplyingToId(null);
+        toast.success("Resposta publicada!");
+        router.refresh();
+      } else {
+        toast.danger(result.message || "Erro ao responder comentário.");
       }
     });
   };
 
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
 
-  const handleDeleteComment = async (commentId: string) => {
-    if (!confirm("Deseja apagar este comentário?")) return;
-    setIsDeleting(commentId);
+  const confirmDeleteComment = async () => {
+    if (!commentToDelete) return;
+    setIsDeleting(commentToDelete);
     try {
-      const result = await deleteLessonComment(commentId);
-      if (!result.success) {
-        alert(result.message || "Erro ao apagar comentário");
+      const result = await deleteLessonComment(commentToDelete);
+      if (result.success) {
+        toast.success("Comentário removido.");
+        setCommentToDelete(null);
+        router.refresh();
+      } else {
+        toast.danger(result.message || "Erro ao apagar comentário.");
       }
     } finally {
       setIsDeleting(null);
@@ -152,11 +185,8 @@ export default function LessonTabs({
                 aria-label={tab.badge ? `${tab.label} (${tab.badge})` : undefined}
                 className="h-13 w-auto shrink-0 gap-2 px-3 text-sm font-semibold sm:px-4"
               >
-                <HugeiconsIcon
-                  icon={tab.icon}
-                  size={18}
-                  strokeWidth={1.8}
-                  className="shrink-0"
+                <tab.icon
+                  className="size-4.5 shrink-0"
                   aria-hidden="true"
                 />
                 <span>{tab.label}</span>
@@ -193,7 +223,7 @@ export default function LessonTabs({
         {hasMaterials && (
           <Tabs.Panel id="materials" className={PANEL_CLASS}>
             <h2 className="display-3 mb-5 text-foreground sm:mb-6">Materiais complementares</h2>
-            <ul className="flex max-w-[68ch] flex-col gap-3">
+            <ul className="flex w-full flex-col gap-3">
               {lesson.attachments.map((attachment, idx) => (
                 <li key={attachment.id ?? idx}>
                   <a
@@ -224,225 +254,380 @@ export default function LessonTabs({
         {/* --- Comentários --------------------------------------------------- */}
         {enableComments && (
           <Tabs.Panel id="comments" className={PANEL_CLASS}>
-            <h2 className="display-3 mb-5 text-foreground sm:mb-6">Comentários e dúvidas</h2>
-          <div className="flex max-w-[68ch] gap-3 sm:gap-4">
-            <Avatar size="md" color="accent" className="mt-1 flex shrink-0">
-              {currentUser?.user_metadata?.avatar_url ? (
-                <Avatar.Image src={currentUser.user_metadata.avatar_url} alt={currentUser?.user_metadata?.full_name || currentUser?.email || "Você"} />
-              ) : (
-                <Avatar.Fallback>
-                  {currentUser?.email?.substring(0, 2).toUpperCase() || "VC"}
-                </Avatar.Fallback>
-              )}
-            </Avatar>
-            <div className="relative flex-1">
-              <TextField value={newComment} onChange={setNewComment}>
-                <Label className="sr-only">Escrever um comentário</Label>
-                <TextArea
-                  rows={4}
-                  placeholder="Adicione um comentário..."
-                  className="pr-14"
-                  disabled={isSubmittingComment}
-                />
-              </TextField>
-              <Button
-                isIconOnly
-                variant="primary"
-                aria-label="Enviar comentário"
-                className="absolute bottom-3 right-3 rounded-lg"
-                onClick={handleSubmitComment}
-                isDisabled={isSubmittingComment || !newComment.trim()}
-              >
-                {isSubmittingComment ? (
-                  <Spinner className="size-4" />
-                ) : (
-                  <Send className="size-4" aria-hidden="true" />
-                )}
-              </Button>
+            <div className="mb-6 flex flex-col gap-1">
+              <h2 className="display-3 text-foreground">Comentários e dúvidas</h2>
+              <p className="text-sm text-muted">
+                Espaço aberto para compartilhar reflexões, tirar dúvidas e colaborar com a turma.
+              </p>
             </div>
-          </div>
 
-          <ul className="mt-8 flex max-w-[68ch] flex-col gap-6 sm:mt-10">
-            {initialComments.length === 0 ? (
-              <li className="rounded-xl border border-dashed border-hairline-strong px-4 py-8 text-center text-sm text-muted">
-                Seja o primeiro a comentar!
-              </li>
-            ) : (
-              initialComments.map((comment) => (
-                <li key={comment.id} className="flex gap-3 sm:gap-4">
-                  <Avatar size="md" className="mt-1 flex shrink-0">
-                    {comment.user.avatarUrl ? (
-                      <Avatar.Image src={comment.user.avatarUrl} alt={comment.user.name} />
+            {/* Comment Composer */}
+            <div className="flex w-full items-start gap-3 sm:gap-4">
+              <Avatar
+                size="md"
+                color="accent"
+                className="mt-1 size-11 shrink-0 aspect-square rounded-full overflow-hidden ring-2 ring-border/80 shadow-sm"
+              >
+                {currentUser?.user_metadata?.avatar_url ? (
+                  <Avatar.Image
+                    src={currentUser.user_metadata.avatar_url}
+                    alt={currentUser?.user_metadata?.full_name || currentUser?.email || "Você"}
+                    className="size-full aspect-square object-cover rounded-full"
+                  />
+                ) : (
+                  <Avatar.Fallback className="font-display text-xs font-bold text-accent-soft-foreground">
+                    {currentUser?.user_metadata?.full_name
+                      ? currentUser.user_metadata.full_name.substring(0, 2).toUpperCase()
+                      : currentUser?.email?.substring(0, 2).toUpperCase() || "VC"}
+                  </Avatar.Fallback>
+                )}
+              </Avatar>
+
+              <div className="min-w-0 flex-1 rounded-2xl border-2 border-border/80 bg-surface shadow-elev-1 transition-all duration-200 focus-within:border-accent focus-within:ring-4 focus-within:ring-accent/15 focus-within:shadow-elev-2">
+                <div className="p-3.5 sm:p-4">
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    rows={3}
+                    placeholder="Adicione um comentário, insight ou tire sua dúvida sobre esta aula..."
+                    className="w-full resize-y bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted/60 focus:outline-none min-h-[96px] sm:text-base"
+                    disabled={isSubmittingComment}
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/50 bg-surface-secondary/40 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-b-2xl">
+                  <span className="flex items-center gap-1.5 text-xs text-muted">
+                    <Sparkles className="size-3.5 text-accent" aria-hidden="true" />
+                    <span>Espaço de aprendizado colaborativo</span>
+                  </span>
+
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="gap-2 rounded-xl px-4 py-2 font-bold shadow-elev-1 hover:shadow-elev-2 transition-all"
+                    onClick={handleSubmitComment}
+                    isDisabled={isSubmittingComment || !newComment.trim()}
+                  >
+                    {isSubmittingComment ? (
+                      <>
+                        <Spinner className="size-3.5" />
+                        <span>Publicando...</span>
+                      </>
                     ) : (
-                      <Avatar.Fallback>
-                        {comment.user.name.substring(0, 2).toUpperCase()}
-                      </Avatar.Fallback>
+                      <>
+                        <Send className="size-3.5" aria-hidden="true" />
+                        <span>Publicar comentário</span>
+                      </>
                     )}
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <div className="rounded-xl border border-hairline bg-background-secondary p-3.5 sm:p-4">
-                      <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-foreground">
-                            {comment.user.name}
-                          </span>
-                          {comment.status === "pending" && (
-                            <span className="rounded-full border border-warning/20 bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning">
-                              Aguardando aprovação
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Comments Feed */}
+            <div className="mt-8 w-full sm:mt-10">
+              {initialComments.length === 0 ? (
+                <div className="flex w-full flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-surface-secondary/25 px-6 py-12 text-center">
+                  <span className="mb-3.5 grid size-12 place-items-center rounded-2xl bg-accent-soft text-accent shadow-elev-1">
+                    <MessageSquare className="size-6" aria-hidden="true" />
+                  </span>
+                  <p className="font-display text-base font-bold text-foreground">
+                    Nenhum comentário ou dúvida ainda
+                  </p>
+                  <p className="mt-1.5 max-w-md text-sm text-muted">
+                    Seja o primeiro a compartilhar reflexões, fazer perguntas ou contribuir sobre esta aula.
+                  </p>
+                </div>
+              ) : (
+                <ul className="flex w-full flex-col gap-6">
+                  {initialComments.map((comment) => (
+                    <li key={comment.id} className="flex w-full gap-3 sm:gap-4">
+                      <Avatar
+                        size="md"
+                        className="mt-1 size-10 shrink-0 aspect-square rounded-full overflow-hidden ring-2 ring-border/50 shadow-sm"
+                      >
+                        {comment.user.avatarUrl ? (
+                          <Avatar.Image
+                            src={comment.user.avatarUrl}
+                            alt={comment.user.name}
+                            className="size-full aspect-square object-cover rounded-full"
+                          />
+                        ) : (
+                          <Avatar.Fallback className="font-display text-xs font-bold text-accent-soft-foreground">
+                            {comment.user.name.substring(0, 2).toUpperCase()}
+                          </Avatar.Fallback>
+                        )}
+                      </Avatar>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="rounded-2xl border border-border/70 bg-surface p-4 sm:p-5 shadow-elev-1 transition-all hover:border-border">
+                          <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-display text-sm font-bold text-foreground">
+                                {comment.user.name}
+                              </span>
+                              {comment.status === "pending" && (
+                                <span className="rounded-full border border-warning/30 bg-warning/10 px-2.5 py-0.5 text-[10px] font-semibold text-warning">
+                                  Aguardando aprovação
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted">
+                              {formatDistanceToNow(new Date(comment.createdAt), {
+                                addSuffix: true,
+                                locale: ptBR,
+                              })}
                             </span>
+                          </div>
+                          <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                            {comment.content}
+                          </p>
+                        </div>
+
+                        <div className="mt-2 flex items-center justify-between gap-2 px-1">
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              variant={replyingToId === comment.id ? "primary" : "ghost"}
+                              size="sm"
+                              className="gap-1.5 text-xs font-semibold"
+                              onClick={() => handleToggleReply(comment.id)}
+                            >
+                              <MessageSquare className="size-3.5" aria-hidden="true" />
+                              {replyingToId === comment.id ? "Cancelar resposta" : "Responder"}
+                            </Button>
+                            {comment.replies && comment.replies.length > 0 && (
+                              <span className="rounded-lg bg-surface-secondary px-2.5 py-1 text-xs font-medium text-muted">
+                                {comment.replies.length} {comment.replies.length === 1 ? "resposta" : "respostas"}
+                              </span>
+                            )}
+                          </div>
+
+                          {currentUser?.id === comment.userId && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="gap-1.5 text-xs text-danger hover:bg-danger-soft hover:text-danger-soft-foreground"
+                              onClick={() => setCommentToDelete(comment.id)}
+                              isDisabled={isDeleting === comment.id}
+                            >
+                              {isDeleting === comment.id ? (
+                                <Spinner className="size-3" />
+                              ) : (
+                                <Trash className="size-3" aria-hidden="true" />
+                              )}
+                              Excluir
+                            </Button>
                           )}
                         </div>
-                        <span className="text-xs text-muted">
-                          {formatDistanceToNow(new Date(comment.createdAt), {
-                            addSuffix: true,
-                            locale: ptBR,
-                          })}
-                        </span>
-                      </div>
-                      <p className="text-sm leading-6 text-muted">{comment.content}</p>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between gap-1">
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm">
-                          Responder
-                        </Button>
-                        <Button variant="ghost" size="sm" className="gap-1.5 text-muted">
-                          <MessageSquare className="size-3.5" aria-hidden="true" />
-                          {comment.replies?.length || 0} respostas
-                        </Button>
-                      </div>
-                      {currentUser?.id === comment.userId && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="gap-1.5 text-danger"
-                          onClick={() => handleDeleteComment(comment.id)}
-                          isDisabled={isDeleting === comment.id}
-                        >
-                          {isDeleting === comment.id ? <Spinner className="size-3.5" /> : <Trash className="size-3.5" aria-hidden="true" />}
-                          Apagar
-                        </Button>
-                      )}
-                    </div>
 
-                    {/* Replies */}
-                    {comment.replies && comment.replies.length > 0 && (
-                      <ul className="mt-4 flex flex-col gap-4 border-l border-hairline pl-3 sm:pl-4">
-                        {comment.replies.map((reply) => (
-                          <li key={reply.id} className="flex gap-3 sm:gap-4">
-                            <Avatar size="sm" className="mt-1 flex shrink-0">
-                              {reply.user.avatarUrl ? (
-                                <Avatar.Image src={reply.user.avatarUrl} alt={reply.user.name} />
+                        {/* Inline Reply Composer */}
+                        {replyingToId === comment.id && (
+                          <div className="mt-3 flex w-full gap-3 rounded-2xl border-2 border-accent/40 bg-surface p-3.5 sm:p-4 shadow-elev-1">
+                            <Avatar
+                              size="sm"
+                              className="size-8 shrink-0 aspect-square rounded-full overflow-hidden ring-1 ring-border/60"
+                            >
+                              {currentUser?.user_metadata?.avatar_url ? (
+                                <Avatar.Image
+                                  src={currentUser.user_metadata.avatar_url}
+                                  alt="Você"
+                                  className="size-full aspect-square object-cover rounded-full"
+                                />
                               ) : (
-                                <Avatar.Fallback>
-                                  {reply.user.name.substring(0, 2).toUpperCase()}
+                                <Avatar.Fallback className="font-display text-[10px] font-bold">
+                                  {currentUser?.email?.substring(0, 2).toUpperCase() || "VC"}
                                 </Avatar.Fallback>
                               )}
                             </Avatar>
-                            <div className="min-w-0 flex-1">
-                              <div className="rounded-xl border border-hairline bg-background-secondary p-3.5 sm:p-4">
-                                <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-bold text-foreground">
-                                      {reply.user.name}
-                                    </span>
-                                    {reply.status === "pending" && (
-                                      <span className="rounded-full border border-warning/20 bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning">
-                                        Aguardando aprovação
-                                      </span>
-                                    )}
-                                  </div>
-                                  <span className="text-xs text-muted">
-                                    {formatDistanceToNow(new Date(reply.createdAt), {
-                                      addSuffix: true,
-                                      locale: ptBR,
-                                    })}
-                                  </span>
-                                </div>
-                                <p className="text-sm leading-6 text-muted">{reply.content}</p>
+
+                            <div className="min-w-0 flex-1 space-y-2.5">
+                              <textarea
+                                value={replyContent}
+                                onChange={(e) => setReplyContent(e.target.value)}
+                                rows={2}
+                                placeholder={`Responder para ${comment.user.name}...`}
+                                className="w-full resize-y bg-transparent text-sm leading-relaxed text-foreground placeholder:text-muted/60 focus:outline-none min-h-[64px]"
+                                disabled={isSubmittingReply}
+                                autoFocus
+                              />
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="tertiary"
+                                  size="sm"
+                                  onClick={() => {
+                                    setReplyingToId(null);
+                                    setReplyContent("");
+                                  }}
+                                  isDisabled={isSubmittingReply}
+                                >
+                                  Cancelar
+                                </Button>
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  className="gap-1.5 font-bold"
+                                  onClick={() => handleSubmitReply(comment.id)}
+                                  isDisabled={isSubmittingReply || !replyContent.trim()}
+                                >
+                                  {isSubmittingReply ? (
+                                    <Spinner className="size-3" />
+                                  ) : (
+                                    <Send className="size-3" aria-hidden="true" />
+                                  )}
+                                  <span>Responder</span>
+                                </Button>
                               </div>
-                              {currentUser?.id === reply.userId && (
-                                <div className="mt-2 flex justify-end">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="gap-1.5 text-danger"
-                                    onClick={() => handleDeleteComment(reply.id)}
-                                    isDisabled={isDeleting === reply.id}
-                                  >
-                                    {isDeleting === reply.id ? <Spinner className="size-3.5" /> : <Trash className="size-3.5" aria-hidden="true" />}
-                                    Apagar
-                                  </Button>
-                                </div>
-                              )}
                             </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </li>
-              ))
-            )}
-          </ul>
-        </Tabs.Panel>
+                          </div>
+                        )}
+
+                        {/* Replies list */}
+                        {comment.replies && comment.replies.length > 0 && (
+                          <ul className="mt-3.5 space-y-3 border-l-2 border-border/60 pl-3.5 sm:pl-5 ml-3.5 sm:ml-5">
+                            {comment.replies.map((reply) => (
+                              <li key={reply.id} className="flex gap-3">
+                                <Avatar
+                                  size="sm"
+                                  className="mt-1 size-8 shrink-0 aspect-square rounded-full overflow-hidden ring-1 ring-border/50 shadow-sm"
+                                >
+                                  {reply.user.avatarUrl ? (
+                                    <Avatar.Image
+                                      src={reply.user.avatarUrl}
+                                      alt={reply.user.name}
+                                      className="size-full aspect-square object-cover rounded-full"
+                                    />
+                                  ) : (
+                                    <Avatar.Fallback className="font-display text-[10px] font-bold">
+                                      {reply.user.name.substring(0, 2).toUpperCase()}
+                                    </Avatar.Fallback>
+                                  )}
+                                </Avatar>
+
+                                <div className="min-w-0 flex-1">
+                                  <div className="rounded-xl border border-border/60 bg-surface-secondary/60 p-3 sm:p-3.5">
+                                    <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-display text-xs font-bold text-foreground">
+                                          {reply.user.name}
+                                        </span>
+                                        {reply.status === "pending" && (
+                                          <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-[9px] font-semibold text-warning">
+                                            Aguardando aprovação
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span className="text-[11px] text-muted">
+                                        {formatDistanceToNow(new Date(reply.createdAt), {
+                                          addSuffix: true,
+                                          locale: ptBR,
+                                        })}
+                                      </span>
+                                    </div>
+                                    <p className="text-xs sm:text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                                      {reply.content}
+                                    </p>
+                                  </div>
+
+                                  {currentUser?.id === reply.userId && (
+                                    <div className="mt-1 flex justify-end">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 px-2 text-[11px] text-danger hover:bg-danger-soft hover:text-danger-soft-foreground"
+                                        onClick={() => setCommentToDelete(reply.id)}
+                                        isDisabled={isDeleting === reply.id}
+                                      >
+                                        {isDeleting === reply.id ? (
+                                          <Spinner className="size-3" />
+                                        ) : (
+                                          <Trash className="size-3" aria-hidden="true" />
+                                        )}
+                                        Excluir
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </Tabs.Panel>
         )}
 
-        {/* --- Anotações ----------------------------------------------------- */}
-        <Tabs.Panel id="notes" className={PANEL_CLASS}>
-          <div className="mb-5 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:items-end sm:justify-between">
-            <div className="min-w-0">
-              <h2 className="display-3 text-foreground">Suas anotações</h2>
-              <p className="mt-2 max-w-[52ch] text-sm text-muted">
-                Espaço minimalista para seus pensamentos. Suas anotações ficam na sua conta.
-              </p>
+          {/* Anotações */}
+          <Tabs.Panel id="notes" className={PANEL_CLASS}>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-display font-bold text-foreground">Suas anotações</p>
+                <p className="text-xs text-muted">Privadas — só você vê o que escrever aqui.</p>
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSaveNote}
+                isDisabled={isSaving}
+                className="self-start sm:self-auto"
+              >
+                {isSaving ? (
+                  <Spinner className="size-3.5" />
+                ) : saveSuccess ? (
+                  <Check className="size-3.5 text-success" aria-hidden="true" />
+                ) : (
+                  <Save className="size-3.5" aria-hidden="true" />
+                )}
+                <span>{saveSuccess ? "Salvo!" : "Salvar anotações"}</span>
+              </Button>
             </div>
-            <Button
-              variant={saveSuccess ? "secondary" : "primary"}
-              onClick={handleSaveNote}
-              isDisabled={isSaving}
-              className="w-full shrink-0 gap-2 sm:w-auto"
-            >
-              {isSaving ? (
-                <Spinner className="size-4" />
-              ) : saveSuccess ? (
-                <Check className="size-4 text-success" aria-hidden="true" />
-              ) : (
-                <Save className="size-4" aria-hidden="true" />
-              )}
-              {isSaving ? "Salvando..." : saveSuccess ? "Salvo!" : "Salvar anotação"}
-            </Button>
-          </div>
 
-          <TextField value={note} onChange={setNote}>
-            <Label className="sr-only">Anotações desta aula</Label>
-            {/*
-              Papel pautado: a linha acompanha o `line-height`, e `background-attachment:
-              local` faz o pautado rolar junto com o texto em vez de ficar parado no campo.
-            */}
-            <TextArea
-              rows={14}
-              placeholder="Escreva seus maiores insights sobre a aula aqui..."
-              style={{
-                backgroundImage:
-                  "repeating-linear-gradient(transparent, transparent 31px, var(--hairline) 31px, var(--hairline) 32px)",
-                backgroundAttachment: "local",
-                backgroundColor: "var(--surface)",
-                lineHeight: "32px",
-                padding: "8px 16px",
-                fontFamily: "var(--font-mono), monospace",
-              }}
-              className="min-h-[18rem] resize-y rounded-xl border border-hairline sm:min-h-[25rem]"
-            />
-          </TextField>
+            <TextField value={note} onChange={setNote}>
+              <Label className="sr-only">Anotações desta aula</Label>
+              {/*
+                Papel pautado: a linha acompanha o `line-height`, e `background-attachment:
+                local` faz o pautado rolar junto com o texto em vez de ficar parado no campo.
+              */}
+              <TextArea
+                rows={14}
+                placeholder="Escreva seus maiores insights sobre a aula aqui..."
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(transparent, transparent 31px, var(--hairline) 31px, var(--hairline) 32px)",
+                  backgroundAttachment: "local",
+                  backgroundColor: "var(--surface)",
+                  lineHeight: "32px",
+                  padding: "8px 16px",
+                  fontFamily: "var(--font-mono), monospace",
+                }}
+                className="min-h-[18rem] resize-y rounded-xl border border-hairline sm:min-h-[25rem]"
+              />
+            </TextField>
 
-          {saveError && (
-            <p role="alert" className="mt-3 text-sm text-danger">
-              {saveError}
-            </p>
-          )}
-        </Tabs.Panel>
-      </Tabs.Root>
-    </Card>
-  );
+            {saveError && (
+              <p role="alert" className="mt-3 text-sm text-danger">
+                {saveError}
+              </p>
+            )}
+          </Tabs.Panel>
+        </Tabs.Root>
+
+        <ConfirmDialog
+          isOpen={Boolean(commentToDelete)}
+          onOpenChange={(open) => {
+            if (!open) setCommentToDelete(null);
+          }}
+          title="Apagar comentário"
+          description="Tem certeza que deseja apagar este comentário? Esta ação não pode ser desfeita."
+          confirmText="Apagar"
+          cancelText="Cancelar"
+          variant="danger"
+          isLoading={Boolean(isDeleting)}
+          onConfirm={confirmDeleteComment}
+        />
+      </Card>
+    );
 }

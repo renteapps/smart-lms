@@ -56,7 +56,8 @@ import { AssignCourseModal } from "@/components/business/AssignCourseModal";
 import { SeatsUpgradeModal } from "@/components/business/SeatsUpgradeModal";
 import { useCompanyManager } from "@/hooks/useCompanyManager";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { cn } from "@/lib/utils";
 import { downloadCsv } from "@/lib/downloadCsv";
 
@@ -152,25 +153,39 @@ function EmpresaGestaoContent() {
       toast.success("Convite reenviado com sucesso.");
       loadData();
     } else {
-      toast.error(res.message);
+      toast.error(res.message || "Erro ao reenviar convite.");
     }
   };
 
-  const handleDeactivateMember = async (member: CompanyMember) => {
-    if (confirm(`Deseja desativar o acesso de ${member.name}? A vaga será liberada imediatamente no plano.`)) {
+  const [memberToDeactivate, setMemberToDeactivate] = useState<CompanyMember | null>(null);
+  const [isDeactivating, setIsDeactivating] = useState(false);
+
+  const handleDeactivateMember = (member: CompanyMember) => {
+    setMemberToDeactivate(member);
+  };
+
+  const handleConfirmDeactivate = async () => {
+    if (!memberToDeactivate) return;
+    setIsDeactivating(true);
+    try {
       let res;
-      if (member.status === "convidado") {
-        res = await revokeInvite(member.id);
+      if (memberToDeactivate.status === "convidado") {
+        res = await revokeInvite(memberToDeactivate.id);
       } else {
-        res = await updateMember(member.id, { status: "disabled" });
+        res = await updateMember(memberToDeactivate.id, { status: "disabled" });
       }
-      
+
       if (res.success) {
-        toast.success(`Acesso de ${member.name} desativado. 1 vaga foi liberada!`);
+        toast.success(`Acesso de ${memberToDeactivate.name} desativado. 1 vaga foi liberada!`);
         loadData();
       } else {
         toast.error(res.message || "Erro ao desativar membro.");
       }
+    } catch {
+      toast.error("Erro ao desativar membro.");
+    } finally {
+      setIsDeactivating(false);
+      setMemberToDeactivate(null);
     }
   };
 
@@ -1035,6 +1050,21 @@ function EmpresaGestaoContent() {
         onClose={() => setIsUpgradeModalOpen(false)}
         company={selectedCompany}
         onSuccess={loadData}
+      />
+
+      <ConfirmDialog
+        isOpen={!!memberToDeactivate}
+        onOpenChange={(open) => !open && setMemberToDeactivate(null)}
+        title="Desativar acesso"
+        description={
+          memberToDeactivate
+            ? `Deseja desativar o acesso de ${memberToDeactivate.name}? A vaga será liberada imediatamente no plano.`
+            : ""
+        }
+        confirmLabel="Desativar membro"
+        isDestructive
+        isLoading={isDeactivating}
+        onConfirm={handleConfirmDeactivate}
       />
     </div>
   );

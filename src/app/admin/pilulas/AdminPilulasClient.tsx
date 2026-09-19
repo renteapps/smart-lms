@@ -34,7 +34,7 @@ import {
   ToggleButtonGroup,
   Tooltip,
 } from '@heroui/react';
-import { toast } from 'sonner';
+import { toast } from "@/lib/toast";
 import { PageHeader, StatCard, StatusBadge } from '@/components/ui/editorial';
 import { Pilula, PilulaFormat, PilulaStatus } from '@/types/pilula';
 import { PilulaFormModal } from '@/components/admin/pilulas/PilulaFormModal';

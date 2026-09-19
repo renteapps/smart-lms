@@ -31,7 +31,7 @@ import { StatCard, StatusBadge } from "@/components/ui/editorial";
 import { cn } from "@/lib/utils";
 import type { CourseStatus } from "@/types/course";
 import { updateCoursesOrderBulk, toggleCourseFeatured } from "./actions";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { RatingSummary } from "@/components/admin/RatingSummary";
 import {
   DndContext,

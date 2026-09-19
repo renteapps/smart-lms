@@ -75,27 +75,30 @@ export default function CoursesCatalogClient({ courses, trail, questionnaire }: 
             </SearchField.Group>
           </SearchField>
 
-          <div className="flex items-center gap-2 overflow-hidden">
+          <div className="relative flex items-center gap-2 overflow-hidden">
             <SlidersHorizontal className="mr-1 size-4 shrink-0 text-muted hidden sm:block" aria-hidden="true" />
-            <div className="flex-1 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-              <ToggleButtonGroup
-                aria-label="Filtrar por categoria"
-                selectionMode="single"
-                disallowEmptySelection
-                isDetached
-                selectedKeys={[category]}
-                onSelectionChange={(keys) => {
-                  const [next] = Array.from(keys);
-                  if (next !== undefined) setCategory(String(next));
-                }}
-                className="flex w-max flex-nowrap"
-              >
-                {categories.map((item) => (
-                  <ToggleButton key={item} id={item} className="shrink-0">
-                    {item}
-                  </ToggleButton>
-                ))}
-              </ToggleButtonGroup>
+            <div className="relative flex-1 overflow-hidden">
+              <div className="overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+                <ToggleButtonGroup
+                  aria-label="Filtrar por categoria"
+                  selectionMode="single"
+                  disallowEmptySelection
+                  isDetached
+                  selectedKeys={[category]}
+                  onSelectionChange={(keys) => {
+                    const [next] = Array.from(keys);
+                    if (next !== undefined) setCategory(String(next));
+                  }}
+                  className="flex w-max flex-nowrap"
+                >
+                  {categories.map((item) => (
+                    <ToggleButton key={item} id={item} className="shrink-0">
+                      {item}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+              </div>
+              <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background to-transparent sm:hidden" />
             </div>
           </div>
         </div>
