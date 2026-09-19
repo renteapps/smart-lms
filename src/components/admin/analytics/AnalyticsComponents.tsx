@@ -172,38 +172,37 @@ export function MetricCard({
   tone = "primary",
 }: MetricCardProps) {
   return (
-    <Card className="relative overflow-hidden border border-border bg-surface shadow-xs transition-all duration-200 hover:border-accent/40 hover:shadow-md">
-      <Card.Content className="p-5 flex flex-col justify-between h-full space-y-3.5">
-        {/* Top Header Row: Label + Icon */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-bold tracking-wider text-muted uppercase">
-              {label}
-            </span>
-            {tooltipText && (
-              <Tooltip.Root>
-                <Tooltip.Trigger>
-                  <span className="text-muted hover:text-foreground cursor-help shrink-0" tabIndex={0}>
-                    <Info className="size-3.5" aria-hidden="true" />
-                  </span>
-                </Tooltip.Trigger>
-                <Tooltip.Content>{tooltipText}</Tooltip.Content>
-              </Tooltip.Root>
-            )}
+    <Card>
+      <Card.Content className="flex h-full flex-col justify-between gap-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-medium text-muted">{label}</p>
+              {tooltipText && (
+                <Tooltip.Root>
+                  <Tooltip.Trigger>
+                    <button
+                      type="button"
+                      aria-label={`Sobre ${label}`}
+                      className="shrink-0 cursor-help rounded-full text-muted transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                    >
+                      <Info className="size-3.5" aria-hidden="true" />
+                    </button>
+                  </Tooltip.Trigger>
+                  <Tooltip.Content>{tooltipText}</Tooltip.Content>
+                </Tooltip.Root>
+              )}
+            </div>
+            <p className="mt-3 break-words font-display text-3xl font-bold tracking-tight text-foreground tabular-nums">
+              {value}
+            </p>
           </div>
 
           {Icon && (
-            <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg shadow-2xs", toneBackgrounds[tone])}>
-              <Icon className="size-4" aria-hidden="true" />
+            <span className={cn("grid size-11 shrink-0 place-items-center rounded-xl", toneBackgrounds[tone])}>
+              <Icon className="size-5" aria-hidden="true" />
             </span>
           )}
-        </div>
-
-        {/* Big Metric Value */}
-        <div>
-          <p className="font-display text-2xl lg:text-3xl font-bold tracking-tight text-foreground tabular-nums">
-            {value}
-          </p>
         </div>
 
         {/* Footer Row: Trend Badge + Helper + Sparkline */}
@@ -310,7 +309,7 @@ export function SimpleBarChart({
 
       <div className="flex items-center justify-between gap-1 pt-2">
         {data.map((item) => (
-          <span key={item.label} className="flex-1 text-center text-[11px] font-medium text-muted truncate">
+          <span key={item.label} className="flex-1 text-center text-2xs font-medium text-muted truncate">
             {item.label}
           </span>
         ))}
@@ -459,7 +458,7 @@ export function RetentionFunnelChart({ stages }: { stages: FunnelStage[] }) {
               </span>
               <div className="flex items-center gap-3">
                 {stage.dropRate ? (
-                  <Chip size="sm" variant="soft" color="danger" className="text-[10px] font-bold">
+                  <Chip size="sm" variant="soft" color="danger" className="text-3xs font-bold">
                     -{stage.dropRate}% queda
                   </Chip>
                 ) : null}

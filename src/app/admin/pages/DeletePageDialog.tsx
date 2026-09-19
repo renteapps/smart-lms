@@ -2,8 +2,8 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Trash2 } from "lucide-react";
-import { AlertDialog, Button } from "@heroui/react";
+import { Trash2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { deletePage } from "./actions";
 
 type DeletePageDialogProps = {
@@ -25,29 +25,19 @@ export function DeletePageDialog({ page, onClose }: DeletePageDialogProps) {
   };
 
   return (
-    <AlertDialog.Root isOpen onOpenChange={(open) => { if (!open) onClose(); }}>
-      <AlertDialog.Backdrop>
-        <AlertDialog.Container size="md">
-          <AlertDialog.Dialog>
-            <AlertDialog.Header>
-              <AlertDialog.Icon status="danger">
-                <AlertTriangle className="size-5" aria-hidden="true" />
-              </AlertDialog.Icon>
-              <AlertDialog.Heading>Excluir “{page.title}”?</AlertDialog.Heading>
-            </AlertDialog.Header>
-            <AlertDialog.Body>
-              <p>O rascunho e o conteúdo publicado desta página são apagados. Esta ação não pode ser desfeita.</p>
-            </AlertDialog.Body>
-            <AlertDialog.Footer>
-              <Button variant="tertiary" onClick={onClose} isDisabled={isPending}>Cancelar</Button>
-              <Button variant="danger" onClick={handleConfirm} isDisabled={isPending}>
-                <Trash2 className="size-4" aria-hidden="true" />
-                Excluir página
-              </Button>
-            </AlertDialog.Footer>
-          </AlertDialog.Dialog>
-        </AlertDialog.Container>
-      </AlertDialog.Backdrop>
-    </AlertDialog.Root>
+    <ConfirmDialog
+      isOpen
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      tone="danger"
+      title={`Excluir “${page.title}”?`}
+      description={<p>O rascunho e o conteúdo publicado desta página são apagados. Esta ação não pode ser desfeita.</p>}
+      confirmLabel="Excluir página"
+      confirmIcon={<Trash2 className="size-4" aria-hidden="true" />}
+      isLoading={isPending}
+      loadingLabel="Excluindo…"
+      onConfirm={handleConfirm}
+    />
   );
 }

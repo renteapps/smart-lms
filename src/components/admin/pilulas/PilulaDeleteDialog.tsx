@@ -1,9 +1,8 @@
 'use client';
 
-import React from 'react';
-import { Pilula } from '@/types/pilula';
-import { AlertTriangle, Trash2, Loader2 } from 'lucide-react';
-import { AlertDialog, Button } from '@heroui/react';
+import { Trash2 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import type { Pilula } from '@/types/pilula';
 
 interface PilulaDeleteDialogProps {
   pilula: Pilula | null;
@@ -16,52 +15,28 @@ export function PilulaDeleteDialog({ pilula, onClose, onConfirm, isPending = fal
   if (!pilula) return null;
 
   return (
-    <AlertDialog.Root
+    <ConfirmDialog
       isOpen
       onOpenChange={(open) => {
-        if (!open && !isPending) onClose();
+        if (!open) onClose();
       }}
-    >
-      <AlertDialog.Backdrop>
-        <AlertDialog.Container size="md">
-          <AlertDialog.Dialog>
-            <AlertDialog.Header>
-              <AlertDialog.Icon status="danger">
-                <AlertTriangle className="size-5" aria-hidden="true" />
-              </AlertDialog.Icon>
-              <AlertDialog.Heading>Excluir pílula de conhecimento?</AlertDialog.Heading>
-            </AlertDialog.Header>
+      tone="danger"
+      title="Excluir pílula de conhecimento?"
+      confirmLabel="Excluir pílula"
+      confirmIcon={<Trash2 className="size-4" aria-hidden="true" />}
+      isLoading={isPending}
+      loadingLabel="Excluindo…"
+      onConfirm={() => onConfirm(pilula.id)}
+      description={
+        <>
+          <p>Esta ação não pode ser desfeita.</p>
 
-            <AlertDialog.Body>
-              <p>Esta ação não pode ser desfeita.</p>
-
-              <div className="mt-4 rounded-lg border border-border bg-background-secondary p-4">
-                <p className="text-sm font-semibold text-foreground">{pilula.title}</p>
-                <p className="mt-1 line-clamp-2 text-xs text-muted">{pilula.challenge}</p>
-              </div>
-            </AlertDialog.Body>
-
-            <AlertDialog.Footer>
-              <Button variant="tertiary" onClick={onClose} isDisabled={isPending}>
-                Cancelar
-              </Button>
-              <Button variant="danger" onClick={() => onConfirm(pilula.id)} isDisabled={isPending}>
-                {isPending ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                    Excluindo…
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="size-4" aria-hidden="true" />
-                    Excluir pílula
-                  </>
-                )}
-              </Button>
-            </AlertDialog.Footer>
-          </AlertDialog.Dialog>
-        </AlertDialog.Container>
-      </AlertDialog.Backdrop>
-    </AlertDialog.Root>
+          <div className="mt-4 rounded-lg border border-border bg-background-secondary p-4">
+            <p className="text-sm font-semibold text-foreground">{pilula.title}</p>
+            <p className="mt-1 line-clamp-2 text-xs text-muted">{pilula.challenge}</p>
+          </div>
+        </>
+      }
+    />
   );
 }

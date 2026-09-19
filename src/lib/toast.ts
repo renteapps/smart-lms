@@ -24,9 +24,11 @@ export const toast = Object.assign(
   {
     success: (message: string, options?: ToastOptions) => heroToast.success(message, sanitizeOptions(options)),
     danger: (message: string, options?: ToastOptions) => heroToast.danger(message, sanitizeOptions(options)),
+    /** @deprecated use `toast.danger`. */
     error: (message: string, options?: ToastOptions) => heroToast.danger(message, sanitizeOptions(options)),
     warning: (message: string, options?: ToastOptions) => heroToast.warning(message, sanitizeOptions(options)),
     info: (message: string, options?: ToastOptions) => heroToast.info(message, sanitizeOptions(options)),
+    /** Sem estado de carregamento próprio no HeroUI: aparece como info; a chamada não pode ser atualizada por id. */
     loading: (message: string, options?: ToastOptions) => heroToast.info(message, sanitizeOptions(options)),
     promise: heroToast.promise,
     close: heroToast.close,

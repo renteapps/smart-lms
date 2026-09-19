@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { Plus, UserRound } from "lucide-react";
-import { Avatar, Card, EmptyState, Label, SearchField, Table, buttonVariants } from "@heroui/react";
-import { PageHeader, StatusBadge } from "@/components/ui/editorial";
-import { cn } from "@/lib/utils";
+import { UserRound } from "lucide-react";
+import { Avatar, Card, Label, SearchField, Table, buttonVariants } from "@heroui/react";
+import { AdminEmptyState, PageHeader, StatusBadge } from "@/components/ui/editorial";
 import { createClient } from "@/lib/supabase/server";
 
 const initials = (name: string) =>
@@ -61,11 +60,6 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
         eyebrow="Pessoas"
         title="Usuários"
         description="Acompanhe acesso, papel e engajamento das pessoas na plataforma."
-        actions={
-          <Link href="/admin/users/novo" className={cn(buttonVariants({ variant: "primary" }), "gap-2")}>
-            <Plus className="size-4" aria-hidden="true" /> Novo usuário
-          </Link>
-        }
       />
 
       <Card>
@@ -87,13 +81,18 @@ export default async function AdminUsers({ searchParams }: { searchParams: Promi
 
         <Card.Content className="px-0 pb-0">
           {isEmpty ? (
-            <EmptyState className="flex flex-col items-center gap-2 px-6 py-14 text-center">
-              <span className="grid size-11 place-items-center rounded-xl bg-background-secondary">
-                <UserRound className="size-5 text-muted" aria-hidden="true" />
-              </span>
-              <p className="font-semibold text-foreground">Nenhuma pessoa encontrada</p>
-              <p className="text-sm text-muted">Ajuste sua busca ou convide alguém para a plataforma.</p>
-            </EmptyState>
+            <AdminEmptyState
+              icon={UserRound}
+              title="Nenhuma pessoa encontrada"
+              description="Ajuste sua busca para encontrar quem você procura."
+              action={
+                q ? (
+                  <Link href="/admin/users" className={buttonVariants({ variant: "secondary", size: "sm" })}>
+                    Limpar busca
+                  </Link>
+                ) : undefined
+              }
+            />
           ) : (
             <>
               <div className="hidden md:block">

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   BarChart3,
   Bell,
@@ -24,9 +24,15 @@ import {
   CreditCard,
   FileText,
   Sparkles,
+  Coins,
+  Globe,
+  Mail,
+  Navigation,
+  Palette,
+  Plug,
+  Search,
 } from "lucide-react";
 import {
-  Badge,
   Breadcrumbs,
   Button,
   Drawer,
@@ -67,17 +73,24 @@ const navGroups = [
     ],
   },
   {
-    label: "Plataforma",
-    links: [
-      { href: "/admin/ajustes", icon: Settings, label: "Ajustes" },
-    ],
-  },
-  {
     label: "Vendas & Corporativo",
     links: [
       { href: "/admin/business", icon: Building2, label: "Empresas (B2B)" },
       { href: "/admin/planos", icon: CreditCard, label: "Planos" },
       { href: "/admin/planos/assinaturas", icon: FileText, label: "Assinaturas" },
+    ],
+  },
+  {
+    label: "Plataforma",
+    links: [
+      { href: "/admin/ajustes", icon: Settings, label: "Ajustes" },
+      { href: "/admin/aparencia", icon: Palette, label: "Aparência" },
+      { href: "/admin/navegacao", icon: Navigation, label: "Navegação" },
+      { href: "/admin/pages", icon: Globe, label: "Páginas" },
+      { href: "/admin/chat", icon: MessageSquare, label: "Assistente IA" },
+      { href: "/admin/credits", icon: Coins, label: "Créditos de IA" },
+      { href: "/admin/integracoes", icon: Plug, label: "Integrações" },
+      { href: "/admin/emails", icon: Mail, label: "Modelos de e-mail" },
     ],
   },
 ];
@@ -105,7 +118,6 @@ const segmentLabels: Record<string, string> = {
   pages: "Páginas",
   "public-home": "Home Pública",
   "no-products": "Sem Produtos",
-  aparencia: "Aparência",
   "testes-perfil": "Testes de Perfil",
   ajustes: "Ajustes",
   chat: "Assistente IA",
@@ -116,7 +128,7 @@ const segmentLabels: Record<string, string> = {
   configuracoes: "Configurações",
   aulas: "Aulas",
   "aulas-personalizadas": "Aulas personalizadas",
-  planos: "Planos de Assinatura",
+  planos: "Planos",
   integracoes: "Integrações",
   eduzz: "Eduzz",
   hotmart: "Hotmart",
@@ -133,13 +145,58 @@ const segmentLabels: Record<string, string> = {
   emails: "Modelos de E-mail",
   assinaturas: "Assinaturas (Alunos)",
   historico: "Histórico de Conversas",
-  new: "Nova Empresa",
+  new: "Novo",
+  matriculas: "Matrículas",
+  "aulas-galeria": "Galeria de aulas",
+  quiz: "Quiz",
+  busca: "Busca",
+  autores: "Autores",
+  agendar: "Agendar",
+  aparencia: "Aparência",
 };
+
+// Segmentos dinâmicos (uuid, número ou slug longo) viram "Detalhes".
+const isDynamicSegment = (segment: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(segment) || /^\d+$/.test(segment) || segment.length > 24;
+
+const prettifySegment = (segment: string) => {
+  const text = segment.replace(/[-_]+/g, " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
+const COLLAPSED_KEY = "admin-sidebar-collapsed";
+let collapsedFallback = false;
+const collapsedListeners = new Set<() => void>();
+
+function subscribeCollapsed(listener: () => void) {
+  collapsedListeners.add(listener);
+  return () => {
+    collapsedListeners.delete(listener);
+  };
+}
+
+function readCollapsed() {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) === "1";
+  } catch {
+    return collapsedFallback;
+  }
+}
+
+function writeCollapsed(value: boolean) {
+  try {
+    localStorage.setItem(COLLAPSED_KEY, value ? "1" : "0");
+  } catch {
+    collapsedFallback = value; // sem storage: vale só nesta sessão
+  }
+  collapsedListeners.forEach((listener) => listener());
+}
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = useSyncExternalStore(subscribeCollapsed, readCollapsed, () => false);
+  const updateCollapsed = writeCollapsed;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -158,8 +215,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const isActive = (href: string) => href === activeLink;
   const segments = pathname.split("/").filter(Boolean).slice(1);
 
-  const labelFor = (segment: string) =>
-    segmentLabels[segment] || (segment.length > 10 ? "Detalhes" : segment);
+  const labelFor = (segment: string, parent?: string) => {
+    if (segment === "new" && parent === "business") return "Nova empresa";
+    if (segmentLabels[segment]) return segmentLabels[segment];
+    return isDynamicSegment(segment) ? "Detalhes" : prettifySegment(segment);
+  };
 
   const navContent = (compact = false) => (
     <nav className="flex-1 overflow-y-auto px-3 pb-5 pt-3" aria-label="Navegação administrativa">
@@ -168,7 +228,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           {compact ? (
             <span className="sr-only">{group.label}</span>
           ) : (
-            <p className="eyebrow mb-2 px-3 text-[10px]">{group.label}</p>
+            <p className="eyebrow mb-2 px-3 text-3xs">{group.label}</p>
           )}
           <div className="space-y-1">
             {group.links.map((link) => {
@@ -218,7 +278,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           {!collapsed && (
             <Tooltip.Root>
               <Tooltip.Trigger>
-                <Button isIconOnly size="sm" variant="ghost" aria-label="Recolher menu" onClick={() => setCollapsed(true)}>
+                <Button isIconOnly size="sm" variant="ghost" aria-label="Recolher menu" onClick={() => updateCollapsed(true)}>
                   <PanelLeftClose className="size-4" aria-hidden="true" />
                 </Button>
               </Tooltip.Trigger>
@@ -233,7 +293,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="mb-5 flex justify-center">
             <Tooltip.Root>
               <Tooltip.Trigger>
-                <Button isIconOnly size="sm" variant="outline" aria-label="Expandir menu" onClick={() => setCollapsed(false)}>
+                <Button isIconOnly size="sm" variant="outline" aria-label="Expandir menu" onClick={() => updateCollapsed(false)}>
                   <PanelLeftOpen className="size-4" aria-hidden="true" />
                 </Button>
               </Tooltip.Trigger>
@@ -274,13 +334,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   key={`${segment}-${index}`}
                   href={index === segments.length - 1 ? undefined : `/${["admin", ...segments.slice(0, index + 1)].join("/")}`}
                 >
-                  {labelFor(segment)}
+                  {labelFor(segment, segments[index - 1])}
                 </Breadcrumbs.Item>
               ))}
             </Breadcrumbs.Root>
 
-            <p className="truncate font-display text-base font-extrabold text-foreground sm:hidden">
-              {labelFor(segments.at(-1) || "admin")}
+            <p className="truncate font-display text-base font-bold text-foreground sm:hidden">
+              {labelFor(segments.at(-1) || "admin", segments.at(-2))}
             </p>
           </div>
 
@@ -295,22 +355,26 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <Label className="sr-only">Buscar no painel</Label>
               <SearchField.Group>
                 <SearchField.SearchIcon />
-                <SearchField.Input 
-                  placeholder="Buscar no painel" 
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSearch();
-                  }}
-                />
+                <SearchField.Input placeholder="Buscar no painel" />
                 <SearchField.ClearButton />
               </SearchField.Group>
             </SearchField>
 
-            <Badge.Anchor>
-              <Button isIconOnly variant="ghost" aria-label="Notificações">
-                <Bell className="size-5" aria-hidden="true" />
-              </Button>
-              <Badge color="danger" size="sm" placement="top-right" aria-hidden="true" />
-            </Badge.Anchor>
+            <Link
+              href="/admin/busca"
+              aria-label="Buscar no painel"
+              className={cn(buttonVariants({ variant: "ghost", isIconOnly: true }), "lg:hidden")}
+            >
+              <Search className="size-5" aria-hidden="true" />
+            </Link>
+
+            <Link
+              href="/admin/notificacoes"
+              aria-label="Notificações"
+              className={buttonVariants({ variant: "ghost", isIconOnly: true })}
+            >
+              <Bell className="size-5" aria-hidden="true" />
+            </Link>
 
             <Link
               href="/"
