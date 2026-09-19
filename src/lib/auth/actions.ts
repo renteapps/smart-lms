@@ -7,6 +7,7 @@ import { type EmailOtpType } from "@supabase/supabase-js";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { getClientIp } from "@/lib/clientIp";
 import { safeRedirect } from "@/lib/safeRedirect";
+import { passwordPolicyError } from "@/lib/auth/passwordPolicy";
 
 export type AuthActionResult = {
   success: boolean;
@@ -146,11 +147,9 @@ export async function signUpAction(formData: FormData): Promise<AuthActionResult
     };
   }
 
-  if (password.length < 6) {
-    return {
-      success: false,
-      error: "A senha deve conter no mínimo 6 caracteres.",
-    };
+  const passwordError = passwordPolicyError(password);
+  if (passwordError) {
+    return { success: false, error: passwordError };
   }
 
   const origin = await getOrigin();
@@ -298,11 +297,9 @@ export async function updateUserPasswordAction(formData: FormData): Promise<Auth
     };
   }
 
-  if (password.length < 6) {
-    return {
-      success: false,
-      error: "A nova senha precisa ter no mínimo 6 caracteres.",
-    };
+  const passwordError = passwordPolicyError(password);
+  if (passwordError) {
+    return { success: false, error: passwordError };
   }
 
   if (password !== confirmPassword) {
