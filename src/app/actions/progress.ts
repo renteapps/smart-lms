@@ -23,6 +23,11 @@ export async function setLessonCompletion(
 
     if (isCompleted) {
       const { data: lesson } = await supabase.from("lessons").select("type").eq("id", lessonId).maybeSingle();
+      // Aula de quiz só conclui passando no quiz (submitQuizResult). O botão
+      // já some na interface; aqui fecha o atalho de chamar a action direto.
+      if (lesson?.type === "quiz") {
+        return { success: false, message: "Esta aula é concluída ao atingir a nota mínima no quiz." };
+      }
       if (lesson?.type === "personalized_ai") {
         const { data: ready } = await supabase.from("personalized_lesson_generations")
           .select("id")
