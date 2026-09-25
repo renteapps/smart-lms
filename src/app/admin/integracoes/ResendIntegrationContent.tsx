@@ -1382,8 +1382,10 @@ export function ResendIntegrationContent() {
                 <div className="text-xs">
                   <p className="font-bold text-foreground">Boas-vindas ao Aluno</p>
                   <p className="text-muted mt-0.5">
-                    Enviado assim que o aluno se cadastra ou é criado na plataforma.
+                    Enviado quando uma compra (Hotmart/Eduzz) cria a conta do aluno, com o link para ele definir a senha.
+                    O cadastro pelo site usa o e-mail de confirmação do Supabase.
                   </p>
+                  <p className="mt-1 font-semibold text-warning">Desligado, quem compra não recebe o link de acesso.</p>
                 </div>
               </label>
 
@@ -1405,7 +1407,7 @@ export function ResendIntegrationContent() {
                 <div className="text-xs">
                   <p className="font-bold text-foreground">Recuperação de Senha</p>
                   <p className="text-muted mt-0.5">
-                    Link seguro para redefinição de acesso à conta.
+                    Template usado pelo suporte do admin e por campanhas. O &ldquo;esqueci a senha&rdquo; do aluno sai pelo Supabase.
                   </p>
                 </div>
               </label>
@@ -1430,6 +1432,7 @@ export function ResendIntegrationContent() {
                   <p className="text-muted mt-0.5">
                     Disparado quando um curso é adquirido ou liberado manualmente.
                   </p>
+                  <p className="mt-1 font-semibold text-warning">Ainda não é disparado automaticamente — só em campanha manual.</p>
                 </div>
               </label>
 
@@ -1453,10 +1456,11 @@ export function ResendIntegrationContent() {
                   <p className="text-muted mt-0.5">
                     Aviso e link do certificado oficial quando o curso é concluído.
                   </p>
+                  <p className="mt-1 font-semibold text-warning">Ainda não é disparado automaticamente — só em campanha manual.</p>
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-background-secondary hover:bg-surface transition-colors cursor-pointer sm:col-span-2">
+              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-background-secondary hover:bg-surface transition-colors cursor-pointer">
                 <input
                   type="checkbox"
                   checked={config.categories.platform.subscriptionConfirmation}
@@ -1478,6 +1482,30 @@ export function ResendIntegrationContent() {
                   <p className="font-bold text-foreground">Confirmação de Assinatura & Fatura</p>
                   <p className="text-muted mt-0.5">
                     Recibo e confirmação de renovação ou contratação de plano de assinatura.
+                  </p>
+                  <p className="mt-1 font-semibold text-warning">Ainda não é disparado automaticamente — só em campanha manual.</p>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-background-secondary hover:bg-surface transition-colors cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={config.categories.platform.orgInvite ?? true}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      categories: {
+                        ...config.categories,
+                        platform: { ...config.categories.platform, orgInvite: e.target.checked },
+                      },
+                    })
+                  }
+                  className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-primary"
+                />
+                <div className="text-xs">
+                  <p className="font-bold text-foreground">Convite de Empresa</p>
+                  <p className="text-muted mt-0.5">
+                    Enviado quando o gestor de uma empresa convida um colaborador, com o link para aceitar o convite.
                   </p>
                 </div>
               </label>
@@ -1520,6 +1548,7 @@ export function ResendIntegrationContent() {
                   <p className="text-muted mt-0.5">
                     Aviso automático aos matriculados quando novo conteúdo é publicado.
                   </p>
+                  <p className="mt-1 font-semibold text-warning">Ainda não é disparado automaticamente — só em campanha manual.</p>
                 </div>
               </label>
 
@@ -1546,6 +1575,7 @@ export function ResendIntegrationContent() {
                   <p className="text-muted mt-0.5">
                     Notifica o aluno quando um professor ou colega responde sua dúvida.
                   </p>
+                  <p className="mt-1 font-semibold text-warning">Ainda não é disparado automaticamente — só em campanha manual.</p>
                 </div>
               </label>
 
@@ -1598,6 +1628,7 @@ export function ResendIntegrationContent() {
                   <p className="text-muted mt-0.5">
                     Lembrete para alunos ausentes há 7 ou 30 dias retornarem aos estudos.
                   </p>
+                  <p className="mt-1 font-semibold text-warning">Ainda não é disparado automaticamente — só em campanha manual.</p>
                 </div>
               </label>
             </div>
@@ -1661,6 +1692,7 @@ export function ResendIntegrationContent() {
                     <option value="course_enrollment">🎓 Matrícula em Curso</option>
                     <option value="certificate">🏆 Certificado de Conclusão</option>
                     <option value="subscription">⭐ Assinatura Confirmada</option>
+                    <option value="org_invite">🏢 Convite de Empresa</option>
                     <option value="notification">📢 Notificação / Comunicado</option>
                     <option value="inactivity">⏱️ Reengajamento (Ausente)</option>
                   </NativeSelect>

@@ -65,8 +65,8 @@ export function RouteShell({
     <div className="ambient-canvas">
       {!isAuthPage && <NavBar items={navigation.menu} />}
       {!isAuthPage && <ProfileBanner />}
-      {/* A conversa já trava a própria altura; `min-h-screen` sobraria como rolagem morta. */}
-      <main className={cn("w-full", !isAgentWorkspace && "min-h-screen")}>{children}</main>
+      {/* A conversa já trava a própria altura; `min-h-dvh` sobraria como rolagem morta. */}
+      <main className={cn("w-full", !isAgentWorkspace && "min-h-dvh")}>{children}</main>
       {hasFloatingChrome && <Footer groups={navigation.footer.groups} />}
       {showAssistant && <ChatSticker />}
       {isAuthenticated && !isAdmin && <GlobalSearchPalette />}

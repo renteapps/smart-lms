@@ -64,7 +64,8 @@ export async function POST(req: NextRequest) {
           ...data,
         },
       },
-      apiKey ? { apiKey } : undefined,
+      // Teste explícito do admin: envia mesmo com a categoria desligada.
+      { configOverride: apiKey ? { apiKey } : undefined, ignoreCategory: true },
     );
 
     if (result.success) {

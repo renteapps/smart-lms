@@ -45,48 +45,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if category is enabled in config
-    if (payload.template) {
-      const { platform, notifications } = config.categories;
-
-      if (payload.template === "welcome" && !platform.welcome) {
-        return NextResponse.json({
-          success: false,
-          message: "Disparos de e-mail de Boas-vindas estão desativados nas configurações.",
-        });
-      }
-      if (payload.template === "password_reset" && !platform.passwordReset) {
-        return NextResponse.json({
-          success: false,
-          message: "Disparos de Recuperação de Senha estão desativados nas configurações.",
-        });
-      }
-      if (payload.template === "course_enrollment" && !platform.courseEnrollment) {
-        return NextResponse.json({
-          success: false,
-          message: "Disparos de Matrícula em Cursos estão desativados nas configurações.",
-        });
-      }
-      if (payload.template === "certificate" && !platform.certificateIssued) {
-        return NextResponse.json({
-          success: false,
-          message: "Disparos de Certificado estão desativados nas configurações.",
-        });
-      }
-      if (payload.template === "inactivity" && !notifications.inactivityReengagement) {
-        return NextResponse.json({
-          success: false,
-          message: "Disparos de Reengajamento estão desativados nas configurações.",
-        });
-      }
-      if (payload.template === "notification" && !notifications.broadcasts) {
-        return NextResponse.json({
-          success: false,
-          message: "Disparos de Notificação estão desativados nas configurações.",
-        });
-      }
-    }
-
+    // Os liga/desliga por tipo de e-mail são checados dentro de sendConfiguredEmail.
     const result = await sendConfiguredEmail(adminClient, payload);
 
     if (result.success) {

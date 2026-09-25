@@ -84,7 +84,7 @@ export function SearchPageView() {
   const showSkeleton = isInitialLoading;
 
   return (
-    <div className="min-h-screen pb-24 pt-[76px]">
+    <div className="min-h-dvh pb-24 pt-[76px]">
       <section className="border-b border-hairline bg-background-secondary/40">
         <div className="editorial-container py-10 sm:py-14">
           <Rise>
@@ -142,7 +142,7 @@ export function SearchPageView() {
                         <button
                           type="button"
                           onClick={() => removeSearch(term)}
-                          className="grid size-5 place-items-center rounded-full text-muted opacity-0 transition-opacity hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
+                          className="grid size-8 place-items-center rounded-full text-muted transition-opacity hover:text-danger focus-visible:opacity-100 pointer-fine:size-5 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100"
                           aria-label={`Remover “${term}” do histórico`}
                         >
                           <X className="size-3" aria-hidden="true" />

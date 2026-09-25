@@ -237,7 +237,7 @@ function AcessarContent() {
               autoComplete="current-password"
             />
 
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pt-1">
               <Checkbox
                 isSelected={rememberMe}
                 onChange={setRememberMe}
@@ -255,7 +255,7 @@ function AcessarContent() {
 
               <Link
                 href="/resetar-senha"
-                className="text-xs font-semibold text-accent hover:text-accent-hover hover:underline transition-colors"
+                className="inline-flex min-h-11 items-center whitespace-nowrap text-xs font-semibold text-accent hover:text-accent-hover hover:underline transition-colors"
               >
                 Esqueceu a senha?
               </Link>

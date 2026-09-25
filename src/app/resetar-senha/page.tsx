@@ -41,7 +41,12 @@ function ResetarSenhaContent() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // `/auth/confirm` manda para cá quando um link de acesso/recuperação expirou.
+  const [errorMessage, setErrorMessage] = useState<string | null>(
+    searchParams.get("expirado") === "1"
+      ? "Este link de acesso expirou ou já foi usado. Informe seu e-mail para receber um novo."
+      : null
+  );
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isPending, startTransition] = useTransition();
 

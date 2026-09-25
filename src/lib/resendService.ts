@@ -1,4 +1,4 @@
-import { EmailLog, EmailSendPayload, EmailSendResponse, ResendConfig } from "@/types/resend";
+import { EmailLog, EmailSendPayload, EmailSendResponse, EmailTemplateType, ResendConfig } from "@/types/resend";
 import { generateEmailHtml } from "./emailTemplates";
 
 const RESEND_CONFIG_KEY = "@smartlms:resend_config";
@@ -17,6 +17,7 @@ export const DEFAULT_RESEND_CONFIG: ResendConfig = {
       courseEnrollment: true,
       certificateIssued: true,
       subscriptionConfirmation: true,
+      orgInvite: true,
     },
     notifications: {
       newContent: true,
@@ -28,6 +29,45 @@ export const DEFAULT_RESEND_CONFIG: ResendConfig = {
   domainStatus: "not_started",
   updatedAt: new Date().toISOString(),
 };
+
+/** Nome amigável de cada categoria, para a mensagem de envio bloqueado. */
+const CATEGORY_LABELS: Partial<Record<EmailTemplateType, string>> = {
+  welcome: "Boas-vindas",
+  password_reset: "Recuperação de Senha",
+  course_enrollment: "Matrícula em Cursos",
+  certificate: "Certificado",
+  subscription: "Assinatura Confirmada",
+  org_invite: "Convite de Empresa",
+  notification: "Notificações (Broadcasts)",
+  inactivity: "Reengajamento",
+};
+
+/**
+ * Se o tipo de e-mail está liberado pelos liga/desliga da integração Resend.
+ *
+ * Devolve a mensagem de bloqueio, ou `null` quando pode enviar. `test` e envios
+ * sem template (HTML avulso) não têm categoria e sempre passam.
+ */
+export function emailCategoryBlockReason(
+  template: EmailTemplateType | undefined,
+  categories: ResendConfig["categories"],
+): string | null {
+  if (!template || template === "test") return null;
+  const { platform, notifications } = categories;
+  const enabled: Record<EmailTemplateType, boolean> = {
+    welcome: platform.welcome,
+    password_reset: platform.passwordReset,
+    course_enrollment: platform.courseEnrollment,
+    certificate: platform.certificateIssued,
+    subscription: platform.subscriptionConfirmation,
+    org_invite: platform.orgInvite,
+    notification: notifications.broadcasts,
+    inactivity: notifications.inactivityReengagement,
+    test: true,
+  };
+  if (enabled[template] !== false) return null;
+  return `Disparos de ${CATEGORY_LABELS[template] ?? template} estão desativados nas configurações do Resend.`;
+}
 
 // In-memory cache for server-side execution
 let serverConfig: ResendConfig = { ...DEFAULT_RESEND_CONFIG };
@@ -204,6 +244,95 @@ export async function getResendDomains(apiKey: string): Promise<{ success: boole
   }
 }
 
+
+/** Um e-mail já resolvido (assunto e HTML prontos) para o envio em lote. */
+export type BatchEmailItem = {
+  to: string;
+  subject: string;
+  html?: string;
+  text?: string;
+  tags?: { name: string; value: string }[];
+};
+
+/** Limite do endpoint `/emails/batch` do Resend. */
+export const RESEND_BATCH_SIZE = 100;
+/** Pausa entre chamadas: o Resend limita requisições por segundo por conta. */
+const RESEND_BATCH_PAUSE_MS = 600;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Envia vários e-mails pelo endpoint de lote do Resend (até 100 por chamada),
+ * uma chamada por vez. Com 429 espera o `retry-after` e tenta de novo uma vez.
+ * Devolve um resultado por item, na mesma ordem. Sem chave `re_`, simula.
+ */
+export async function sendEmailBatch(
+  items: BatchEmailItem[],
+  config: Pick<ResendConfig, "apiKey" | "fromName" | "fromEmail" | "replyTo" | "enabled">,
+  fetchImpl: typeof fetch = fetch,
+): Promise<EmailSendResponse[]> {
+  if (!config.enabled) {
+    const error = "O envio de e-mails via Resend está desabilitado nas configurações.";
+    return items.map(() => ({ success: false, error }));
+  }
+
+  const apiKey = config.apiKey?.trim();
+  if (!apiKey || !apiKey.startsWith("re_")) {
+    return items.map(() => ({
+      success: true,
+      simulated: true,
+      id: `sim_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+      message: "E-mail simulado (Resend sem chave de API).",
+    }));
+  }
+
+  const results: EmailSendResponse[] = [];
+  for (let start = 0; start < items.length; start += RESEND_BATCH_SIZE) {
+    if (start > 0) await sleep(RESEND_BATCH_PAUSE_MS);
+    const chunk = items.slice(start, start + RESEND_BATCH_SIZE);
+    const body = JSON.stringify(chunk.map((item) => ({
+      from: `${config.fromName} <${config.fromEmail}>`,
+      to: [item.to],
+      subject: item.subject,
+      html: item.html,
+      text: item.text,
+      reply_to: config.replyTo || undefined,
+      tags: item.tags,
+    })));
+
+    const post = () => fetchImpl("https://api.resend.com/emails/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body,
+    });
+
+    try {
+      let res = await post();
+      if (res.status === 429) {
+        const retryAfter = Number(res.headers.get("retry-after"));
+        await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 1000);
+        res = await post();
+      }
+      const data = await res.json().catch(() => ({}));
+      const ids: { id?: string }[] = Array.isArray(data?.data) ? data.data : [];
+      if (res.ok) {
+        chunk.forEach((_, index) => {
+          const id = ids[index]?.id;
+          results.push(id
+            ? { success: true, id, message: "E-mail enviado via Resend." }
+            : { success: false, error: "Resend não devolveu id para este destinatário." });
+        });
+      } else {
+        const error = data?.message || `Erro ao enviar lote (HTTP ${res.status})`;
+        chunk.forEach(() => results.push({ success: false, error }));
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Falha na conexão com a API do Resend";
+      chunk.forEach(() => results.push({ success: false, error: message }));
+    }
+  }
+  return results;
+}
 
 export async function sendEmail(
   payload: EmailSendPayload,

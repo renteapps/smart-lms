@@ -3,11 +3,28 @@ import "server-only";
 import type { DB } from "@/lib/data/types";
 import { getEmailTemplate } from "@/lib/data/emails";
 import { interpolateVariables } from "@/lib/emailTemplates";
-import { DEFAULT_RESEND_CONFIG, sendEmail } from "@/lib/resendService";
+import { DEFAULT_RESEND_CONFIG, emailCategoryBlockReason, sendEmail, sendEmailBatch } from "@/lib/resendService";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServiceRoleKey } from "@/lib/supabase/env";
 import type { EmailLog, EmailSendPayload, EmailSendResponse, ResendConfig } from "@/types/resend";
-import { getUserTemplateVariables } from "@/lib/data/userVariables";
+import { getUserTemplateVariables, getUsersTemplateVariables } from "@/lib/data/userVariables";
+import { getAppearanceConfig } from "@/lib/data/appearance";
+import { getSiteUrl } from "@/lib/siteUrl";
+
+/**
+ * Variáveis globais dos templates: identidade vem de Aparência, não do Resend.
+ * Antes `{{nome_plataforma}}` usava o nome do remetente ("Fulano de Tal"), e
+ * era isso que aparecia no assunto e no corpo dos e-mails.
+ */
+async function brandVariables(db: DB) {
+  const appearance = await getAppearanceConfig(db);
+  return {
+    appName: appearance.platformName,
+    nome_plataforma: appearance.platformName,
+    cor_marca: appearance.primaryColor,
+    link_plataforma: getSiteUrl(),
+  };
+}
 
 type IntegrationRow = {
   enabled: boolean | null;
@@ -62,68 +79,170 @@ export async function getResendServerConfig(db: DB): Promise<ResendConfig> {
   };
 }
 
-async function persistEmailLog(
-  db: DB,
-  payload: EmailSendPayload,
-  result: EmailSendResponse,
-): Promise<void> {
+function logRow(payload: Pick<EmailSendPayload, "to" | "subject" | "template">, result: EmailSendResponse) {
   const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
   const status: EmailLog["status"] = result.success
     ? result.simulated
       ? "simulated"
       : "sent"
     : "failed";
-
-  const { error } = await db.from("email_logs").insert({
+  return {
     recipient: recipients[0] || "desconhecido",
     subject: payload.subject || "(sem assunto)",
     template: payload.template || "custom",
     status,
     resend_id: result.id ?? null,
     error: result.error ?? null,
-  });
+  };
+}
 
+async function persistEmailLogs(db: DB, rows: ReturnType<typeof logRow>[]): Promise<void> {
+  if (!rows.length) return;
+  const { error } = await db.from("email_logs").insert(rows);
   if (error) {
     console.error("[resend:logs] Não foi possível persistir o envio:", error.message);
   }
 }
 
+type TemplateDefinition = Awaited<ReturnType<typeof getEmailTemplate>>;
+
+/** Interpola assunto/HTML/texto com os dados do destinatário. */
+function renderPayload(
+  payload: EmailSendPayload,
+  template: TemplateDefinition,
+  templateData: Record<string, unknown>,
+): EmailSendPayload {
+  if (payload.template && payload.template !== "test" && template) {
+    return {
+      ...payload,
+      data: templateData,
+      subject: interpolateVariables(payload.subject || template.subject, templateData, { diagnosticContext: "email-subject" }),
+      html: interpolateVariables(payload.html || template.html, templateData, { html: true, diagnosticContext: "email-html" }),
+    };
+  }
+  return {
+    ...payload,
+    data: templateData,
+    subject: interpolateVariables(payload.subject || "", templateData, { diagnosticContext: "email-subject" }),
+    html: payload.html ? interpolateVariables(payload.html, templateData, { html: true, diagnosticContext: "email-html" }) : payload.html,
+    text: payload.text ? interpolateVariables(payload.text, templateData, { diagnosticContext: "email-text" }) : payload.text,
+  };
+}
+
+export type SendConfiguredEmailOptions = {
+  /** Sobrescreve campos da configuração salva (ex.: chave digitada na tela de teste). */
+  configOverride?: Partial<ResendConfig>;
+  /**
+   * Ignora os liga/desliga por tipo de e-mail. Só para ações pontuais e
+   * explícitas de um admin (teste de template, "reenviar acesso") — os
+   * disparos automáticos e as campanhas respeitam a configuração.
+   */
+  ignoreCategory?: boolean;
+};
+
 /** Envia usando configuração e template persistidos, registrando o resultado. */
 export async function sendConfiguredEmail(
   db: DB,
   payload: EmailSendPayload,
-  configOverride?: Partial<ResendConfig>,
+  options: SendConfiguredEmailOptions = {},
 ): Promise<EmailSendResponse> {
-  const config = { ...(await getResendServerConfig(db)), ...(configOverride ?? {}) };
-  const userVariables = payload.userId ? await getUserTemplateVariables(db, payload.userId) : {};
-  const templateData = { ...payload.data, userVariables, appName: config.fromName };
-  let resolvedPayload: EmailSendPayload = { ...payload, data: templateData };
+  const config = { ...(await getResendServerConfig(db)), ...(options.configOverride ?? {}) };
 
-  if (payload.template && payload.template !== "test") {
-    const template = await getEmailTemplate(db, payload.template);
-    if (template) {
-      resolvedPayload = {
-        ...payload,
-        data: templateData,
-        subject: interpolateVariables(payload.subject || template.subject, templateData, { diagnosticContext: "email-subject" }),
-        html: payload.html
-          ? interpolateVariables(payload.html, templateData, { html: true, diagnosticContext: "email-html" })
-          : interpolateVariables(template.html, templateData, { html: true, diagnosticContext: "email-html" }),
-      };
-    }
-  } else {
-    resolvedPayload = {
-      ...payload,
-      data: templateData,
-      subject: interpolateVariables(payload.subject || '', templateData, { diagnosticContext: "email-subject" }),
-      html: payload.html ? interpolateVariables(payload.html, templateData, { html: true, diagnosticContext: "email-html" }) : payload.html,
-      text: payload.text ? interpolateVariables(payload.text, templateData, { diagnosticContext: "email-text" }) : payload.text,
-    };
+  const blocked = options.ignoreCategory ? null : emailCategoryBlockReason(payload.template, config.categories);
+  if (blocked) {
+    const result: EmailSendResponse = { success: false, error: blocked };
+    await persistEmailLogs(db, [logRow(payload, result)]);
+    return result;
   }
 
+  const [userVariables, brand] = await Promise.all([
+    payload.userId ? getUserTemplateVariables(db, payload.userId) : Promise.resolve({}),
+    brandVariables(db),
+  ]);
+  const templateData = { ...brand, ...payload.data, userVariables };
+  const template = payload.template && payload.template !== "test" ? await getEmailTemplate(db, payload.template) : null;
+  const resolvedPayload = renderPayload(payload, template, templateData);
+
   const result = await sendEmail(resolvedPayload, config);
-  await persistEmailLog(db, resolvedPayload, result);
+  await persistEmailLogs(db, [logRow(resolvedPayload, result)]);
   return result;
+}
+
+export type BatchRecipient = {
+  to: string;
+  userId?: string;
+  /** Dados só deste destinatário (somados aos dados comuns). */
+  data?: Record<string, unknown>;
+};
+
+export type BatchSendSummary = {
+  sent: number;
+  simulated: number;
+  failed: number;
+  /** Primeiro erro encontrado, para mostrar ao admin. */
+  firstError?: string;
+};
+
+/**
+ * Envio em lote com o mesmo template para muitos destinatários (campanhas,
+ * convites em massa). Carrega configuração, template e variáveis de perfil uma
+ * vez só, interpola por destinatário e usa o endpoint de lote do Resend — o
+ * envio um a um em paralelo estourava o limite de requisições por segundo.
+ */
+export async function sendConfiguredEmailBatch(
+  db: DB,
+  common: Omit<EmailSendPayload, "to" | "userId">,
+  recipients: BatchRecipient[],
+  options: SendConfiguredEmailOptions = {},
+): Promise<BatchSendSummary> {
+  const summary: BatchSendSummary = { sent: 0, simulated: 0, failed: 0 };
+  if (!recipients.length) return summary;
+
+  const config = { ...(await getResendServerConfig(db)), ...(options.configOverride ?? {}) };
+  const blocked = options.ignoreCategory ? null : emailCategoryBlockReason(common.template, config.categories);
+  if (blocked) {
+    await persistEmailLogs(db, recipients.map((r) => logRow({ ...common, to: r.to }, { success: false, error: blocked })));
+    return { ...summary, failed: recipients.length, firstError: blocked };
+  }
+
+  const [template, variablesByUser, brand] = await Promise.all([
+    common.template && common.template !== "test" ? getEmailTemplate(db, common.template) : Promise.resolve(null),
+    getUsersTemplateVariables(db, recipients.flatMap((r) => (r.userId ? [r.userId] : []))),
+    brandVariables(db),
+  ]);
+
+  const rendered = recipients.map((recipient) => renderPayload(
+    { ...common, to: recipient.to, userId: recipient.userId },
+    template,
+    {
+      ...brand,
+      ...common.data,
+      ...recipient.data,
+      userVariables: recipient.userId ? variablesByUser.get(recipient.userId) ?? {} : {},
+    },
+  ));
+
+  const results = await sendEmailBatch(
+    rendered.map((payload) => ({
+      to: payload.to as string,
+      subject: payload.subject,
+      html: payload.html,
+      text: payload.text,
+      tags: payload.tags,
+    })),
+    config,
+  );
+
+  results.forEach((result) => {
+    if (!result.success) {
+      summary.failed += 1;
+      summary.firstError ??= result.error;
+    } else if (result.simulated) summary.simulated += 1;
+    else summary.sent += 1;
+  });
+
+  await persistEmailLogs(db, rendered.map((payload, index) => logRow(payload, results[index])));
+  return summary;
 }
 
 /**

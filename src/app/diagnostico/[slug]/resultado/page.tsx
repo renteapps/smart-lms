@@ -145,7 +145,7 @@ export default function DiagnosticResultPage({ params }: { params: Promise<{ slu
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg" aria-busy="true" aria-label="Carregando diagnóstico">
+      <div className="min-h-dvh flex items-center justify-center bg-bg" aria-busy="true" aria-label="Carregando diagnóstico">
         <Spinner size="lg" color="accent" />
       </div>
     );
@@ -153,7 +153,7 @@ export default function DiagnosticResultPage({ params }: { params: Promise<{ slu
 
   if (!result || !result.winner) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg text-center">
+      <div className="min-h-dvh flex items-center justify-center bg-bg text-center">
         <div>
           <h1 className="text-xl font-bold mb-2">Resultado Indisponível</h1>
           <p className="text-muted">Não conseguimos carregar o seu resultado.</p>
@@ -171,7 +171,7 @@ export default function DiagnosticResultPage({ params }: { params: Promise<{ slu
   const hasPercentages = percentages && percentages.length > 0;
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col pt-12 pb-24 overflow-y-auto px-6">
+    <div className="min-h-dvh bg-surface flex flex-col pt-12 pb-24 overflow-y-auto px-6">
       <div className="max-w-2xl mx-auto w-full flex flex-col items-center text-center space-y-8">
         
         <div className="space-y-4 w-full">

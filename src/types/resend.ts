@@ -4,6 +4,7 @@ export type EmailTemplateType =
   | "course_enrollment"
   | "certificate"
   | "subscription"
+  | "org_invite"
   | "notification"
   | "inactivity"
   | "test";
@@ -34,6 +35,7 @@ export interface PlatformEmailCategories {
   courseEnrollment: boolean;
   certificateIssued: boolean;
   subscriptionConfirmation: boolean;
+  orgInvite: boolean;
 }
 
 export interface NotificationEmailCategories {

@@ -3,7 +3,7 @@ import { Skeleton } from "@heroui/react/skeleton";
 export default function MinhaTrilhaLoading() {
   return (
     <div
-      className="editorial-container min-h-screen px-4 pb-24 pt-8 sm:px-6 lg:px-8"
+      className="editorial-container min-h-dvh px-4 pb-24 pt-8 sm:px-6 lg:px-8"
       aria-busy="true"
       aria-label="Carregando sua trilha..."
     >

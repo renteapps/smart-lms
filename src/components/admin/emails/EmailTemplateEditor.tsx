@@ -40,12 +40,11 @@ import {
 } from "@/types/resend";
 import {
   getDefaultTemplateDefinitions,
-  getCustomTemplates,
-  saveCustomTemplate,
-  resetCustomTemplate,
   interpolateVariables,
   EmailTemplateData,
 } from "@/lib/emailTemplates";
+import { getSiteUrl } from "@/lib/siteUrl";
+import { useAppearance } from "@/contexts/AppearanceContext";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { UserVariablePicker } from "@/components/admin/UserVariablePicker";
@@ -72,25 +71,33 @@ export function EmailTemplateEditor({
   const [copiedTag, setCopiedTag] = useState<string | null>(null);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
-  // Sample data for live interpolation
-  const [sampleData, setSampleData] = useState<EmailTemplateData>({
-    name: "Carlos Silva",
-    email: "carlos.silva@empresa.com",
-    courseTitle: "Formação Completa em Next.js & IA",
-    courseUrl: "https://smartlms.com/cursos/nextjs-ia",
-    loginUrl: "https://smartlms.com/login",
-    resetUrl: "https://smartlms.com/recuperar-senha?token=xyz987",
-    certificateCode: "CERT-948201",
-    certificateUrl: "https://smartlms.com/certificados/948201",
-    planName: "Plano Pro Anual",
-    planPrice: "R$ 499,90/ano",
-    daysInactive: 7,
-    notificationTitle: "Novo Módulo Prático Liberado",
-    notificationMessage: "Adicionamos 4 novas aulas com exercícios reais sobre IA Generativa.",
-    actionUrl: "https://smartlms.com/minha-trilha",
-    actionText: "Acessar Aula Agora",
-    appName: "Smart LMS",
-  });
+  // Dados de exemplo da prévia: marca e endereços reais da plataforma, para a
+  // prévia mostrar exatamente o nome, a cor e os links que o aluno vai receber.
+  const appearance = useAppearance();
+  const siteUrl = getSiteUrl();
+  const sampleData: EmailTemplateData = {
+    nome: "Carlos",
+    email: "carlos@empresa.com",
+    appName: appearance.platformName,
+    nome_plataforma: appearance.platformName,
+    cor_marca: appearance.primaryColor,
+    link_plataforma: siteUrl,
+    link_login: `${siteUrl}/auth/confirm?token_hash=exemplo&type=recovery`,
+    link_recuperacao: `${siteUrl}/auth/confirm?token_hash=exemplo&type=recovery`,
+    curso: "Plano Anual",
+    nome_curso: "Liderança na Prática",
+    link_curso: `${siteUrl}/cursos`,
+    codigo_certificado: "G6-8F3A21",
+    link_certificado: `${siteUrl}/certificados/exemplo`,
+    nome_plano: "Plano Anual",
+    nome_empresa: "Acme Ltda",
+    link_convite: `${siteUrl}/convite/exemplo`,
+    dias_inativo: 7,
+    titulo_notificacao: "Novo módulo liberado",
+    mensagem_notificacao: "Adicionamos 4 aulas práticas ao seu curso.\nReserve 20 minutos esta semana para assistir.",
+    link_acao: `${siteUrl}/minha-trilha`,
+    texto_acao: "Ver as novas aulas",
+  };
 
   // Test Email Modal
   const [testModalOpen, setTestModalOpen] = useState(false);
@@ -100,31 +107,45 @@ export function EmailTemplateEditor({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const loadTemplates = () => {
-    const loaded = getCustomTemplates();
-    setTemplates(loaded);
-    const active = loaded[selectedType] || getDefaultTemplateDefinitions()[0];
-    setSubject(active.subject);
-    setPreviewText(active.previewText);
-    setHtmlContent(active.html);
-    setIsCustomized(!!active.isCustomized);
+  const applyTemplate = (template: CustomEmailTemplate) => {
+    setSubject(template.subject);
+    setPreviewText(template.previewText);
+    setHtmlContent(template.html);
+    setIsCustomized(!!template.isCustomized);
   };
 
-  // Load templates on mount
+  /*
+   * Os modelos vêm do banco (`email_templates` sobre os padrões do código) —
+   * é de lá que o envio real lê. Antes esta tela lia o localStorage, e o admin
+   * via um e-mail diferente do que os alunos recebiam.
+   */
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadTemplates();
+    let cancelled = false;
+    fetch("/api/admin/integracoes/resend")
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (!data?.success || !data.templates) throw new Error(data?.error);
+        const loaded = data.templates as Record<string, CustomEmailTemplate>;
+        setTemplates(loaded);
+        applyTemplate(loaded[selectedType] ?? getDefaultTemplateDefinitions()[0]);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        const defaults = Object.fromEntries(getDefaultTemplateDefinitions().map((t) => [t.type, t]));
+        setTemplates(defaults);
+        applyTemplate(defaults[selectedType] ?? getDefaultTemplateDefinitions()[0]);
+        toast.danger("Não foi possível carregar os modelos salvos. Exibindo os padrões.");
+      });
+    return () => { cancelled = true; };
+    // Carrega uma vez; a troca de modelo usa o estado já carregado.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSelectTemplate = (type: EmailTemplateType) => {
     setSelectedType(type);
     const t = templates[type] || getDefaultTemplateDefinitions().find((d) => d.type === type);
-    if (t) {
-      setSubject(t.subject);
-      setPreviewText(t.previewText);
-      setHtmlContent(t.html);
-      setIsCustomized(!!t.isCustomized);
-    }
+    if (t) applyTemplate(t);
   };
 
   const currentTemplate = templates[selectedType] || getDefaultTemplateDefinitions().find((d) => d.type === selectedType);
@@ -198,42 +219,47 @@ export function EmailTemplateEditor({
         updatedAt: new Date().toISOString(),
       };
 
-      const saved = saveCustomTemplate(updatedTemplate);
-      setTemplates((prev) => ({ ...prev, [selectedType]: saved }));
-      setIsCustomized(true);
-
-      // Also persist to API if available
-      fetch("/api/admin/integracoes/resend", {
+      const res = await fetch("/api/admin/integracoes/resend", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "save_template", template: saved }),
-      }).catch(() => {});
+        body: JSON.stringify({ action: "save_template", template: updatedTemplate }),
+      });
+      const data = await res.json();
+      if (!data?.success) throw new Error(data?.error || "Erro ao salvar o modelo de e-mail.");
 
-      toast.success(`Modelo "${currentTemplate.name}" salvo com sucesso!`);
-    } catch {
-      toast.danger("Erro ao salvar o modelo de e-mail.");
+      const saved = (data.template as CustomEmailTemplate) ?? updatedTemplate;
+      setTemplates((prev) => ({ ...prev, [selectedType]: saved }));
+      setIsCustomized(true);
+      toast.success(`Modelo "${currentTemplate.name}" salvo. Os próximos envios já usam esta versão.`);
+    } catch (error) {
+      toast.danger(error instanceof Error ? error.message : "Erro ao salvar o modelo de e-mail.");
     } finally {
       setIsSaving(false);
     }
   };
 
   // Reset to default
-  const handleConfirmReset = () => {
-    const reset = resetCustomTemplate(selectedType);
-    setTemplates((prev) => ({ ...prev, [selectedType]: reset }));
-    setSubject(reset.subject);
-    setPreviewText(reset.previewText);
-    setHtmlContent(reset.html);
-    setIsCustomized(false);
+  const handleConfirmReset = async () => {
+    try {
+      const res = await fetch("/api/admin/integracoes/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reset_template", templateType: selectedType }),
+      });
+      const data = await res.json();
+      if (!data?.success) throw new Error(data?.error || "Erro ao restaurar o modelo.");
 
-    fetch("/api/admin/integracoes/resend", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "reset_template", templateType: selectedType }),
-    }).catch(() => {});
-
-    toast.success(`Modelo "${reset.name}" restaurado para o padrão original.`);
-    setIsResetConfirmOpen(false);
+      const reset = getDefaultTemplateDefinitions().find((d) => d.type === selectedType);
+      if (reset) {
+        setTemplates((prev) => ({ ...prev, [selectedType]: reset }));
+        applyTemplate(reset);
+        toast.success(`Modelo "${reset.name}" restaurado para o padrão.`);
+      }
+    } catch (error) {
+      toast.danger(error instanceof Error ? error.message : "Erro ao restaurar o modelo.");
+    } finally {
+      setIsResetConfirmOpen(false);
+    }
   };
 
   // Send Test Email

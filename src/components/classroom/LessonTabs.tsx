@@ -511,7 +511,7 @@ export default function LessonTabs({
                                           {reply.user.name}
                                         </span>
                                         {reply.status === "pending" && (
-                                          <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-[9px] font-semibold text-warning">
+                                          <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-3xs font-semibold text-warning">
                                             Aguardando aprovação
                                           </span>
                                         )}

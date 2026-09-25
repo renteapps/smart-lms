@@ -70,7 +70,7 @@ export default function CourseGalleryClient({
     : null;
 
   return (
-    <div className="min-h-screen pt-20 sm:pt-[76px]">
+    <div className="min-h-dvh pt-20 sm:pt-[76px]">
       <section className="editorial-container py-5 sm:py-8 lg:py-10">
         <div className="relative isolate overflow-hidden rounded-xl sm:rounded-2xl bg-neutral-950 text-white shadow-elev-4 border border-white/10">
           <Image

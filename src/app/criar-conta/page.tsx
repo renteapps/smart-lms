@@ -40,7 +40,8 @@ function CriarContaContent() {
 
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
+  // Pré-preenchido pelo link de convite de empresa (/convite/[token]).
+  const [email, setEmail] = useState(() => searchParams.get("email") ?? "");
   const [phone, setPhone] = useState("");
   const [phoneDdi, setPhoneDdi] = useState("+55");
   const [birthDate, setBirthDate] = useState("");

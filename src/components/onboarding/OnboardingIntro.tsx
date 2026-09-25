@@ -44,7 +44,7 @@ export function OnboardingIntro({ questionCount, estimatedMinutes, isPreparing, 
   const reduceMotion = useReducedMotion();
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background pt-[76px] text-foreground">
+    <div className="relative min-h-dvh overflow-hidden bg-background pt-[76px] text-foreground">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_24%,rgba(49,87,183,0.08),transparent_32%),radial-gradient(circle_at_88%_40%,rgba(201,121,87,0.07),transparent_30%)]" />
 
       <main className="relative z-10 mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-14">

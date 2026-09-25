@@ -82,7 +82,9 @@ export function InviteMemberModal({
     setIsSubmitting(false);
 
     if (res.success) {
-      toast.success(`Convite enviado com sucesso para ${email.trim()}!`);
+      // `message` no sucesso: o convite foi criado, mas o e-mail não saiu.
+      if (res.message) toast.warning(res.message);
+      else toast.success(`Convite enviado com sucesso para ${email.trim()}!`);
       setName("");
       setEmail("");
       setJobTitle("");

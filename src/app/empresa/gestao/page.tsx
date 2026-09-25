@@ -150,7 +150,7 @@ function EmpresaGestaoContent() {
   const handleResendInvite = async (member: CompanyMember) => {
     const res = await resendInvite(member.id);
     if (res.success) {
-      toast.success("Convite reenviado com sucesso.");
+      toast.success(`Convite reenviado para ${member.email}.`);
       loadData();
     } else {
       toast.error(res.message || "Erro ao reenviar convite.");

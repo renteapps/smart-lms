@@ -1,13 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getArticleSlugs } from "@/lib/data/blog";
 import { createClient } from "@/lib/supabase/server";
-
-function getSiteUrl(): string {
-  const configured =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://smartlms.com.br");
-  return configured.replace(/\/$/, "");
-}
+import { getSiteUrl } from "@/lib/siteUrl";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient();

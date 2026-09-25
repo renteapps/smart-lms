@@ -1,11 +1,5 @@
 import type { MetadataRoute } from "next";
-
-function getSiteUrl(): string {
-  const configured =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://smartlms.com.br");
-  return configured.replace(/\/$/, "");
-}
+import { getSiteUrl } from "@/lib/siteUrl";
 
 export default function robots(): MetadataRoute.Robots {
   const siteUrl = getSiteUrl();

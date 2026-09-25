@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn, getContrastForeground } from "@/lib/utils";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppearanceConfig } from "@/lib/data/appearance";
+import { getSiteUrl } from "@/lib/siteUrl";
 import { AppearanceProvider } from "@/contexts/AppearanceContext";
 
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", display: "swap" });
@@ -12,9 +13,7 @@ const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", displa
 export async function generateMetadata(): Promise<Metadata> {
   const supabase = createAdminClient();
   const appearance = await getAppearanceConfig(supabase);
-  const siteUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://smartlms.com.br");
+  const siteUrl = getSiteUrl();
 
   return {
     metadataBase: new URL(siteUrl),

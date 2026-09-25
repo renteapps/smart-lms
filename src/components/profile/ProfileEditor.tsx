@@ -414,7 +414,9 @@ export function ProfileEditor() {
       }
 
       const { error } = await supabase.auth.resetPasswordForEmail(targetEmail, {
-        redirectTo: `${window.location.origin}/acessar`,
+        // Mesmo destino de /resetar-senha: /auth/confirm troca o token pela
+        // sessão e abre a tela de definir nova senha.
+        redirectTo: `${window.location.origin}/auth/confirm?type=recovery&next=/resetar-senha?mode=update`,
       });
 
       if (error) throw error;

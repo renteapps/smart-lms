@@ -760,6 +760,7 @@ export default function ResendOverviewPage() {
                   <option value="course_enrollment">🎓 Matrícula em Curso</option>
                   <option value="certificate">🏆 Certificado de Conclusão</option>
                   <option value="subscription">⭐ Assinatura Confirmada</option>
+                  <option value="org_invite">🏢 Convite de Empresa</option>
                   <option value="notification">📢 Notificação Geral</option>
                   <option value="inactivity">⏱️ Reengajamento</option>
                 </NativeSelect>

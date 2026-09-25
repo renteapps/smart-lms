@@ -65,7 +65,7 @@ export default async function CertificatePage({
   const logoUrl = appearanceData?.value?.logoUrl || '';
 
   return (
-    <div className="min-h-screen bg-background pt-24 sm:pt-28 md:pt-32 pb-12 sm:pb-16 print:min-h-0 print:bg-white print:pt-0 print:pb-0">
+    <div className="min-h-dvh bg-background pt-24 sm:pt-28 md:pt-32 pb-12 sm:pb-16 print:min-h-0 print:bg-white print:pt-0 print:pb-0">
       <CertificateClientView
         certificate={certificate}
         platformName={platformName}

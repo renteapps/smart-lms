@@ -201,7 +201,7 @@ export default function OnboardingPage() {
 
   if (isGenerating) {
     return (
-      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 pt-[76px] text-foreground">
+      <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-4 pt-[76px] text-foreground">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(49,87,183,0.12),transparent_40%)]" />
         <motion.section
           initial={reduceMotion ? false : { opacity: 0, y: 18 }}
@@ -245,7 +245,7 @@ export default function OnboardingPage() {
   if (!questionnaire || !question) return null;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background pt-[76px] text-foreground">
+    <div className="relative min-h-dvh overflow-hidden bg-background pt-[76px] text-foreground">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_24%,rgba(49,87,183,0.08),transparent_32%),radial-gradient(circle_at_88%_40%,rgba(201,121,87,0.07),transparent_30%)]" />
 
       <header className="relative z-10 border-b border-border/70 bg-background/88 backdrop-blur-xl">

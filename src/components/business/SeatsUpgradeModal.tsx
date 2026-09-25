@@ -125,7 +125,7 @@ export function SeatsUpgradeModal({
                         }`}
                       >
                         {pack.discount && (
-                          <span className="absolute -top-2 right-2 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-accent text-accent-foreground">
+                          <span className="absolute -top-2 right-2 px-1.5 py-0.5 rounded-full text-3xs font-bold bg-accent text-accent-foreground">
                             {pack.discount}
                           </span>
                         )}

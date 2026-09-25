@@ -17,7 +17,7 @@ export function AccessNotice({
   secondaryAction?: NoticeAction;
 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg px-6">
+    <div className="min-h-dvh flex items-center justify-center bg-bg px-6">
       <div className="max-w-md w-full text-center space-y-6">
         <div className="space-y-3">
           <h1 className="text-2xl sm:text-3xl font-black font-display text-foreground">{title}</h1>

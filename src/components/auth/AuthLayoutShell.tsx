@@ -38,13 +38,13 @@ export function AuthLayoutShell({
   const name = platformName || "Smart LMS";
   const resolvedBadge = sideBadge || `${name} 2.0`;
   return (
-    <div className="relative min-h-screen flex flex-col justify-between pt-10 pb-16 sm:pt-14 sm:pb-20">
+    <div className="relative min-h-dvh flex flex-col justify-between pt-10 pb-16 sm:pt-14 sm:pb-20">
       <div className="editorial-container w-full max-w-[68rem]">
         {/* Top bar with back to home and Brand */}
         <div className="mb-8 flex items-center justify-between">
           <Link
             href="/"
-            className="group flex items-center gap-2 text-sm font-semibold text-muted transition-colors hover:text-foreground"
+            className="group flex min-h-11 items-center gap-2 text-sm font-semibold text-muted transition-colors hover:text-foreground"
           >
             <ArrowLeft className="size-4 transition-transform group-hover:-translate-x-1" aria-hidden="true" />
             <span>Voltar ao início</span>
@@ -70,7 +70,7 @@ export function AuthLayoutShell({
                   <span>{footerText} </span>
                   <Link
                     href={footerLinkHref}
-                    className="font-bold text-accent hover:text-accent-hover hover:underline transition-colors ml-1"
+                    className="ml-1 inline-block py-3 -my-3 font-bold text-accent hover:text-accent-hover hover:underline transition-colors"
                   >
                     {footerLinkText}
                   </Link>

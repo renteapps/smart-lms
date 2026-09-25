@@ -96,7 +96,7 @@ export function TakeTestClient({ test, isPublicFlow }: TakeTestClientProps) {
   };
 
   return (
-    <div className="min-h-screen bg-bg relative overflow-hidden flex flex-col">
+    <div className="min-h-dvh bg-bg relative overflow-hidden flex flex-col">
       {/* HEADER & PROGRESS */}
       <div className="absolute top-0 left-0 right-0 h-2 bg-background-secondary z-50">
         <motion.div

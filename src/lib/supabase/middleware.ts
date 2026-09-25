@@ -56,6 +56,8 @@ export async function updateSession(request: NextRequest) {
     "/pagina",
     // Teste de perfil livre: a pessoa responde sem conta e só cria login no resultado.
     "/diagnostico",
+    // Convite de empresa: quem ainda não tem conta abre o link antes de se cadastrar.
+    "/convite/",
     "/api/",
     /*
      * Quem clica num link de recuperação de senha, confirmação de cadastro ou
@@ -87,8 +89,19 @@ export async function updateSession(request: NextRequest) {
     return createRedirectResponse(url);
   }
 
+  /*
+   * `/resetar-senha?mode=update` é o destino do link de recuperação: o
+   * `/auth/confirm` já criou a sessão, então a pessoa chega LOGADA para definir
+   * a senha. Tratá-la como tela de login a mandava para "/" e ela nunca via o
+   * formulário — quebrando o "esqueci a senha" e o primeiro acesso de quem
+   * comprou (conta criada sem senha).
+   */
+  const isPasswordUpdate =
+    request.nextUrl.pathname.startsWith("/resetar-senha") &&
+    request.nextUrl.searchParams.get("mode") === "update";
+
   // Redirect authenticated users away from auth pages (respeitando o redirect se houver)
-  if (user && isAuthRoute) {
+  if (user && isAuthRoute && !isPasswordUpdate) {
     const redirectParam = request.nextUrl.searchParams.get("redirect") || request.nextUrl.searchParams.get("next");
     const target = new URL(safeRedirect(redirectParam, "/"), request.nextUrl.origin);
     // Voltar para outra tela de login criaria um loop de redirecionamento.

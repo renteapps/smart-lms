@@ -234,9 +234,14 @@ export default function NotificacoesClient({ initialCampaigns, initialAutomation
       setCampaigns((prev) => [newCampaign, ...prev]);
       const delivery = newCampaign.emailDelivery;
       if (channels.includes("email") && delivery?.failed) {
-        toast.warning(`Campanha criada: ${delivery.sent} e-mails enviados e ${delivery.failed} falharam.`);
+        toast.warning(`Campanha criada: ${delivery.sent} e-mails enviados e ${delivery.failed} falharam.`, {
+          description: delivery.firstError,
+        });
+      } else if (channels.includes("email") && delivery?.simulated) {
+        // Sem chave do Resend nada sai de fato — não dá para chamar de "enviado".
+        toast.warning(`Campanha criada, mas nenhum e-mail saiu: o Resend não está configurado (${delivery.simulated} simulados).`);
       } else if (channels.includes("email")) {
-        toast.success(`Campanha personalizada criada e ${delivery?.sent || 0} e-mails processados.`);
+        toast.success(`Campanha criada e ${delivery?.sent || 0} e-mails enviados.`);
       } else {
         toast.success("Notificação enviada com sucesso!");
       }

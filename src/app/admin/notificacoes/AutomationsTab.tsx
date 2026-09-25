@@ -15,7 +15,9 @@ import {
   Tag,
   Copy,
   Check,
+  AlertTriangle,
 } from "lucide-react";
+import { Alert } from "@heroui/react";
 import { toast } from "@/lib/toast";
 import { StatusBadge } from "@/components/ui/editorial";
 import { UserVariablePicker } from "@/components/admin/UserVariablePicker";
@@ -133,9 +135,27 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
     course_completed: "Concluiu curso há",
   };
 
+  // Nenhum job avalia estas regras ainda: elas são gravadas, mas nada dispara.
+  // Enquanto o motor não existe, a tela precisa dizer isso com todas as letras.
+  const notRunningNotice = (
+    <Alert status="warning">
+      <Alert.Indicator>
+        <AlertTriangle className="size-4" aria-hidden="true" />
+      </Alert.Indicator>
+      <Alert.Content>
+        <Alert.Title>As automações ainda não disparam</Alert.Title>
+        <Alert.Description>
+          As regras ficam salvas, mas nenhum e-mail ou notificação é enviado automaticamente por enquanto.
+          Para falar com os alunos agora, use uma campanha manual na aba de notificações.
+        </Alert.Description>
+      </Alert.Content>
+    </Alert>
+  );
+
   if (isCreating) {
     return (
       <div className="surface-card p-6 max-w-3xl mx-auto space-y-6">
+        {notRunningNotice}
         <div className="flex justify-between items-center border-b border-border/60 pb-4">
           <div>
             <h2 className="text-xl font-extrabold text-foreground">Criar Nova Automação de Growth</h2>
@@ -495,6 +515,7 @@ export function AutomationsTab({ initialAutomations }: { initialAutomations: any
 
   return (
     <div className="space-y-6">
+      {notRunningNotice}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-accent/10 border border-accent/20 p-5 rounded-2xl">
         <div>
           <h3 className="text-base font-bold text-foreground flex items-center gap-2">

@@ -109,6 +109,7 @@ describe("Resend Integration Service", () => {
       "course_enrollment",
       "certificate",
       "subscription",
+      "org_invite",
       "inactivity",
       "notification",
     ] as const;

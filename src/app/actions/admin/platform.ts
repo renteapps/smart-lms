@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { requireAdmin, requireUser } from "@/lib/supabase/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServiceRoleKey } from "@/lib/supabase/env";
@@ -10,6 +11,8 @@ import { toDbRole } from "@/lib/data/business";
 import type { Company, MemberRole } from "@/types/business";
 import type { Plan } from "@/lib/data/plans";
 import type { ActionResult } from "../progress";
+import { resolveAppOrigin } from "@/lib/auth/accessLink";
+import { sendConfiguredEmailBatch } from "@/lib/resendServer";
 
 type Saved<T> = { success: boolean; message?: string; data?: T };
 
@@ -134,6 +137,59 @@ async function requireManagerOf(table: "organization_members" | "organization_in
 }
 
 /**
+ * Convite de empresa por e-mail, com o link `/convite/<token>`.
+ *
+ * Usa o cliente admin porque o gestor da empresa não lê `integrations.secrets`
+ * (RLS de admin da plataforma). Best-effort: o convite já está gravado; se o
+ * e-mail falhar, devolve o motivo para a tela avisar o gestor.
+ */
+async function deliverInviteEmails(
+  companyId: string,
+  invites: { email: string; name?: string | null; token: string }[],
+): Promise<{ sent: number; failed: number; error?: string }> {
+  if (invites.length === 0) return { sent: 0, failed: 0 };
+  if (!getSupabaseServiceRoleKey()) {
+    return { sent: 0, failed: invites.length, error: "Envio de e-mail indisponível neste ambiente." };
+  }
+
+  try {
+    const admin = createAdminClient() as unknown as DB;
+    const { data: org } = await admin
+      .from("organizations")
+      .select("name, trade_name")
+      .eq("id", companyId)
+      .maybeSingle();
+    const companyName = org?.trade_name || org?.name || "sua empresa";
+
+    const headerList = await headers();
+    const host = headerList.get("host");
+    const proto = headerList.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https");
+    const origin = resolveAppOrigin(host ? `${proto}://${host}` : null);
+
+    const summary = await sendConfiguredEmailBatch(
+      admin,
+      { subject: "", template: "org_invite", tags: [{ name: "origem", value: "convite-empresa" }] },
+      invites.map((invite) => ({
+        to: invite.email,
+        data: {
+          nome: invite.name?.trim().split(/\s+/)[0] || "",
+          email: invite.email,
+          nome_empresa: companyName,
+          link_convite: `${origin}/convite/${encodeURIComponent(invite.token)}`,
+        },
+      })),
+    );
+
+    if (summary.simulated > 0) {
+      return { sent: summary.sent, failed: summary.failed + summary.simulated, error: "Resend não configurado: nenhum e-mail saiu." };
+    }
+    return { sent: summary.sent, failed: summary.failed, error: summary.firstError };
+  } catch (error) {
+    return { sent: 0, failed: invites.length, error: (error as Error).message };
+  }
+}
+
+/**
  * Convida alguém para a empresa.
  *
  * O assento é conferido antes de gravar: um convite pendente já ocupa vaga, do
@@ -169,21 +225,28 @@ export async function inviteMember(
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 14);
 
+    const email = input.email.trim().toLowerCase();
+    const token = crypto.randomUUID();
     const { error } = await supabase.from("organization_invites").insert({
       organization_id: companyId,
-      email: input.email.trim().toLowerCase(),
+      email,
       full_name: input.name ?? null,
       department: input.department ?? null,
       role: toDbRole(input.role),
-      token: crypto.randomUUID(),
+      token,
       expires_at: expiresAt.toISOString(),
       created_by: user.id,
     });
 
     if (error) return { success: false, message: error.message };
 
+    const delivery = await deliverInviteEmails(companyId, [{ email, name: input.name, token }]);
+
     revalidatePath("/empresa/gestao");
-    return { success: true };
+    // `message` no sucesso = convite gravado, mas o e-mail não saiu.
+    return delivery.sent === 1
+      ? { success: true }
+      : { success: true, message: `Convite criado, mas o e-mail não foi enviado${delivery.error ? `: ${delivery.error}` : "."}` };
   } catch (error) {
     return { success: false, message: (error as Error).message };
   }
@@ -231,7 +294,8 @@ export async function bulkInviteMembers(
       email: m.email.trim().toLowerCase(),
       full_name: m.name ?? null,
       department: m.department ?? null,
-      role: "member",
+      // "member" não existe no enum org_role e fazia o insert inteiro falhar.
+      role: toDbRole("colaborador"),
       token: crypto.randomUUID(),
       expires_at: expiresAt.toISOString(),
       created_by: user.id,
@@ -246,6 +310,14 @@ export async function bulkInviteMembers(
 
     result.success = true;
     result.addedCount = toProcess.length;
+
+    const delivery = await deliverInviteEmails(
+      companyId,
+      rows.map((row, index) => ({ email: row.email, name: toProcess[index].name, token: row.token })),
+    );
+    if (delivery.failed > 0) {
+      result.errors.push(`${delivery.failed} convite(s) sem e-mail enviado${delivery.error ? `: ${delivery.error}` : "."}`);
+    }
 
     revalidatePath("/empresa/gestao");
     return result;
@@ -274,21 +346,31 @@ export async function revokeInvite(inviteId: string): Promise<ActionResult> {
 
 export async function resendInvite(inviteId: string): Promise<ActionResult> {
   try {
-    const { supabase } = await requireManagerOf("organization_invites", inviteId);
+    const { supabase, companyId } = await requireManagerOf("organization_invites", inviteId);
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 14);
 
-    const { error } = await supabase
+    // Reenviar também reabre um convite vencido (o prazo novo só vale com status
+    // pendente). Aceito ou revogado não volta.
+    const { data: invite, error } = await supabase
       .from("organization_invites")
-      .update({
-        expires_at: expiresAt.toISOString(),
-      })
-      .eq("id", inviteId);
+      .update({ expires_at: expiresAt.toISOString(), status: "pending" })
+      .eq("id", inviteId)
+      .in("status", ["pending", "expired"])
+      .select("email, full_name, token")
+      .maybeSingle();
 
     if (error) return { success: false, message: error.message };
+    if (!invite) return { success: false, message: "Convite não encontrado, já aceito ou revogado." };
+
+    const delivery = await deliverInviteEmails(companyId, [
+      { email: invite.email, name: invite.full_name, token: invite.token },
+    ]);
 
     revalidatePath("/empresa/gestao");
-    return { success: true };
+    return delivery.sent === 1
+      ? { success: true }
+      : { success: false, message: `Prazo renovado, mas o e-mail não foi enviado${delivery.error ? `: ${delivery.error}` : "."}` };
   } catch (error) {
     return { success: false, message: (error as Error).message };
   }

@@ -3,7 +3,7 @@ import { Skeleton } from "@heroui/react/skeleton";
 export default function LessonLoading() {
   return (
     <div
-      className="min-h-screen pb-16 pt-4 sm:pt-6"
+      className="min-h-dvh pb-16 pt-4 sm:pt-6"
       aria-busy="true"
       aria-label="Carregando aula..."
     >

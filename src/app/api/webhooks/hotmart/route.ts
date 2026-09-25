@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
     verifySignature: (secrets) =>
       verifyHotmartRequest({ rawBody, hottokHeader, signatureHeader, secrets }),
     normalize: normalizeHotmartEvent,
+    appOrigin: req.nextUrl.origin,
   });
 
   return NextResponse.json(body, { status });

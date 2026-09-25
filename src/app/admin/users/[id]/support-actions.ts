@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { sendConfiguredEmail } from "@/lib/resendServer";
+import { generateFirstPartyAuthLink } from "@/lib/auth/accessLink";
 
 export async function checkAdmin() {
   const supabase = await createClient();
@@ -49,13 +50,9 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Pro
 }
 
 /**
- * `admin.auth.admin.generateLink()` **não envia e-mail** — apenas devolve a URL e
- * o `hashed_token`. Quem entrega é o Resend, com os templates que já existem no
- * admin (mesmo caminho de `src/lib/billing/welcome.ts`).
- *
- * Montamos uma URL de primeira parte apontando para `/auth/confirm`, que consome
- * `token_hash` + `type` via `verifyOtp` — funciona independente do fluxo (PKCE ou
- * implícito). Se o token não vier, caímos no `action_link` cru do Supabase.
+ * O link é de primeira parte (`generateFirstPartyAuthLink`, o mesmo usado pelo
+ * e-mail de compra em `src/lib/billing/welcome.ts`). Quem entrega é o Resend,
+ * com os templates que já existem no admin.
  *
  * O envio é best-effort: uma vez que o link foi gerado, ele **sempre** volta pro
  * admin, mesmo que o e-mail falhe, trave ou o Resend não esteja configurado.
@@ -71,26 +68,17 @@ async function generateAndSendAccessLink(opts: {
   const admin = createAdminClient();
   const origin = await getOrigin();
 
-  const { data, error } = await admin.auth.admin.generateLink({
-    type: opts.kind,
+  const { link, error } = await generateFirstPartyAuthLink(admin, {
+    kind: opts.kind,
     email: opts.email,
+    next: opts.next,
+    origin,
   });
 
-  const properties = data?.properties;
-  if (error || !properties) {
-    console.error("[support-actions] generateLink falhou", error?.message);
-    return {
-      link: null,
-      emailSent: false,
-      error: error?.message ?? "Não foi possível gerar o link de acesso.",
-    };
+  if (!link) {
+    console.error("[support-actions] generateLink falhou", error);
+    return { link: null, emailSent: false, error: error ?? "Não foi possível gerar o link de acesso." };
   }
-
-  const { hashed_token, action_link } = properties;
-  const link = hashed_token
-    ? `${origin}/auth/confirm?token_hash=${encodeURIComponent(hashed_token)}` +
-      `&type=${opts.kind}&next=${encodeURIComponent(opts.next)}`
-    : action_link;
 
   const linkData =
     opts.kind === "recovery"
@@ -113,7 +101,7 @@ async function generateAndSendAccessLink(opts: {
           ...linkData,
         },
         tags: [{ name: "origem", value: "admin-suporte" }],
-      }),
+      }, { ignoreCategory: true }),
       12_000,
       { success: false, error: "Tempo esgotado ao contatar o provedor de e-mail." },
     );
@@ -158,12 +146,14 @@ export async function resendAccessEmail(
   const email = await getAccountEmail(userId);
   if (!email) return { success: false, message: "Conta não encontrada." };
 
+  // Recovery, não magic link: o template de primeiro acesso manda "criar
+  // senha", e quem mais precisa de reenvio é o comprador que nunca definiu uma.
   const { link, emailSent, error } = await generateAndSendAccessLink({
-    kind: "magiclink",
+    kind: "recovery",
     userId,
     email,
     name,
-    next: "/minha-trilha",
+    next: "/resetar-senha?mode=update",
     template: "welcome",
   });
 

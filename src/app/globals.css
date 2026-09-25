@@ -278,6 +278,25 @@
   }
 }
 
+/*
+ * Telas de toque: o iOS Safari amplia a página ao focar um campo com fonte
+ * menor que 16px e só desfaz o zoom na mão. Fica fora de qualquer @layer de
+ * propósito: precisa vencer os tamanhos de fonte dos componentes.
+ * A altura mínima de 44px segue a área de toque recomendada.
+ */
+@media (pointer: coarse) {
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="hidden"]),
+  select {
+    min-height: 44px;
+  }
+}
+
 /* ---------------------------------------------------------------------------
  * Tipografia editorial
  *

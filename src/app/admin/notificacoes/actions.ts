@@ -3,7 +3,7 @@
 import { requireAdmin } from "@/lib/supabase/auth";
 import { getUsersTemplateVariables } from "@/lib/data/userVariables";
 import { interpolateUserText } from "@/lib/userVariables";
-import { sendConfiguredEmail } from "@/lib/resendServer";
+import { sendConfiguredEmailBatch, type BatchSendSummary } from "@/lib/resendServer";
 
 export async function getNotificationCampaigns() {
   const { supabase } = await requireAdmin();
@@ -119,22 +119,24 @@ export async function createNotificationCampaign(campaignData: any) {
     }
   }
 
-  let sentEmails = 0;
-  let failedEmails = 0;
+  let emailDelivery: BatchSendSummary = { sent: 0, simulated: 0, failed: 0 };
   if (campaignData.channels?.includes("email") && targetUserIds.length > 0) {
-    const { data: recipients } = await supabase
-      .from("profiles")
-      .select("id, email")
-      .in("id", targetUserIds)
-      .not("email", "is", null);
+    // `.in()` vai na URL: centenas de UUIDs de uma vez estouram o limite dela.
+    const recipients: { id: string; email: string }[] = [];
+    for (let index = 0; index < targetUserIds.length; index += 200) {
+      const { data: rows } = await supabase
+        .from("profiles")
+        .select("id, email")
+        .in("id", targetUserIds.slice(index, index + 200))
+        .not("email", "is", null);
+      recipients.push(...(rows ?? []));
+    }
 
-    // Lotes pequenos protegem o provedor e ainda permitem conteúdo individual.
-    const rows = recipients ?? [];
-    for (let index = 0; index < rows.length; index += 10) {
-      const batch = rows.slice(index, index + 10);
-      const results = await Promise.all(batch.map((recipient) => sendConfiguredEmail(supabase, {
-        to: recipient.email,
-        userId: recipient.id,
+    // Lote único do Resend: o conteúdo continua individual (variáveis de cada
+    // perfil), mas sai em chamadas de até 100 e-mails, dentro do limite de taxa.
+    emailDelivery = await sendConfiguredEmailBatch(
+      supabase,
+      {
         subject: campaignData.emailDetails?.subject || campaignData.title,
         template: campaignData.emailDetails?.template || "notification",
         data: {
@@ -144,12 +146,13 @@ export async function createNotificationCampaign(campaignData: any) {
           actionUrl: campaignData.emailDetails?.buttonUrl || "",
           actionText: campaignData.emailDetails?.buttonText || "Acessar Plataforma",
         },
-      })));
-      results.forEach((result) => result.success ? sentEmails += 1 : failedEmails += 1);
-    }
+        tags: [{ name: "origem", value: "campanha" }],
+      },
+      recipients.map((recipient) => ({ to: recipient.email, userId: recipient.id })),
+    );
   }
 
-  return { ...data, emailDelivery: { sent: sentEmails, failed: failedEmails } };
+  return { ...data, emailDelivery };
 }
 
 export async function deleteNotificationCampaign(id: string) {

@@ -53,7 +53,12 @@ type ProcessResult = {
   note?: string;
 };
 
-async function processEvent(db: DB, event: NormalizedBillingEvent, authoritative: boolean): Promise<ProcessResult> {
+async function processEvent(
+  db: DB,
+  event: NormalizedBillingEvent,
+  authoritative: boolean,
+  appOrigin?: string | null,
+): Promise<ProcessResult> {
   if (event.action === "ignore") {
     return { status: "ignored", userId: null, subscriptionId: null, enrollmentId: null, note: "Evento sem efeito sobre o acesso." };
   }
@@ -92,6 +97,7 @@ async function processEvent(db: DB, event: NormalizedBillingEvent, authoritative
         email: user.email,
         name: event.buyer.name,
         productName: target.kind === "plan" ? target.planName : target.courseTitle,
+        origin: appOrigin,
       });
     }
     return { status: "processed", userId: user.userId, subscriptionId: grant.subscriptionId, enrollmentId: grant.enrollmentId };
@@ -200,8 +206,10 @@ export async function handleBillingWebhook(input: {
   clientIp: string;
   verifySignature: (secrets: readonly string[]) => boolean;
   normalize: (payload: unknown) => NormalizedBillingEvent | null;
+  /** Origem pública que recebeu o webhook; vira a base do link de acesso no e-mail de boas-vindas. */
+  appOrigin?: string | null;
 }): Promise<WebhookOutcome> {
-  const { gateway, rawBody, clientIp, verifySignature, normalize } = input;
+  const { gateway, rawBody, clientIp, verifySignature, normalize, appOrigin } = input;
   if (!checkWebhookRate(clientIp)) return { status: 429, body: { error: "Muitas requisições." } };
   if (!getSupabaseServiceRoleKey()) {
     console.error(`[webhook:${gateway}] service role ausente.`);
@@ -266,7 +274,7 @@ export async function handleBillingWebhook(input: {
       : gateway === "hotmart"
         ? await enrichHotmartEvent(db, normalized, config)
         : { event: normalized, authoritative: false, warning: undefined };
-    const result = await processEvent(db, enriched.event, enriched.authoritative);
+    const result = await processEvent(db, enriched.event, enriched.authoritative, appOrigin);
     await db.from("gateway_webhook_events").update({
       status: result.status, user_id: result.userId, subscription_id: result.subscriptionId,
       enrollment_id: result.enrollmentId, error_message: result.note ?? null,

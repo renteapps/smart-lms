@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
     verifySignature: (secrets) =>
       verifyEduzzSignature(rawBytes, signatureHeader, secrets),
     normalize: normalizeEduzzEvent,
+    appOrigin: req.nextUrl.origin,
   });
 
   return NextResponse.json(body, { status });

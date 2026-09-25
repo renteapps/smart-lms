@@ -1,3 +1,4 @@
+import { generateFirstPartyAuthLink } from "@/lib/auth/accessLink";
 import type { DB } from "@/lib/data/types";
 import { sendConfiguredEmail } from "@/lib/resendServer";
 
@@ -5,9 +6,10 @@ import { sendConfiguredEmail } from "@/lib/resendServer";
  * E-mail de boas-vindas para quem acabou de comprar e ainda não tinha conta.
  *
  * A conta é criada sem senha, então o "link de login" é na verdade um link de
- * recuperação: é por ele que a pessoa define a primeira senha. `generateLink`
- * apenas gera a URL — quem entrega é o Resend, com o template `welcome` que já
- * existe no admin.
+ * recuperação: é por ele que a pessoa define a primeira senha. O link é de
+ * primeira parte (`/auth/confirm`) para cair direto em "definir nova senha" —
+ * ver `generateFirstPartyAuthLink`. Quem entrega é o Resend, com o template
+ * `welcome` do admin, que precisa usar `{{link_login}}` no botão.
  *
  * Falha aqui **não** derruba o provisionamento: o acesso já foi concedido, e um
  * e-mail não entregue se resolve pelo "reenviar acesso" na tela do usuário. Por
@@ -15,21 +17,20 @@ import { sendConfiguredEmail } from "@/lib/resendServer";
  */
 export async function sendPurchaseWelcomeEmail(
   db: DB,
-  input: { userId?: string; email: string; name?: string; productName: string },
+  input: { userId?: string; email: string; name?: string; productName: string; origin?: string | null },
 ): Promise<boolean> {
   try {
-    const { data, error } = await db.auth.admin.generateLink({
-      type: "recovery",
+    const { link: actionLink, error } = await generateFirstPartyAuthLink(db, {
+      kind: "recovery",
       email: input.email,
+      next: "/resetar-senha?mode=update",
+      origin: input.origin,
     });
 
-    if (error) {
-      console.error("[billing:welcome] falha ao gerar link de acesso", error.message);
+    if (!actionLink) {
+      console.error("[billing:welcome] falha ao gerar link de acesso", error);
       return false;
     }
-
-    const actionLink = data?.properties?.action_link;
-    if (!actionLink) return false;
 
     const result = await sendConfiguredEmail(db, {
       to: input.email,
