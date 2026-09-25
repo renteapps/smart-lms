@@ -142,6 +142,38 @@ ${items.map((item, index) => `  <tr>
   </tr>`).join("\n")}
 </table>`;
 
+/** Subtítulo de seção dentro do card (e-mails longos e explicativos). */
+const sectionTitle = (text: string) => `<h2 class="heading" style="margin: 36px 0 12px; font-size: 17px; line-height: 24px; font-weight: 700; color: #111827;">${text}</h2>`;
+
+/** Passos com título e explicação (versão detalhada de `steps`). */
+const detailedSteps = (items: { title: string; text: string }[]) => `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+${items.map((item, index) => `  <tr>
+    <td valign="top" width="36" style="padding: 0 0 18px;">
+      <table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr>
+        <td align="center" valign="middle" width="26" height="26" style="width: 26px; height: 26px; border-radius: 13px; background-color: {{cor_marca}}; color: #ffffff; font-size: 13px; font-weight: 700; line-height: 26px;">${index + 1}</td>
+      </tr></table>
+    </td>
+    <td valign="top" style="padding: 2px 0 18px;">
+      <p class="strong-text" style="margin: 0 0 4px; font-size: 15px; line-height: 22px; font-weight: 700; color: #111827;">${item.title}</p>
+      <p class="body-text" style="margin: 0; font-size: 14px; line-height: 22px; color: #4b5563;">${item.text}</p>
+    </td>
+  </tr>`).join("\n")}
+</table>`;
+
+/** Lista com marcador na cor da marca. */
+const bulletList = (items: string[]) => `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+${items.map((item) => `  <tr>
+    <td valign="top" width="20" style="padding: 9px 0 8px;">
+      <span style="display: inline-block; width: 6px; height: 6px; border-radius: 3px; background-color: {{cor_marca}};"></span>
+    </td>
+    <td valign="top" class="body-text" style="padding: 0 0 8px; font-size: 14px; line-height: 22px; color: #4b5563;">${item}</td>
+  </tr>`).join("\n")}
+</table>`;
+
+/** Pergunta e resposta curtas (seção de dúvidas). */
+const faqItem = (question: string, answer: string) => `<p class="strong-text" style="margin: 0 0 4px; font-size: 14px; line-height: 22px; font-weight: 700; color: #111827;">${question}</p>
+<p class="body-text" style="margin: 0 0 16px; font-size: 14px; line-height: 22px; color: #4b5563;">${answer}</p>`;
+
 const baseHtmlShell = (content: string, previewText: string) => `<!DOCTYPE html>
 <html lang="pt-BR" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
@@ -245,7 +277,7 @@ export function getDefaultTemplateDefinitions(): CustomEmailTemplate[] {
       {
         type: "welcome",
         name: "Primeiro acesso",
-        description: "Enviado quando uma compra (Hotmart/Eduzz) cria a conta do aluno, e pelo \"Reenviar acesso\" do suporte. O botão leva a criar a senha — precisa usar {{link_login}}.",
+        description: "Enviado quando a compra de um curso avulso cria a conta do aluno, e pelo \"Reenviar acesso\" do suporte. Assinatura de plano usa o modelo \"Boas-vindas do assinante\". O botão leva a criar a senha — precisa usar {{link_login}}.",
         category: "platform",
         subject: "Seu acesso está liberado — {{nome_plataforma}}",
         previewText: "Crie sua senha e comece a estudar.",
@@ -275,6 +307,80 @@ ${steps([
 ${emailButton("{{link_login}}", "Criar minha senha")}
 ${linkFallback("{{link_login}}")}
 ${infoBox(`<p class="body-text" style="margin: 0; font-size: 13px; line-height: 20px; color: #4b5563;">Por segurança, este link vale por pouco tempo e só pode ser usado uma vez. Se ele expirar, acesse <a href="{{link_plataforma}}/resetar-senha" target="_blank" style="color: {{cor_marca}};">{{link_plataforma}}/resetar-senha</a> e informe este e-mail ({{email}}) para receber um novo.</p>`)}`,
+    ),
+    template(
+      {
+        type: "plan_welcome",
+        name: "Boas-vindas do assinante",
+        description: "Enviado automaticamente quando alguém assina um plano (Hotmart/Eduzz) e ainda não tinha conta: a conta é criada com o e-mail da compra e este e-mail explica, passo a passo, como entrar pela primeira vez.",
+        category: "platform",
+        subject: "Sua assinatura está ativa — veja como fazer seu primeiro acesso",
+        previewText: "Criamos sua conta com o e-mail da compra. Falta só criar sua senha.",
+        variables: [
+          {
+            tag: "{{link_login}}",
+            label: "Link para criar a senha",
+            example: "https://www.plataformag6.com/auth/confirm?token_hash=…",
+            description: "Link pessoal do primeiro acesso. Expira em pouco tempo e só funciona uma vez — obrigatório no botão.",
+          },
+          {
+            tag: "{{nome_plano}}",
+            label: "Plano assinado",
+            example: "Plano Anual",
+            description: "Nome do plano comprado, como cadastrado em Planos.",
+          },
+          {
+            tag: "{{validade_plano}}",
+            label: "Validade do acesso",
+            example: "até 25/09/2027",
+            description: "Até quando o acesso está pago, ou \"enquanto a assinatura estiver ativa\" quando não há data.",
+          },
+        ],
+      },
+      `${eyebrow("Assinatura confirmada")}
+${heading("Boas-vindas, {{nome}}! Sua assinatura está ativa.")}
+${paragraph("Obrigado por assinar o <strong class=\"strong-text\" style=\"color: #111827;\">{{nome_plano}}</strong>. Como você ainda não tinha cadastro na plataforma {{nome_plataforma}}, <strong class=\"strong-text\" style=\"color: #111827;\">nós criamos sua conta automaticamente</strong> usando o e-mail informado na compra.")}
+${paragraph("Para entrar pela primeira vez, falta só uma coisa: <strong class=\"strong-text\" style=\"color: #111827;\">criar a sua senha</strong>. Abaixo explicamos tudo, passo a passo.")}
+${infoBox(`${infoLabel("Seu plano")}${infoValue("{{nome_plano}}")}
+<p class="muted-text" style="margin: 12px 0 0; font-size: 13px; line-height: 20px; color: #6b7280;">Acesso liberado <strong class="strong-text" style="color: #111827;">{{validade_plano}}</strong></p>
+<p class="muted-text" style="margin: 4px 0 0; font-size: 13px; line-height: 20px; color: #6b7280;">Seu login é este e-mail: <strong class="strong-text" style="color: #111827;">{{email}}</strong></p>`)}
+${emailButton("{{link_login}}", "Criar minha senha e entrar")}
+${linkFallback("{{link_login}}")}
+${infoBox(`<p class="body-text" style="margin: 0; font-size: 13px; line-height: 20px; color: #4b5563;"><strong class="strong-text" style="color: #111827;">Importante:</strong> este link é pessoal, vale por pouco tempo e só pode ser usado uma vez. Se ele expirar, não tem problema — veja em &ldquo;Dúvidas comuns&rdquo;, no fim deste e-mail, como pedir um novo em segundos.</p>`)}
+${sectionTitle("Seu primeiro acesso, passo a passo")}
+${detailedSteps([
+  {
+    title: "Crie sua senha",
+    text: "Clique no botão &ldquo;Criar minha senha e entrar&rdquo;. Você vai para uma página segura da plataforma, onde escolhe a senha — ela precisa ter pelo menos 8 caracteres, com letras e números. Depois de salvar, você já entra na sua conta.",
+  },
+  {
+    title: "Complete seu cadastro",
+    text: "Logo em seguida pedimos alguns dados que a loja de pagamento não nos envia: nome completo, nome de usuário, telefone, data de nascimento, gênero e cargo. É obrigatório, leva cerca de um minuto e só acontece uma vez.",
+  },
+  {
+    title: "Monte sua trilha de estudos",
+    text: "Em <a href=\"{{link_plataforma}}/minha-trilha\" target=\"_blank\" style=\"color: {{cor_marca}};\">Minha Trilha</a>, responda algumas perguntas rápidas sobre seus objetivos e o tempo que você tem para estudar. Com isso a plataforma organiza uma trilha personalizada e mostra, a cada dia, qual é o seu próximo passo.",
+  },
+  {
+    title: "Comece a estudar",
+    text: "Pronto! A página inicial mostra onde você parou e o que estudar agora. Você pode seguir a trilha ou explorar os cursos livremente, no seu ritmo.",
+  },
+])}
+${sectionTitle("Como entrar nas próximas vezes")}
+${paragraph("Acesse <a href=\"{{link_plataforma}}/acessar\" target=\"_blank\" style=\"color: {{cor_marca}};\">{{link_plataforma}}/acessar</a> e entre com o seu e-mail (<strong class=\"strong-text\" style=\"color: #111827;\">{{email}}</strong>) e a senha que você criou. Dica: salve esse endereço nos favoritos do navegador ou na tela inicial do celular.")}
+${sectionTitle("O que você encontra na plataforma")}
+${bulletList([
+  "<strong class=\"strong-text\" style=\"color: #111827;\">Cursos e aulas</strong> liberados pelo seu plano, com o seu progresso salvo automaticamente.",
+  "<strong class=\"strong-text\" style=\"color: #111827;\">Trilha personalizada</strong>, que organiza o que estudar e em que ordem.",
+  "<strong class=\"strong-text\" style=\"color: #111827;\">Agentes de IA</strong> para tirar dúvidas, praticar e aplicar o conteúdo em situações reais.",
+  "<strong class=\"strong-text\" style=\"color: #111827;\">Anotações</strong> nas aulas, para revisar depois.",
+  "<strong class=\"strong-text\" style=\"color: #111827;\">Certificados</strong> ao concluir os cursos, com validação pública.",
+])}
+${sectionTitle("Dúvidas comuns")}
+${faqItem("O link expirou ou não abre. E agora?", "Acesse <a href=\"{{link_plataforma}}/resetar-senha\" target=\"_blank\" style=\"color: {{cor_marca}};\">{{link_plataforma}}/resetar-senha</a>, informe o e-mail {{email}} e enviaremos um novo link na hora. Confira também a caixa de spam.")}
+${faqItem("Recebi outro e-mail sobre a compra. Qual devo usar?", "O e-mail da plataforma de pagamento é o comprovante da sua compra. O acesso aos conteúdos é sempre por aqui, na plataforma {{nome_plataforma}}, com o e-mail e a senha que você criar.")}
+${faqItem("Comprei com um e-mail e quero usar outro.", "Sua conta foi criada com o e-mail usado na compra. Se precisar trocar, é só responder este e-mail que ajudamos você.")}
+${faqItem("Já criei minha senha. Preciso fazer algo com este e-mail?", "Não. Guarde-o só como referência — daqui em diante, basta entrar pelo endereço da plataforma.")}`,
     ),
     template(
       {

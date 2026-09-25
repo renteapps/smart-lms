@@ -1,5 +1,6 @@
 export type EmailTemplateType =
   | "welcome"
+  | "plan_welcome"
   | "password_reset"
   | "course_enrollment"
   | "certificate"

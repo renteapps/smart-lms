@@ -756,6 +756,7 @@ export default function ResendOverviewPage() {
  className="w-full"
  >
                   <option value="welcome">🎉 Boas-vindas (Cadastro)</option>
+                  <option value="plan_welcome">🌟 Boas-vindas do assinante</option>
                   <option value="password_reset">🔒 Recuperação de Senha</option>
                   <option value="course_enrollment">🎓 Matrícula em Curso</option>
                   <option value="certificate">🏆 Certificado de Conclusão</option>

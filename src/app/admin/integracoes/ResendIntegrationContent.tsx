@@ -1382,7 +1382,8 @@ export function ResendIntegrationContent() {
                 <div className="text-xs">
                   <p className="font-bold text-foreground">Boas-vindas ao Aluno</p>
                   <p className="text-muted mt-0.5">
-                    Enviado quando uma compra (Hotmart/Eduzz) cria a conta do aluno, com o link para ele definir a senha.
+                    Enviado quando uma compra (Hotmart/Eduzz) cria a conta do aluno, com o link para ele definir a senha:
+                    &ldquo;Boas-vindas do assinante&rdquo; para planos e &ldquo;Primeiro acesso&rdquo; para cursos avulsos.
                     O cadastro pelo site usa o e-mail de confirmação do Supabase.
                   </p>
                   <p className="mt-1 font-semibold text-warning">Desligado, quem compra não recebe o link de acesso.</p>
@@ -1688,6 +1689,7 @@ export function ResendIntegrationContent() {
  className="w-full"
  >
                     <option value="welcome">🎉 Boas-vindas (Cadastro)</option>
+                    <option value="plan_welcome">🌟 Boas-vindas do assinante</option>
                     <option value="password_reset">🔒 Recuperação de Senha</option>
                     <option value="course_enrollment">🎓 Matrícula em Curso</option>
                     <option value="certificate">🏆 Certificado de Conclusão</option>

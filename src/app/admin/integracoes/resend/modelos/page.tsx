@@ -34,6 +34,7 @@ import {
 
 const TEMPLATE_ICONS: Record<EmailTemplateType, LucideIcon> = {
   welcome: Mail,
+  plan_welcome: Sparkles,
   password_reset: Shield,
   course_enrollment: Sparkles,
   certificate: Award,

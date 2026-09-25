@@ -97,6 +97,9 @@ export async function findUserByEmail(db: DB, email: string): Promise<string | n
 
 export type ResolvedUser = { userId: string; created: boolean; email: string };
 
+/** Valor de `app_metadata.provisioned_by` das contas criadas pelo webhook de compra. */
+export const GATEWAY_PROVISIONED = "gateway";
+
 export async function findContractOwner(
   db: DB,
   gateway: BillingGateway,
@@ -142,6 +145,10 @@ export async function resolveOrCreateUser(db: DB, buyer: NormalizedBillingEvent[
   const { data: created, error: createError } = await db.auth.admin.createUser({
     email,
     email_confirm: true,
+    // Marca a conta nascida de uma compra: é o que permite reenviar as
+    // boas-vindas se o primeiro processamento falhou depois de criá-la
+    // (ver `pendingFirstAccessEmail`).
+    app_metadata: { provisioned_by: GATEWAY_PROVISIONED },
     user_metadata: {
       full_name: buyer.name ?? null,
       phone: buyer.phone ?? null,

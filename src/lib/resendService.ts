@@ -33,6 +33,7 @@ export const DEFAULT_RESEND_CONFIG: ResendConfig = {
 /** Nome amigável de cada categoria, para a mensagem de envio bloqueado. */
 const CATEGORY_LABELS: Partial<Record<EmailTemplateType, string>> = {
   welcome: "Boas-vindas",
+  plan_welcome: "Boas-vindas",
   password_reset: "Recuperação de Senha",
   course_enrollment: "Matrícula em Cursos",
   certificate: "Certificado",
@@ -56,6 +57,8 @@ export function emailCategoryBlockReason(
   const { platform, notifications } = categories;
   const enabled: Record<EmailTemplateType, boolean> = {
     welcome: platform.welcome,
+    // Mesmo liga/desliga das boas-vindas: é o e-mail de acesso do assinante novo.
+    plan_welcome: platform.welcome,
     password_reset: platform.passwordReset,
     course_enrollment: platform.courseEnrollment,
     certificate: platform.certificateIssued,

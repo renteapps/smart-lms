@@ -16,7 +16,7 @@ import {
 } from "./provisioning";
 import { loadGatewayWebhookConfig, type GatewayWebhookConfig } from "./secrets";
 import type { BillingGateway, NormalizedBillingEvent } from "./types";
-import { sendPurchaseWelcomeEmail } from "./welcome";
+import { pendingFirstAccessEmail, sendPurchaseWelcomeEmail } from "./welcome";
 
 export class PermanentWebhookError extends Error {
   constructor(message: string) { super(message); this.name = "PermanentWebhookError"; }
@@ -91,12 +91,18 @@ async function processEvent(
       planId: target.kind === "plan" ? target.planId : null,
       courseId: target.kind === "course" ? target.courseId : null,
     });
-    if (user.created) {
+    // Conta nova recebe as boas-vindas; conta que já existia só recebe se é uma
+    // conta de compra que ainda não teve o primeiro acesso (retentativa depois
+    // de falha) — ver `pendingFirstAccessEmail`.
+    const welcomeTo = user.created ? user.email : await pendingFirstAccessEmail(db, user.userId);
+    if (welcomeTo) {
       await sendPurchaseWelcomeEmail(db, {
         userId: user.userId,
-        email: user.email,
+        email: welcomeTo,
         name: event.buyer.name,
         productName: target.kind === "plan" ? target.planName : target.courseTitle,
+        productKind: target.kind,
+        accessEndsAt: grant.accessEndsAt,
         origin: appOrigin,
       });
     }

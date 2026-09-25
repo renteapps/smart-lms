@@ -16,7 +16,7 @@ vi.mock("@/lib/supabase/env", () => ({ getSupabaseServiceRoleKey: vi.fn(() => "s
 vi.mock("./secrets", () => ({
   loadGatewayWebhookConfig: vi.fn(async () => ({ enabled: true, secrets: ["secret"], producerId: "producer-1" })),
 }));
-vi.mock("./welcome", () => ({ sendPurchaseWelcomeEmail: vi.fn() }));
+vi.mock("./welcome", () => ({ sendPurchaseWelcomeEmail: vi.fn(), pendingFirstAccessEmail: vi.fn(async () => null) }));
 vi.mock("./hotmartApi", async () => {
   const actual = await vi.importActual<typeof import("./hotmartApi")>("./hotmartApi");
   return { ...actual, getHotmartAccessToken: vi.fn(), getHotmartSubscriberSnapshot: vi.fn() };
