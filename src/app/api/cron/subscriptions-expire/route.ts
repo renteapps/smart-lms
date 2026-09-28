@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { authorizeCronRequest } from "@/lib/cronAuth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServiceRoleKey } from "@/lib/supabase/env";
-import { safeEquals } from "@/lib/billing/signature";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET;
-  const authorization = request.headers.get("authorization");
-  if (!cronSecret || !safeEquals(authorization ?? "", `Bearer ${cronSecret}`)) {
-    return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
-  }
+const PATH = "/api/cron/subscriptions-expire";
+
+/** Rotina diária (QStash, 00:15 em Brasília — ver src/lib/cronJobs.ts). */
+async function handle(request: NextRequest) {
+  const auth = await authorizeCronRequest(request, PATH);
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
   if (!getSupabaseServiceRoleKey()) {
     return NextResponse.json({ error: "Service role ausente." }, { status: 503 });
   }
@@ -20,3 +20,8 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: "Falha ao expirar assinaturas." }, { status: 503 });
   return NextResponse.json({ ok: true, expired: data ?? 0 });
 }
+
+/** QStash chama por POST, assinado. */
+export const POST = handle;
+/** Disparo manual: `curl -H "Authorization: Bearer $CRON_SECRET" …`. */
+export const GET = handle;

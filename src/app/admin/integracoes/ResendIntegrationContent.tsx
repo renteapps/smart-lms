@@ -1510,6 +1510,29 @@ export function ResendIntegrationContent() {
                   </p>
                 </div>
               </label>
+
+              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-background-secondary hover:bg-surface transition-colors cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={config.categories.platform.renewalNotices ?? true}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      categories: {
+                        ...config.categories,
+                        platform: { ...config.categories.platform, renewalNotices: e.target.checked },
+                      },
+                    })
+                  }
+                  className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-primary"
+                />
+                <div className="text-xs">
+                  <p className="font-bold text-foreground">Vencimento & Expiração</p>
+                  <p className="text-muted mt-0.5">
+                    Automático: aviso 7 dias antes da renovação ou do fim do acesso, e aviso quando a assinatura expira sem renovação.
+                  </p>
+                </div>
+              </label>
             </div>
           </div>
 
@@ -1632,6 +1655,29 @@ export function ResendIntegrationContent() {
                   <p className="mt-1 font-semibold text-warning">Ainda não é disparado automaticamente — só em campanha manual.</p>
                 </div>
               </label>
+
+              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border/70 bg-background-secondary hover:bg-surface transition-colors cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={config.categories.notifications.winback ?? true}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      categories: {
+                        ...config.categories,
+                        notifications: { ...config.categories.notifications, winback: e.target.checked },
+                      },
+                    })
+                  }
+                  className="w-4 h-4 mt-0.5 rounded border-border text-accent focus:ring-primary"
+                />
+                <div className="text-xs">
+                  <p className="font-bold text-foreground">Reconquista de Assinantes</p>
+                  <p className="text-muted mt-0.5">
+                    Automático: 4 e-mails nos dias 3, 10, 20 e 30 após o fim do acesso. Para sozinha se a pessoa renovar ou se descadastrar.
+                  </p>
+                </div>
+              </label>
             </div>
           </div>
 
@@ -1695,6 +1741,13 @@ export function ResendIntegrationContent() {
                     <option value="certificate">🏆 Certificado de Conclusão</option>
                     <option value="subscription">⭐ Assinatura Confirmada</option>
                     <option value="org_invite">🏢 Convite de Empresa</option>
+                    <option value="renewal_reminder">🔁 Lembrete de renovação</option>
+                    <option value="expiration_warning">⏳ Aviso de vencimento</option>
+                    <option value="subscription_expired">⌛ Assinatura expirada</option>
+                    <option value="winback_1">💌 Reconquista 1</option>
+                    <option value="winback_2">💌 Reconquista 2</option>
+                    <option value="winback_3">💌 Reconquista 3</option>
+                    <option value="winback_4">💌 Reconquista 4</option>
                     <option value="notification">📢 Notificação / Comunicado</option>
                     <option value="inactivity">⏱️ Reengajamento (Ausente)</option>
                   </NativeSelect>

@@ -7,12 +7,13 @@ import { OpenRouterIntegrationContent } from "../OpenRouterIntegrationContent";
 import { PandaVideoIntegrationContent } from "../PandaVideoIntegrationContent";
 import { EduzzIntegrationContent } from "../EduzzIntegrationContent";
 import { HotmartIntegrationContent } from "../HotmartIntegrationContent";
+import { UpstashSchedulesContent } from "../UpstashSchedulesContent";
 
 export default function IntegracaoDetalhePage() {
   const params = useParams();
   const slug = params.slug as string;
 
-  const KNOWN_SLUGS = ["eduzz", "hotmart", "resend", "openrouter", "pandavideo"];
+  const KNOWN_SLUGS = ["eduzz", "hotmart", "resend", "openrouter", "pandavideo", "agendamentos"];
   if (!KNOWN_SLUGS.includes(slug)) {
     notFound();
   }
@@ -27,6 +28,8 @@ export default function IntegracaoDetalhePage() {
         <PandaVideoIntegrationContent />
       ) : slug === "eduzz" ? (
         <EduzzIntegrationContent />
+      ) : slug === "agendamentos" ? (
+        <UpstashSchedulesContent />
       ) : (
         <HotmartIntegrationContent />
       )}

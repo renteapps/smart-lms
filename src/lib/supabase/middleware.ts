@@ -58,6 +58,8 @@ export async function updateSession(request: NextRequest) {
     "/diagnostico",
     // Convite de empresa: quem ainda não tem conta abre o link antes de se cadastrar.
     "/convite/",
+    // Descadastro de e-mail: aberto direto do e-mail, sem login (o token é a autorização).
+    "/descadastrar",
     "/api/",
     /*
      * Quem clica num link de recuperação de senha, confirmação de cadastro ou
@@ -167,6 +169,7 @@ export async function updateSession(request: NextRequest) {
     "/auth/",
     "/api/",
     "/certificados/",
+    "/descadastrar",
   ];
   const isCompletionExempt = isAdminRoute
     || completionExemptPrefixes.some((prefix) => request.nextUrl.pathname.startsWith(prefix));

@@ -48,6 +48,13 @@ export default async function IntegracoesPage() {
       logo: "https://pandavideo.com/favicon.ico",
       badge: "Vídeos",
     },
+    {
+      name: "Agendamentos (Upstash)",
+      slug: "agendamentos",
+      description: "Rotinas automáticas via QStash: expirar assinaturas e enviar os e-mails de vencimento e reconquista.",
+      logo: "https://upstash.com/icons/favicon-32x32.png",
+      badge: "Automação",
+    },
   ];
 
   // Mescla a base com o status real do banco

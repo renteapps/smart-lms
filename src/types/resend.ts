@@ -5,6 +5,13 @@ export type EmailTemplateType =
   | "course_enrollment"
   | "certificate"
   | "subscription"
+  | "renewal_reminder"
+  | "expiration_warning"
+  | "subscription_expired"
+  | "winback_1"
+  | "winback_2"
+  | "winback_3"
+  | "winback_4"
   | "org_invite"
   | "notification"
   | "inactivity"
@@ -37,6 +44,8 @@ export interface PlatformEmailCategories {
   certificateIssued: boolean;
   subscriptionConfirmation: boolean;
   orgInvite: boolean;
+  /** Aviso de vencimento (7 dias antes) e aviso de assinatura expirada. */
+  renewalNotices: boolean;
 }
 
 export interface NotificationEmailCategories {
@@ -44,6 +53,8 @@ export interface NotificationEmailCategories {
   communityReplies: boolean;
   broadcasts: boolean;
   inactivityReengagement: boolean;
+  /** Sequência de reconquista (4 e-mails em 30 dias) para quem não renovou. */
+  winback: boolean;
 }
 
 export interface ResendConfig {
@@ -70,6 +81,8 @@ export interface EmailSendPayload {
   text?: string;
   data?: Record<string, unknown>;
   tags?: { name: string; value: string }[];
+  /** Cabeçalhos extras (ex.: List-Unsubscribe nos e-mails de reconquista). */
+  headers?: Record<string, string>;
 }
 
 export interface EmailSendResponse {

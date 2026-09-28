@@ -288,7 +288,7 @@ export async function syncSubscriptionSnapshot(
     p_user_id: context.userId ?? null,
     p_plan_id: context.planId ?? null,
     p_course_id: context.courseId ?? null,
-    p_status: event.subscription?.localStatus ?? "pending",
+    p_status: event.subscription?.localStatus ?? (event.action === "grant" ? "active" : "pending"),
     p_gateway_status: event.subscription?.gatewayStatus ?? null,
     p_current_period_end: context.currentPeriodEnd ?? effectiveAccessEnd(event),
     p_amount: context.amount ?? event.transaction?.amount ?? event.subscription?.amount ?? null,

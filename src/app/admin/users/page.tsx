@@ -1,184 +1,45 @@
-import Link from "next/link";
-import { UserRound } from "lucide-react";
-import { Avatar, Card, Label, SearchField, Table, buttonVariants } from "@heroui/react";
-import { AdminEmptyState, PageHeader, StatusBadge } from "@/components/ui/editorial";
+import { PageHeader } from "@/components/ui/editorial";
 import { createClient } from "@/lib/supabase/server";
+import {
+  getAdminUsers,
+  getAdminUsersMetrics,
+  getAdminUsersFilterOptions,
+  normalizeAdminUserFilters,
+} from "@/lib/data/usersAdmin";
+import { AdminUsersClient } from "./AdminUsersClient";
 
-const initials = (name: string) =>
-  name
-    .split(" ")
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("");
-
-export default async function AdminUsers({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const params = await searchParams;
-  const q = params.q || "";
+export default async function AdminUsers({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const rawParams = await searchParams;
+  const filters = normalizeAdminUserFilters(rawParams);
 
   const supabase = await createClient();
 
-  let query = supabase
-    .from("profiles")
-    .select("id, full_name, email, role, status, last_access_at, created_at");
-
-  if (q) {
-    query = query.or(`full_name.ilike.%${q}%,email.ilike.%${q}%`);
-  }
-
-  const { data: profiles, error } = await query.order('created_at', { ascending: false });
-
-  if (error) {
-    console.error("Erro ao buscar usuários", error);
-  }
-
-  const users = (profiles || []).map((user) => {
-    const roleDisplay = user.role === "admin" ? "Administrador" : user.role === "instructor" ? "Instrutor" : "Aluno";
-    const statusDisplay = user.status === "active" ? "Ativo" : "Inativo";
-    const lastSeenStr = user.last_access_at 
-      ? new Date(user.last_access_at).toLocaleDateString("pt-BR", { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-      : "Nunca";
-    
-    // Progresso mockado, ideal seria buscar do Supabase por aluno
-    const progress = user.role === "student" ? "Em andamento" : "—";
-
-    return {
-      id: user.id,
-      name: user.full_name || "Desconhecido",
-      email: user.email || "",
-      role: roleDisplay,
-      status: statusDisplay,
-      progress: progress,
-      lastSeen: lastSeenStr,
-    };
-  });
-
-  const isEmpty = users.length === 0;
+  const [{ users, totalCount, totalPages }, metrics, filterOptions] = await Promise.all([
+    getAdminUsers(supabase, filters),
+    getAdminUsersMetrics(supabase),
+    getAdminUsersFilterOptions(supabase),
+  ]);
 
   return (
     <div className="space-y-7">
       <PageHeader
         eyebrow="Pessoas"
         title="Usuários"
-        description="Acompanhe acesso, papel e engajamento das pessoas na plataforma."
+        description="Acompanhe acesso, papel, matrículas e assinaturas das pessoas na plataforma."
       />
 
-      <Card>
-        <Card.Header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <form action="/admin/users" method="GET" className="w-full sm:max-w-md">
-            <SearchField defaultValue={q} aria-label="Buscar usuário">
-              <Label className="sr-only">Buscar usuário</Label>
-              <SearchField.Group>
-                <SearchField.SearchIcon />
-                <SearchField.Input name="q" placeholder="Buscar por nome ou e-mail" />
-                <SearchField.ClearButton />
-              </SearchField.Group>
-            </SearchField>
-          </form>
-          <p className="text-xs text-muted">
-            <strong className="font-semibold text-foreground">{profiles?.length || 0}</strong> pessoas cadastradas
-          </p>
-        </Card.Header>
-
-        <Card.Content className="px-0 pb-0">
-          {isEmpty ? (
-            <AdminEmptyState
-              icon={UserRound}
-              title="Nenhuma pessoa encontrada"
-              description="Ajuste sua busca para encontrar quem você procura."
-              action={
-                q ? (
-                  <Link href="/admin/users" className={buttonVariants({ variant: "secondary", size: "sm" })}>
-                    Limpar busca
-                  </Link>
-                ) : undefined
-              }
-            />
-          ) : (
-            <>
-              <div className="hidden md:block">
-                <Table.Root>
-                  <Table.ScrollContainer>
-                    <Table.Content aria-label="Usuários da plataforma">
-                      <Table.Header>
-                        <Table.Column isRowHeader>Pessoa</Table.Column>
-                        <Table.Column>Papel</Table.Column>
-                        <Table.Column>Progresso</Table.Column>
-                        <Table.Column>Status</Table.Column>
-                        <Table.Column>Último acesso</Table.Column>
-                      </Table.Header>
-                      <Table.Body>
-                        {users.map((user) => (
-                          <Table.Row key={user.id} id={user.id}>
-                            <Table.Cell>
-                              <Link href={`/admin/users/${user.id}`} className="group flex items-center gap-3">
-                                <Avatar size="sm" color="accent">
-                                  <Avatar.Fallback>{initials(user.name)}</Avatar.Fallback>
-                                </Avatar>
-                                <span className="block">
-                                  <span className="block text-sm font-semibold text-foreground group-hover:text-accent">
-                                    {user.name}
-                                  </span>
-                                  <span className="mt-0.5 block text-xs text-muted">{user.email}</span>
-                                </span>
-                              </Link>
-                            </Table.Cell>
-                            <Table.Cell>{user.role}</Table.Cell>
-                            <Table.Cell className="font-semibold text-foreground">{user.progress}</Table.Cell>
-                            <Table.Cell>
-                              <StatusBadge tone={user.status === "Ativo" ? "positive" : "negative"}>{user.status}</StatusBadge>
-                            </Table.Cell>
-                            <Table.Cell className="text-muted">{user.lastSeen}</Table.Cell>
-                          </Table.Row>
-                        ))}
-                      </Table.Body>
-                    </Table.Content>
-                  </Table.ScrollContainer>
-                </Table.Root>
-              </div>
-
-              <ul className="divide-y divide-separator md:hidden">
-                {users.map((user) => (
-                  <li key={user.id} className="p-4">
-                    <div className="flex items-start gap-3">
-                      <Avatar size="sm" color="accent">
-                        <Avatar.Fallback>{initials(user.name)}</Avatar.Fallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <Link href={`/admin/users/${user.id}`} className="block font-semibold leading-5 text-foreground">
-                          {user.name}
-                        </Link>
-                        <p className="mt-1 truncate text-xs text-muted">{user.email}</p>
-                      </div>
-                      <StatusBadge tone={user.status === "Ativo" ? "positive" : "negative"}>{user.status}</StatusBadge>
-                    </div>
-
-                    <dl className="mt-4 grid grid-cols-3 gap-3 rounded-lg bg-background-secondary p-3 text-center text-xs">
-                      <div>
-                        <dt className="text-muted">Papel</dt>
-                        <dd className="mt-1 font-semibold text-foreground">{user.role}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-muted">Progresso</dt>
-                        <dd className="mt-1 font-semibold text-foreground">{user.progress}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-muted">Acesso</dt>
-                        <dd className="mt-1 truncate font-semibold text-foreground">{user.lastSeen.split(",")[0]}</dd>
-                      </div>
-                    </dl>
-
-                    <div className="mt-4 flex justify-end">
-                      <Link href={`/admin/users/${user.id}`} className={buttonVariants({ variant: "secondary", size: "sm" })}>
-                        Gerenciar
-                      </Link>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </Card.Content>
-      </Card>
+      <AdminUsersClient
+        users={users}
+        metrics={metrics}
+        filterOptions={filterOptions}
+        currentFilters={filters}
+        totalCount={totalCount}
+        totalPages={totalPages}
+      />
     </div>
   );
 }

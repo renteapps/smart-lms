@@ -24,6 +24,9 @@ import {
   X,
   RefreshCw,
   Building2,
+  CalendarClock,
+  CalendarX,
+  Heart,
 } from "lucide-react";
 import { CustomEmailTemplate, EmailTemplateType } from "@/types/resend";
 import {
@@ -40,6 +43,13 @@ const TEMPLATE_ICONS: Record<EmailTemplateType, LucideIcon> = {
   certificate: Award,
   subscription: CreditCard,
   org_invite: Building2,
+  renewal_reminder: CalendarClock,
+  expiration_warning: CalendarClock,
+  subscription_expired: CalendarX,
+  winback_1: Heart,
+  winback_2: Heart,
+  winback_3: Heart,
+  winback_4: Heart,
   inactivity: Clock,
   notification: Bell,
   test: Send,

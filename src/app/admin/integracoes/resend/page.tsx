@@ -762,6 +762,13 @@ export default function ResendOverviewPage() {
                   <option value="certificate">🏆 Certificado de Conclusão</option>
                   <option value="subscription">⭐ Assinatura Confirmada</option>
                   <option value="org_invite">🏢 Convite de Empresa</option>
+                  <option value="renewal_reminder">🔁 Lembrete de renovação</option>
+                  <option value="expiration_warning">⏳ Aviso de vencimento</option>
+                  <option value="subscription_expired">⌛ Assinatura expirada</option>
+                  <option value="winback_1">💌 Reconquista 1</option>
+                  <option value="winback_2">💌 Reconquista 2</option>
+                  <option value="winback_3">💌 Reconquista 3</option>
+                  <option value="winback_4">💌 Reconquista 4</option>
                   <option value="notification">📢 Notificação Geral</option>
                   <option value="inactivity">⏱️ Reengajamento</option>
                 </NativeSelect>

@@ -163,7 +163,7 @@ ${items.map((item, index) => `  <tr>
 /** Lista com marcador na cor da marca. */
 const bulletList = (items: string[]) => `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
 ${items.map((item) => `  <tr>
-    <td valign="top" width="20" style="padding: 9px 0 8px;">
+    <td valign="top" width="20" style="padding: 8px 0 8px; font-size: 0; line-height: 0;">
       <span style="display: inline-block; width: 6px; height: 6px; border-radius: 3px; background-color: {{cor_marca}};"></span>
     </td>
     <td valign="top" class="body-text" style="padding: 0 0 8px; font-size: 14px; line-height: 22px; color: #4b5563;">${item}</td>
@@ -173,6 +173,26 @@ ${items.map((item) => `  <tr>
 /** Pergunta e resposta curtas (seção de dúvidas). */
 const faqItem = (question: string, answer: string) => `<p class="strong-text" style="margin: 0 0 4px; font-size: 14px; line-height: 22px; font-weight: 700; color: #111827;">${question}</p>
 <p class="body-text" style="margin: 0 0 16px; font-size: 14px; line-height: 22px; color: #4b5563;">${answer}</p>`;
+
+/** Linha de descadastro dos e-mails de reconquista (winback). */
+const unsubscribeNote = () => `<p class="muted-text" style="margin: 28px 0 0; font-size: 12px; line-height: 18px; color: #9ca3af;">Não quer mais receber estes lembretes? <a href="{{link_descadastro}}" target="_blank" style="color: #9ca3af; text-decoration: underline;">Descadastrar</a>.</p>`;
+
+/** Variáveis dos e-mails de vencimento/expiração, preenchidas por lifecycleEmails.ts. */
+const LIFECYCLE_VARIABLES: EmailTemplateVariable[] = [
+  { tag: "{{nome_plano}}", label: "Plano", example: "Plano Anual", description: "Plano da assinatura." },
+  { tag: "{{data_vencimento}}", label: "Data de vencimento", example: "25/09/2027", description: "Data de renovação ou de fim do acesso (horário de Brasília)." },
+  { tag: "{{link_renovacao}}", label: "Link de renovação", example: "https://pay.hotmart.com/…", description: "Checkout cadastrado no plano (Planos → Checkout). Sem ele, a página da plataforma." },
+  { tag: "{{nome_gateway}}", label: "Plataforma de pagamento", example: "Hotmart", description: "Onde a assinatura é cobrada (Hotmart, Eduzz ou a própria plataforma)." },
+  { tag: "{{resumo_progresso}}", label: "Resumo do progresso", example: "Você já concluiu 23 aulas — a última foi em “Liderança na Prática”.", description: "Frase pronta com o progresso do aluno (neutra quando ainda não há aulas concluídas)." },
+];
+
+/** Variáveis da sequência de reconquista. */
+const WINBACK_VARIABLES: EmailTemplateVariable[] = [
+  ...LIFECYCLE_VARIABLES,
+  { tag: "{{resumo_novidades}}", label: "Resumo das novidades", example: "Desde que seu acesso terminou, entraram 12 aulas novas na plataforma.", description: "Frase pronta com o que foi publicado depois do fim do acesso (neutra quando não há novidades)." },
+  { tag: "{{dias_sem_acesso}}", label: "Dias sem acesso", example: "20", description: "Dias desde o fim do acesso." },
+  { tag: "{{link_descadastro}}", label: "Link de descadastro", example: "https://www.plataformag6.com/descadastrar?…", description: "Link pessoal para parar de receber a sequência de reconquista. Obrigatório nestes e-mails." },
+];
 
 const baseHtmlShell = (content: string, previewText: string) => `<!DOCTYPE html>
 <html lang="pt-BR" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -467,6 +487,157 @@ ${paragraph("Confirmamos sua assinatura. Todo o conteúdo incluído no seu plano
 ${infoBox(`${infoLabel("Plano")}${infoValue("{{nome_plano}}")}`)}
 ${emailButton("{{link_login}}", "Acessar a plataforma")}
 ${linkFallback("{{link_login}}")}`,
+    ),
+    template(
+      {
+        type: "renewal_reminder",
+        name: "Lembrete de renovação",
+        description: "Automático, 7 dias antes da renovação de quem tem cobrança recorrente ativa na Hotmart/Eduzz. Avisa a data e pede para conferir o cartão.",
+        category: "platform",
+        subject: "Sua assinatura renova em {{data_vencimento}}",
+        previewText: "Nada a fazer — só confira se o cartão cadastrado está em dia.",
+        variables: LIFECYCLE_VARIABLES,
+      },
+      `${eyebrow("Renovação automática")}
+${heading("Sua assinatura renova em {{data_vencimento}}")}
+${paragraph("Oi, {{nome}}! Passando para avisar que o seu <strong class=\"strong-text\" style=\"color: #111827;\">{{nome_plano}}</strong> será renovado automaticamente em <strong class=\"strong-text\" style=\"color: #111827;\">{{data_vencimento}}</strong>, pela {{nome_gateway}}. Você não precisa fazer nada: o acesso continua sem interrupção.")}
+${infoBox(`${infoLabel("Plano")}${infoValue("{{nome_plano}}")}
+<p class="muted-text" style="margin: 12px 0 0; font-size: 13px; line-height: 20px; color: #6b7280;">Renovação em <strong class="strong-text" style="color: #111827;">{{data_vencimento}}</strong> · cobrança pela {{nome_gateway}}</p>`)}
+${sectionTitle("Para a renovação dar certo")}
+${bulletList([
+  "Confira se o cartão cadastrado na {{nome_gateway}} está válido e com limite disponível.",
+  "Trocou de cartão? Atualize os dados direto na {{nome_gateway}}, na área das suas compras e assinaturas.",
+  "Se a cobrança não for aprovada, a {{nome_gateway}} tenta de novo nos dias seguintes — e, se ainda assim não passar, avisamos você por aqui.",
+])}
+${sectionTitle("Seu progresso até aqui")}
+${paragraph("{{resumo_progresso}}")}
+${emailButton("{{link_plataforma}}", "Continuar estudando")}
+${linkFallback("{{link_plataforma}}")}`,
+    ),
+    template(
+      {
+        type: "expiration_warning",
+        name: "Aviso de vencimento",
+        description: "Automático, 7 dias antes do fim do acesso de quem cancelou a renovação ou tem plano sem cobrança recorrente. Convida a renovar pelo checkout do plano.",
+        category: "platform",
+        subject: "Seu acesso termina em {{data_vencimento}}",
+        previewText: "Renove para continuar de onde parou.",
+        variables: LIFECYCLE_VARIABLES,
+      },
+      `${eyebrow("Aviso de vencimento")}
+${heading("Seu acesso termina em {{data_vencimento}}")}
+${paragraph("Oi, {{nome}}! O seu <strong class=\"strong-text\" style=\"color: #111827;\">{{nome_plano}}</strong> vence em <strong class=\"strong-text\" style=\"color: #111827;\">{{data_vencimento}}</strong> e não tem renovação automática. Depois dessa data, os cursos, a sua trilha e os agentes de IA ficam bloqueados.")}
+${paragraph("{{resumo_progresso}}")}
+${emailButton("{{link_renovacao}}", "Renovar meu acesso")}
+${linkFallback("{{link_renovacao}}")}
+${infoBox(`<p class="body-text" style="margin: 0; font-size: 13px; line-height: 20px; color: #4b5563;">Renovando, você continua exatamente de onde parou: seu progresso, suas anotações e seus certificados ficam guardados na sua conta.</p>`)}`,
+    ),
+    template(
+      {
+        type: "subscription_expired",
+        name: "Assinatura expirada",
+        description: "Automático quando o acesso termina sem renovação: no dia do vencimento, ou 3 dias depois para quem tinha cobrança recorrente (tempo das novas tentativas de cobrança).",
+        category: "platform",
+        subject: "Seu acesso ao {{nome_plano}} terminou",
+        previewText: "Seu progresso continua guardado. Renove para voltar.",
+        variables: LIFECYCLE_VARIABLES,
+      },
+      `${eyebrow("Assinatura encerrada")}
+${heading("Seu acesso terminou, {{nome}}")}
+${paragraph("A assinatura do <strong class=\"strong-text\" style=\"color: #111827;\">{{nome_plano}}</strong> chegou ao fim em {{data_vencimento}}, e o acesso aos conteúdos foi encerrado.")}
+${infoBox(`${infoLabel("O que continua guardado")}
+<p class="body-text" style="margin: 0; font-size: 14px; line-height: 22px; color: #4b5563;">Tudo o que você construiu continua na sua conta: aulas concluídas, anotações, trilha e certificados já emitidos. Ao renovar, você retoma exatamente de onde parou.</p>`)}
+${sectionTitle("Seu progresso")}
+${paragraph("{{resumo_progresso}}")}
+${emailButton("{{link_renovacao}}", "Renovar e voltar a estudar")}
+${linkFallback("{{link_renovacao}}")}
+<p class="muted-text" style="margin: 20px 0 0; font-size: 13px; line-height: 20px; color: #6b7280;">Já renovou? Pode ignorar este e-mail — o acesso volta assim que o pagamento é confirmado.</p>`,
+    ),
+    template(
+      {
+        type: "winback_1",
+        name: "Reconquista 1 — progresso guardado",
+        description: "Sequência de reconquista, dia 3 após o fim do acesso. Para automaticamente se a pessoa renovar ou se descadastrar.",
+        category: "notification",
+        subject: "{{nome}}, seu progresso está guardado",
+        previewText: "Tudo continua onde você deixou.",
+        variables: WINBACK_VARIABLES,
+      },
+      `${eyebrow("Sua conta")}
+${heading("Tudo continua onde você deixou")}
+${paragraph("{{resumo_progresso}}")}
+${paragraph("Aprender tem muito a ver com constância: quanto mais tempo parado, mais difícil é retomar o ritmo. A boa notícia é que voltar é simples — ao renovar, sua trilha, suas anotações e seus certificados estão exatamente onde ficaram.")}
+${emailButton("{{link_renovacao}}", "Retomar meus estudos")}
+${linkFallback("{{link_renovacao}}")}
+${unsubscribeNote()}`,
+    ),
+    template(
+      {
+        type: "winback_2",
+        name: "Reconquista 2 — o que está perdendo",
+        description: "Sequência de reconquista, dia 10 após o fim do acesso: novidades publicadas e o que o plano oferece.",
+        category: "notification",
+        subject: "O que você está perdendo na plataforma {{nome_plataforma}}",
+        previewText: "Veja o que chegou desde que seu acesso terminou.",
+        variables: WINBACK_VARIABLES,
+      },
+      `${eyebrow("Novidades")}
+${heading("Enquanto isso, na plataforma {{nome_plataforma}}…")}
+${paragraph("{{resumo_novidades}}")}
+${sectionTitle("Com o acesso ativo, você tem")}
+${bulletList([
+  "<strong class=\"strong-text\" style=\"color: #111827;\">Cursos e aulas</strong> liberados pelo plano, com o progresso salvo automaticamente.",
+  "<strong class=\"strong-text\" style=\"color: #111827;\">Trilha personalizada</strong>, que mostra o próximo passo a cada dia.",
+  "<strong class=\"strong-text\" style=\"color: #111827;\">Agentes de IA</strong> para tirar dúvidas e praticar em situações reais.",
+  "<strong class=\"strong-text\" style=\"color: #111827;\">Anotações</strong> nas aulas, para revisar quando quiser.",
+  "<strong class=\"strong-text\" style=\"color: #111827;\">Certificados</strong> ao concluir os cursos, com validação pública.",
+])}
+${emailButton("{{link_renovacao}}", "Reativar meu acesso")}
+${linkFallback("{{link_renovacao}}")}
+${unsubscribeNote()}`,
+    ),
+    template(
+      {
+        type: "winback_3",
+        name: "Reconquista 3 — trilha parada",
+        description: "Sequência de reconquista, dia 20 após o fim do acesso: trilha, agentes de IA e certificados parados.",
+        category: "notification",
+        subject: "Sua trilha está parada há {{dias_sem_acesso}} dias",
+        previewText: "15 minutos por dia já colocam você de volta no ritmo.",
+        variables: WINBACK_VARIABLES,
+      },
+      `${eyebrow("Sua trilha")}
+${heading("Sua trilha está parada há {{dias_sem_acesso}} dias")}
+${paragraph("Sua trilha personalizada foi montada a partir dos seus objetivos — e ela continua pronta para você. Cada semana parada adia o próximo passo que você tinha planejado.")}
+${paragraph("{{resumo_progresso}}")}
+${sectionTitle("Para voltar ao ritmo")}
+${bulletList([
+  "Reserve 15 minutos por dia: a trilha mostra exatamente o que estudar em seguida.",
+  "Use os agentes de IA para tirar dúvidas e praticar o que aprendeu em situações reais.",
+  "Conclua os cursos para emitir seus certificados, com validação pública.",
+])}
+${emailButton("{{link_renovacao}}", "Voltar para a minha trilha")}
+${linkFallback("{{link_renovacao}}")}
+${unsubscribeNote()}`,
+    ),
+    template(
+      {
+        type: "winback_4",
+        name: "Reconquista 4 — último lembrete",
+        description: "Último e-mail da sequência de reconquista, dia 30 após o fim do acesso. Depois dele, nenhum outro lembrete é enviado.",
+        category: "notification",
+        subject: "{{nome}}, este é o nosso último lembrete",
+        previewText: "Sua conta e seu progresso continuam guardados.",
+        variables: WINBACK_VARIABLES,
+      },
+      `${eyebrow("Último lembrete")}
+${heading("Este é o nosso último lembrete")}
+${paragraph("Faz cerca de um mês que o seu acesso ao {{nome_plano}} terminou. Não queremos lotar sua caixa de entrada: este é o último e-mail desta série.")}
+${paragraph("{{resumo_progresso}}")}
+${paragraph("Se decidir voltar, é só renovar pelo botão abaixo — sua conta, seu progresso e seus certificados continuam guardados, esperando por você.")}
+${emailButton("{{link_renovacao}}", "Renovar meu acesso")}
+${linkFallback("{{link_renovacao}}")}
+${unsubscribeNote()}`,
     ),
     template(
       {
