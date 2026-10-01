@@ -2,10 +2,12 @@ import type { LearningTrail, Questionnaire, QuestionnaireVersion } from "@/types
 import { collectPersistedOnboardingAnswers, formatOpenOnboardingAnswersForAi, type OpenOnboardingAnswer } from "@/lib/onboarding";
 import { formatUserVariableValues, interpolateUserText, normalizeVariableKey } from "@/lib/userVariables";
 import { getUserTemplateVariables } from "./userVariables";
-import type {
-  TrailAnalyticsData,
-  TrailAnalyticsEvent,
-  TrailAnalyticsEventType,
+import {
+  snapshotFromTrail,
+  type TrailAnalyticsData,
+  type TrailAnalyticsEvent,
+  type TrailAnalyticsEventType,
+  type TrailSnapshot,
 } from "@/lib/trailAnalytics";
 import { logQueryError, type DB, type Row } from "./types";
 
@@ -281,27 +283,111 @@ export async function recordTrailEvent(
   logQueryError("recordTrailEvent", error);
 }
 
-export async function getTrailAnalytics(db: DB, userId?: string): Promise<TrailAnalyticsData> {
-  let query = db
-    .from("trail_events")
-    .select("id, type, payload, occurred_at")
-    .order("occurred_at", { ascending: true })
-    .limit(2000);
+/** O PostgREST do Supabase devolve no máximo mil linhas por chamada. */
+const PAGE_SIZE = 1000;
+/** Teto de segurança para o painel não puxar a tabela inteira de uma vez. */
+const MAX_EVENTS = 20000;
 
-  if (userId) query = query.eq("user_id", userId);
+/**
+ * Eventos da trilha, do mais recente para o mais antigo.
+ *
+ * A versão anterior pedia `limit(2000)` em ordem crescente: o Supabase cortava
+ * em mil e o painel mostrava justamente os mais antigos. Agora pagina, filtra
+ * pelo período no banco e traz o `user_id` — sem ele não dá para contar pessoas.
+ */
+export async function getTrailAnalytics(
+  db: DB,
+  options: { userId?: string; since?: Date | null } = {},
+): Promise<TrailAnalyticsData> {
+  const events: TrailAnalyticsEvent[] = [];
 
-  const { data, error } = await query;
-  logQueryError("getTrailAnalytics", error);
+  for (let from = 0; from < MAX_EVENTS; from += PAGE_SIZE) {
+    let query = db
+      .from("trail_events")
+      .select("id, user_id, type, payload, occurred_at")
+      .order("occurred_at", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
+    if (options.userId) query = query.eq("user_id", options.userId);
+    if (options.since) query = query.gte("occurred_at", options.since.toISOString());
 
-  return {
-    formatVersion: 1,
-    events: (data ?? []).map((row: Row) => ({
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+
+    (data ?? []).forEach((row: Row) => events.push({
       id: row.id,
+      userId: row.user_id,
       type: row.type as TrailAnalyticsEventType,
       occurredAt: row.occurred_at,
       payload: row.payload ?? undefined,
-    })),
-  };
+    }));
+    if (!data || data.length < PAGE_SIZE) break;
+  }
+
+  return { formatVersion: 1, events };
+}
+
+/**
+ * Retrato compacto de todas as trilhas (ver `admin_trail_snapshots`).
+ *
+ * Sem a função no banco — ambiente local ou branch sem a migração — cai na
+ * leitura antiga de `trail_data` inteiro e resume do lado de cá.
+ */
+export async function listTrailSnapshots(db: DB): Promise<TrailSnapshot[]> {
+  const snapshots: TrailSnapshot[] = [];
+
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await db.rpc("admin_trail_snapshots").range(from, from + PAGE_SIZE - 1);
+    if (error) {
+      if (from === 0 && (error.code === "PGRST202" || error.code === "42883")) return listTrailSnapshotsFromRows(db);
+      throw new Error(error.message);
+    }
+
+    ((data ?? []) as Row[]).forEach((row) => snapshots.push({
+      userId: row.user_id,
+      name: row.full_name ?? null,
+      questionnaireVersion: row.questionnaire_version ?? null,
+      answers: row.answers ?? {},
+      availability: row.availability ?? null,
+      feedbackHistory: Array.isArray(row.feedback_history) ? row.feedback_history : [],
+      totalItems: row.total_items ?? 0,
+      completedItems: row.completed_items ?? 0,
+      pendingItems: row.pending_items ?? 0,
+      pendingMinutes: Number(row.pending_minutes) || 0,
+      projectedEndDate: row.projected_end_date ?? null,
+    }));
+    if (!data || data.length < PAGE_SIZE) break;
+  }
+
+  return snapshots;
+}
+
+async function listTrailSnapshotsFromRows(db: DB): Promise<TrailSnapshot[]> {
+  const snapshots: TrailSnapshot[] = [];
+
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await db
+      .from("student_trails")
+      .select("user_id, trail_data")
+      .order("user_id")
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+
+    (data ?? []).forEach((row: Row) => {
+      const trail = row.trail_data as LearningTrail | null;
+      if (trail && Array.isArray(trail.items)) snapshots.push(snapshotFromTrail({ ...trail, userId: row.user_id }));
+    });
+    if (!data || data.length < PAGE_SIZE) break;
+  }
+
+  // `student_trails` aponta para `auth.users`, não para `profiles` — sem embed, os nomes vêm à parte.
+  const names = new Map<string, string | null>();
+  for (let index = 0; index < snapshots.length; index += 200) {
+    const ids = snapshots.slice(index, index + 200).map((snapshot) => snapshot.userId);
+    const { data } = await db.from("profiles").select("id, full_name").in("id", ids);
+    (data ?? []).forEach((row: Row) => names.set(row.id, row.full_name ?? null));
+  }
+
+  return snapshots.map((snapshot) => ({ ...snapshot, name: names.get(snapshot.userId) ?? null }));
 }
 
 // ---------------------------------------------------------------------------

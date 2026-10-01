@@ -10,6 +10,7 @@ import { getPublishedQuestionnaire, saveLearningTrail as persistTrail } from "@/
 import * as trailData from "@/lib/data/trail";
 import { getUserTemplateVariables } from "@/lib/data/userVariables";
 import type { ActionResult } from "./progress";
+import { getAnalyticsPeriodBounds, parseAnalyticsPeriod, type AnalyticsPeriod } from "@/lib/analytics";
 
 /**
  * Versão do formato do item da trilha.
@@ -396,20 +397,32 @@ export async function getOnboardingData() {
   }
 }
 
-export async function getAdminTrailAnalytics() {
+/**
+ * Dados brutos da aba "Saúde & Resultados" de /admin/onboarding.
+ *
+ * Os eventos vêm filtrados pelo período; as trilhas são o retrato atual. O
+ * resumo é calculado no cliente (`summarizeTrailHealth`) contra a versão
+ * publicada do questionário que a tela já tem em mãos.
+ */
+export async function getAdminTrailAnalytics(period: AnalyticsPeriod = "30d") {
   try {
     const { adminClient } = await requireAdmin();
+    const { start } = getAnalyticsPeriodBounds(parseAnalyticsPeriod(period));
 
-    const [analyticsData, { data: trailsData }] = await Promise.all([
-      trailData.getTrailAnalytics(adminClient),
-      adminClient.from("student_trails").select("trail_data"),
+    const [analyticsData, trails] = await Promise.all([
+      trailData.getTrailAnalytics(adminClient, { since: start }),
+      trailData.listTrailSnapshots(adminClient),
     ]);
 
-    const trails = (trailsData || []).map((t) => t.trail_data as LearningTrail).filter(Boolean);
-
-    return { success: true, data: analyticsData, trails };
+    return {
+      success: true as const,
+      data: analyticsData,
+      trails,
+      since: start?.toISOString() ?? null,
+      generatedAt: new Date().toISOString(),
+    };
   } catch (error) {
-    return { success: false, message: (error as Error).message };
+    return { success: false as const, message: (error as Error).message };
   }
 }
 

@@ -71,7 +71,8 @@ export default function OnboardingPage() {
           setAnswers(res.existing.answers || {});
           setAvailability(res.existing.availability);
         }
-        await trackTrailEvent('onboarding_started');
+        // `returning`: quem já tem trilha e voltou para refazer as respostas.
+        await trackTrailEvent('onboarding_started', { returning: Boolean(res.success && res.existing) });
       } catch (err) {
         console.error(err);
       }
@@ -82,11 +83,13 @@ export default function OnboardingPage() {
   useEffect(() => {
     // Só conta como etapa vista depois que ela sai da abertura e entra no questionário.
     if (!hasStarted || !question?.text) return;
+    // O texto cru (com `{{nome}}`) e o id: o funil do admin agrupa por pergunta, não por aluno.
     trackTrailEvent('onboarding_step_viewed', {
       step: currentStep + 1,
-      label: questionText,
+      questionId: question.id,
+      label: question.text,
     }).catch(() => {});
-  }, [hasStarted, currentStep, question?.text, questionText]);
+  }, [hasStarted, currentStep, question?.id, question?.text]);
 
   const handleToggleSelect = (optionLabel: string) => {
     if (question.type === 'availability' || question.type === 'open') return;

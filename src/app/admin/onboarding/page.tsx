@@ -3,6 +3,7 @@ import { getContentIndex } from "@/lib/data/content";
 import { getDraftQuestionnaire, getPublishedQuestionnaire, listQuestionnaireVersions } from "@/lib/data/trail";
 import { getOnboardingVariableDefinitions } from "@/lib/data/userVariables";
 import { OnboardingClient } from "./OnboardingClient";
+import { parseOnboardingTab } from "./tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +18,12 @@ export const dynamic = "force-dynamic";
  * (`items`, `eligibleLessons`) e o `OnboardingClient` remonta o índice local
  * com `createContentIndex`.
  */
-export default async function AdminOnboardingPage() {
-  const supabase = await createClient();
+export default async function AdminOnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const [supabase, { aba }] = await Promise.all([createClient(), searchParams]);
 
   const [draft, published, versions, index, variableDefinitions] = await Promise.all([
     getDraftQuestionnaire(supabase),
@@ -36,6 +41,7 @@ export default async function AdminOnboardingPage() {
       contentItems={index.items}
       eligibleLessons={index.eligibleLessons}
       initialVariableDefinitions={variableDefinitions}
+      initialTab={parseOnboardingTab(aba)}
     />
   );
 }

@@ -3,18 +3,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Tabs } from '@heroui/react';
+import { ONBOARDING_TAB_PARAMS, type OnboardingTab } from './tabs';
 import { Reorder } from 'framer-motion';
 import {
-  Save, PlayCircle, BarChart3, ListChecks, Plus, TriangleAlert, Activity,
-  CheckCircle2, Clock3, RefreshCw, History, UploadCloud, Undo2, X, Loader2, HelpCircle,
+  Save, PlayCircle, BarChart3, ListChecks, Plus, TriangleAlert, CheckCircle2,
+  Clock3, History, UploadCloud, Undo2, X, Loader2, HelpCircle,
 } from 'lucide-react';
 import { toast } from "@/lib/toast";
 import { Questionnaire, Question, ContentMapping, QuestionnaireVersion, EligibleLesson } from '@/types/trilha';
 import { createContentIndex, type ContentItem } from '@/lib/contentCatalog';
 import { validateQuestionnaire } from '@/lib/matching';
 import { analyzeQuestionnaire } from '@/lib/adminTrailDiagnostics';
-import { summarizeTrailAnalytics, TrailAnalyticsSummary } from '@/lib/trailAnalytics';
-import { getAdminTrailAnalytics } from '@/app/actions/trail';
 import {
   saveQuestionnaireDraft, publishQuestionnaire, restoreQuestionnaireVersion,
   discardQuestionnaireDraft, getQuestionnaireVersions,
@@ -24,11 +24,23 @@ import { AvailabilityQuestionCard } from '@/components/admin/onboarding/Availabi
 import { ContentPickerModal } from '@/components/admin/onboarding/ContentPickerModal';
 import { TrailPreview } from '@/components/admin/onboarding/TrailPreview';
 import { VersionHistoryPanel } from '@/components/admin/onboarding/VersionHistoryPanel';
+import { TrailHealthPanel } from '@/components/admin/onboarding/TrailHealthPanel';
 import { PageHeader, StatusBadge } from '@/components/ui/editorial';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { OnboardingVariableDefinition } from '@/lib/userVariables';
 
 const BACKUP_KEY = 'smartlms_onboarding_draft_backup_v1';
+
+/** Quantas perguntas a publicação cria, altera e remove em relação à versão no ar. */
+function diffQuestions(published: Question[], next: Question[]) {
+  const before = new Map(published.map((question) => [question.id, JSON.stringify(question)]));
+  const after = new Set(next.map((question) => question.id));
+  return {
+    added: next.filter((question) => !before.has(question.id)).length,
+    changed: next.filter((question) => before.has(question.id) && before.get(question.id) !== JSON.stringify(question)).length,
+    removed: published.filter((question) => !after.has(question.id)).length,
+  };
+}
 
 function createEmptyQuestion(): Question {
   return {
@@ -83,10 +95,12 @@ interface OnboardingClientProps {
   contentItems: ContentItem[];
   eligibleLessons: EligibleLesson[];
   initialVariableDefinitions: OnboardingVariableDefinition[];
+  initialTab?: OnboardingTab;
 }
 
 export function OnboardingClient({
   initialDraft, initialPublished, initialVersions, contentItems, eligibleLessons, initialVariableDefinitions,
+  initialTab = 'questions',
 }: OnboardingClientProps) {
   const router = useRouter();
   const index = useMemo(() => createContentIndex(contentItems, eligibleLessons), [contentItems, eligibleLessons]);
@@ -104,14 +118,12 @@ export function OnboardingClient({
   const [versions, setVersions] = useState<QuestionnaireVersion[]>(initialVersions);
   const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialQuestions));
 
-  const [activeTab, setActiveTab] = useState<'questions' | 'preview' | 'stats' | 'history'>('questions');
+  const [activeTab, setActiveTabState] = useState<OnboardingTab>(initialTab);
   const [previewVersion, setPreviewVersion] = useState<QuestionnaireVersion | null>(null);
 
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [activePickerContext, setActivePickerContext] = useState<{ questionId: string; optionIndex: number } | null>(null);
   const [isDiscardConfirmOpen, setIsDiscardConfirmOpen] = useState(false);
-
-  const [analytics, setAnalytics] = useState<TrailAnalyticsSummary | null>(null);
 
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -156,6 +168,16 @@ export function OnboardingClient({
 
   const isDirty = JSON.stringify(questions) !== savedSnapshot;
   const canPublish = validationErrors.length === 0;
+  const publishDiff = useMemo(() => diffQuestions(publishedQuestions, questions), [publishedQuestions, questions]);
+
+  /** Troca de aba sem navegação: só reescreve `?aba=` para o link e o recarregar caírem na mesma aba. */
+  const setActiveTab = (tab: OnboardingTab) => {
+    setActiveTabState(tab);
+    const url = new URL(window.location.href);
+    if (tab === 'questions') url.searchParams.delete('aba');
+    else url.searchParams.set('aba', ONBOARDING_TAB_PARAMS[tab]);
+    window.history.replaceState(window.history.state, '', url);
+  };
 
   // Backup local: se salvar falhar, a próxima visita oferece recuperar em vez de perder a edição.
   useEffect(() => {
@@ -173,22 +195,45 @@ export function OnboardingClient({
     return () => window.removeEventListener('beforeunload', handler);
   }, [isDirty]);
 
+  // No celular a faixa de abas rola: a aba aberta (inclusive a vinda de `?aba=`) precisa ficar à vista.
   useEffect(() => {
-    if (activeTab !== 'stats') return;
-    let isMounted = true;
-    async function loadAnalytics() {
-      try {
-        const res = await getAdminTrailAnalytics();
-        if (res.success && res.data && isMounted) {
-          setAnalytics(summarizeTrailAnalytics(res.data, res.trails || []));
-        }
-      } catch (err) {
-        console.error('Erro ao carregar analytics da trilha', err);
-      }
-    }
-    loadAnalytics();
-    return () => { isMounted = false; };
+    // Um quadro depois: na montagem a faixa ainda não tem a largura final.
+    const frame = requestAnimationFrame(() => {
+      document
+        .querySelector('[aria-label="Seções do onboarding"] [role="tab"][aria-selected="true"]')
+        ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+    return () => cancelAnimationFrame(frame);
   }, [activeTab]);
+
+  // ⌘S / Ctrl+S salva o rascunho em vez de abrir o "salvar página" do navegador.
+  const saveShortcutRef = React.useRef<() => void>(() => {});
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        saveShortcutRef.current();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  /** Diagnóstico da aba de resultados → pergunta correspondente no editor. */
+  const handleOpenQuestion = (questionId: string) => {
+    setActiveTab('questions');
+    // Dois quadros: um para a aba montar o painel, outro para o editor existir no DOM.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const target = document.getElementById(`question-${questionId}`);
+      if (!target) return;
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Um pulso no contorno para o olho achar a pergunta depois da rolagem.
+      target.animate?.(
+        [{ boxShadow: '0 0 0 3px var(--accent)' }, { boxShadow: '0 0 0 3px var(--accent)', offset: 0.6 }, { boxShadow: '0 0 0 0 transparent' }],
+        { duration: 1800, easing: 'ease-out' },
+      );
+    }));
+  };
 
   const clearBackup = () => {
     try { window.localStorage.removeItem(BACKUP_KEY); } catch { /* nada a limpar */ }
@@ -272,6 +317,7 @@ export function OnboardingClient({
   };
 
   const handleSaveDraft = async () => {
+    if (isSavingDraft || !isDirty) return;
     setIsSavingDraft(true);
     try {
       const res = await saveQuestionnaireDraft(questions);
@@ -288,6 +334,8 @@ export function OnboardingClient({
       setIsSavingDraft(false);
     }
   };
+
+  useEffect(() => { saveShortcutRef.current = handleSaveDraft; });
 
   const handleConfirmPublish = async () => {
     setIsPublishing(true);
@@ -429,11 +477,12 @@ export function OnboardingClient({
             )}
             <button
               onClick={handleSaveDraft}
-              disabled={isSavingDraft}
+              disabled={isSavingDraft || !isDirty}
+              title={isDirty ? 'Salvar rascunho (⌘S)' : 'Nenhuma alteração para salvar'}
               className="flex min-h-10 items-center gap-2 rounded-full border border-border/60 bg-surface px-4 text-sm font-bold text-foreground hover:bg-surface-hover disabled:opacity-50 transition-colors"
             >
-              {isSavingDraft ? <Loader2 size={17} className="animate-spin" /> : <Save size={17} />}
-              Salvar rascunho
+              {isSavingDraft ? <Loader2 size={17} className="animate-spin" /> : isDirty ? <Save size={17} /> : <CheckCircle2 size={17} />}
+              {isSavingDraft ? 'Salvando…' : isDirty ? 'Salvar rascunho' : 'Tudo salvo'}
             </button>
             <button
               onClick={() => canPublish ? setIsPublishDialogOpen(true) : toast.danger('Revise as pendências antes de publicar.')}
@@ -468,59 +517,45 @@ export function OnboardingClient({
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-border/40 overflow-x-auto hide-scrollbar">
-        <button
-          onClick={() => setActiveTab('questions')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors shrink-0 ${
-            activeTab === 'questions' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-foreground'
-          }`}
-        >
-          <ListChecks size={18} />
-          Perguntas & Mapeamentos
-          {validationErrors.length > 0 && (
-            <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-bold text-danger">{validationErrors.length}</span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('preview')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors shrink-0 ${
-            activeTab === 'preview' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-foreground'
-          }`}
-        >
-          <PlayCircle size={18} />
-          Prévia da Trilha
-        </button>
-        <button
-          onClick={() => setActiveTab('stats')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors shrink-0 ${
-            activeTab === 'stats' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-foreground'
-          }`}
-        >
-          <BarChart3 size={18} />
-          Saúde & Resultados
-        </button>
-        <button
-          onClick={() => setActiveTab('history')}
-          className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors shrink-0 ${
-            activeTab === 'history' ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-foreground'
-          }`}
-        >
-          <History size={18} />
-          Histórico
-        </button>
-      </div>
+      <Tabs.Root
+        selectedKey={activeTab}
+        onSelectionChange={(key) => setActiveTab(String(key) as OnboardingTab)}
+        className="flex min-w-0 flex-col"
+      >
+        <Tabs.List aria-label="Seções do onboarding" className="hide-scrollbar w-full max-w-full gap-1 overflow-x-auto">
+          <Tabs.Tab id="questions" className="w-auto shrink-0 gap-2 whitespace-nowrap font-semibold sm:w-full">
+            <ListChecks size={17} aria-hidden="true" />
+            Perguntas & Mapeamentos
+            {validationErrors.length > 0 && (
+              <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-bold text-danger" aria-label={`${validationErrors.length} pendências`}>
+                {validationErrors.length}
+              </span>
+            )}
+          </Tabs.Tab>
+          <Tabs.Tab id="preview" className="w-auto shrink-0 gap-2 whitespace-nowrap font-semibold sm:w-full">
+            <PlayCircle size={17} aria-hidden="true" />
+            Prévia da Trilha
+          </Tabs.Tab>
+          <Tabs.Tab id="stats" className="w-auto shrink-0 gap-2 whitespace-nowrap font-semibold sm:w-full">
+            <BarChart3 size={17} aria-hidden="true" />
+            Saúde & Resultados
+          </Tabs.Tab>
+          <Tabs.Tab id="history" className="w-auto shrink-0 gap-2 whitespace-nowrap font-semibold sm:w-full">
+            <History size={17} aria-hidden="true" />
+            Histórico
+            {versions.length > 0 && <span className="text-xs font-semibold text-muted" data-numeric>{versions.length}</span>}
+          </Tabs.Tab>
+        </Tabs.List>
 
-      {/* Tab Content */}
-      <div className="min-h-[500px]">
-        {activeTab === 'questions' && validationErrors.length > 0 && (
+        <Tabs.Panel id="questions" className="min-h-[500px] pt-6">
+        {validationErrors.length > 0 && (
           <div className="mb-5 rounded-xl border border-warning/30 bg-warning/8 p-4 text-sm text-warning">
             <p className="flex items-center gap-2 font-bold"><TriangleAlert size={17} /> Pendências para publicar</p>
             <ul className="mt-2 list-disc space-y-1 pl-5">{validationErrors.map((error) => <li key={error}>{error}</li>)}</ul>
           </div>
         )}
 
-        {activeTab === 'questions' && (
+        
           <div className="flex flex-col gap-4 max-w-5xl">
             <Reorder.Group as="div" axis="y" values={contentQuestions} onReorder={handleReorderContentQuestions} className="flex flex-col gap-4">
               {contentQuestions.map((question, idx) => (
@@ -576,9 +611,10 @@ export function OnboardingClient({
               </button>
             )}
           </div>
-        )}
+        </Tabs.Panel>
 
-        {activeTab === 'preview' && (
+        <Tabs.Panel id="preview" className="min-h-[500px] pt-6">
+        
           <div className="max-w-6xl">
             {previewVersion && (
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent/5 p-3 text-sm text-accent-soft-foreground">
@@ -590,29 +626,20 @@ export function OnboardingClient({
             )}
             <TrailPreview questionnaire={previewVersion ?? questionnaireForValidation} index={index} />
           </div>
-        )}
+        </Tabs.Panel>
 
-        {activeTab === 'stats' && (
-          <div className="max-w-6xl space-y-8">
-            <section>
-              <div className="mb-4 flex items-center justify-between"><div><p className="eyebrow">Efetividade</p><h2 className="mt-1 text-2xl font-extrabold text-foreground">Sinais da experiência do aluno</h2></div><Activity className="h-6 w-6 text-accent" /></div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="surface-card p-5"><CheckCircle2 className="h-5 w-5 text-success" /><p className="mt-4 text-xs font-semibold text-muted">Sessões concluídas</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.completedSessions || 0}<span className="text-base text-muted">/{analytics?.plannedSessions || 0}</span></p><p className="mt-2 text-xs text-muted">{analytics?.completionRate || 0}% do plano atual</p></div>
-                <div className="surface-card p-5"><Clock3 className="h-5 w-5 text-accent-orange" /><p className="mt-4 text-xs font-semibold text-muted">Carga suportada</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.averageSupportedMinutes || 0}<span className="text-base text-muted"> min</span></p><p className="mt-2 text-xs text-muted">Média de sessões leves ou adequadas</p></div>
-                <div className="surface-card p-5"><RefreshCw className="h-5 w-5 text-accent" /><p className="mt-4 text-xs font-semibold text-muted">Taxa de replanejamento</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.replanRate || 0}%</p><p className="mt-2 text-xs text-muted">{analytics?.replanCount || 0} ajustes registrados</p></div>
-                <div className="surface-card p-5"><BarChart3 className="h-5 w-5 text-accent" /><p className="mt-4 text-xs font-semibold text-muted">Onboarding concluído</p><p className="mt-1 text-3xl font-extrabold text-foreground">{analytics?.onboardingCompletionRate || 0}%</p><p className="mt-2 text-xs text-muted">{analytics?.onboardingCompletions || 0} de {analytics?.onboardingStarts || 0} inícios</p></div>
-              </div>
-            </section>
+        <Tabs.Panel id="stats" className="min-h-[500px] pt-6">
+        
+          <TrailHealthPanel
+            questions={publishedQuestions.length ? publishedQuestions : questions}
+            isUsingDraft={publishedQuestions.length === 0}
+            diagnostics={diagnostics}
+            onOpenQuestion={handleOpenQuestion}
+          />
+        </Tabs.Panel>
 
-            <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-              <div className="surface-card p-5 sm:p-6"><div className="flex items-center justify-between"><div><p className="eyebrow">Diagnóstico</p><h3 className="mt-1 text-xl font-extrabold text-foreground">Saúde da curadoria</h3></div><span className="rounded-full bg-background-secondary px-3 py-1 text-xs font-bold text-muted">{diagnostics.length} sinais</span></div>{diagnostics.length === 0 ? <div className="mt-6 flex items-center gap-3 rounded-lg border border-positive/20 bg-success/5 p-4 text-sm text-success"><CheckCircle2 size={19} /> Nenhuma inconsistência encontrada na configuração atual.</div> : <div className="mt-5 space-y-3">{diagnostics.map((item) => <article key={item.id} className={`rounded-lg border p-4 ${item.severity === 'error' ? 'border-danger/25 bg-danger/5' : item.severity === 'warning' ? 'border-warning/25 bg-warning/5' : 'border-accent/20 bg-accent/5'}`}><div className="flex items-start gap-3"><TriangleAlert className={`mt-0.5 h-4 w-4 shrink-0 ${item.severity === 'error' ? 'text-danger' : item.severity === 'warning' ? 'text-warning' : 'text-accent'}`} /><div><h4 className="text-sm font-bold text-foreground">{item.title}</h4><p className="mt-1 text-xs leading-5 text-muted">{item.detail}</p></div></div></article>)}</div>}</div>
-
-              <div className="space-y-6"><div className="surface-card p-5 sm:p-6"><p className="eyebrow">Abandono por etapa</p><h3 className="mt-1 text-xl font-extrabold text-foreground">Funil do onboarding</h3>{analytics?.stepViews.length ? <div className="mt-5 space-y-3">{analytics.stepViews.map((step) => <div key={step.step}><div className="flex items-center justify-between gap-3 text-xs"><span className="truncate font-semibold text-muted">{step.step}. {step.label}</span><strong className="text-foreground">-{step.dropRate}%</strong></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-background-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${analytics.onboardingStarts ? Math.min(100, (step.views / analytics.onboardingStarts) * 100) : 0}%` }} /></div></div>)}</div> : <p className="mt-5 text-sm text-muted">O funil aparecerá após uma passagem pelo onboarding.</p>}</div><div className="surface-card p-5 sm:p-6"><p className="eyebrow">Conteúdos ignorados</p><h3 className="mt-1 text-xl font-extrabold text-foreground">Removidos pelos alunos</h3>{analytics?.ignoredContents.length ? <div className="mt-4 space-y-2">{analytics.ignoredContents.slice(0, 5).map((item) => <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg bg-background-secondary px-3 py-2 text-sm"><span className="truncate font-semibold text-muted">{item.title}</span><strong className="text-foreground">{item.count}×</strong></div>)}</div> : <p className="mt-5 text-sm text-muted">Nenhum conteúdo foi removido em toda a base de alunos.</p>}</div></div>
-            </section>
-          </div>
-        )}
-
-        {activeTab === 'history' && (
+        <Tabs.Panel id="history" className="min-h-[500px] pt-6">
+        
           <div className="max-w-4xl">
             <VersionHistoryPanel
               versions={versions}
@@ -621,8 +648,8 @@ export function OnboardingClient({
               restoringVersion={restoringVersion}
             />
           </div>
-        )}
-      </div>
+        </Tabs.Panel>
+      </Tabs.Root>
 
       {/* Modals */}
       <ContentPickerModal
@@ -632,41 +659,44 @@ export function OnboardingClient({
         index={index}
       />
 
-      {isPublishDialogOpen && (
-        <>
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => setIsPublishDialogOpen(false)} />
-          <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border/50 bg-surface shadow-2xl p-6">
-            <h2 className="text-lg font-bold text-foreground flex items-center gap-2"><UploadCloud size={19} className="text-accent" /> Publicar questionário</h2>
-            <p className="mt-2 text-sm text-muted">
-              A versão atualmente publicada será arquivada e esta se torna a nova versão ativa para todos os alunos.
+      <ConfirmDialog
+        isOpen={isPublishDialogOpen}
+        onOpenChange={setIsPublishDialogOpen}
+        title="Publicar questionário"
+        tone="primary"
+        confirmLabel="Publicar para todos"
+        confirmIcon={<UploadCloud size={16} aria-hidden="true" />}
+        isLoading={isPublishing}
+        loadingLabel="Publicando…"
+        onConfirm={handleConfirmPublish}
+        description={(
+          <div className="space-y-4 text-sm text-muted">
+            <p>
+              {publishedInfo
+                ? `A v${publishedInfo.version} será arquivada e esta versão passa a valer para quem fizer o onboarding a partir de agora.`
+                : 'Esta será a primeira versão publicada — o onboarding passa a usá-la imediatamente.'}
             </p>
-            <label className="mt-4 block text-xs font-semibold text-muted">Nota da versão (opcional)</label>
-            <textarea
-              value={publishNotes}
-              onChange={(event) => setPublishNotes(event.target.value)}
-              placeholder="O que mudou nesta versão?"
-              rows={3}
-              className="mt-1.5 w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent resize-none"
-            />
-            <div className="mt-5 flex justify-end gap-3">
-              <button
-                onClick={() => setIsPublishDialogOpen(false)}
-                className="px-5 py-2.5 rounded-lg font-semibold text-muted hover:text-foreground hover:bg-surface-hover transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleConfirmPublish}
-                disabled={isPublishing}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold bg-accent text-accent-foreground hover:bg-accent-hover disabled:opacity-50 transition-colors shadow-sm"
-              >
-                {isPublishing ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
-                {isPublishing ? 'Publicando…' : 'Confirmar publicação'}
-              </button>
-            </div>
+            {publishedInfo && (
+              <ul className="flex flex-wrap gap-2" aria-label="Resumo das mudanças">
+                {publishDiff.added > 0 && <li className="rounded-full bg-success/10 px-2.5 py-1 text-xs font-bold text-success">+{publishDiff.added} {publishDiff.added === 1 ? 'pergunta nova' : 'perguntas novas'}</li>}
+                {publishDiff.changed > 0 && <li className="rounded-full bg-accent/10 px-2.5 py-1 text-xs font-bold text-accent">{publishDiff.changed} {publishDiff.changed === 1 ? 'alterada' : 'alteradas'}</li>}
+                {publishDiff.removed > 0 && <li className="rounded-full bg-danger/10 px-2.5 py-1 text-xs font-bold text-danger">−{publishDiff.removed} {publishDiff.removed === 1 ? 'removida' : 'removidas'}</li>}
+                {publishDiff.added + publishDiff.changed + publishDiff.removed === 0 && <li className="text-xs">Nenhuma pergunta mudou em relação à versão no ar.</li>}
+              </ul>
+            )}
+            <label className="block">
+              <span className="text-xs font-semibold text-muted">Nota da versão (opcional)</span>
+              <textarea
+                value={publishNotes}
+                onChange={(event) => setPublishNotes(event.target.value)}
+                placeholder="O que mudou nesta versão?"
+                rows={3}
+                className="mt-1.5 w-full resize-none rounded-lg border border-border/60 bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+              />
+            </label>
           </div>
-        </>
-      )}
+        )}
+      />
 
       <ConfirmDialog
         isOpen={isDiscardConfirmOpen}

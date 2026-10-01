@@ -63,7 +63,7 @@ export const QuestionEditor: React.FC<QuestionEditorProps> = ({
   };
 
   return (
-    <div className={`rounded-2xl border bg-surface shadow-sm overflow-hidden transition-all ${issueCount > 0 ? 'border-warning/50' : 'border-border/40 hover:border-border/80'}`}>
+    <div id={`question-${question.id}`} className={`scroll-mt-24 rounded-2xl border bg-surface shadow-sm overflow-hidden transition-all ${issueCount > 0 ? 'border-warning/50' : 'border-border/40 hover:border-border/80'}`}>
 
       {/* Header / Summary */}
       <div

@@ -212,7 +212,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
             </span>
             <div>
               <p className="text-xs text-muted font-medium">Conversão de Checkout</p>
-              <p className="font-display text-lg font-bold text-foreground">{kpis.conversionRate}%</p>
+              <p className="font-display text-lg font-bold text-foreground">{kpis.conversionRate != null ? `${kpis.conversionRate}%` : "—"}</p>
             </div>
           </div>
           <Chip size="sm" variant="soft" color="success">
@@ -227,7 +227,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
             </span>
             <div>
               <p className="text-xs text-muted font-medium">Taxa de Reembolso</p>
-              <p className="font-display text-lg font-bold text-foreground">{kpis.refundRate}%</p>
+              <p className="font-display text-lg font-bold text-foreground">{Number(kpis.refundRate ?? 0).toFixed(1)}%</p>
             </div>
           </div>
           <span className="text-xs text-muted font-medium">3 estornos no período</span>
@@ -377,7 +377,7 @@ export function SalesAnalyticsView({ basePath = "/admin/analises", data }: Sales
                   <div className="text-xs font-medium text-foreground">
                     Previsão de Fechamento:{" "}
                     <strong className="text-accent font-display">
-                      R$ {kpis.forecastRevenue.toLocaleString("pt-BR")}
+                      {kpis.forecastRevenue != null ? `R$ ${kpis.forecastRevenue.toLocaleString("pt-BR")}` : "—"}
                     </strong>
                   </div>
                 </div>

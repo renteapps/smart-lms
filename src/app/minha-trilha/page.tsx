@@ -693,7 +693,7 @@ export default function MinhaTrilhaPage() {
     ).length;
 
     commitTrail(updated);
-    trackTrailEvent('content_postponed', { itemId: item.id });
+    trackTrailEvent('content_postponed', { itemId: item.id, title: item.title });
     setPostponeTarget(null);
     setAdaptationMessage(
       movedTogether > 0
