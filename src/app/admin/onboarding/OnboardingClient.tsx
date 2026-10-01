@@ -523,7 +523,7 @@ export function OnboardingClient({
         className="flex min-w-0 flex-col"
       >
         <Tabs.List aria-label="Seções do onboarding" className="hide-scrollbar w-full max-w-full gap-1 overflow-x-auto">
-          <Tabs.Tab id="questions" className="w-auto shrink-0 gap-2 whitespace-nowrap font-semibold sm:w-full">
+          <Tabs.Tab id="questions" className="w-auto shrink-0 gap-2 whitespace-nowrap font-semibold sm:w-full sm:shrink">
             <ListChecks size={17} aria-hidden="true" />
             Perguntas & Mapeamentos
             {validationErrors.length > 0 && (
@@ -532,15 +532,15 @@ export function OnboardingClient({
               </span>
             )}
           </Tabs.Tab>
-          <Tabs.Tab id="preview" className="w-auto shrink-0 gap-2 whitespace-nowrap font-semibold sm:w-full">
+          <Tabs.Tab id="preview" className="w-auto shrink-0 gap-2 whitespace-nowrap font-semibold sm:w-full sm:shrink">
             <PlayCircle size={17} aria-hidden="true" />
             Prévia da Trilha
           </Tabs.Tab>
-          <Tabs.Tab id="stats" className="w-auto shrink-0 gap-2 whitespace-nowrap font-semibold sm:w-full">
+          <Tabs.Tab id="stats" className="w-auto shrink-0 gap-2 whitespace-nowrap font-semibold sm:w-full sm:shrink">
             <BarChart3 size={17} aria-hidden="true" />
             Saúde & Resultados
           </Tabs.Tab>
-          <Tabs.Tab id="history" className="w-auto shrink-0 gap-2 whitespace-nowrap font-semibold sm:w-full">
+          <Tabs.Tab id="history" className="w-auto shrink-0 gap-2 whitespace-nowrap font-semibold sm:w-full sm:shrink">
             <History size={17} aria-hidden="true" />
             Histórico
             {versions.length > 0 && <span className="text-xs font-semibold text-muted" data-numeric>{versions.length}</span>}
